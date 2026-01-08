@@ -1,0 +1,708 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Complete light/dark mode with Kev Strategy brand colors */
+/* Light mode (default) */
+:root {
+  --background: oklch(0.98 0.002 240);
+  --foreground: oklch(0.15 0.02 160);
+  --card: oklch(1 0 0 / 0.9);
+  --card-foreground: oklch(0.15 0.02 160);
+  --popover: oklch(0.99 0.002 240 / 0.98);
+  --popover-foreground: oklch(0.15 0.02 160);
+  --primary: oklch(0.38 0.08 160);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.95 0.005 240);
+  --secondary-foreground: oklch(0.25 0.02 160);
+  --muted: oklch(0.92 0.005 240);
+  --muted-foreground: oklch(0.45 0.02 160);
+  --accent: oklch(0.42 0.1 160);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.88 0.01 160 / 0.3);
+  --input: oklch(0.95 0.005 240);
+  --ring: oklch(0.42 0.1 160);
+  --radius: 1rem;
+
+  /* Kev Strategy brand colors - Light Mode */
+  --kev-primary: oklch(0.38 0.08 160); /* #3D5A4C forest green */
+  --kev-primary-light: oklch(0.48 0.1 158);
+  --kev-primary-dim: oklch(0.3 0.06 160);
+  --kev-success: oklch(0.5 0.12 145);
+  --kev-warning: oklch(0.65 0.15 85);
+  --kev-danger: oklch(0.55 0.18 25);
+
+  /* Neutral palette - Light */
+  --neutral-50: oklch(0.98 0.002 240);
+  --neutral-100: oklch(0.95 0.003 240);
+  --neutral-200: oklch(0.9 0.004 240);
+  --neutral-300: oklch(0.8 0.005 240);
+  --neutral-400: oklch(0.6 0.008 240);
+  --neutral-500: oklch(0.45 0.01 240);
+  --neutral-600: oklch(0.35 0.008 240);
+  --neutral-700: oklch(0.25 0.006 240);
+  --neutral-800: oklch(0.18 0.005 240);
+  --neutral-900: oklch(0.12 0.004 240);
+
+  /* Glass effect colors - Light */
+  --glass-bg: oklch(1 0 0 / 0.7);
+  --glass-border: oklch(0.38 0.08 160 / 0.15);
+  --glass-shadow: oklch(0.38 0.08 160 / 0.1);
+
+  /* Particle colors - Light */
+  --particle-color: oklch(0.4 0.1 160 / 0.4);
+  --particle-glow: oklch(0.38 0.08 160 / 0.3);
+  --orb-color: oklch(0.4 0.08 160 / 0.05);
+}
+
+/* Dark mode */
+.dark {
+  --background: oklch(0.08 0.008 240);
+  --foreground: oklch(0.95 0.005 240);
+  --card: oklch(0.12 0.006 240 / 0.6);
+  --card-foreground: oklch(0.95 0.005 240);
+  --popover: oklch(0.1 0.006 240 / 0.95);
+  --popover-foreground: oklch(0.95 0.005 240);
+  --primary: oklch(0.45 0.12 160);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.16 0.005 240 / 0.5);
+  --secondary-foreground: oklch(0.95 0.005 240);
+  --muted: oklch(0.18 0.005 240);
+  --muted-foreground: oklch(0.6 0.01 240);
+  --accent: oklch(0.5 0.12 160);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.28 0.01 240 / 0.4);
+  --input: oklch(0.16 0.005 240);
+  --ring: oklch(0.5 0.12 160);
+
+  /* Kev Strategy brand colors - Dark Mode */
+  --kev-primary: oklch(0.45 0.1 160);
+  --kev-primary-light: oklch(0.55 0.12 158);
+  --kev-primary-dim: oklch(0.35 0.08 160);
+  --kev-success: oklch(0.6 0.15 145);
+  --kev-warning: oklch(0.7 0.15 85);
+  --kev-danger: oklch(0.6 0.18 25);
+
+  /* Neutral palette - Dark */
+  --neutral-50: oklch(0.98 0.002 240);
+  --neutral-100: oklch(0.95 0.003 240);
+  --neutral-200: oklch(0.9 0.004 240);
+  --neutral-300: oklch(0.8 0.005 240);
+  --neutral-400: oklch(0.6 0.008 240);
+  --neutral-500: oklch(0.45 0.01 240);
+  --neutral-600: oklch(0.35 0.008 240);
+  --neutral-700: oklch(0.25 0.006 240);
+  --neutral-800: oklch(0.18 0.005 240);
+  --neutral-900: oklch(0.12 0.004 240);
+
+  /* Glass effect colors - Dark */
+  --glass-bg: oklch(0.14 0.008 240 / 0.7);
+  --glass-border: oklch(0.35 0.015 160 / 0.2);
+  --glass-shadow: oklch(0.45 0.1 160 / 0.15);
+
+  /* Particle colors - Dark */
+  --particle-color: oklch(0.5 0.12 160 / 0.5);
+  --particle-glow: oklch(0.45 0.1 160 / 0.8);
+  --orb-color: oklch(0.4 0.08 160 / 0.08);
+}
+
+@theme inline {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "Inter", system-ui, sans-serif;
+  --font-mono: "SF Mono", "Roboto Mono", monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-kev-primary: var(--kev-primary);
+  --color-kev-primary-light: var(--kev-primary-light);
+  --color-kev-primary-dim: var(--kev-primary-dim);
+  --color-kev-success: var(--kev-success);
+  --color-kev-warning: var(--kev-warning);
+  --color-kev-danger: var(--kev-danger);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01" 1, "cv01" 1;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
+  opacity: 0.7;
+}
+
+/* Glass card uses CSS variables for theme support */
+.glass-card {
+  background: linear-gradient(135deg, var(--glass-bg) 0%, oklch(from var(--glass-bg) l c h / 0.5) 100%);
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px oklch(from var(--glass-border) l c h / 0.1) inset, 0 20px 50px -20px oklch(0 0 0 / 0.2), 0 0
+    80px -30px var(--glass-shadow);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: var(--kev-primary);
+  box-shadow: 0 0 0 1px oklch(from var(--glass-border) l c h / 0.15) inset, 0 25px 60px -20px oklch(0 0 0 / 0.3), 0 0
+    100px -20px var(--glass-shadow);
+  transform: translateY(-2px);
+}
+
+/* Light mode specific glass adjustments */
+:root .glass-card {
+  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.03) inset, 0 10px 40px -15px oklch(0 0 0 / 0.1), 0 0 60px -20px
+    var(--glass-shadow);
+}
+
+:root .glass-card:hover {
+  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.05) inset, 0 15px 50px -15px oklch(0 0 0 / 0.15), 0 0 80px -15px
+    var(--glass-shadow);
+}
+
+/* Clean card without glassmorphism effects */
+.card-base {
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  border-color: var(--kev-primary);
+  background: oklch(from var(--card) calc(l * 1.05) c h);
+}
+
+/* Section label */
+.section-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* Number display */
+.number-display {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Status indicators */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.status-active {
+  background: var(--kev-success);
+  box-shadow: 0 0 10px oklch(from var(--kev-success) l c h / 0.6);
+}
+.status-pending {
+  background: var(--kev-warning);
+}
+.status-inactive {
+  background: var(--neutral-500);
+}
+
+/* Added stagger animation keyframes for view transitions */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 20px oklch(from var(--kev-primary) l c h / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px oklch(from var(--kev-primary) l c h / 0.4);
+  }
+}
+
+/* Animation utility classes */
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.4s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.4s ease-out forwards;
+}
+
+.animate-count-up {
+  animation: count-up 0.6s ease-out forwards;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s ease-out forwards;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  opacity: 0;
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger-children > *:nth-child(2) {
+  animation-delay: 50ms;
+}
+.stagger-children > *:nth-child(3) {
+  animation-delay: 100ms;
+}
+.stagger-children > *:nth-child(4) {
+  animation-delay: 150ms;
+}
+.stagger-children > *:nth-child(5) {
+  animation-delay: 200ms;
+}
+.stagger-children > *:nth-child(6) {
+  animation-delay: 250ms;
+}
+.stagger-children > *:nth-child(7) {
+  animation-delay: 300ms;
+}
+.stagger-children > *:nth-child(8) {
+  animation-delay: 350ms;
+}
+.stagger-children > *:nth-child(9) {
+  animation-delay: 400ms;
+}
+.stagger-children > *:nth-child(10) {
+  animation-delay: 450ms;
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px -8px oklch(0 0 0 / 0.2);
+}
+
+/* Skeleton loader animation */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--muted) 0%, oklch(from var(--muted) calc(l * 1.1) c h) 50%, var(--muted) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Button press effect */
+.press-effect {
+  transition: transform 0.1s ease;
+}
+
+.press-effect:active {
+  transform: scale(0.97);
+}
+
+/* Smooth number transition for counters */
+.number-transition {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* View transition wrapper */
+.view-transition {
+  animation: fade-in-up 0.4s ease-out;
+}
+
+/* Card entrance animation */
+.card-entrance {
+  opacity: 0;
+  animation: fade-in-scale 0.5s ease-out 0.1s forwards;
+}
+
+/* Particle animation keyframes */
+@keyframes float-particle {
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+@keyframes float-particle-slow {
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-50vh) translateX(30px) scale(1.2);
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(-10px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-float-particle {
+  animation: float-particle 15s ease-in-out infinite;
+}
+
+.animate-float-particle-slow {
+  animation: float-particle-slow 20s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, oklch(from var(--kev-primary) l c h / 0.1) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Grid overlay uses theme-aware colors */
+.grid-overlay {
+  background-image: linear-gradient(oklch(from var(--kev-primary) l c h / 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(from var(--kev-primary) l c h / 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-radial {
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -20%,
+    oklch(from var(--kev-primary) l c h / 0.12) 0%,
+    transparent 70%
+  );
+}
+
+/* Light mode radial - more subtle */
+:root .bg-gradient-radial {
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -20%,
+    oklch(from var(--kev-primary) l c h / 0.08) 0%,
+    transparent 70%
+  );
+}
+
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 30px oklch(from var(--kev-primary) l c h / 0.3);
+}
+
+.glow-green-subtle {
+  box-shadow: 0 0 60px oklch(from var(--kev-primary) l c h / 0.15);
+}
+
+/* Progress bar glow */
+.progress-glow {
+  box-shadow: 0 0 20px oklch(from var(--kev-primary) l c h / 0.5);
+}
+
+/* Light mode progress glow - more subtle */
+:root .progress-glow {
+  box-shadow: 0 0 15px oklch(from var(--kev-primary) l c h / 0.3);
+}
+
+/* Added smooth page transitions */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.page-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Focus ring animation */
+.focus-ring {
+  outline: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--kev-primary);
+}
+
+/* Tooltip animation */
+@keyframes tooltip-appear {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tooltip-animate {
+  animation: tooltip-appear 0.15s ease-out;
+}
+
+/* Loading dots animation */
+@keyframes loading-dots {
+  0%,
+  20% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  80%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+}
+
+.loading-dot {
+  animation: loading-dots 1.4s ease-in-out infinite;
+}
+
+.loading-dot:nth-child(1) {
+  animation-delay: 0ms;
+}
+.loading-dot:nth-child(2) {
+  animation-delay: 160ms;
+}
+.loading-dot:nth-child(3) {
+  animation-delay: 320ms;
+}
+
+/* Ripple effect */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--x, 50%) var(--y, 50%),
+    oklch(from var(--kev-primary) l c h / 0.3) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.ripple:active::after {
+  opacity: 1;
+}
