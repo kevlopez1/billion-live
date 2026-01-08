@@ -2,14 +2,6 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
 import { type Locale, getTranslation, type TranslationKeys } from "@/lib/i18n"
-import {
-  updateGlobalMetrics as updateSupabaseMetrics,
-  addDailyPulseEntry,
-  deleteDailyPulseEntry,
-  getDailyPulseEntries,
-  subscribeToDailyPulse,
-  type DailyPulse as SupabasePulseEntry
-} from "@/lib/supabase"
 
 // Types
 export interface GlobalMetrics {
@@ -385,7 +377,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [metrics, setMetrics] = useState<GlobalMetrics>(initialMetrics)
   const [liveStatus, setLiveStatus] = useState<LiveStatus>(initialLiveStatus)
-  const [pulseEntries, setPulseEntries] = useState<PulseEntry[]>([])
+  const [pulseEntries, setPulseEntries] = useState<PulseEntry[]>(initialPulseEntries)
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [manifesto, setManifesto] = useState<ManifestoContent>(initialManifesto)
   const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones)
@@ -434,45 +426,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error("Failed to load goals")
       }
     }
-
-    // Load initial pulse entries from Supabase
-    const loadPulseEntries = async () => {
-      const entries = await getDailyPulseEntries()
-      const formattedEntries: PulseEntry[] = entries.map((entry) => ({
-        id: entry.id,
-        content: entry.content,
-        category: entry.category,
-        timestamp: entry.timestamp,
-        timeAgo: formatTimeAgo(new Date(entry.timestamp)),
-        hasImage: entry.has_image,
-        imageUrl: entry.image_url || undefined,
-      }))
-      setPulseEntries(formattedEntries)
-    }
-
-    loadPulseEntries()
-
-    // Subscribe to real-time pulse updates
-    const unsubscribe = subscribeToDailyPulse((pulse, event) => {
-      if (event === 'INSERT') {
-        const newEntry: PulseEntry = {
-          id: pulse.id,
-          content: pulse.content,
-          category: pulse.category,
-          timestamp: pulse.timestamp,
-          timeAgo: formatTimeAgo(new Date(pulse.timestamp)),
-          hasImage: pulse.has_image,
-          imageUrl: pulse.image_url || undefined,
-        }
-        setPulseEntries((prev) => [newEntry, ...prev])
-      } else if (event === 'DELETE') {
-        setPulseEntries((prev) => prev.filter((p) => p.id !== pulse.id))
-      }
-    })
-
-    return () => {
-      unsubscribe()
-    }
   }, [])
 
   useEffect(() => {
@@ -481,20 +434,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateMetrics = useCallback(async (newMetrics: Partial<GlobalMetrics>) => {
     setIsLoading(true)
-
-    // Update Supabase
-    const supabaseMetrics = {
-      net_worth: newMetrics.netWorth,
-      monthly_growth: newMetrics.monthlyGrowth,
-      roi: newMetrics.roi,
-      target_revenue: newMetrics.targetRevenue,
-      active_projects: newMetrics.activeProjects,
-      ytd_return: newMetrics.ytdReturn,
-    }
-
-    await updateSupabaseMetrics(supabaseMetrics)
-
-    // Update local state as fallback
+    await simulateApiCall()
     setMetrics((prev) => ({ ...prev, ...newMetrics }))
     setIsLoading(false)
   }, [])
@@ -508,28 +448,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addPulseEntry = useCallback(async (entry: Omit<PulseEntry, "id" | "timestamp" | "timeAgo">) => {
     setIsLoading(true)
-
-    // Add to Supabase
-    const supabaseEntry = {
-      content: entry.content,
-      category: entry.category,
-      has_image: entry.hasImage || false,
-      image_url: entry.imageUrl || null,
+    await simulateApiCall()
+    const newEntry: PulseEntry = {
+      ...entry,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      timeAgo: "Just now",
     }
-
-    await addDailyPulseEntry(supabaseEntry)
-    // Real-time subscription will handle adding to state automatically
-
+    setPulseEntries((prev) => [newEntry, ...prev])
     setIsLoading(false)
   }, [])
 
   const deletePulseEntry = useCallback(async (id: string) => {
     setIsLoading(true)
-
-    // Delete from Supabase
-    await deleteDailyPulseEntry(id)
-    // Real-time subscription will handle removing from state automatically
-
+    await simulateApiCall()
+    setPulseEntries((prev) => prev.filter((p) => p.id !== id))
     setIsLoading(false)
   }, [])
 
@@ -706,15 +639,3 @@ export function useApp() {
 }
 
 const simulateApiCall = () => new Promise((resolve) => setTimeout(resolve, 800))
-
-// Helper function to format time ago
-function formatTimeAgo(date: Date): string {
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-  if (diffInSeconds < 60) return 'Just now'
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
-  return date.toLocaleDateString()
-}

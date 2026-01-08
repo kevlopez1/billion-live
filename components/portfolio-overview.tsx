@@ -3,100 +3,16 @@
 import { useEffect, useState, useRef } from "react"
 import { useApp } from "@/context/app-context"
 import { TrendingUp, ArrowUpRight, Target, Calendar } from "lucide-react"
-import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 
 export function PortfolioOverview() {
   const { metrics } = useApp()
-  const [supabaseMetrics, setSupabaseMetrics] = useState<GlobalMetrics | null>(null)
-  const [displayValue, setDisplayValue] = useState<number>(0)
-  const targetValue = supabaseMetrics?.target_revenue || metrics.targetRevenue
-  const animationRef = useRef<number | undefined>(undefined)
-  const isInitialLoad = useRef(true)
+  const [displayValue, setDisplayValue] = useState(metrics.netWorth)
+  const targetValue = metrics.targetRevenue
+  const animationRef = useRef<number>()
 
-  // Fetch initial data from Supabase
   useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('global_metrics')
-          .select('*')
-
-        if (error) {
-          // Fallback to local metrics if database fails
-          setSupabaseMetrics({
-            id: 'fallback',
-            net_worth: metrics.netWorth,
-            monthly_growth: metrics.monthlyGrowth,
-            roi: metrics.roi,
-            target_revenue: metrics.targetRevenue,
-            active_projects: metrics.activeProjects,
-            ytd_return: metrics.ytdReturn,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          return
-        }
-
-        if (data && data.length > 0) {
-          setSupabaseMetrics(data[0])
-        } else {
-          // Fallback to local metrics if no data
-          setSupabaseMetrics({
-            id: 'fallback',
-            net_worth: metrics.netWorth,
-            monthly_growth: metrics.monthlyGrowth,
-            roi: metrics.roi,
-            target_revenue: metrics.targetRevenue,
-            active_projects: metrics.activeProjects,
-            ytd_return: metrics.ytdReturn,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-        }
-      } catch (err) {
-        // Fallback to local metrics on exception
-        setSupabaseMetrics({
-          id: 'fallback',
-          net_worth: metrics.netWorth,
-          monthly_growth: metrics.monthlyGrowth,
-          roi: metrics.roi,
-          target_revenue: metrics.targetRevenue,
-          active_projects: metrics.activeProjects,
-          ytd_return: metrics.ytdReturn,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-      }
-    }
-
-    fetchMetrics()
-
-    // Subscribe to real-time changes
-    const unsubscribe = subscribeToGlobalMetrics((newMetrics) => {
-      setSupabaseMetrics(newMetrics)
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [])
-
-  // Animate value changes when metrics update
-  useEffect(() => {
-    if (!supabaseMetrics) return
-
-    // On initial load, set value directly without animation
-    if (isInitialLoad.current) {
-      setDisplayValue(supabaseMetrics.net_worth)
-      isInitialLoad.current = false
-      return
-    }
-
-    // Don't animate if the value hasn't changed
-    if (displayValue === supabaseMetrics.net_worth) return
-
     const startValue = displayValue
-    const endValue = supabaseMetrics.net_worth
+    const endValue = metrics.netWorth
     const duration = 800
     const startTime = performance.now()
 
@@ -115,13 +31,9 @@ export function PortfolioOverview() {
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current)
     }
-  }, [supabaseMetrics?.net_worth])
+  }, [metrics.netWorth])
 
-  const netWorth = supabaseMetrics?.net_worth || displayValue
-  const monthlyGrowth = supabaseMetrics?.monthly_growth || metrics.monthlyGrowth
-  const activeProjects = supabaseMetrics?.active_projects || metrics.activeProjects
-  const ytdReturn = supabaseMetrics?.ytd_return || metrics.ytdReturn
-  const progress = (netWorth / targetValue) * 100
+  const progress = (metrics.netWorth / targetValue) * 100
 
   return (
     <div className="glass-card p-6">
@@ -133,7 +45,7 @@ export function PortfolioOverview() {
               Total Portfolio Value
             </span>
             <div className="flex items-center gap-1 px-2 py-0.5 bg-kev-success/15 border border-kev-success/20 rounded-full text-kev-success text-[10px] font-medium">
-              <TrendingUp className="w-3 h-3" />+{monthlyGrowth.toFixed(1)}%
+              <TrendingUp className="w-3 h-3" />+{metrics.monthlyGrowth}%
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -176,19 +88,19 @@ export function PortfolioOverview() {
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1">Monthly Growth</p>
             <div className="flex items-center gap-1">
               <span className="text-xl font-semibold number-display">
-                +${((netWorth * monthlyGrowth) / 100 / 1_000_000).toFixed(1)}M
+                +${((metrics.netWorth * metrics.monthlyGrowth) / 100 / 1_000_000).toFixed(1)}M
               </span>
               <ArrowUpRight className="w-4 h-4 text-kev-success" />
             </div>
           </div>
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1">Active Projects</p>
-            <span className="text-xl font-semibold number-display">{activeProjects}</span>
+            <span className="text-xl font-semibold number-display">{metrics.activeProjects}</span>
           </div>
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1">YTD Return</p>
             <div className="flex items-center gap-1">
-              <span className="text-xl font-semibold number-display text-kev-success">+{ytdReturn}%</span>
+              <span className="text-xl font-semibold number-display text-kev-success">+{metrics.ytdReturn}%</span>
             </div>
           </div>
         </div>
