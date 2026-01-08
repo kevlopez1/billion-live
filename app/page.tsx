@@ -418,13 +418,12 @@ export default function Dashboard() {
               <button
                 key={item.id}
                 onClick={() => (item.id === "admin" ? handleAdminAccess() : setActiveView(item.id))}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all press-effect ${
-                  activeView === item.id
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all press-effect ${activeView === item.id
                     ? item.id === "admin"
                       ? "bg-amber-500/15 text-amber-500 border border-amber-500/20"
                       : "bg-kev-primary/15 text-kev-primary border border-kev-primary/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
+                  }`}
               >
                 <item.icon className="w-4 h-4" />
                 <span>{item.label}</span>
@@ -601,9 +600,7 @@ export default function Dashboard() {
 
         <MobileNav
           activeView={activeView}
-          setActiveView={setActiveView}
-          isAuthenticated={isAuthenticated}
-          onAdminClick={handleAdminAccess}
+          onViewChange={setActiveView}
         />
       </div>
     </div>
