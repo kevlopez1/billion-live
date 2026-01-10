@@ -479,9 +479,8 @@ export default function Dashboard() {
         </aside>
 
         {/* Main content area */}
-        <div className="flex-1 flex flex-col pt-14 lg:pt-0">
-          <div className="h-6 w-full lg:hidden"></div>
-          <header className="px-6 py-4 border-b border-border/50 backdrop-blur-xl bg-background/60">
+        <div className="flex-1 flex flex-col">
+          <header className="px-6 pt-20 pb-4 border-b border-border/50 backdrop-blur-xl bg-background/60">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setCommandOpen(true)}
