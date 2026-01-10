@@ -8,7 +8,10 @@ import {
   deleteDailyPulseEntry,
   getDailyPulseEntries,
   subscribeToDailyPulse,
-  type DailyPulse as SupabasePulseEntry
+  getProjects,
+  subscribeToProjects,
+  type DailyPulse as SupabasePulseEntry,
+  type Project as SupabaseProject
 } from "@/lib/supabase"
 
 // Types
@@ -386,7 +389,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [metrics, setMetrics] = useState<GlobalMetrics>(initialMetrics)
   const [liveStatus, setLiveStatus] = useState<LiveStatus>(initialLiveStatus)
   const [pulseEntries, setPulseEntries] = useState<PulseEntry[]>([])
-  const [projects, setProjects] = useState<Project[]>(initialProjects)
+  const [projects, setProjects] = useState<Project[]>([])
   const [manifesto, setManifesto] = useState<ManifestoContent>(initialManifesto)
   const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones)
   const [goals, setGoals] = useState<Goal[]>(initialGoals) // Added goals state
@@ -453,7 +456,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadPulseEntries()
 
     // Subscribe to real-time pulse updates
-    const unsubscribe = subscribeToDailyPulse((pulse, event) => {
+    const unsubscribePulse = subscribeToDailyPulse((pulse, event) => {
       if (event === 'INSERT') {
         const newEntry: PulseEntry = {
           id: pulse.id,
@@ -470,8 +473,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     })
 
+    // Load initial projects from Supabase
+    const loadProjects = async () => {
+      const supabaseProjects = await getProjects()
+      console.log('DEBUG: Raw Supabase projects:', supabaseProjects)
+      const formattedProjects: Project[] = supabaseProjects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        type: "Venture", // Default type
+        value: p.valuation,
+        invested: 0, // Not in DB
+        change: p.roi,
+        trend: p.roi >= 0 ? "up" : "down",
+        status: p.status as any, // Assuming DB values match exact strings or close enough
+        allocation: 0, // Will be calculated dynamically if needed
+        description: "",
+        lastUpdate: new Date(p.created_at).toLocaleDateString(),
+      }))
+      setProjects(formattedProjects)
+    }
+
+    loadProjects()
+
+    // Subscribe to real-time projects updates
+    const unsubscribeProjects = subscribeToProjects((project, event) => {
+      if (event === 'INSERT' || event === 'UPDATE') {
+        const formattedProject: Project = {
+          id: project.id,
+          name: project.name,
+          type: "Venture",
+          value: project.valuation,
+          invested: 0,
+          change: project.roi,
+          trend: project.roi >= 0 ? "up" : "down",
+          status: project.status as any,
+          allocation: 0,
+          description: "",
+          lastUpdate: new Date(project.created_at).toLocaleDateString(),
+        }
+
+        setProjects((prev) => {
+          if (event === 'UPDATE') {
+            return prev.map(p => p.id === project.id ? formattedProject : p)
+          }
+          return [...prev, formattedProject]
+        })
+      } else if (event === 'DELETE') {
+        setProjects((prev) => prev.filter((p) => p.id !== project.id))
+      }
+    })
+
     return () => {
-      unsubscribe()
+      unsubscribePulse()
+      unsubscribeProjects()
     }
   }, [])
 

@@ -13,6 +13,7 @@ const statusColors: Record<string, string> = {
 
 export function ProjectsList() {
   const { projects } = useApp()
+  console.log('ProjectsList received data:', projects)
 
   const formatCurrency = (value: number) => {
     if (value >= 1_000_000) {
@@ -72,13 +73,12 @@ export function ProjectsList() {
                 <td className="px-6 py-4 text-right font-medium number-display">{formatCurrency(project.value)}</td>
                 <td className="px-6 py-4 text-right">
                   <div
-                    className={`inline-flex items-center gap-1 text-sm font-medium ${
-                      project.trend === "up"
+                    className={`inline-flex items-center gap-1 text-sm font-medium ${project.trend === "up"
                         ? "text-kev-success"
                         : project.trend === "down"
                           ? "text-kev-danger"
                           : "text-muted-foreground"
-                    }`}
+                      }`}
                   >
                     {project.trend === "up" && <TrendingUp className="w-3 h-3" />}
                     {project.trend === "down" && <TrendingDown className="w-3 h-3" />}

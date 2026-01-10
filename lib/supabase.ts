@@ -1,211 +1,92 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase client configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// --- TUS CREDENCIALES ---
+const supabaseUrl = "https://llhvnzlbnmoufilxgshv.supabase.co"
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsaHZuemxibm1vdWZpbHhnc2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4OTQ1OTUsImV4cCI6MjA4MzQ3MDU5NX0.rdIM39PWW6U90JfeRix6B8xdybX-wCFjEnzngsIYrrQ"
 
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env.local file.'
-  )
-}
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Create and export Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
-})
-
-// TypeScript types for database tables
+// --- TIPOS ---
 export interface GlobalMetrics {
-  id: string
-  net_worth: number
-  monthly_growth: number
-  roi: number
-  target_revenue: number
-  active_projects: number
-  ytd_return: number
-  created_at: string
-  updated_at: string
+  id: string; net_worth: number; monthly_growth: number; roi: number;
+  target_revenue: number; active_projects: number; ytd_return: number;
+  created_at: string; updated_at: string;
 }
 
 export interface DailyPulse {
-  id: string
-  content: string
-  category: 'business' | 'networking' | 'personal'
-  timestamp: string
-  has_image: boolean
-  image_url: string | null
-  created_at: string
+  id: string; content: string; category: 'business' | 'networking' | 'personal';
+  timestamp: string; has_image: boolean; image_url: string | null;
+  created_at: string; mood?: string; revenue?: number; profit?: number; note?: string;
 }
 
-// Database helper functions
+export interface Project {
+  id: string; name: string; status: string;
+  revenue: number; valuation: number; roi: number; created_at: string;
+}
+
+// --- LECTURA ---
 export const getGlobalMetrics = async (): Promise<GlobalMetrics | null> => {
-  const { data, error } = await supabase
-    .from('global_metrics')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (error) {
-    console.error('Error fetching global metrics:', error)
-    return null
-  }
-
+  const { data } = await supabase.from('global_metrics').select('*').limit(1).single()
   return data
 }
 
-export const getDailyPulseEntries = async (): Promise<DailyPulse[]> => {
-  const { data, error } = await supabase
-    .from('daily_pulse')
-    .select('*')
-    .order('timestamp', { ascending: false })
-    .limit(20)
-
-  if (error) {
-    console.error('Error fetching daily pulse entries:', error)
-    return []
-  }
-
+export const getProjects = async (): Promise<Project[]> => {
+  const { data } = await supabase.from('projects').select('*')
   return data || []
 }
 
-export const updateGlobalMetrics = async (
-  metrics: Partial<Omit<GlobalMetrics, 'id' | 'created_at' | 'updated_at'>>
-): Promise<GlobalMetrics | null> => {
-  // Get the first (latest) record
-  const { data: existing } = await supabase
-    .from('global_metrics')
-    .select('id')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
+export const getDailyPulseEntries = async (): Promise<DailyPulse[]> => {
+  const { data } = await supabase.from('daily_pulse').select('*').order('created_at', { ascending: false }).limit(20)
+  return data || []
+}
 
+// --- ESCRITURA ---
+export const updateGlobalMetrics = async (metrics: any) => {
+  const existing = await getGlobalMetrics();
   if (!existing) {
-    // If no record exists, insert a new one
-    const { data, error } = await supabase
-      .from('global_metrics')
-      .insert([metrics])
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error inserting global metrics:', error)
-      return null
-    }
-
+    const { data } = await supabase.from('global_metrics').insert([metrics]).select().single()
     return data
   }
-
-  // Update existing record
-  const { data, error } = await supabase
-    .from('global_metrics')
-    .update(metrics)
-    .eq('id', existing.id)
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Error updating global metrics:', error)
-    return null
-  }
-
+  const { data } = await supabase.from('global_metrics').update(metrics).eq('id', existing.id).select().single()
   return data
 }
 
-export const addDailyPulseEntry = async (
-  entry: Omit<DailyPulse, 'id' | 'created_at' | 'timestamp'>
-): Promise<DailyPulse | null> => {
-  const { data, error } = await supabase
-    .from('daily_pulse')
-    .insert([
-      {
-        ...entry,
-        timestamp: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Error adding daily pulse entry:', error)
-    return null
-  }
-
+export const addDailyPulseEntry = async (entry: any) => {
+  const { data } = await supabase.from('daily_pulse').insert([entry]).select().single()
   return data
 }
 
-export const deleteDailyPulseEntry = async (id: string): Promise<boolean> => {
+export const deleteDailyPulseEntry = async (id: string) => {
   const { error } = await supabase.from('daily_pulse').delete().eq('id', id)
-
-  if (error) {
-    console.error('Error deleting daily pulse entry:', error)
-    return false
-  }
-
-  return true
+  return !error
 }
 
-// Real-time subscription helpers
-export const subscribeToGlobalMetrics = (
-  callback: (metrics: GlobalMetrics) => void
-) => {
-  const channel = supabase
-    .channel('global_metrics_changes')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'global_metrics',
-      },
-      (payload) => {
-        if (payload.new) {
-          callback(payload.new as GlobalMetrics)
-        }
-      }
-    )
-    .subscribe()
+// --- REALTIME (LA PARTE CORREGIDA ✅) ---
+// Ahora devolvemos una función () => {} que es lo que React espera para limpiar.
 
-  return () => {
-    supabase.removeChannel(channel)
-  }
+export const subscribeToGlobalMetrics = (cb: any) => {
+  const channel = supabase.channel('metrics_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'global_metrics' }, 
+    (payload) => cb(payload.new))
+    .subscribe()
+    
+  return () => { supabase.removeChannel(channel) }
 }
 
-export const subscribeToDailyPulse = (
-  callback: (pulse: DailyPulse, event: 'INSERT' | 'UPDATE' | 'DELETE') => void
-) => {
-  const channel = supabase
-    .channel('daily_pulse_changes')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'daily_pulse',
-      },
-      (payload) => {
-        if (payload.eventType === 'INSERT' && payload.new) {
-          callback(payload.new as DailyPulse, 'INSERT')
-        } else if (payload.eventType === 'UPDATE' && payload.new) {
-          callback(payload.new as DailyPulse, 'UPDATE')
-        } else if (payload.eventType === 'DELETE' && payload.old) {
-          callback(payload.old as DailyPulse, 'DELETE')
-        }
-      }
-    )
+export const subscribeToProjects = (cb: any) => {
+  const channel = supabase.channel('projects_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, 
+    (payload) => cb(payload.new, payload.eventType))
     .subscribe()
 
-  return () => {
-    supabase.removeChannel(channel)
-  }
+  return () => { supabase.removeChannel(channel) }
+}
+
+export const subscribeToDailyPulse = (cb: any) => {
+  const channel = supabase.channel('pulse_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_pulse' }, 
+    (payload) => cb(payload.new, payload.eventType))
+    .subscribe()
+
+  return () => { supabase.removeChannel(channel) }
 }

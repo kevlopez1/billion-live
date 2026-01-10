@@ -77,7 +77,7 @@ export function MobileNav({ activeView, onViewChange }: MobileNavProps) {
       )}
 
       {/* Main nav bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card !rounded-none border-t border-border/50 px-2 py-2 lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card !rounded-none border-t border-border/50 px-2 pt-2 pb-8 lg:hidden">
         <div className="flex items-center justify-around">
           {primaryNavItems.map((item) => (
             <button

@@ -63,6 +63,12 @@ export function ProjectsView() {
 
   const { projects, isAdmin, deleteProject, addProject, t } = useApp()
 
+  // DEBUG: Log received data
+  console.log('ProjectsView received data:', projects)
+
+  // TEMPORARY: Bypass filtering to show all data
+  const filteredProjects = projects
+  /*
   const filteredProjects = projects.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -70,6 +76,7 @@ export function ProjectsView() {
     const matchesStatus = !statusFilter || p.status === statusFilter
     return matchesSearch && matchesStatus
   })
+  */
 
   const handleDelete = async (id: string) => {
     await deleteProject(id)
@@ -143,18 +150,16 @@ export function ProjectsView() {
           <div className="flex items-center glass-card p-1 rounded-lg">
             <button
               onClick={() => setViewMode("mindmap")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                viewMode === "mindmap" ? "bg-kev-primary text-white" : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${viewMode === "mindmap" ? "bg-kev-primary text-white" : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <Network className="w-4 h-4" />
               <span className="hidden sm:inline">{t.projects.mindMap}</span>
             </button>
             <button
               onClick={() => setViewMode("grid")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                viewMode === "grid" ? "bg-kev-primary text-white" : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${viewMode === "grid" ? "bg-kev-primary text-white" : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <LayoutGrid className="w-4 h-4" />
               <span className="hidden sm:inline">{t.projects.grid}</span>
@@ -189,11 +194,10 @@ export function ProjectsView() {
             </div>
             <button
               onClick={() => setShowFilterDialog(true)}
-              className={`flex items-center justify-center gap-2 px-4 py-2.5 border rounded-lg text-sm transition-colors ${
-                statusFilter
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 border rounded-lg text-sm transition-colors ${statusFilter
                   ? "bg-kev-primary/10 border-kev-primary/30 text-kev-primary"
                   : "bg-secondary/50 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
-              }`}
+                }`}
             >
               <Filter className="w-4 h-4" />
               <span>{statusFilter || t.common.filter}</span>
@@ -250,13 +254,12 @@ export function ProjectsView() {
                       {t.projects.return}
                     </div>
                     <div
-                      className={`font-semibold flex items-center gap-1 ${
-                        project.trend === "up"
+                      className={`font-semibold flex items-center gap-1 ${project.trend === "up"
                           ? "text-kev-success"
                           : project.trend === "down"
                             ? "text-kev-danger"
                             : "text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {project.trend === "up" && <TrendingUp className="w-3 h-3" />}
                       {project.trend === "down" && <TrendingDown className="w-3 h-3" />}
@@ -442,11 +445,10 @@ export function ProjectsView() {
                 setStatusFilter(null)
                 setShowFilterDialog(false)
               }}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-                !statusFilter
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${!statusFilter
                   ? "bg-kev-primary/10 text-kev-primary border border-kev-primary/20"
                   : "hover:bg-secondary/50"
-              }`}
+                }`}
             >
               All Projects
             </button>
@@ -457,11 +459,10 @@ export function ProjectsView() {
                   setStatusFilter(status)
                   setShowFilterDialog(false)
                 }}
-                className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-                  statusFilter === status
+                className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${statusFilter === status
                     ? "bg-kev-primary/10 text-kev-primary border border-kev-primary/20"
                     : "hover:bg-secondary/50"
-                }`}
+                  }`}
               >
                 {status}
               </button>
