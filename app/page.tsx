@@ -479,7 +479,7 @@ export default function Dashboard() {
         </aside>
 
         {/* Main content area */}
-        <div className="flex-1 flex flex-col pt-[calc(env(safe-area-inset-top)+20px)]">
+        <div className="flex-1 flex flex-col pt-32">
           <header className="px-6 py-4 border-b border-border/50 backdrop-blur-xl bg-background/60">
             <div className="flex items-center justify-between">
               <button
