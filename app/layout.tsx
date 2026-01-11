@@ -38,13 +38,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#3D5A4C" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" }, // Mejor negro puro para OLED
   ],
-  width: "device-width",
+  width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: "cover",
+  viewportFit: 'cover', // <--- ¡ESTA ES LA LÍNEA MÁGICA! 🌟
 }
 
 export default function RootLayout({
