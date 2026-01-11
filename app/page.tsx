@@ -480,7 +480,7 @@ export default function Dashboard() {
 
         {/* Main content area */}
         <div className="flex-1 flex flex-col">
-          <header className="px-6 pt-20 pb-4 border-b border-border/50 backdrop-blur-xl bg-background/60">
+          <header className="px-6 pb-4 border-b border-border/50 backdrop-blur-xl bg-background/60 pt-[calc(env(safe-area-inset-top)+20px)] lg:py-4">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setCommandOpen(true)}
