@@ -1,15 +1,22 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import { Manrope, Space_Grotesk } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AppProvider } from "@/context/app-context"
 import { AuthProvider } from "@/context/auth-context"
 import { Toaster } from "sonner"
 import "./globals.css"
 
-const inter = Inter({
+// Cuerpo: Manrope (cálida, premium). Display/números: Space Grotesk (engineered, AMG).
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-manrope",
+  display: "swap",
+})
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-grotesk",
   display: "swap",
 })
 
@@ -72,7 +79,7 @@ export const metadata: Metadata = {
     title: "KEV PROJECT GTA | De $10 a un Mercedes-AMG Mansory",
     description:
       "El reto en vivo desde Bolivia: de $10 al Mansory, construyendo un imperio en público con PRIME (empleados de IA).",
-    creator: "@1kevlopez",
+    creator: "@kev.project.gta",
   },
   appleWebApp: {
     capable: true,
@@ -116,7 +123,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${manrope.variable} ${spaceGrotesk.variable} font-sans antialiased`}>
         <AuthProvider>
           <AppProvider>
             {children}
