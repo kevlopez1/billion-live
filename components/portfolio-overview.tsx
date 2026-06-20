@@ -124,7 +124,7 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <section className="relative overflow-hidden rounded-[var(--radius)] border border-border bg-card/50 backdrop-blur-xl px-6 py-10 md:px-10 md:py-14 lg:px-14">
+    <section className="relative overflow-hidden rounded-[var(--radius)] border border-border bg-card/50 backdrop-blur-xl px-5 py-7 md:px-10 md:py-12 lg:px-12">
       {/* Marca de agua gigante */}
       <span className="pointer-events-none select-none absolute -bottom-10 -left-3 font-display font-extrabold uppercase leading-none tracking-tighter text-foreground/[0.04] text-[32vw] md:text-[17rem] z-0">
         GTA
@@ -169,11 +169,11 @@ export function PortfolioOverview() {
 
         {/* Foto + widgets flotantes */}
         <div className="relative">
-          <div className="relative rounded-[2rem] overflow-hidden border border-border shadow-2xl aspect-square max-w-md mx-auto lg:mx-0">
+          <div className="relative rounded-[1.75rem] overflow-hidden border border-border shadow-xl aspect-square w-full max-w-[280px] mx-auto lg:mx-0">
             <img
               src="/images/kev.jpg"
               alt="Kev López"
-              className="w-full h-full object-cover object-[center_42%]"
+              className="w-full h-full object-cover object-[center_58%]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
             <span className="absolute bottom-3 left-4 font-display font-extrabold uppercase tracking-tighter text-white/90 text-2xl leading-none">
