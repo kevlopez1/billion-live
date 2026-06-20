@@ -11,15 +11,15 @@ export function ChallengeStatement() {
           El villano · 1.300 likes
         </div>
 
-        <blockquote className="text-2xl md:text-4xl font-light text-muted-foreground italic leading-snug max-w-2xl">
+        <blockquote className="font-serif-display italic text-3xl md:text-5xl text-muted-foreground leading-snug max-w-2xl">
           “me lo compró mi papá”
         </blockquote>
 
-        <h2 className="font-display font-extrabold uppercase tracking-tighter leading-[0.82] text-7xl md:text-9xl mt-8 text-accent-gradient">
+        <h2 className="font-display font-extrabold uppercase tracking-tighter leading-[0.82] text-8xl md:text-[11rem] mt-6 text-accent-gradient">
           No.
         </h2>
 
-        <p className="text-xl md:text-3xl font-semibold leading-snug mt-8 max-w-3xl text-balance">
+        <p className="text-xl md:text-3xl font-semibold leading-snug mt-6 max-w-3xl text-balance">
           Empecé desde <span className="text-accent-gradient">${CHALLENGE_START}</span>. Desde Bolivia. En cámara.
         </p>
         <p className="text-base md:text-lg text-muted-foreground font-light mt-4 max-w-2xl text-pretty">

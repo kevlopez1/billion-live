@@ -1,13 +1,14 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Manrope, Bricolage_Grotesque } from "next/font/google"
+import { Manrope, Bricolage_Grotesque, Instrument_Serif } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AppProvider } from "@/context/app-context"
 import { AuthProvider } from "@/context/auth-context"
 import { Toaster } from "sonner"
 import "./globals.css"
 
-// Cuerpo: Manrope. Display/títulos: Bricolage Grotesque (carácter editorial, pesado).
+// Mezcla de 3 tipografías (look único):
+// Manrope = cuerpo · Bricolage Grotesque = títulos display · Instrument Serif = acentos editoriales.
 const manrope = Manrope({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -19,6 +20,14 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
   weight: ["400", "600", "700", "800"],
   variable: "--font-grotesk",
+  display: "swap",
+})
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  variable: "--font-serif-display",
   display: "swap",
 })
 
@@ -204,7 +213,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${manrope.variable} ${bricolage.variable} font-sans antialiased`}>
+      <body className={`${manrope.variable} ${bricolage.variable} ${instrumentSerif.variable} font-sans antialiased`}>
         <AuthProvider>
           <AppProvider>
             {children}

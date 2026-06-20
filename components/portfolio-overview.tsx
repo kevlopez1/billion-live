@@ -86,19 +86,15 @@ export function PortfolioOverview() {
   useEffect(() => {
     if (!supabaseMetrics) return
 
-    // On initial load, set value directly without animation
-    if (isInitialLoad.current) {
-      setDisplayValue(supabaseMetrics.net_worth)
-      isInitialLoad.current = false
-      return
-    }
-
     // Don't animate if the value hasn't changed
     if (displayValue === supabaseMetrics.net_worth) return
 
-    const startValue = displayValue
+    // Odómetro: en la primera carga anima desde 0 (efecto dramático); luego desde el valor actual.
+    const initial = isInitialLoad.current
+    isInitialLoad.current = false
+    const startValue = initial ? 0 : displayValue
     const endValue = supabaseMetrics.net_worth
-    const duration = 800
+    const duration = initial ? 1600 : 800
     const startTime = performance.now()
 
     const animate = (currentTime: number) => {
@@ -141,21 +137,40 @@ export function PortfolioOverview() {
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/10 to-transparent" />
 
+      {/* Palabra gigante de fondo (sello editorial) */}
+      <span className="pointer-events-none select-none absolute -bottom-8 -right-3 font-display font-extrabold uppercase leading-none tracking-tighter text-white/[0.05] text-[34vw] md:text-[18rem] z-[1]">
+        GTA
+      </span>
+
       <div className="relative z-10 p-7 md:p-12">
-        {/* Eyebrow */}
-        <div className="flex items-center gap-2.5 mb-5 text-[11px] uppercase tracking-[0.24em] text-white/70">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#6b8cff] animate-pulse shadow-[0_0_10px_#6b8cff]" />
-          KEV PROJECT GTA · EN VIVO
+        {/* Eyebrow — español + inglés */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-7 text-[11px] uppercase tracking-[0.24em] text-white/70">
+          <span className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#6b8cff] animate-pulse shadow-[0_0_10px_#6b8cff]" />
+            Live
+          </span>
+          <span className="text-white/30">/</span>
+          <span>Building in public</span>
+          <span className="text-white/30">/</span>
+          <span>Santa Cruz · Bolivia</span>
         </div>
 
-        {/* Titular GIGANTE de póster, dos tonos */}
-        <h1 className="font-display font-extrabold uppercase tracking-tighter leading-[0.8] text-6xl sm:text-7xl md:text-[7rem]">
-          <span className="block text-white">De $10 al</span>
-          <span className="block text-accent-gradient">Mansory</span>
+        {/* Titular con MEZCLA de tipografías y tamaños (serif + display) */}
+        <h1 className="leading-[0.82]">
+          <span className="block font-serif-display italic text-white/85 text-3xl sm:text-4xl md:text-6xl">
+            De $10 al
+          </span>
+          <span className="block font-display font-extrabold uppercase tracking-tighter text-accent-gradient text-7xl sm:text-8xl md:text-[9.5rem] -mt-1">
+            Mansory
+          </span>
         </h1>
 
-        {/* Contador + progreso, sobre la foto */}
-        <div className="mt-9 flex flex-wrap items-end gap-x-12 gap-y-6">
+        <p className="font-serif-display italic text-white/55 text-lg md:text-2xl mt-6 max-w-md">
+          El auto es la carnada — el imperio es la meta.
+        </p>
+
+        {/* Contador odómetro + progreso */}
+        <div className="mt-10 flex flex-wrap items-end gap-x-12 gap-y-6">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-[10px] uppercase tracking-[0.18em] text-white/55">Contador · Revenue PRIME</span>
@@ -167,7 +182,7 @@ export function PortfolioOverview() {
               )}
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-5xl md:text-6xl font-semibold number-display text-white tracking-tighter leading-none">
+              <span className="text-6xl md:text-7xl font-extrabold number-display text-white tracking-tighter leading-none">
                 ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </span>
               <span className="text-xs text-white/50">USD</span>
@@ -188,7 +203,7 @@ export function PortfolioOverview() {
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-white/40">
               <Lock className="w-2.5 h-2.5" />
-              <span>Capa secreta · ${SECRET_TARGET.toLocaleString()}</span>
+              <span>Secret layer · ${SECRET_TARGET.toLocaleString()}</span>
             </div>
           </div>
         </div>
