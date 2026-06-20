@@ -129,8 +129,8 @@ export function PortfolioOverview() {
       <div className="absolute inset-0 lg:left-[38%]">
         <img
           src="/images/mansory.jpg"
-          alt="Mercedes-AMG S63 P950 por Mansory — el auto del reto"
-          className="w-full h-full object-cover object-[center_42%]"
+          alt="Mercedes-AMG GT 63 4-door por Mansory — el auto del reto"
+          className="w-full h-full object-cover object-center"
         />
         {/* Degradados para fundir la foto con el negro y dar legibilidad al texto */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-[#0a0a0a]/10 lg:bg-gradient-to-r lg:from-[#0a0a0a] lg:via-[#0a0a0a]/70 lg:to-transparent" />
