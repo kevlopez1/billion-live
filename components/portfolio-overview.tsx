@@ -185,33 +185,33 @@ export function PortfolioOverview() {
 
         {/* Foto + widgets flotantes */}
         <div className="relative">
-          <div className="relative rounded-[1.75rem] overflow-hidden border border-border shadow-xl aspect-square w-full max-w-[280px] mx-auto lg:mx-0">
+          <div className="relative rounded-[1.5rem] overflow-hidden border border-border shadow-xl aspect-square w-full max-w-[190px] sm:max-w-[220px] mx-auto lg:mx-0">
             <img
               src="/images/kev.jpg"
               alt="Kev López"
               className="w-full h-full object-cover object-[center_58%]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-            <span className="absolute bottom-3 left-4 font-display font-extrabold uppercase tracking-tighter text-white/90 text-2xl leading-none">
+            <span className="absolute bottom-2.5 left-3.5 font-display font-extrabold uppercase tracking-tighter text-white/90 text-xl leading-none">
               Kev López
             </span>
           </div>
 
           {/* Widget: progreso hacia el Mansory */}
-          <div className="absolute -left-3 sm:-left-6 top-6 glass-card px-4 py-3 shadow-xl">
-            <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.16em] text-muted-foreground mb-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" /> Progreso
+          <div className="absolute -left-2 sm:-left-5 top-5 glass-card px-3 py-2 shadow-xl">
+            <div className="flex items-center gap-1.5 text-[8px] uppercase tracking-[0.16em] text-muted-foreground mb-0.5">
+              <span className="w-1 h-1 rounded-full bg-kev-primary animate-pulse" /> Progreso
             </div>
-            <div className="text-2xl font-extrabold number-display text-accent-gradient leading-none">
+            <div className="text-lg font-extrabold number-display text-accent-gradient leading-none">
               {progress.toFixed(2)}%
             </div>
-            <div className="text-[9px] text-muted-foreground mt-0.5">al Mansory</div>
+            <div className="text-[8px] text-muted-foreground mt-0.5">al Mansory</div>
           </div>
 
           {/* Widget: ubicación en vivo */}
-          <div className="absolute -right-3 sm:-right-6 bottom-10 glass-card px-4 py-3 shadow-xl">
-            <div className="text-[9px] uppercase tracking-[0.16em] text-muted-foreground">En vivo</div>
-            <div className="text-sm font-semibold">Santa Cruz, BO</div>
+          <div className="absolute -right-2 sm:-right-5 bottom-8 glass-card px-3 py-2 shadow-xl">
+            <div className="text-[8px] uppercase tracking-[0.16em] text-muted-foreground">En vivo</div>
+            <div className="text-xs font-semibold">Santa Cruz, BO</div>
           </div>
         </div>
       </div>
