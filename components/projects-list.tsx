@@ -8,7 +8,7 @@ export function ProjectsList() {
   return (
     <div className="overflow-hidden">
       <div className="p-6 md:p-8 border-b border-border">
-        <h2 className="text-lg font-medium tracking-tight">El Ecosistema</h2>
+        <h2 className="text-2xl font-bold tracking-tight">El Ecosistema</h2>
         <p className="text-sm text-muted-foreground mt-1 font-light">Una máquina, cuatro funciones</p>
       </div>
 

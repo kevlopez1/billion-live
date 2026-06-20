@@ -26,7 +26,7 @@ export function LatestContent() {
     <div className="glass-card p-6 md:p-8">
       <div className="flex items-end justify-between mb-6">
         <div>
-          <h3 className="text-lg font-medium tracking-tight">Mirá el reto</h3>
+          <h3 className="text-2xl font-bold tracking-tight">Mirá el reto</h3>
           <p className="text-sm text-muted-foreground mt-1 font-light">El contenido que mueve la máquina</p>
         </div>
       </div>
