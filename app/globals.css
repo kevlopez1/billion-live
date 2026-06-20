@@ -6,33 +6,35 @@
 /* Complete light/dark mode with Kev Strategy brand colors */
 /* Light mode (default) */
 :root {
-  --background: oklch(0.98 0.002 240);
-  --foreground: oklch(0.15 0.02 160);
+  /* Light mode — neutral, monochrome (rarely used; app defaults to dark) */
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.14 0 0);
   --card: oklch(1 0 0 / 0.9);
-  --card-foreground: oklch(0.15 0.02 160);
-  --popover: oklch(0.99 0.002 240 / 0.98);
-  --popover-foreground: oklch(0.15 0.02 160);
-  --primary: oklch(0.38 0.08 160);
+  --card-foreground: oklch(0.14 0 0);
+  --popover: oklch(0.99 0 0 / 0.98);
+  --popover-foreground: oklch(0.14 0 0);
+  --primary: oklch(0.16 0 0);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.95 0.005 240);
-  --secondary-foreground: oklch(0.25 0.02 160);
-  --muted: oklch(0.92 0.005 240);
-  --muted-foreground: oklch(0.45 0.02 160);
-  --accent: oklch(0.42 0.1 160);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.22 0 0);
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.16 0 0);
   --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.88 0.01 160 / 0.3);
-  --input: oklch(0.95 0.005 240);
-  --ring: oklch(0.42 0.1 160);
-  --radius: 1rem;
+  --border: oklch(0 0 0 / 0.08);
+  --input: oklch(0 0 0 / 0.1);
+  --ring: oklch(0.16 0 0);
+  --radius: 1.25rem;
 
-  /* Kev Strategy brand colors - Light Mode */
-  --kev-primary: oklch(0.38 0.08 160); /* #3D5A4C forest green */
-  --kev-primary-light: oklch(0.48 0.1 158);
-  --kev-primary-dim: oklch(0.3 0.06 160);
-  --kev-success: oklch(0.5 0.12 145);
-  --kev-warning: oklch(0.65 0.15 85);
+  /* Accent system — platinum (monochrome luxury). Green is reserved for the
+     KEV Strategy sub-brand and the single 'live' pulse, not the shell. */
+  --kev-primary: oklch(0.2 0 0);
+  --kev-primary-light: oklch(0.32 0 0);
+  --kev-primary-dim: oklch(0.5 0 0);
+  --kev-success: oklch(0.55 0.11 150);
+  --kev-warning: oklch(0.7 0.12 85);
   --kev-danger: oklch(0.55 0.18 25);
 
   /* Neutral palette - Light */
@@ -47,46 +49,42 @@
   --neutral-800: oklch(0.18 0.005 240);
   --neutral-900: oklch(0.12 0.004 240);
 
-  /* Glass effect colors - Light */
-  --glass-bg: oklch(1 0 0 / 0.7);
-  --glass-border: oklch(0.38 0.08 160 / 0.15);
-  --glass-shadow: oklch(0.38 0.08 160 / 0.1);
-
-  /* Particle colors - Light */
-  --particle-color: oklch(0.4 0.1 160 / 0.4);
-  --particle-glow: oklch(0.38 0.08 160 / 0.3);
-  --orb-color: oklch(0.4 0.08 160 / 0.05);
+  /* Surface (card) colors - Light */
+  --glass-bg: oklch(1 0 0 / 0.8);
+  --glass-border: oklch(0 0 0 / 0.08);
+  --glass-shadow: oklch(0 0 0 / 0.08);
 }
 
 /* Dark mode */
 .dark {
-  --background: oklch(0.08 0.008 240);
-  --foreground: oklch(0.95 0.005 240);
-  --card: oklch(0.12 0.006 240 / 0.6);
-  --card-foreground: oklch(0.95 0.005 240);
-  --popover: oklch(0.1 0.006 240 / 0.95);
-  --popover-foreground: oklch(0.95 0.005 240);
-  --primary: oklch(0.45 0.12 160);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.16 0.005 240 / 0.5);
-  --secondary-foreground: oklch(0.95 0.005 240);
-  --muted: oklch(0.18 0.005 240);
-  --muted-foreground: oklch(0.6 0.01 240);
-  --accent: oklch(0.5 0.12 160);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.55 0.2 25);
+  /* Dark mode — OLED neutral, no hue tint. The luxury default. */
+  --background: oklch(0.04 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.135 0 0 / 0.55);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.1 0 0 / 0.96);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.12 0 0);
+  --secondary: oklch(0.18 0 0 / 0.6);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.62 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.12 0 0);
+  --destructive: oklch(0.6 0.16 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.28 0.01 240 / 0.4);
-  --input: oklch(0.16 0.005 240);
-  --ring: oklch(0.5 0.12 160);
+  --border: oklch(1 0 0 / 0.08);
+  --input: oklch(1 0 0 / 0.1);
+  --ring: oklch(0.97 0 0);
 
-  /* Kev Strategy brand colors - Dark Mode */
-  --kev-primary: oklch(0.45 0.1 160);
-  --kev-primary-light: oklch(0.55 0.12 158);
-  --kev-primary-dim: oklch(0.35 0.08 160);
-  --kev-success: oklch(0.6 0.15 145);
-  --kev-warning: oklch(0.7 0.15 85);
-  --kev-danger: oklch(0.6 0.18 25);
+  /* Accent system — platinum/white (monochrome luxury) */
+  --kev-primary: oklch(0.97 0 0);
+  --kev-primary-light: oklch(1 0 0);
+  --kev-primary-dim: oklch(0.7 0 0);
+  --kev-success: oklch(0.72 0.1 150);
+  --kev-warning: oklch(0.78 0.11 85);
+  --kev-danger: oklch(0.62 0.16 25);
 
   /* Neutral palette - Dark */
   --neutral-50: oklch(0.98 0.002 240);
@@ -100,15 +98,10 @@
   --neutral-800: oklch(0.18 0.005 240);
   --neutral-900: oklch(0.12 0.004 240);
 
-  /* Glass effect colors - Dark */
-  --glass-bg: oklch(0.14 0.008 240 / 0.7);
-  --glass-border: oklch(0.35 0.015 160 / 0.2);
-  --glass-shadow: oklch(0.45 0.1 160 / 0.15);
-
-  /* Particle colors - Dark */
-  --particle-color: oklch(0.5 0.12 160 / 0.5);
-  --particle-glow: oklch(0.45 0.1 160 / 0.8);
-  --orb-color: oklch(0.4 0.08 160 / 0.08);
+  /* Surface (card) colors - Dark */
+  --glass-bg: oklch(0.135 0 0 / 0.6);
+  --glass-border: oklch(1 0 0 / 0.08);
+  --glass-shadow: oklch(0 0 0 / 0.5);
 }
 
 @theme inline {
@@ -199,21 +192,17 @@
 
 /* Glass card uses CSS variables for theme support */
 .glass-card {
-  background: linear-gradient(135deg, var(--glass-bg) 0%, oklch(from var(--glass-bg) l c h / 0.5) 100%);
-  backdrop-filter: blur(40px) saturate(150%);
-  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  box-shadow: 0 0 0 1px oklch(from var(--glass-border) l c h / 0.1) inset, 0 20px 50px -20px oklch(0 0 0 / 0.2), 0 0
-    80px -30px var(--glass-shadow);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 0 0 oklch(1 0 0 / 0.04) inset, 0 24px 60px -32px var(--glass-shadow);
+  transition: border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  border-color: var(--kev-primary);
-  box-shadow: 0 0 0 1px oklch(from var(--glass-border) l c h / 0.15) inset, 0 25px 60px -20px oklch(0 0 0 / 0.3), 0 0
-    100px -20px var(--glass-shadow);
-  transform: translateY(-2px);
+  border-color: oklch(1 0 0 / 0.16);
 }
 
 /* Light mode specific glass adjustments */
@@ -432,8 +421,8 @@
 }
 
 .hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px -8px oklch(0 0 0 / 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 50px -28px oklch(0 0 0 / 0.5);
 }
 
 /* Skeleton loader animation */
@@ -584,23 +573,22 @@
   );
 }
 
-/* Glow effects */
+/* Glow effects — neutralized for the monochrome luxury system */
 .glow-green {
-  box-shadow: 0 0 30px oklch(from var(--kev-primary) l c h / 0.3);
+  box-shadow: none;
 }
 
 .glow-green-subtle {
-  box-shadow: 0 0 60px oklch(from var(--kev-primary) l c h / 0.15);
+  box-shadow: none;
 }
 
-/* Progress bar glow */
+/* Progress bar — soft platinum sheen, no heavy glow */
 .progress-glow {
-  box-shadow: 0 0 20px oklch(from var(--kev-primary) l c h / 0.5);
+  box-shadow: 0 0 12px oklch(1 0 0 / 0.12);
 }
 
-/* Light mode progress glow - more subtle */
 :root .progress-glow {
-  box-shadow: 0 0 15px oklch(from var(--kev-primary) l c h / 0.3);
+  box-shadow: none;
 }
 
 /* Added smooth page transitions */

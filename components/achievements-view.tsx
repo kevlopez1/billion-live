@@ -325,7 +325,7 @@ export function AchievementsView() {
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center">
               <span className="text-2xl font-bold text-white">{level}</span>
             </div>
             <div>

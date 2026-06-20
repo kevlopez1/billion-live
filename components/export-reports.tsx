@@ -319,7 +319,7 @@ ${JSON.stringify(reportData, null, 2)}`
                   onClick={() => setDateRange(range.id as typeof dateRange)}
                   className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors ${
                     dateRange === range.id
-                      ? "bg-kev-primary text-white"
+                      ? "bg-kev-primary text-background"
                       : "bg-secondary/50 text-muted-foreground hover:text-foreground"
                   }`}
                 >

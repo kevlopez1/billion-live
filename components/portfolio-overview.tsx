@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useApp, CHALLENGE_TARGET, SECRET_TARGET } from "@/context/app-context"
-import { TrendingUp, ArrowUpRight, Target, Lock } from "lucide-react"
+import { TrendingUp, Lock } from "lucide-react"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 
 export function PortfolioOverview() {
@@ -128,91 +128,68 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <div className="glass-card p-6">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+    <div className="glass-card p-6 md:p-10">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
         {/* Main value */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
-              Contador del Reto · Revenue PRIME
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Contador del reto · Revenue PRIME
             </span>
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-kev-success/15 border border-kev-success/20 rounded-full text-kev-success text-[10px] font-medium">
-              <TrendingUp className="w-3 h-3" />
-              {monthlyGrowth >= 0 ? "+" : ""}
-              {monthlyGrowth.toFixed(1)}%
-            </div>
+            {monthlyGrowth !== 0 && (
+              <span
+                className={`flex items-center gap-1 text-[11px] font-medium ${
+                  monthlyGrowth > 0 ? "text-kev-success" : "text-kev-danger"
+                }`}
+              >
+                <TrendingUp className="w-3 h-3" />
+                {monthlyGrowth > 0 ? "+" : ""}
+                {monthlyGrowth.toFixed(1)}%
+              </span>
+            )}
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-semibold tracking-tight number-display">
+          <div className="flex items-baseline gap-3">
+            <span className="text-5xl sm:text-6xl md:text-7xl font-light tracking-tighter number-display leading-none break-all">
               ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-sm text-muted-foreground">USD</span>
+            <span className="text-sm text-muted-foreground font-light">USD</span>
           </div>
-          <p className="text-xs text-muted-foreground">De $10 a un Mercedes-AMG GT 63 Mansory · desde Bolivia</p>
+          <p className="text-sm text-muted-foreground mt-5 font-light">
+            De $10 a un Mercedes-AMG GT&nbsp;63 Mansory — desde Bolivia.
+          </p>
         </div>
 
         {/* Progress to goal */}
-        <div className="flex-1 max-w-md">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Target className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Meta:</span>
-              <span className="font-medium">${targetValue.toLocaleString()}</span>
-              <span className="hidden sm:inline text-muted-foreground">· Mansory AMG GT</span>
-            </div>
-            <span className="text-sm font-medium text-kev-primary">{progress.toFixed(2)}%</span>
+        <div className="w-full lg:max-w-sm">
+          <div className="flex items-baseline justify-between mb-3">
+            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Meta · Mansory AMG GT
+            </span>
+            <span className="text-sm font-medium number-display">${targetValue.toLocaleString()}</span>
           </div>
-          <div className="h-2 bg-secondary/50 rounded-full overflow-hidden backdrop-blur-sm">
+          <div className="h-px w-full bg-border mb-3" />
+          <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-kev-primary to-kev-primary-light rounded-full transition-all duration-1000 progress-glow"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${Math.max(progress, 0.6)}%` }}
             />
           </div>
-          <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-            <span>$10</span>
-            <span>El auto es la carnada</span>
-            <span>$450K</span>
+          <div className="flex items-center justify-between mt-2.5 text-[11px] text-muted-foreground">
+            <span className="number-display">$10</span>
+            <span className="font-medium text-foreground/70 number-display">{progress.toFixed(2)}%</span>
+            <span className="number-display">$450K</span>
           </div>
 
           {/* Capa secreta: el imperio de largo plazo (mensaje de dos capas) */}
-          <div className="mt-4 pt-3 border-t border-border/40 opacity-70 hover:opacity-100 transition-opacity">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Lock className="w-3 h-3" />
-                <span className="uppercase tracking-wider">Capa secreta · El imperio</span>
+          <div className="mt-6 pt-5 border-t border-border opacity-50 hover:opacity-90 transition-opacity duration-500">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <Lock className="w-2.5 h-2.5" />
+                <span className="uppercase tracking-[0.18em]">Capa secreta · El imperio</span>
               </div>
-              <span className="text-[11px] font-medium text-muted-foreground number-display">
+              <span className="text-[10px] text-muted-foreground number-display">
                 ${SECRET_TARGET.toLocaleString()}
               </span>
-            </div>
-            <div className="h-1 bg-secondary/40 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-muted-foreground/40 rounded-full transition-all duration-1000"
-                style={{ width: `${Math.max(secretProgress, 0.4)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Quick stats - hidden on smaller screens for cleaner layout */}
-        <div className="hidden xl:flex gap-6 lg:gap-8">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1">Crecimiento mensual</p>
-            <div className="flex items-center gap-1">
-              <span className="text-xl font-semibold number-display">
-                +${Math.round((netWorth * monthlyGrowth) / 100).toLocaleString()}
-              </span>
-              <ArrowUpRight className="w-4 h-4 text-kev-success" />
-            </div>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1">Marcas activas</p>
-            <span className="text-xl font-semibold number-display">{activeProjects}</span>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1">Progreso al auto</p>
-            <div className="flex items-center gap-1">
-              <span className="text-xl font-semibold number-display text-kev-success">{progress.toFixed(2)}%</span>
             </div>
           </div>
         </div>

@@ -213,7 +213,7 @@ export function NotificationCenter({
                 <button
                   onClick={() => setFilter("all")}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    filter === "all" ? "bg-kev-primary text-white" : "text-muted-foreground hover:text-foreground"
+                    filter === "all" ? "bg-kev-primary text-background" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   All
@@ -221,7 +221,7 @@ export function NotificationCenter({
                 <button
                   onClick={() => setFilter("unread")}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    filter === "unread" ? "bg-kev-primary text-white" : "text-muted-foreground hover:text-foreground"
+                    filter === "unread" ? "bg-kev-primary text-background" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   Unread ({unreadCount})

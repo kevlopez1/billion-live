@@ -150,7 +150,7 @@ export function ProjectsView() {
           <div className="flex items-center glass-card p-1 rounded-lg">
             <button
               onClick={() => setViewMode("mindmap")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${viewMode === "mindmap" ? "bg-kev-primary text-white" : "text-muted-foreground hover:text-foreground"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${viewMode === "mindmap" ? "bg-kev-primary text-background" : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               <Network className="w-4 h-4" />
@@ -158,7 +158,7 @@ export function ProjectsView() {
             </button>
             <button
               onClick={() => setViewMode("grid")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${viewMode === "grid" ? "bg-kev-primary text-white" : "text-muted-foreground hover:text-foreground"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${viewMode === "grid" ? "bg-kev-primary text-background" : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               <LayoutGrid className="w-4 h-4" />
@@ -168,7 +168,7 @@ export function ProjectsView() {
           {isAdmin && (
             <button
               onClick={() => setShowAddDialog(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg transition-colors text-sm font-medium"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg transition-colors text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
               <span>{t.projects.addProject}</span>
@@ -422,7 +422,7 @@ export function ProjectsView() {
             <button
               onClick={handleAddProject}
               disabled={isSubmitting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               {isSubmitting ? "Adding..." : "Add Project"}

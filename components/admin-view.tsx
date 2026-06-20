@@ -307,7 +307,7 @@ export function AdminView() {
             <button
               onClick={handleSaveMetrics}
               disabled={isLoading}
-              className="flex items-center gap-2 px-6 py-3 bg-kev-primary hover:bg-kev-primary-light text-white rounded-xl transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 bg-kev-primary hover:bg-kev-primary-light text-background rounded-xl transition-colors disabled:opacity-50"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Changes
@@ -384,7 +384,7 @@ export function AdminView() {
               <button
                 onClick={handleSaveStatus}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-6 py-3 bg-kev-primary hover:bg-kev-primary-light text-white rounded-xl transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 bg-kev-primary hover:bg-kev-primary-light text-background rounded-xl transition-colors disabled:opacity-50"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Update Status
@@ -431,7 +431,7 @@ export function AdminView() {
                 <button
                   onClick={handleAddPulse}
                   disabled={isLoading}
-                  className="flex items-center gap-2 px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm transition-colors disabled:opacity-50"
                 >
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Post
@@ -536,7 +536,7 @@ export function AdminView() {
                 <button
                   onClick={handleAddProject}
                   disabled={isLoading}
-                  className="flex items-center gap-2 px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm transition-colors disabled:opacity-50"
                 >
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Add Project
@@ -638,7 +638,7 @@ export function AdminView() {
             <button
               onClick={handleSaveManifesto}
               disabled={isLoading}
-              className="flex items-center gap-2 px-6 py-3 bg-kev-primary hover:bg-kev-primary-light text-white rounded-xl transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 bg-kev-primary hover:bg-kev-primary-light text-background rounded-xl transition-colors disabled:opacity-50"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Manifesto
@@ -726,7 +726,7 @@ export function AdminView() {
                 <button
                   onClick={handleAddMilestone}
                   disabled={isLoading}
-                  className="flex items-center gap-2 px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm transition-colors disabled:opacity-50"
                 >
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Add Milestone

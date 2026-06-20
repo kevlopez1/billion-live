@@ -183,7 +183,7 @@ export function SettingsView() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-start gap-4 mb-6">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center">
+              <div className="w-16 h-16 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
                 <span className="text-xl font-semibold text-white">KS</span>
               </div>
               <div className="flex-1">
@@ -199,7 +199,7 @@ export function SettingsView() {
               <button
                 onClick={handleSaveProfile}
                 disabled={isSavingProfile}
-                className="px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Save
@@ -518,7 +518,7 @@ export function SettingsView() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="w-24 h-24 mx-auto rounded-xl bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center">
+            <div className="w-24 h-24 mx-auto rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
               <span className="text-3xl font-semibold text-white">KS</span>
             </div>
             <div className="border-2 border-dashed border-border/50 rounded-lg p-8 text-center hover:border-kev-primary/50 transition-colors cursor-pointer">
@@ -531,7 +531,7 @@ export function SettingsView() {
                 setShowAvatarDialog(false)
                 toast.success("Avatar feature coming soon!")
               }}
-              className="w-full py-2.5 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg text-sm font-medium transition-colors"
+              className="w-full py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors"
             >
               Upload Avatar
             </button>
@@ -606,7 +606,7 @@ export function SettingsView() {
             <button
               onClick={handleChangePassword}
               disabled={isLoading}
-              className="w-full py-2.5 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Change Password
@@ -755,7 +755,7 @@ export function SettingsView() {
                   setShowApiKeyDialog(false)
                 }}
                 disabled={isLoading}
-                className="flex-1 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 Regenerate
