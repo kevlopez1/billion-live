@@ -6,8 +6,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import {
   MapPin,
-  Twitter,
-  Linkedin,
+  Music2,
+  Instagram,
   Youtube,
   Globe,
   Target,
@@ -29,9 +29,9 @@ const profileData = {
   avatar: "/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg",
   coverGradient: "from-[#3D5A4C] via-[#2A7D4F] to-[#1E5A3A]",
   socials: {
-    twitter: "https://www.tiktok.com/@kev.project.gta",
-    linkedin: "https://www.instagram.com/1kevlopez",
-    youtube: "https://www.youtube.com/@1kevlopez",
+    tiktok: "https://www.tiktok.com/@kev.project.gta",
+    instagram: "https://www.instagram.com/kev_project_gta",
+    youtube: "https://www.youtube.com/@KevProjectGTA",
     website: "https://primebusiness.live",
   },
   stats: {
@@ -139,20 +139,20 @@ export default function PublicProfile() {
                 </span>
                 <div className="flex items-center gap-2">
                   <a
-                    href={profileData.socials.twitter}
+                    href={profileData.socials.tiktok}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
                   >
-                    <Twitter className="w-4 h-4" />
+                    <Music2 className="w-4 h-4" />
                   </a>
                   <a
-                    href={profileData.socials.linkedin}
+                    href={profileData.socials.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
                   >
-                    <Linkedin className="w-4 h-4" />
+                    <Instagram className="w-4 h-4" />
                   </a>
                   <a
                     href={profileData.socials.youtube}
@@ -337,8 +337,8 @@ export default function PublicProfile() {
             <Link href="/" className="text-sm text-white/40 hover:text-white transition-colors">
               Dashboard
             </Link>
-            <a href={profileData.socials.twitter} className="text-sm text-white/40 hover:text-white transition-colors">
-              Twitter
+            <a href={profileData.socials.tiktok} className="text-sm text-white/40 hover:text-white transition-colors">
+              TikTok
             </a>
             <a href={profileData.socials.youtube} className="text-sm text-white/40 hover:text-white transition-colors">
               YouTube
