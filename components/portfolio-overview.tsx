@@ -149,7 +149,7 @@ export function PortfolioOverview() {
         </div>
 
         {/* Titular GIGANTE de póster, dos tonos */}
-        <h1 className="font-display font-bold uppercase tracking-tighter leading-[0.82] text-5xl sm:text-7xl md:text-8xl">
+        <h1 className="font-display font-extrabold uppercase tracking-tighter leading-[0.8] text-6xl sm:text-7xl md:text-[7rem]">
           <span className="block text-white">De $10 al</span>
           <span className="block text-accent-gradient">Mansory</span>
         </h1>

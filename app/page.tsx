@@ -18,6 +18,7 @@ import { ManifestoView } from "@/components/manifesto-view"
 import { JourneyView } from "@/components/journey-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
 import { LatestContent } from "@/components/latest-content"
+import { ChallengeStatement } from "@/components/challenge-statement"
 import { CommunityWall } from "@/components/community-wall"
 import { AdminView } from "@/components/admin-view"
 import { GoalsView } from "@/components/goals-view"
@@ -182,33 +183,15 @@ export default function Dashboard() {
     switch (activeView) {
       case "dashboard":
         return (
-          <div className="view-transition stagger-children space-y-8">
-            <div className="flex items-end justify-between">
-              <div>
-                <h1 className="text-4xl md:text-5xl font-semibold text-foreground tracking-tighter text-balance">
-                  {t.dashboard.title}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-2 max-w-md text-pretty font-light">
-                  {t.dashboard.subtitle}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-kev-success animate-pulse" />
-                <span>{t.dashboard.liveData}</span>
-              </div>
-            </div>
-
+          <div className="view-transition stagger-children space-y-6 md:space-y-8">
             <PortfolioOverview />
+            <ChallengeStatement />
             <MetricsGrid />
-
-            <div className="glass-card hover-lift">
+            <div className="glass-card hover-lift overflow-hidden">
               <ProjectsList />
             </div>
-
-            <SocialPowerGrid />
-
             <LatestContent />
-
+            <SocialPowerGrid />
             <CommunityWall />
           </div>
         )
@@ -282,24 +265,14 @@ export default function Dashboard() {
       case "dashboard":
         return (
           <div className="view-transition stagger-children space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-semibold text-foreground tracking-tight">{t.dashboard.title}</h1>
-                <p className="text-xs text-muted-foreground mt-1 text-pretty">{t.dashboard.subtitle}</p>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-kev-success animate-pulse" />
-                <span>Live</span>
-              </div>
-            </div>
-
             <PortfolioOverview />
+            <ChallengeStatement />
             <MetricsGrid />
-            <div className="glass-card">
+            <div className="glass-card overflow-hidden">
               <ProjectsList />
             </div>
-            <SocialPowerGrid />
             <LatestContent />
+            <SocialPowerGrid />
             <CommunityWall />
           </div>
         )
