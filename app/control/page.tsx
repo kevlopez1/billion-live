@@ -59,7 +59,7 @@ export default function ControlPage() {
           value={secret}
           onChange={(e) => setSecret(e.target.value)}
           placeholder="ADMIN_SECRET"
-          className="w-full mb-4 px-4 py-2.5 bg-white/[0.04] border border-border rounded-lg text-sm outline-none focus:border-white/30 transition-colors"
+          className="w-full mb-4 px-4 py-2.5 bg-foreground/[0.04] border border-border rounded-lg text-sm outline-none focus:border-foreground/30 transition-colors"
         />
 
         <label className="text-[11px] uppercase tracking-wider text-muted-foreground block mb-1.5">
@@ -70,7 +70,7 @@ export default function ControlPage() {
           value={netWorth}
           onChange={(e) => setNetWorth(e.target.value)}
           placeholder="ej. 250"
-          className="w-full mb-4 px-4 py-2.5 bg-white/[0.04] border border-border rounded-lg text-sm number-display outline-none focus:border-white/30 transition-colors"
+          className="w-full mb-4 px-4 py-2.5 bg-foreground/[0.04] border border-border rounded-lg text-sm number-display outline-none focus:border-foreground/30 transition-colors"
         />
 
         <label className="text-[11px] uppercase tracking-wider text-muted-foreground block mb-1.5">
@@ -81,7 +81,7 @@ export default function ControlPage() {
           value={growth}
           onChange={(e) => setGrowth(e.target.value)}
           placeholder="ej. 12.5"
-          className="w-full mb-6 px-4 py-2.5 bg-white/[0.04] border border-border rounded-lg text-sm number-display outline-none focus:border-white/30 transition-colors"
+          className="w-full mb-6 px-4 py-2.5 bg-foreground/[0.04] border border-border rounded-lg text-sm number-display outline-none focus:border-foreground/30 transition-colors"
         />
 
         <button

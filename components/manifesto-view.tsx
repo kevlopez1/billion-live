@@ -110,7 +110,7 @@ export function ManifestoView() {
         <p className="text-sm text-muted-foreground font-light mb-5">El método con el que voy a construir todo</p>
         <div className="glass-card divide-y divide-border overflow-hidden">
           {strategyMethod.map((s, i) => (
-            <div key={i} className="flex items-center gap-5 md:gap-8 px-6 md:px-8 py-5 group hover:bg-white/[0.02] transition-colors">
+            <div key={i} className="flex items-center gap-5 md:gap-8 px-6 md:px-8 py-5 group hover:bg-foreground/[0.03] transition-colors">
               <span className="text-3xl md:text-4xl font-light number-display text-muted-foreground/50 w-8 shrink-0 text-center group-hover:text-foreground transition-colors">
                 {s.letter}
               </span>

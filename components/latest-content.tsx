@@ -38,11 +38,11 @@ export function LatestContent() {
             href={c.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative overflow-hidden rounded-2xl border border-border hover:border-white/[0.16] transition-colors"
+            className="group relative overflow-hidden rounded-2xl border border-border hover:border-foreground/20 transition-colors"
           >
             {/* Placeholder cinematográfico (hasta incrustar el video real) */}
-            <div className="aspect-video flex items-center justify-center bg-gradient-to-br from-white/[0.06] to-transparent">
-              <div className="w-14 h-14 rounded-full bg-white/10 border border-white/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="aspect-video flex items-center justify-center bg-gradient-to-br from-foreground/[0.06] to-transparent">
+              <div className="w-14 h-14 rounded-full bg-foreground/[0.06] border border-border flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Play className="w-5 h-5 text-foreground ml-0.5" fill="currentColor" />
               </div>
             </div>

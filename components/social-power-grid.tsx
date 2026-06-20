@@ -61,7 +61,7 @@ export function SocialPowerGrid() {
             href={platform.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group p-5 rounded-2xl border border-border transition-colors hover:border-white/[0.16] hover:bg-white/[0.02]"
+            className="group p-5 rounded-2xl border border-border transition-colors hover:border-foreground/20 hover:bg-foreground/[0.03]"
           >
             <div className="flex items-center justify-between mb-6 text-muted-foreground">
               <div className="flex items-center gap-2">

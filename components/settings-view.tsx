@@ -183,8 +183,8 @@ export function SettingsView() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-start gap-4 mb-6">
-              <div className="w-16 h-16 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
-                <span className="text-xl font-semibold text-white">KS</span>
+              <div className="w-16 h-16 rounded-xl bg-foreground/[0.06] border border-border flex items-center justify-center">
+                <span className="text-xl font-semibold text-foreground">KS</span>
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold">{profile.name}</h3>
@@ -518,8 +518,8 @@ export function SettingsView() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="w-24 h-24 mx-auto rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
-              <span className="text-3xl font-semibold text-white">KS</span>
+            <div className="w-24 h-24 mx-auto rounded-xl bg-foreground/[0.06] border border-border flex items-center justify-center">
+              <span className="text-3xl font-semibold text-foreground">KS</span>
             </div>
             <div className="border-2 border-dashed border-border/50 rounded-lg p-8 text-center hover:border-kev-primary/50 transition-colors cursor-pointer">
               <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
@@ -711,7 +711,7 @@ export function SettingsView() {
             <button
               onClick={handleRevokeAllSessions}
               disabled={isLoading}
-              className="w-full py-2.5 bg-kev-danger hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-kev-danger hover:bg-red-600 text-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               Revoke All Other Sessions
@@ -806,7 +806,7 @@ export function SettingsView() {
               <button
                 onClick={handleDeleteAccount}
                 disabled={isLoading || deleteConfirmText !== "DELETE"}
-                className="flex-1 py-2.5 bg-kev-danger hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-kev-danger hover:bg-red-600 text-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Delete Account

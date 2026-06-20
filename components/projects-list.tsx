@@ -18,7 +18,7 @@ export function ProjectsList() {
           return (
             <div
               key={project.id}
-              className="group flex items-center gap-4 md:gap-6 px-6 md:px-8 py-5 transition-colors hover:bg-white/[0.02]"
+              className="group flex items-center gap-4 md:gap-6 px-6 md:px-8 py-5 transition-colors hover:bg-foreground/[0.03]"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2.5">
@@ -37,7 +37,7 @@ export function ProjectsList() {
                   <span className="uppercase tracking-wider">Peso</span>
                   <span className="number-display">{project.allocation}%</span>
                 </div>
-                <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                <div className="h-1 bg-foreground/[0.06] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-foreground/30 rounded-full transition-all duration-700"
                     style={{ width: `${project.allocation}%` }}

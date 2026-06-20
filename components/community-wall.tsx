@@ -131,8 +131,8 @@ export function CommunityWall() {
             className="p-4 rounded-xl bg-secondary/30 border border-border/50 hover:border-kev-primary/30 transition-all"
           >
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
-                <span className="text-[10px] font-medium text-white">{msg.avatar}</span>
+              <div className="w-9 h-9 rounded-full bg-foreground/[0.06] border border-border flex items-center justify-center shrink-0">
+                <span className="text-[10px] font-medium text-foreground">{msg.avatar}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1 gap-2">

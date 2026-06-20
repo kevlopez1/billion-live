@@ -325,8 +325,8 @@ export function AchievementsView() {
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">{level}</span>
+            <div className="w-16 h-16 rounded-2xl bg-foreground/[0.06] border border-border flex items-center justify-center">
+              <span className="text-2xl font-bold text-foreground">{level}</span>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">{t.achievements.level}</div>
@@ -350,7 +350,7 @@ export function AchievementsView() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-              <Flame className="w-7 h-7 text-white" />
+              <Flame className="w-7 h-7 text-foreground" />
             </div>
             <div>
               <div className="text-sm text-muted-foreground">{t.achievements.currentStreak}</div>
