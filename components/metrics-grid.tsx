@@ -54,7 +54,13 @@ export function MetricsGrid() {
             <metric.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span className="text-[10px] uppercase tracking-[0.16em]">{metric.label}</span>
           </div>
-          <p className="text-3xl md:text-4xl font-light tracking-tight number-display text-foreground">
+          <p
+            className={`text-3xl md:text-4xl tracking-tight number-display ${
+              metric.label === "Revenue PRIME"
+                ? "text-accent-gradient font-medium"
+                : "text-foreground font-light"
+            }`}
+          >
             {metric.value}
           </p>
           <p className="text-[11px] text-muted-foreground mt-2 font-light truncate">{metric.period}</p>

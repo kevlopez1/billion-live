@@ -189,7 +189,7 @@ export function CommunityWall() {
             <button
               onClick={handleSubmitMessage}
               disabled={isSubmitting || !newMessage.trim() || !userName.trim()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 btn-accent rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               {isSubmitting ? "Publicando..." : "Publicar Mensaje"}

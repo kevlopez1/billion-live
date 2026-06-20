@@ -216,7 +216,7 @@ export function ProjectDetailView({ project, open, onClose }: ProjectDetailViewP
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors capitalize ${
-                activeTab === tab ? "bg-kev-primary text-background" : "text-muted-foreground hover:text-foreground"
+                activeTab === tab ? "btn-accent" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab}

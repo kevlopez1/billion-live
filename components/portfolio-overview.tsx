@@ -128,8 +128,9 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <div className="glass-card p-6 md:p-10 relative overflow-hidden">
-      <div className="accent-glow -left-20 top-1/2 -translate-y-1/2" />
+    <div className="accent-surface rounded-[var(--radius)] p-7 md:p-12 relative overflow-hidden">
+      <div className="accent-glow -left-24 -top-24" />
+      <div className="accent-glow accent-glow-violet -right-24 -bottom-28" />
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 relative z-10">
         {/* Main value */}
         <div>
@@ -150,7 +151,7 @@ export function PortfolioOverview() {
             )}
           </div>
           <div className="flex items-baseline gap-3">
-            <span className="text-6xl sm:text-7xl md:text-8xl font-medium tracking-tighter number-display leading-none break-all text-accent-gradient">
+            <span className="text-7xl sm:text-8xl md:text-9xl font-semibold tracking-tighter number-display leading-[0.9] break-all text-accent-gradient">
               ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </span>
             <span className="text-sm text-muted-foreground font-light">USD</span>

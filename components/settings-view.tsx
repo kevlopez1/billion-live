@@ -199,7 +199,7 @@ export function SettingsView() {
               <button
                 onClick={handleSaveProfile}
                 disabled={isSavingProfile}
-                className="px-4 py-2 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 btn-accent rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Save
@@ -531,7 +531,7 @@ export function SettingsView() {
                 setShowAvatarDialog(false)
                 toast.success("Avatar feature coming soon!")
               }}
-              className="w-full py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors"
+              className="w-full py-2.5 btn-accent rounded-lg text-sm font-medium transition-colors"
             >
               Upload Avatar
             </button>
@@ -606,7 +606,7 @@ export function SettingsView() {
             <button
               onClick={handleChangePassword}
               disabled={isLoading}
-              className="w-full py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2.5 btn-accent rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Change Password
@@ -755,7 +755,7 @@ export function SettingsView() {
                   setShowApiKeyDialog(false)
                 }}
                 disabled={isLoading}
-                className="flex-1 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 btn-accent rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 Regenerate

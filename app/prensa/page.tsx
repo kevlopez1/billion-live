@@ -113,7 +113,7 @@ export default function PrensaPage() {
             </p>
             <a
               href="mailto:kev@primebusiness.live?subject=Prensa%20KEV%20PROJECT%20GTA"
-              className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 btn-accent rounded-lg text-sm font-medium transition-colors"
             >
               <Mail className="w-4 h-4" />
               Solicitar press kit

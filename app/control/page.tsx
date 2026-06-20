@@ -87,7 +87,7 @@ export default function ControlPage() {
         <button
           onClick={submit}
           disabled={status === "loading"}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 btn-accent rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
         >
           {status === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           Guardar
