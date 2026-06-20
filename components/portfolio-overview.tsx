@@ -134,9 +134,12 @@ export function PortfolioOverview() {
       <div className="relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center">
         {/* Texto */}
         <div>
-          <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-muted-foreground mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" />
-            El reto · Building in public
+          <div className="inline-flex items-center gap-2 rounded-full border border-kev-primary/25 bg-kev-primary/5 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-foreground/80 mb-6">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-kev-primary opacity-60 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-kev-primary" />
+            </span>
+            En vivo · El reto
           </div>
 
           {/* Titular: mezcla de tipografías */}
@@ -148,6 +151,19 @@ export function PortfolioOverview() {
               Mansory
             </span>
           </h1>
+
+          {/* Contador en vivo — el corazón del reto */}
+          <div className="mt-7">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-1">
+              Recaudado por PRIME · en tiempo real
+            </div>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="number-display font-extrabold text-accent-gradient text-5xl sm:text-6xl leading-none tabular-nums">
+                ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-muted-foreground text-sm number-display">/ $450K</span>
+            </div>
+          </div>
 
           <p className="font-serif-display italic text-muted-foreground text-lg md:text-xl mt-5 max-w-md">
             El auto es la carnada — el imperio es la meta.
@@ -181,14 +197,15 @@ export function PortfolioOverview() {
             </span>
           </div>
 
-          {/* Widget: contador (odómetro) */}
+          {/* Widget: progreso hacia el Mansory */}
           <div className="absolute -left-3 sm:-left-6 top-6 glass-card px-4 py-3 shadow-xl">
             <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.16em] text-muted-foreground mb-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" /> Contador · PRIME
+              <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" /> Progreso
             </div>
             <div className="text-2xl font-extrabold number-display text-accent-gradient leading-none">
-              ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              {progress.toFixed(2)}%
             </div>
+            <div className="text-[9px] text-muted-foreground mt-0.5">al Mansory</div>
           </div>
 
           {/* Widget: ubicación en vivo */}

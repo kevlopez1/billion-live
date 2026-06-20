@@ -14,6 +14,7 @@ import { SocialPowerGrid } from "@/components/social-power-grid"
 import { LatestContent } from "@/components/latest-content"
 import { ChallengeStatement } from "@/components/challenge-statement"
 import { QuickActions } from "@/components/quick-actions"
+import { EarlyWall } from "@/components/early-wall"
 import { IntroSplash } from "@/components/intro-splash"
 import { LayoutDashboard, Activity, BookOpen } from "lucide-react"
 
@@ -37,6 +38,7 @@ export default function Dashboard() {
             <PortfolioOverview />
             <QuickActions />
             <ChallengeStatement />
+            <EarlyWall />
             <MetricsGrid />
             <div className="glass-card overflow-hidden">
               <ProjectsList />
