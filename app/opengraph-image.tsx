@@ -36,7 +36,7 @@ export default function Image() {
         >
           <div style={{ display: "flex" }}>KEV PROJECT GTA</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 9999, background: "#46d39a" }} />
+            <div style={{ width: 10, height: 10, borderRadius: 9999, background: "#5b7cff" }} />
             EN VIVO
           </div>
         </div>
