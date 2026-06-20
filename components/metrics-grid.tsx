@@ -1,46 +1,48 @@
 "use client"
 
-import { useApp } from "@/context/app-context"
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Briefcase } from "lucide-react"
+import { useApp, CHALLENGE_TARGET } from "@/context/app-context"
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Briefcase, Car } from "lucide-react"
 
 export function MetricsGrid() {
-  const { metrics, projects } = useApp()
+  const { metrics } = useApp()
 
-  const totalValue = projects.reduce((sum, p) => sum + p.value, 0)
-  const avgROI = projects.reduce((sum, p) => sum + p.change, 0) / projects.length
+  // Revenue real de PRIME = el contador del reto.
+  const revenue = metrics.netWorth
+  // Progreso hacia el Mercedes-AMG Mansory.
+  const progress = Math.min(Math.max((revenue / CHALLENGE_TARGET) * 100, 0), 100)
 
   const dynamicMetrics = [
     {
-      label: "Revenue",
-      value: `$${(totalValue / 1_000_000).toFixed(1)}M`,
-      change: `+${metrics.monthlyGrowth}%`,
-      trend: "up" as const,
-      period: "vs last month",
+      label: "Revenue PRIME",
+      value: `$${revenue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
+      change: `${metrics.monthlyGrowth >= 0 ? "+" : ""}${metrics.monthlyGrowth}%`,
+      trend: metrics.monthlyGrowth >= 0 ? ("up" as const) : ("down" as const),
+      period: "vs mes anterior",
       icon: DollarSign,
     },
     {
-      label: "Active Projects",
+      label: "Marcas activas",
       value: metrics.activeProjects.toString(),
-      change: "+2",
+      change: "PRIME · KEV · IU · @Kev",
       trend: "up" as const,
-      period: "this quarter",
+      period: "el ecosistema",
       icon: Briefcase,
     },
     {
-      label: "Avg ROI",
-      value: `${avgROI.toFixed(1)}%`,
-      change: `+${(avgROI * 0.15).toFixed(1)}%`,
-      trend: avgROI > 0 ? ("up" as const) : ("down" as const),
-      period: "vs last month",
-      icon: BarChart3,
+      label: "Progreso al auto",
+      value: `${progress.toFixed(2)}%`,
+      change: "Mansory AMG GT",
+      trend: "up" as const,
+      period: "meta $450K",
+      icon: Car,
     },
     {
-      label: "YTD Return",
-      value: `${metrics.ytdReturn}%`,
-      change: `+${(metrics.ytdReturn * 0.1).toFixed(1)}%`,
-      trend: metrics.ytdReturn > 0 ? ("up" as const) : ("down" as const),
-      period: "vs last year",
-      icon: TrendingUp,
+      label: "ROI PRIME",
+      value: `${(metrics.roi || 0).toFixed(1)}%`,
+      change: `${(metrics.roi || 0) >= 0 ? "+" : ""}${(metrics.roi || 0).toFixed(1)}%`,
+      trend: (metrics.roi || 0) >= 0 ? ("up" as const) : ("down" as const),
+      period: "moat = datos + nicho",
+      icon: BarChart3,
     },
   ]
 

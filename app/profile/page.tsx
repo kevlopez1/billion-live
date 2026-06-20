@@ -22,43 +22,43 @@ import { toast } from "sonner"
 
 // Public profile data (would come from API in production)
 const profileData = {
-  name: "Kevin Strategy",
-  tagline: "Building to $1 Billion in Public",
-  bio: "Serial entrepreneur, investor, and strategist. Documenting the journey from $0 to $1B with radical transparency. Focused on asymmetric bets, scalable systems, and legacy over ego.",
-  location: "Dubai, UAE",
+  name: "Kev López",
+  tagline: "De $10 a un Mercedes-AMG Mansory — en público, desde Bolivia",
+  bio: "Benjamín Kevin López Mamani, 21, Santa Cruz. Fundador de PRIME (empleados de IA para empresas). El reto: de $10 a un Mercedes-AMG GT 63 Mansory, con el contador alimentado por el revenue real de PRIME. El auto es la carnada; el imperio es la meta. Sin filtro, sin papá.",
+  location: "Santa Cruz de la Sierra, Bolivia",
   avatar: "/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg",
   coverGradient: "from-[#3D5A4C] via-[#2A7D4F] to-[#1E5A3A]",
   socials: {
-    twitter: "https://twitter.com/kevstrategy",
-    linkedin: "https://linkedin.com/in/kevstrategy",
-    youtube: "https://youtube.com/@kevstrategy",
-    website: "https://kevstrategy.com",
+    twitter: "https://www.tiktok.com/@kev.project.gta",
+    linkedin: "https://www.instagram.com/1kevlopez",
+    youtube: "https://www.youtube.com/@1kevlopez",
+    website: "https://primebusiness.live",
   },
   stats: {
-    netWorth: 225_234_891,
-    target: 1_000_000_000,
-    monthlyGrowth: 12.4,
-    projectsCount: 7,
-    yearsActive: 9,
+    netWorth: 10,
+    target: 450_000,
+    monthlyGrowth: 0,
+    projectsCount: 4,
+    yearsActive: 1,
   },
   milestones: [
-    { year: "2015", title: "Started Journey", amount: "$2,500" },
-    { year: "2018", title: "First Million", amount: "$1.2M" },
-    { year: "2020", title: "Pandemic Pivot", amount: "$24M" },
-    { year: "2024", title: "Current Chapter", amount: "$225M" },
+    { year: "2024", title: "Nace PRIME", amount: "PRIME v1" },
+    { year: "2025", title: "El comentario de los 1.300 likes", amount: "Pausa" },
+    { year: "2026", title: "El Relanzamiento · Día 1", amount: "$10" },
+    { year: "Meta", title: "Mercedes-AMG GT 63 Mansory", amount: "$450K" },
   ],
   featuredProjects: [
-    { name: "Apex Ventures", type: "Venture Capital", value: "$42.8M", change: "+18.2%" },
-    { name: "Neural Labs", type: "AI/ML Startup", value: "$8.2M", change: "+24.5%" },
-    { name: "Titan Real Estate", type: "Real Estate", value: "$156M", change: "+2.1%" },
+    { name: "PRIME", type: "Empleados de IA · El motor de dinero", value: "MRR", change: "Moat: datos + nicho" },
+    { name: "KEV Strategy", type: "Inmobiliaria · Reputación", value: "Activos", change: "Largo plazo" },
+    { name: "Insightful University", type: "Educación · Masificación", value: "Comunidad", change: "Atención → alumnos" },
   ],
   principles: [
-    { title: "Asymmetric Risk", desc: "Invest where loss is limited but gains are unlimited" },
-    { title: "Radical Scalability", desc: "Build businesses that work without trading time for money" },
-    { title: "Legacy Over Ego", desc: "Build for the next decades, not the next month" },
+    { title: "Apalancamiento de la Atención", desc: "El auto cuesta $450K una vez; la atención se convierte en 10x/100x/1000x" },
+    { title: "Consistencia sobre Talento", desc: "Mi mayor riesgo es abandonar. Todo está diseñado para no fallar en consistencia" },
+    { title: "Autenticidad desde la Crisis", desc: "Misión real desde Bolivia, no flex. Cada hito = una Beca PRIME" },
   ],
   quote:
-    "The goal isn't to be a billionaire. The goal is to become the kind of person capable of building a billion-dollar empire.",
+    "No me lo compró mi papá. Empecé desde $10, desde Bolivia, en cámara. El auto es la carnada — el imperio es la meta.",
 }
 
 export default function PublicProfile() {
@@ -70,7 +70,7 @@ export default function PublicProfile() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${profileData.name} - The Billion Live`,
+          title: `${profileData.name} - KEV PROJECT GTA`,
           text: profileData.tagline,
           url,
         })
@@ -80,7 +80,7 @@ export default function PublicProfile() {
     } else {
       await navigator.clipboard.writeText(url)
       setCopied(true)
-      toast.success("Profile link copied!")
+      toast.success("¡Link del perfil copiado!")
       setTimeout(() => setCopied(false), 2000)
     }
   }
@@ -96,7 +96,7 @@ export default function PublicProfile() {
         <nav className="relative z-10 flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
           <Link href="/" className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
             <ChevronRight className="w-4 h-4 rotate-180" />
-            <span className="text-sm">Back to Dashboard</span>
+            <span className="text-sm">Volver al Centro de Mando</span>
           </Link>
           <div className="flex items-center gap-3">
             <Button
@@ -106,7 +106,7 @@ export default function PublicProfile() {
               className="bg-white/10 border-white/20 text-white hover:bg-white/20"
             >
               <Share2 className="w-4 h-4 mr-2" />
-              {copied ? "Copied!" : "Share"}
+              {copied ? "¡Copiado!" : "Compartir"}
             </Button>
           </div>
         </nav>
@@ -183,19 +183,19 @@ export default function PublicProfile() {
         <div className="bg-[#111] border border-white/10 rounded-2xl p-6 md:p-8 mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
             <div>
-              <p className="text-white/50 text-sm mb-1">Current Net Worth</p>
+              <p className="text-white/50 text-sm mb-1">Contador · Revenue PRIME</p>
               <div className="text-4xl md:text-5xl font-bold text-emerald-400">
-                ${(profileData.stats.netWorth / 1_000_000).toFixed(1)}M
+                ${profileData.stats.netWorth.toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </div>
             </div>
             <div className="text-right">
-              <p className="text-white/50 text-sm mb-1">Target</p>
-              <div className="text-2xl font-semibold text-white/80">$1 Billion</div>
+              <p className="text-white/50 text-sm mb-1">Meta</p>
+              <div className="text-2xl font-semibold text-white/80">$450K · Mansory</div>
             </div>
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-white/50">Progress to Goal</span>
+              <span className="text-white/50">Progreso a la meta</span>
               <span className="text-emerald-400 font-medium">{progressPercent.toFixed(2)}%</span>
             </div>
             <div className="h-3 bg-white/10 rounded-full overflow-hidden">
@@ -207,20 +207,20 @@ export default function PublicProfile() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10">
             <div>
-              <p className="text-white/50 text-xs mb-1">Monthly Growth</p>
+              <p className="text-white/50 text-xs mb-1">Crecimiento mensual</p>
               <p className="text-lg font-semibold text-emerald-400">+{profileData.stats.monthlyGrowth}%</p>
             </div>
             <div>
-              <p className="text-white/50 text-xs mb-1">Active Projects</p>
+              <p className="text-white/50 text-xs mb-1">Marcas activas</p>
               <p className="text-lg font-semibold">{profileData.stats.projectsCount}</p>
             </div>
             <div>
-              <p className="text-white/50 text-xs mb-1">Years Active</p>
+              <p className="text-white/50 text-xs mb-1">Años del reto</p>
               <p className="text-lg font-semibold">{profileData.stats.yearsActive}</p>
             </div>
             <div>
-              <p className="text-white/50 text-xs mb-1">Started With</p>
-              <p className="text-lg font-semibold">$2,500</p>
+              <p className="text-white/50 text-xs mb-1">Empezó con</p>
+              <p className="text-lg font-semibold">$10</p>
             </div>
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function PublicProfile() {
             <div className="bg-[#111] border border-white/10 rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-emerald-400" />
-                The Journey
+                El Camino
               </h2>
               <div className="relative">
                 <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-white/10" />
@@ -267,7 +267,7 @@ export default function PublicProfile() {
             <div className="bg-[#111] border border-white/10 rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-emerald-400" />
-                Featured Projects
+                El Ecosistema
               </h2>
               <div className="space-y-4">
                 {profileData.featuredProjects.map((project, i) => (
@@ -295,7 +295,7 @@ export default function PublicProfile() {
             <div className="bg-[#111] border border-white/10 rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                 <Target className="w-5 h-5 text-emerald-400" />
-                Philosophy
+                Filosofía
               </h2>
               <div className="space-y-4">
                 {profileData.principles.map((principle, i) => (
@@ -318,11 +318,11 @@ export default function PublicProfile() {
 
             {/* CTA */}
             <div className="bg-[#111] border border-white/10 rounded-2xl p-6 text-center">
-              <h3 className="font-semibold mb-2">Follow the Journey</h3>
-              <p className="text-sm text-white/50 mb-4">Get weekly updates on progress and insights</p>
+              <h3 className="font-semibold mb-2">Seguí el reto</h3>
+              <p className="text-sm text-white/50 mb-4">Actualizaciones del camino de $10 al Mansory</p>
               <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white">
                 <Mail className="w-4 h-4 mr-2" />
-                Subscribe to Updates
+                Seguir el reto
               </Button>
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function PublicProfile() {
       {/* Footer */}
       <footer className="border-t border-white/10 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-white/40">2024 Kev Strategy. The Billion Live.</p>
+          <p className="text-sm text-white/40">2026 KEV PROJECT GTA · PRIME. Hecho en Bolivia.</p>
           <div className="flex items-center gap-4">
             <Link href="/" className="text-sm text-white/40 hover:text-white transition-colors">
               Dashboard

@@ -134,18 +134,18 @@ export function AnalyticsView() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="p-4 bg-kev-success/10 border border-kev-success/20 rounded-xl">
             <div className="text-sm text-kev-success font-medium mb-1">{t.analytics.bestMonth}</div>
-            <div className="text-lg font-semibold">Quantum Trading</div>
-            <div className="text-sm text-muted-foreground">+34.2% {t.analytics.thisQuarter}</div>
+            <div className="text-lg font-semibold">PRIME</div>
+            <div className="text-sm text-muted-foreground">El motor del reto</div>
           </div>
           <div className="p-4 bg-kev-primary/10 border border-kev-primary/20 rounded-xl">
             <div className="text-sm text-kev-primary font-medium mb-1">{t.analytics.largestHolding}</div>
-            <div className="text-lg font-semibold">Titan Real Estate</div>
-            <div className="text-sm text-muted-foreground">$156M (25% {t.analytics.allocation})</div>
+            <div className="text-lg font-semibold">PRIME</div>
+            <div className="text-sm text-muted-foreground">55% {t.analytics.allocation}</div>
           </div>
           <div className="p-4 bg-kev-warning/10 border border-kev-warning/20 rounded-xl">
             <div className="text-sm text-kev-warning font-medium mb-1">{t.analytics.worstMonth}</div>
-            <div className="text-lg font-semibold">Green Energy Fund</div>
-            <div className="text-sm text-muted-foreground">-1.2% {t.analytics.underperforming}</div>
+            <div className="text-lg font-semibold">Insightful University</div>
+            <div className="text-sm text-muted-foreground">Pre-revenue · por activar</div>
           </div>
         </div>
       </div>

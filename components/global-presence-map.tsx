@@ -3,12 +3,12 @@
 import { MapPin, Globe } from "lucide-react"
 
 const locations = [
-  { city: "Dubai", country: "UAE", type: "HQ", active: true },
-  { city: "Singapore", country: "Singapore", type: "Office", active: true },
-  { city: "London", country: "UK", type: "Office", active: true },
-  { city: "Miami", country: "USA", type: "Office", active: true },
-  { city: "Tokyo", country: "Japan", type: "Partner", active: false },
-  { city: "Sydney", country: "Australia", type: "Partner", active: false },
+  { city: "Santa Cruz", country: "Bolivia", type: "HQ · Origen", active: true },
+  { city: "La Paz", country: "Bolivia", type: "PRIME", active: true },
+  { city: "Buenos Aires", country: "Argentina", type: "PRIME LatAm", active: false },
+  { city: "CDMX", country: "México", type: "PRIME LatAm", active: false },
+  { city: "Miami", country: "EE.UU.", type: "Objetivo O-1/EB-1A", active: false },
+  { city: "Delaware", country: "EE.UU.", type: "C-Corp", active: false },
 ]
 
 export function GlobalPresenceMap() {
@@ -16,17 +16,17 @@ export function GlobalPresenceMap() {
     <div className="glass-card p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Global Presence</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">Operations across 6 countries</p>
+          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Expansión</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">De Santa Cruz a LatAm y EE.UU.</p>
         </div>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-kev-success" />
-            <span className="text-muted-foreground">Active</span>
+            <span className="text-muted-foreground">Operando</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
-            <span className="text-muted-foreground">Partner</span>
+            <span className="text-muted-foreground">Objetivo</span>
           </div>
         </div>
       </div>
@@ -40,12 +40,12 @@ export function GlobalPresenceMap() {
 
         {locations.map((loc) => {
           const positions: Record<string, { x: string; y: string }> = {
-            Dubai: { x: "58%", y: "42%" },
-            Singapore: { x: "75%", y: "55%" },
-            London: { x: "45%", y: "28%" },
-            Miami: { x: "22%", y: "42%" },
-            Tokyo: { x: "85%", y: "32%" },
-            Sydney: { x: "88%", y: "72%" },
+            "Santa Cruz": { x: "32%", y: "70%" },
+            "La Paz": { x: "27%", y: "65%" },
+            "Buenos Aires": { x: "35%", y: "84%" },
+            CDMX: { x: "17%", y: "47%" },
+            Miami: { x: "23%", y: "41%" },
+            Delaware: { x: "26%", y: "33%" },
           }
           const pos = positions[loc.city]
 

@@ -6,58 +6,56 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 const activities = [
   {
+    type: "alert",
+    title: "Reto relanzado · Día 1",
+    description: "De $10 al Mansory, desde Bolivia",
+    time: "Ahora mismo",
+  },
+  {
     type: "transaction",
-    title: "Investment received",
-    description: "Apex Ventures Series B",
-    amount: "+$2,500,000",
-    time: "2 min ago",
+    title: "Nuevo cliente PRIME",
+    description: "Empleado de IA instalado",
+    amount: "+$ revenue",
+    time: "hace 12 min",
     positive: true,
   },
   {
-    type: "user",
-    title: "New investor onboarded",
-    description: "Capital Partners LLC",
-    time: "15 min ago",
-  },
-  {
     type: "document",
-    title: "Contract signed",
-    description: "Neural Labs partnership",
-    time: "1 hour ago",
+    title: "Beca PRIME instalada",
+    description: "Negocio boliviano, en cámara",
+    time: "hace 2 horas",
   },
   {
-    type: "transaction",
-    title: "Dividend payout",
-    description: "Q3 distributions",
-    amount: "-$450,000",
-    time: "3 hours ago",
-    positive: false,
+    type: "user",
+    title: "Nueva audiencia",
+    description: "Base de datos creciendo",
+    time: "hace 4 horas",
   },
   {
     type: "alert",
-    title: "Milestone reached",
-    description: "$45M portfolio value",
-    time: "5 hours ago",
+    title: "Respuesta al villano",
+    description: "'No me lo compró mi papá'",
+    time: "hace 6 horas",
   },
   {
     type: "transaction",
-    title: "Real estate acquisition",
-    description: "Downtown Dubai property",
-    amount: "+$12,000,000",
-    time: "1 day ago",
+    title: "MRR de PRIME",
+    description: "El motor que financia el auto",
+    amount: "+$ MRR",
+    time: "hace 1 día",
     positive: true,
   },
   {
     type: "document",
-    title: "Due diligence complete",
-    description: "Quantum Trading audit",
-    time: "2 days ago",
+    title: "Ruta EE.UU. en marcha",
+    description: "O-1 → EB-1A · C-Corp Delaware",
+    time: "hace 2 días",
   },
   {
     type: "user",
-    title: "Team member joined",
-    description: "Sarah Chen - CFO",
-    time: "3 days ago",
+    title: "PRIME suma equipo",
+    description: "Construyendo el moat de datos",
+    time: "hace 3 días",
   },
 ]
 
@@ -74,12 +72,12 @@ export function ActivityFeed() {
   return (
     <div className="p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Recent Activity</h2>
+        <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Actividad Reciente</h2>
         <button
           onClick={() => setShowAll(true)}
           className="text-xs text-kev-primary hover:text-kev-primary-light transition-colors font-medium"
         >
-          View all
+          Ver todo
         </button>
       </div>
 
@@ -124,7 +122,7 @@ export function ActivityFeed() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5 text-kev-primary" />
-              All Activity
+              Toda la Actividad
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 mt-4">

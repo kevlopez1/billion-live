@@ -1,54 +1,55 @@
 "use client"
 
-import { Youtube, Instagram, Twitter, TrendingUp, Users } from "lucide-react"
+import { Music2, Instagram, Building2, TrendingUp, Users } from "lucide-react"
 
+// La atención como ACTIVO: cada plataforma alimenta la base de datos → público real.
 const socialPlatforms = [
   {
-    name: "YouTube",
-    icon: Youtube,
-    followers: "847K",
-    change: "+12.3K",
-    changePercent: "+1.5%",
-    color: "text-red-500",
-    bgColor: "bg-red-500/10",
-    borderColor: "border-red-500/20",
+    name: "TikTok · @kev.project.gta",
+    icon: Music2,
+    followers: "El Reto",
+    change: "Día 1",
+    changePercent: "Relanzado",
+    color: "text-foreground",
+    bgColor: "bg-foreground/5",
+    borderColor: "border-foreground/15",
   },
   {
-    name: "Instagram",
+    name: "@1kevlopez",
     icon: Instagram,
-    followers: "523K",
-    change: "+8.7K",
-    changePercent: "+1.7%",
+    followers: "19.6K",
+    change: "El medio",
+    changePercent: "Personal",
     color: "text-pink-500",
     bgColor: "bg-pink-500/10",
     borderColor: "border-pink-500/20",
   },
   {
-    name: "X (Twitter)",
-    icon: Twitter,
-    followers: "312K",
-    change: "+5.2K",
-    changePercent: "+1.7%",
-    color: "text-sky-400",
-    bgColor: "bg-sky-400/10",
-    borderColor: "border-sky-400/20",
+    name: "PRIME · primebusiness.live",
+    icon: Building2,
+    followers: "B2B",
+    change: "Leads IA",
+    changePercent: "El motor",
+    color: "text-kev-primary",
+    bgColor: "bg-kev-primary/10",
+    borderColor: "border-kev-primary/20",
   },
 ]
 
 export function SocialPowerGrid() {
-  const totalFollowers = "1.68M"
+  const totalFollowers = "19.6K+"
 
   return (
     <div className="glass-card p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Social Power</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">Influence as an asset</p>
+          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Público & Base de Datos</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">La atención como activo · se convierte en público real</p>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Users className="w-4 h-4 text-kev-primary" />
           <span className="font-semibold text-foreground number-display">{totalFollowers}</span>
-          <span className="text-muted-foreground">Total</span>
+          <span className="text-muted-foreground">Audiencia</span>
         </div>
       </div>
 
@@ -67,14 +68,14 @@ export function SocialPowerGrid() {
             <div className="flex items-end justify-between">
               <div>
                 <div className="text-2xl font-bold text-foreground number-display">{platform.followers}</div>
-                <div className="text-xs text-muted-foreground">Followers</div>
+                <div className="text-xs text-muted-foreground">{platform.changePercent}</div>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-1 text-kev-success text-sm font-medium">
                   <TrendingUp className="w-3.5 h-3.5" />
                   {platform.change}
                 </div>
-                <div className="text-xs text-muted-foreground">This month</div>
+                <div className="text-xs text-muted-foreground">Función</div>
               </div>
             </div>
           </div>

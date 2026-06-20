@@ -39,10 +39,10 @@ export function SettingsView() {
 
   // Profile state
   const [profile, setProfile] = useState({
-    name: "Kevin Strategy",
-    email: "kevin@kevstrategy.com",
-    company: "Kev Strategy LLC",
-    timezone: "UTC-5 (Eastern Time)",
+    name: "Kev López",
+    email: "kev@primebusiness.live",
+    company: "PRIME",
+    timezone: "UTC-4 (Bolivia)",
   })
   const [isSavingProfile, setIsSavingProfile] = useState(false)
 
@@ -64,9 +64,9 @@ export function SettingsView() {
 
   // Sessions data
   const [sessions] = useState([
-    { id: "1", device: "MacBook Pro", location: "Dubai, UAE", lastActive: "Now", current: true },
-    { id: "2", device: "iPhone 15 Pro", location: "Dubai, UAE", lastActive: "2 hours ago", current: false },
-    { id: "3", device: "iPad Pro", location: "Singapore", lastActive: "3 days ago", current: false },
+    { id: "1", device: "MacBook Pro", location: "Santa Cruz, Bolivia", lastActive: "Ahora", current: true },
+    { id: "2", device: "iPhone", location: "Santa Cruz, Bolivia", lastActive: "hace 2 horas", current: false },
+    { id: "3", device: "iPad", location: "La Paz, Bolivia", lastActive: "hace 3 días", current: false },
   ])
 
   const handleSaveProfile = async () => {
@@ -249,11 +249,11 @@ export function SettingsView() {
                   onChange={(e) => setProfile((prev) => ({ ...prev, timezone: e.target.value }))}
                   className="w-full px-4 py-2.5 bg-secondary/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:border-kev-primary/50 transition-colors"
                 >
+                  <option>UTC-4 (Bolivia)</option>
                   <option>UTC-5 (Eastern Time)</option>
-                  <option>UTC-8 (Pacific Time)</option>
+                  <option>UTC-3 (Buenos Aires)</option>
+                  <option>UTC-6 (CDMX)</option>
                   <option>UTC+0 (London)</option>
-                  <option>UTC+4 (Dubai)</option>
-                  <option>UTC+8 (Singapore)</option>
                 </select>
               </div>
             </div>

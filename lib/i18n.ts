@@ -26,7 +26,7 @@ export const translations = {
     // Dashboard
     dashboard: {
       title: "Command Center",
-      subtitle: "Real-time portfolio overview",
+      subtitle: "The challenge counter, live — fueled by real PRIME revenue",
       netWorth: "Net Worth",
       target: "Target",
       progress: "Progress",
@@ -96,7 +96,7 @@ export const translations = {
     // Daily Pulse
     pulse: {
       title: "Daily Pulse",
-      subtitle: "Real-time updates from the journey to $1B",
+      subtitle: "Live updates from the $10-to-Mansory challenge",
       liveNow: "LIVE NOW",
       localTime: "Local time",
       currently: "Currently",
@@ -118,8 +118,8 @@ export const translations = {
     },
     // Manifesto
     manifesto: {
-      title: "The Kev Strategy Manifesto",
-      subtitle: "The principles that guide every decision on the path to building a billion-dollar empire",
+      title: "The KEV PROJECT GTA Manifesto",
+      subtitle: "The principles that guide the challenge: from $10 to the Mansory, and the empire beyond",
       corePrinciples: "Core Principles",
       clickToExpand: "Click to expand",
       mission: "Mission",
@@ -130,16 +130,16 @@ export const translations = {
     // Journey
     journey: {
       title: "The Journey",
-      subtitle: "From $2,500 to ${amount}M — A decade of relentless execution, strategic bets, and compounded growth",
-      netWorth: "Net Worth",
+      subtitle: "From $10 to a Mercedes-AMG Mansory — built in public from Bolivia, fueled by real PRIME revenue",
+      netWorth: "Counter",
       currentChapter: "Current Chapter",
       years: "Years",
       growth: "Growth",
       countries: "Countries",
-      towardBillion: "Toward $1B",
+      towardBillion: "Toward the Mansory",
       thePathAhead: "The Path Ahead",
       pathAheadDesc:
-        "${amount}M to go. At current growth rates, the billion milestone is projected for 2027. Follow the journey in real-time on Daily Pulse.",
+        "The car is the bait; the empire is the goal. Every milestone unlocks a free PRIME install for a Bolivian business. Follow it live on Daily Pulse.",
     },
     // Analytics
     analytics: {
@@ -296,9 +296,9 @@ export const translations = {
     // Goals
     goals: {
       title: "Goal Tracker",
-      subtitle: "Track your path to the billion",
-      billionCalculator: "Billion Calculator",
-      currentNetWorth: "Current Net Worth",
+      subtitle: "Track your path to the Mansory — and the empire",
+      billionCalculator: "Challenge Calculator",
+      currentNetWorth: "Current Counter",
       monthlyGrowthRate: "Monthly Growth Rate",
       targetAmount: "Target Amount",
       projectedDate: "Projected Date",
@@ -330,12 +330,12 @@ export const translations = {
       moderate: "Moderate",
       aggressive: "Aggressive",
       growthRate: "Growth Rate",
-      reachBillionIn: "Reach $1B in",
+      reachBillionIn: "Reach the goal in",
       years: "years",
       months: "months",
       adjustGrowth: "Adjust Growth Rate",
       simulateScenarios: "Simulate different growth scenarios",
-      billionTarget: "$1B Target",
+      billionTarget: "Goal",
       fillRequired: "Please fill all required fields",
       goalAdded: "Goal added successfully",
       goalDeleted: "Goal deleted",
@@ -472,7 +472,7 @@ export const translations = {
     },
     // PWA
     pwa: {
-      installApp: "Install Kev Strategy",
+      installApp: "Install KEV PROJECT GTA",
       addToHomeScreen: "Add to your home screen for quick access",
       iosTapShare: "Tap the share button and select 'Add to Home Screen'",
       install: "Install App",
@@ -550,7 +550,7 @@ export const translations = {
     // Dashboard
     dashboard: {
       title: "Centro de Mando",
-      subtitle: "Vista general del portafolio en tiempo real",
+      subtitle: "El contador del reto, en vivo — alimentado por el revenue real de PRIME",
       netWorth: "Patrimonio Neto",
       target: "Meta",
       progress: "Progreso",
@@ -620,7 +620,7 @@ export const translations = {
     // Pulso Diario
     pulse: {
       title: "Pulso Diario",
-      subtitle: "Actualizaciones en tiempo real del camino al billón",
+      subtitle: "Actualizaciones en vivo del reto: de $10 al Mansory",
       liveNow: "EN VIVO",
       localTime: "Hora local",
       currently: "Actualmente",
@@ -642,8 +642,8 @@ export const translations = {
     },
     // Manifiesto
     manifesto: {
-      title: "El Manifiesto de Kev Strategy",
-      subtitle: "Los principios que guían cada decisión en el camino hacia construir un imperio de mil millones",
+      title: "El Manifiesto de KEV PROJECT GTA",
+      subtitle: "Los principios que guían el reto: de $10 al Mansory, y al imperio que viene después",
       corePrinciples: "Principios Fundamentales",
       clickToExpand: "Clic para expandir",
       mission: "Misión",
@@ -655,16 +655,16 @@ export const translations = {
     journey: {
       title: "El Camino",
       subtitle:
-        "De $2,500 a ${amount}M — Una década de ejecución implacable, apuestas estratégicas y crecimiento compuesto",
-      netWorth: "Patrimonio Neto",
+        "De $10 a un Mercedes-AMG Mansory — construido en público desde Bolivia, alimentado por el revenue real de PRIME",
+      netWorth: "Contador",
       currentChapter: "Capítulo Actual",
       years: "Años",
       growth: "Crecimiento",
       countries: "Países",
-      towardBillion: "Hacia $1B",
+      towardBillion: "Hacia el Mansory",
       thePathAhead: "El Camino por Delante",
       pathAheadDesc:
-        "${amount}M por recorrer. A las tasas de crecimiento actuales, el hito del billón se proyecta para 2027. Sigue el journey en tiempo real en Daily Pulse.",
+        "El auto es la carnada; el imperio es la meta. Cada hito desbloquea una Beca PRIME para un negocio boliviano. Síguelo en vivo en el Pulso Diario.",
     },
     // Analíticas
     analytics: {
@@ -821,9 +821,9 @@ export const translations = {
     // Metas
     goals: {
       title: "Seguimiento de Metas",
-      subtitle: "Rastrea tu camino al billón",
-      billionCalculator: "Calculadora del Billón",
-      currentNetWorth: "Patrimonio Actual",
+      subtitle: "Rastrea tu camino al Mansory — y al imperio",
+      billionCalculator: "Calculadora del Reto",
+      currentNetWorth: "Contador Actual",
       monthlyGrowthRate: "Tasa de Crecimiento Mensual",
       targetAmount: "Cantidad Objetivo",
       projectedDate: "Fecha Proyectada",
@@ -855,12 +855,12 @@ export const translations = {
       moderate: "Moderado",
       aggressive: "Agresivo",
       growthRate: "Tasa de Crecimiento",
-      reachBillionIn: "Alcanzar $1B en",
+      reachBillionIn: "Alcanzar la meta en",
       years: "años",
       months: "meses",
       adjustGrowth: "Ajustar Tasa de Crecimiento",
       simulateScenarios: "Simula diferentes escenarios de crecimiento",
-      billionTarget: "Meta $1B",
+      billionTarget: "Meta del Reto",
       fillRequired: "Por favor completa todos los campos requeridos",
       goalAdded: "Meta añadida exitosamente",
       goalDeleted: "Meta eliminada",
@@ -997,7 +997,7 @@ export const translations = {
     },
     // PWA
     pwa: {
-      installApp: "Instalar Kev Strategy",
+      installApp: "Instalar KEV PROJECT GTA",
       addToHomeScreen: "Añade a tu pantalla de inicio para acceso rápido",
       iosTapShare: "Toca el botón compartir y selecciona 'Añadir a inicio'",
       install: "Instalar App",

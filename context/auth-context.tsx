@@ -31,7 +31,7 @@ const ADMIN_CREDENTIALS = {
 const ADMIN_USER: User = {
   id: "1",
   email: "admin@kevstrategy.com",
-  name: "Kevin Strategy",
+  name: "Kev López",
   role: "admin",
 }
 

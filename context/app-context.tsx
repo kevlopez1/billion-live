@@ -138,21 +138,29 @@ interface AppContextType extends AppState {
 
 // ... existing code for initial data ...
 
+// ── EL RETO: capa pública y capa secreta ──────────────────────────────
+// Capa pública (la carnada): de $10 a un Mercedes-AMG GT 63 MANSORY (~$450K).
+// Capa secreta (la meta real de largo plazo): el imperio de $1.000.000.000.
+// El contador (netWorth) = revenue REAL de PRIME, editable desde el panel Admin.
+export const CHALLENGE_TARGET = 450_000 // Mercedes-AMG GT 63 Mansory
+export const SECRET_TARGET = 1_000_000_000 // El imperio (capa secreta)
+export const CHALLENGE_START = 10 // Empezamos desde $10
+
 const initialMetrics: GlobalMetrics = {
-  netWorth: 225_234_891,
-  monthlyGrowth: 12.4,
-  roi: 34.2,
-  targetRevenue: 1_000_000_000,
-  activeProjects: 7,
-  ytdReturn: 34.2,
+  netWorth: CHALLENGE_START,
+  monthlyGrowth: 0,
+  roi: 0,
+  targetRevenue: CHALLENGE_TARGET,
+  activeProjects: 4,
+  ytdReturn: 0,
 }
 
 const initialLiveStatus: LiveStatus = {
-  location: "Dubai",
-  country: "UAE",
-  localTime: "11:32 PM",
+  location: "Santa Cruz de la Sierra",
+  country: "Bolivia",
+  localTime: "9:41 PM",
   currentActivity:
-    "Reviewing Q1 acquisition targets for the real estate portfolio. Focus on commercial properties in emerging markets.",
+    "Instalando empleados de IA de PRIME para negocios bolivianos. Construyendo el imperio en público, desde la crisis, en cámara.",
   availability: "available",
 }
 
@@ -160,224 +168,219 @@ const initialPulseEntries: PulseEntry[] = [
   {
     id: "1",
     content:
-      "Just closed a $12M real estate deal in Downtown Dubai. The team executed flawlessly. This is what happens when preparation meets opportunity.",
+      "Día 1 del relanzamiento. El comentario con 1.300 likes decía 'me lo compró mi papá'. Yo empiezo desde $10, desde Bolivia, desde la crisis. Cada peso del contador es revenue real de PRIME. Esto no es flex — es la prueba de que se puede construir un imperio en público.",
     category: "business",
-    timestamp: "2024-01-06 14:32",
-    timeAgo: "2 hours ago",
+    timestamp: "2026-06-20 21:41",
+    timeAgo: "Ahora mismo",
   },
   {
     id: "2",
     content:
-      "Coffee meeting with a founder building AI infrastructure. The next wave is here and we're positioning early.",
+      "Nueva 'Beca PRIME': instalé empleados de IA gratis a un negocio boliviano, en cámara. Por cada hito del reto, repito. La atención no se queda en mi bolsillo — se reinvierte en la economía que me formó.",
     category: "networking",
-    timestamp: "2024-01-06 11:15",
-    timeAgo: "5 hours ago",
+    timestamp: "2026-06-20 16:15",
+    timeAgo: "hace 5 horas",
   },
   {
     id: "3",
     content:
-      "Morning routine complete: 5am wake up, cold plunge, 2 hours of deep work before the world wakes up. Non-negotiables.",
+      "El auto es la carnada. La meta real es el sistema: PRIME factura, la viralidad llena la base de datos, la base de datos se vuelve público real. Una máquina que no depende de mi tiempo.",
     category: "personal",
-    timestamp: "2024-01-06 07:00",
-    timeAgo: "9 hours ago",
+    timestamp: "2026-06-20 07:00",
+    timeAgo: "hace 14 horas",
   },
 ]
 
+// Las 4 funciones del imperio. Cada marca = una función:
+// PRIME = dinero · KEV Strategy = reputación · Insightful = masificación · @Kev López = el medio.
 const initialProjects: Project[] = [
   {
     id: "1",
-    name: "Apex Ventures",
-    type: "Venture Capital",
-    value: 42_800_000,
-    invested: 28_500_000,
-    change: 18.2,
+    name: "PRIME",
+    type: "Empleados de IA · SaaS",
+    value: 10,
+    invested: 0,
+    change: 0,
     trend: "up",
     status: "Active",
-    allocation: 38,
-    description: "Early-stage tech investments portfolio",
-    lastUpdate: "2 hours ago",
-    position: { x: 100, y: 100 },
+    allocation: 55,
+    description:
+      "Empleados de IA para empresas (primebusiness.live). El MOTOR DE DINERO del reto: el contador se alimenta del revenue real de PRIME. Moat = datos propios + nicho. Métricas que importan: MRR, clientes, retención.",
+    lastUpdate: "Ahora mismo",
+    position: { x: 120, y: 100 },
   },
   {
     id: "2",
-    name: "Neural Labs",
-    type: "AI/ML Startup",
-    value: 8_200_000,
-    invested: 4_500_000,
-    change: 24.5,
-    trend: "up",
+    name: "KEV Strategy",
+    type: "Inmobiliaria",
+    value: 0,
+    invested: 0,
+    change: 0,
+    trend: "neutral",
     status: "Growth",
     allocation: 18,
-    description: "Machine learning infrastructure company",
-    lastUpdate: "5 hours ago",
-    position: { x: 400, y: 80 },
+    description: "Inmobiliaria. La función REPUTACIÓN: activos reales y credibilidad de largo plazo.",
+    lastUpdate: "Hoy",
+    position: { x: 420, y: 90 },
   },
   {
     id: "3",
-    name: "Titan Real Estate",
-    type: "Real Estate",
-    value: 156_000_000,
-    invested: 120_000_000,
-    change: 2.1,
-    trend: "neutral",
-    status: "Stable",
-    allocation: 25,
-    description: "Commercial and residential properties",
-    lastUpdate: "1 day ago",
-    position: { x: 250, y: 280 },
+    name: "Insightful University",
+    type: "Educación",
+    value: 0,
+    invested: 0,
+    change: 0,
+    trend: "up",
+    status: "Growth",
+    allocation: 15,
+    description: "Educación. La función MASIFICACIÓN: convierte la atención del reto en alumnos y comunidad.",
+    lastUpdate: "Hoy",
+    position: { x: 260, y: 300 },
   },
   {
     id: "4",
-    name: "Quantum Trading",
-    type: "Algorithmic Trading",
-    value: 12_400_000,
-    invested: 6_200_000,
-    change: 34.2,
+    name: "@Kev López · KEV PROJECT GTA",
+    type: "Medios · Audiencia",
+    value: 0,
+    invested: 0,
+    change: 0,
     trend: "up",
     status: "Active",
-    allocation: 11,
-    description: "High-frequency trading algorithms",
-    lastUpdate: "30 min ago",
-    position: { x: 550, y: 200 },
-  },
-  {
-    id: "5",
-    name: "Green Energy Fund",
-    type: "Sustainable Energy",
-    value: 5_800_000,
-    invested: 6_100_000,
-    change: -1.2,
-    trend: "down",
-    status: "Monitoring",
-    allocation: 8,
-    description: "Renewable energy investments",
-    lastUpdate: "3 hours ago",
-    position: { x: 150, y: 400 },
+    allocation: 12,
+    description:
+      "El MEDIO: @1kevlopez (~19.6K) + @kev.project.gta. Genera HYPE → VIRALIDAD → BASE DE DATOS → PÚBLICO REAL. La atención que se convierte en 10x/100x/1000x.",
+    lastUpdate: "Ahora mismo",
+    position: { x: 560, y: 230 },
   },
 ]
 
 const initialManifesto: ManifestoContent = {
-  mission: "Build sustainable wealth through strategic investments while documenting the entire journey transparently",
-  vision: "A world where financial success is demystified and accessible to anyone willing to learn and execute",
-  purpose: "Prove that with strategy, discipline, and transparency, extraordinary results are achievable",
+  mission:
+    "Probar, en público y desde Bolivia en crisis, que se puede ir de $10 a un Mercedes-AMG Mansory construyendo negocios reales — no por suerte ni por herencia, sino por sistema.",
+  vision:
+    "Un imperio construido a la vista de todos, donde la atención de un reto imposible se convierte en empresas que cambian la economía de LatAm.",
+  purpose:
+    "El auto es la carnada. La meta real es convertirme en el tipo de persona — y construir la máquina — capaz de levantar un imperio desde cero.",
   principles: [
     {
       id: "1",
-      title: "Riesgo Asimétrico",
-      shortDesc: "Invertir donde la pérdida es limitada y la ganancia infinita",
+      title: "Apalancamiento de la Atención",
+      shortDesc: "El auto cuesta $450K una vez; la atención se convierte en 10x/100x/1000x",
       fullDesc:
-        "El verdadero arte de la inversión está en encontrar oportunidades donde el downside está controlado pero el upside es ilimitado. Nunca arriesgo más del 5% en una sola posición, pero estructuro cada deal para que el potencial de ganancia sea 10x, 50x o incluso 100x. Esto significa decir no al 99% de las oportunidades y esperar pacientemente por las asimetrías perfectas.",
-      iconName: "Scale",
-    },
-    {
-      id: "2",
-      title: "Escalabilidad Radical",
-      shortDesc: "Negocios que funcionen sin tiempo por dinero",
-      fullDesc:
-        "El tiempo es el único recurso que no se puede recuperar. Por eso, cada negocio que construyo debe poder escalar sin mi presencia directa. Software, sistemas automatizados, equipos de clase mundial. Si mi ingreso depende de mis horas trabajadas, no es un negocio—es un empleo. La meta es crear máquinas de valor que funcionen 24/7/365.",
+        "Una máquina (el reto) genera HYPE → VIRALIDAD → BASE DE DATOS → PÚBLICO REAL. El Mercedes es la carnada que captura la atención; esa atención se reinvierte en PRIME (plataforma de IA para LatAm), en PRIME Payments (stablecoins para una economía sin dólares) y en la marca global. Cada vista no es vanidad: es capital que se compone.",
       iconName: "Rocket",
     },
     {
-      id: "3",
-      title: "Legado sobre Ego",
-      shortDesc: "Construir para las próximas décadas, no para el próximo mes",
+      id: "2",
+      title: "Consistencia sobre Talento",
+      shortDesc: "Mi mayor riesgo es abandonar. Por eso todo está diseñado para no fallar en consistencia.",
       fullDesc:
-        "Las decisiones que tomo hoy están diseñadas para beneficiar a las generaciones que vienen. No compito por métricas de vanidad ni por reconocimiento inmediato. El verdadero éxito se mide en el impacto que dejas cuando ya no estás. Cada inversión, cada negocio, cada relación se evalúa con un horizonte de 30+ años.",
+        "Lanzar proyectos y abandonarlos es el patrón que rompo en público. La racha (Día 1, 2, 3…) es la métrica más honesta del reto: no el dinero, sino el aparecer. Sistemas, no motivación. El que no falta, gana — aunque empiece desde $10.",
+      iconName: "Scale",
+    },
+    {
+      id: "3",
+      title: "Autenticidad desde la Crisis",
+      shortDesc: "Misión real desde Bolivia, no flex frívolo",
+      fullDesc:
+        "La Gen Z de 2026 valora la autenticidad por encima del éxito material. Por eso cada hito desbloquea una 'Beca PRIME': instalo empleados de IA gratis a un negocio boliviano, en cámara. El éxito no se presume — se comparte con la economía que me formó. Esa es la respuesta al comentario de los 1.300 likes.",
       iconName: "Crown",
     },
   ],
   quote:
-    "La meta no es ser billonario. La meta es convertirse en el tipo de persona capaz de construir un imperio de mil millones.",
-  quoteAuthor: "Kevin Strategy",
+    "No me lo compró mi papá. Empecé desde $10, desde Bolivia, en cámara. El auto es la carnada — el imperio es la meta.",
+  quoteAuthor: "Kev — @kev.project.gta",
 }
 
 const initialMilestones: Milestone[] = [
   {
     id: "1",
-    year: "2015",
-    title: "El Comienzo",
+    year: "2024",
+    title: "Nace PRIME",
     description:
-      "Empecé con nada más que una laptop y ambición ilimitada. Primer negocio online lanzado desde un pequeño apartamento.",
-    netWorth: "$2,500",
+      "Fundo PRIME: empleados de IA para empresas (primebusiness.live). La tesis: no ser un wrapper, sino un moat de datos propios + nicho. El motor que financiará todo.",
+    netWorth: "PRIME v1",
     iconName: "Flag",
     highlight: false,
   },
   {
     id: "2",
-    year: "2016",
-    title: "Primeros Ingresos",
-    description: "E-commerce alcanza $10K/mes. Aprendí los fundamentos de marketing, ventas y adquisición de clientes.",
-    netWorth: "$45,000",
-    iconName: "TrendingUp",
+    year: "2025",
+    title: "El Comentario de los 1.300 Likes",
+    description:
+      "El reto original en TikTok queda inactivo. Un comentario con 1.300 likes — 'me lo compró mi papá' — se vuelve el villano. La semilla del relanzamiento.",
+    netWorth: "Pausa",
+    iconName: "Globe",
     highlight: false,
   },
   {
     id: "3",
-    year: "2018",
-    title: "Primer Millón",
+    year: "2026",
+    title: "El Relanzamiento · Día 1",
     description:
-      "Crucé el millón de dólares en patrimonio neto. Diversifiqué en bienes raíces. Comencé a invertir en startups tech.",
-    netWorth: "$1.2M",
+      "Vuelvo. De $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia en crisis, en cámara. El contador se alimenta del revenue real de PRIME. Sin filtro, sin papá.",
+    netWorth: "$10",
     iconName: "Star",
     highlight: true,
   },
   {
     id: "4",
-    year: "2020",
-    title: "Pivote Pandémico",
+    year: "Meta",
+    title: "Mercedes-AMG GT 63 Mansory",
     description:
-      "Mientras otros entraban en pánico, nosotros nos posicionamos. Compramos activos en distress a descuentos profundos.",
-    netWorth: "$24M",
-    iconName: "Globe",
-    highlight: false,
+      "La carnada pública: ~$450.000. El auto que responde al comentario. Cada hito en el camino desbloquea una Beca PRIME para un negocio boliviano.",
+    netWorth: "$450K",
+    iconName: "TrendingUp",
+    highlight: true,
   },
   {
     id: "5",
-    year: "2024",
-    title: "Capítulo Actual",
-    description: "En camino al año más rentable. Enfoque en apuestas de alta convicción en mercados emergentes.",
-    netWorth: "$225M",
-    iconName: "Star",
-    highlight: true,
+    year: "El Imperio",
+    title: "La Capa Secreta",
+    description:
+      "El auto nunca fue la meta. PRIME como plataforma de IA para LatAm, PRIME Payments en stablecoins, y la marca global. La atención compuesta hacia los $1.000.000.000.",
+    netWorth: "$1B",
+    iconName: "Crown",
+    highlight: false,
   },
 ]
 
 const initialGoals: Goal[] = [
   {
     id: "1",
-    name: "First $500M",
-    targetValue: 500_000_000,
-    currentValue: 225_234_891,
-    deadline: "2026-12-31",
-    category: "financial",
-    createdAt: "2024-01-01",
+    name: "Mercedes-AMG GT 63 Mansory",
+    targetValue: 450_000,
+    currentValue: 10,
+    deadline: "2027-12-31",
+    category: "milestone",
+    createdAt: "2026-06-20",
   },
   {
     id: "2",
-    name: "The Billion",
+    name: "El Imperio (capa secreta)",
     targetValue: 1_000_000_000,
-    currentValue: 225_234_891,
-    deadline: "2030-12-31",
-    category: "milestone",
-    createdAt: "2024-01-01",
+    currentValue: 10,
+    deadline: "2032-12-31",
+    category: "financial",
+    createdAt: "2026-06-20",
   },
   {
     id: "3",
-    name: "10 Active Investments",
-    targetValue: 10,
-    currentValue: 7,
-    deadline: "2025-06-30",
-    category: "business",
-    createdAt: "2024-01-01",
+    name: "Racha de consistencia: 30 días",
+    targetValue: 30,
+    currentValue: 1,
+    deadline: "2026-07-20",
+    category: "personal",
+    createdAt: "2026-06-20",
   },
   {
     id: "4",
-    name: "Launch Podcast",
-    targetValue: 1,
-    currentValue: 0,
-    deadline: "2025-03-31",
-    category: "personal",
-    createdAt: "2024-01-01",
+    name: "Becas PRIME instaladas",
+    targetValue: 12,
+    currentValue: 1,
+    deadline: "2026-12-31",
+    category: "business",
+    createdAt: "2026-06-20",
   },
 ]
 
@@ -388,15 +391,15 @@ const AppContext = createContext<AppContextType | undefined>(undefined)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [metrics, setMetrics] = useState<GlobalMetrics>(initialMetrics)
   const [liveStatus, setLiveStatus] = useState<LiveStatus>(initialLiveStatus)
-  const [pulseEntries, setPulseEntries] = useState<PulseEntry[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
+  const [pulseEntries, setPulseEntries] = useState<PulseEntry[]>(initialPulseEntries)
+  const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [manifesto, setManifesto] = useState<ManifestoContent>(initialManifesto)
   const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones)
   const [goals, setGoals] = useState<Goal[]>(initialGoals) // Added goals state
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [theme, setThemeState] = useState<"light" | "dark">("dark")
-  const [locale, setLocaleState] = useState<Locale>("en")
+  const [locale, setLocaleState] = useState<Locale>("es")
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("kev-theme") as "light" | "dark" | null
@@ -450,7 +453,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         hasImage: entry.has_image,
         imageUrl: entry.image_url || undefined,
       }))
-      setPulseEntries(formattedEntries)
+      // Solo reemplazamos el contenido semilla del reto si la DB realmente trae datos.
+      if (formattedEntries.length > 0) setPulseEntries(formattedEntries)
     }
 
     loadPulseEntries()
@@ -490,7 +494,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         description: "",
         lastUpdate: new Date(p.created_at).toLocaleDateString(),
       }))
-      setProjects(formattedProjects)
+      // Solo reemplazamos las 4 marcas semilla si la DB realmente trae proyectos.
+      if (formattedProjects.length > 0) setProjects(formattedProjects)
     }
 
     loadProjects()

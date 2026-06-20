@@ -1,13 +1,14 @@
 {
-  "name": "Kev Strategy - The Billion Live",
-  "short_name": "Kev Strategy",
-  "description": "Investment portfolio management and performance tracking - Road to $1B",
+  "name": "KEV PROJECT GTA - De $10 al Mansory",
+  "short_name": "KEV PROJECT GTA",
+  "description": "Command Center del reto: de $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia, construyendo un imperio en público con PRIME.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#3D5A4C",
   "orientation": "portrait-primary",
   "scope": "/",
+  "lang": "es",
   "icons": [
     {
       "src": "/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg",
@@ -28,12 +29,12 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["finance", "business", "productivity"],
+  "categories": ["business", "finance", "productivity"],
   "shortcuts": [
     {
-      "name": "Dashboard",
+      "name": "Centro de Mando",
       "short_name": "Dashboard",
-      "description": "View your portfolio overview",
+      "description": "El contador del reto en tiempo real",
       "url": "/?view=dashboard",
       "icons": [
         {
@@ -43,9 +44,9 @@
       ]
     },
     {
-      "name": "Goals",
-      "short_name": "Goals",
-      "description": "Track your billion dollar journey",
+      "name": "Metas",
+      "short_name": "Metas",
+      "description": "Camino al Mansory y al imperio",
       "url": "/?view=goals",
       "icons": [
         {
