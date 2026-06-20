@@ -84,7 +84,7 @@ export default function Dashboard() {
                 alt="Kev López"
                 width={36}
                 height={36}
-                className="rounded-lg object-cover w-9 h-9"
+                className="rounded-lg object-cover object-[center_32%] w-9 h-9"
               />
               <div>
                 <span className="text-sm font-semibold text-foreground block">KEV PROJECT GTA</span>
@@ -146,7 +146,7 @@ export default function Dashboard() {
               alt="Kev López"
               width={28}
               height={28}
-              className="rounded-full object-cover w-7 h-7"
+              className="rounded-full object-cover object-[center_32%] w-7 h-7"
             />
             <span className="text-sm font-medium">{getViewTitle(activeView)}</span>
           </div>
