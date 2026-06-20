@@ -9,6 +9,7 @@ import { PortfolioOverview } from "@/components/portfolio-overview"
 import { MetricsGrid } from "@/components/metrics-grid"
 import { ProjectsList } from "@/components/projects-list"
 import { MobileNav } from "@/components/mobile-nav"
+import { SocialLinks } from "@/components/social-links"
 import { AnalyticsView } from "@/components/analytics-view"
 import { ProjectsView } from "@/components/projects-view"
 import { SettingsView } from "@/components/settings-view"
@@ -494,6 +495,7 @@ export default function Dashboard() {
           <footer className="px-6 py-3 border-t border-border/50 backdrop-blur-xl bg-background/40">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>KEV PROJECT GTA · PRIME</span>
+              <SocialLinks />
               <span className="tracking-wide">Hecho en Bolivia 🇧🇴</span>
             </div>
           </footer>
@@ -545,10 +547,14 @@ export default function Dashboard() {
           <div className="space-y-4">{renderMobileContent()}</div>
         </main>
 
-        <MobileNav
-          activeView={activeView}
-          onViewChange={setActiveView}
-        />
+        <footer className="px-4 py-6 flex flex-col items-center gap-3 border-t border-border/50">
+          <SocialLinks />
+          <span className="text-[11px] text-muted-foreground tracking-wide">
+            KEV PROJECT GTA · PRIME · Hecho en Bolivia 🇧🇴
+          </span>
+        </footer>
+
+        <MobileNav activeView={activeView} onViewChange={setActiveView} />
       </div>
     </div>
   )
