@@ -111,6 +111,81 @@ export const viewport: Viewport = {
   viewportFit: 'cover', // <--- ¡ESTA ES LA LÍNEA MÁGICA! 🌟
 }
 
+// Datos estructurados (Schema.org) — para Google y motores de IA.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: "KEV PROJECT GTA",
+      inLanguage: "es",
+      description:
+        "El reto público de $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia, con el contador alimentado por el revenue real de PRIME.",
+    },
+    {
+      "@type": "Person",
+      "@id": `${SITE_URL}/#kev`,
+      name: "Kev López",
+      alternateName: "Benjamín Kevin López Mamani",
+      jobTitle: "Fundador de PRIME",
+      nationality: "Boliviana",
+      homeLocation: { "@type": "Place", name: "Santa Cruz de la Sierra, Bolivia" },
+      description:
+        "Emprendedor boliviano (21) que construye su imperio en público con el reto 'De $10 a un Mercedes-AMG Mansory', financiado por PRIME (empleados de IA).",
+      url: SITE_URL,
+      sameAs: [
+        "https://www.tiktok.com/@kev.project.gta",
+        "https://www.youtube.com/@KevProjectGTA",
+        "https://www.instagram.com/kev_project_gta",
+        "https://www.facebook.com/people/Kev-Project-GTA/",
+        "https://primebusiness.live",
+      ],
+      worksFor: { "@type": "Organization", name: "PRIME", url: "https://primebusiness.live" },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#prime`,
+      name: "PRIME",
+      url: "https://primebusiness.live",
+      description: "Empleados de IA para empresas. El motor económico del reto KEV PROJECT GTA.",
+      founder: { "@id": `${SITE_URL}/#kev` },
+      foundingLocation: { "@type": "Place", name: "Santa Cruz de la Sierra, Bolivia" },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${SITE_URL}/#faq`,
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "¿Quién está haciendo el reto de $10 a un Mercedes-AMG Mansory desde Bolivia?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Kev López (@kev.project.gta), fundador de PRIME, desde Santa Cruz de la Sierra, Bolivia.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "¿Cómo se financia el reto?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Con el revenue real de PRIME, su empresa de empleados de IA para empresas. El contador del reto refleja ingresos reales, no inventados.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "¿Es dinero heredado o flex?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "No. El reto empieza desde $10, en público y desde la crisis, como respuesta auténtica al comentario 'me lo compró mi papá'.",
+          },
+        },
+      ],
+    },
+  ],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -122,6 +197,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body className={`${manrope.variable} ${spaceGrotesk.variable} font-sans antialiased`}>
         <AuthProvider>

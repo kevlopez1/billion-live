@@ -185,10 +185,12 @@ export default function Dashboard() {
           <div className="view-transition stagger-children space-y-8">
             <div className="flex items-end justify-between">
               <div>
-                <h1 className="text-3xl font-semibold text-foreground tracking-tight text-balance">
+                <h1 className="text-4xl md:text-5xl font-semibold text-foreground tracking-tighter text-balance">
                   {t.dashboard.title}
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1.5 max-w-md text-pretty">{t.dashboard.subtitle}</p>
+                <p className="text-sm text-muted-foreground mt-2 max-w-md text-pretty font-light">
+                  {t.dashboard.subtitle}
+                </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-kev-success animate-pulse" />
