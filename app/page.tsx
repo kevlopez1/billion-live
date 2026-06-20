@@ -17,6 +17,7 @@ import { DailyPulseView } from "@/components/daily-pulse-view"
 import { ManifestoView } from "@/components/manifesto-view"
 import { JourneyView } from "@/components/journey-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
+import { LatestContent } from "@/components/latest-content"
 import { CommunityWall } from "@/components/community-wall"
 import { AdminView } from "@/components/admin-view"
 import { GoalsView } from "@/components/goals-view"
@@ -204,6 +205,8 @@ export default function Dashboard() {
 
             <SocialPowerGrid />
 
+            <LatestContent />
+
             <CommunityWall />
           </div>
         )
@@ -294,6 +297,7 @@ export default function Dashboard() {
               <ProjectsList />
             </div>
             <SocialPowerGrid />
+            <LatestContent />
             <CommunityWall />
           </div>
         )

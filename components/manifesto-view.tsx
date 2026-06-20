@@ -12,6 +12,18 @@ const iconMap: Record<string, typeof Scale> = {
   Eye,
 }
 
+// Método STRATEGY — el método de Kev para llegar a los $1.000.000.000.
+const strategyMethod = [
+  { letter: "S", word: "Singularidad", desc: "Ser irrepetible: el único que hace esto, así, desde acá." },
+  { letter: "T", word: "Timing", desc: "Lo correcto en el momento correcto. La ola antes que la multitud." },
+  { letter: "R", word: "Rapidez", desc: "Velocidad de ejecución como ventaja injusta." },
+  { letter: "A", word: "Apalancamiento", desc: "Que cada esfuerzo rinda 10x, 100x, 1000x." },
+  { letter: "T", word: "Tangible", desc: "Resultados reales, medibles, demostrables. Nada de humo." },
+  { letter: "E", word: "Energía", desc: "El combustible diario que sostiene la consistencia." },
+  { letter: "G", word: "Garganta", desc: "La voz: comunicar, vender, convencer, mover gente." },
+  { letter: "Y", word: "Yo", desc: "Todo empieza y termina en uno. La responsabilidad es propia." },
+]
+
 export function ManifestoView() {
   const [expandedPrinciple, setExpandedPrinciple] = useState<string | null>(null)
   const { manifesto, t } = useApp()
@@ -89,6 +101,25 @@ export function ManifestoView() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Método STRATEGY */}
+      <div>
+        <h2 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-1">Método STRATEGY</h2>
+        <p className="text-sm text-muted-foreground font-light mb-5">El método con el que voy a construir todo</p>
+        <div className="glass-card divide-y divide-border overflow-hidden">
+          {strategyMethod.map((s, i) => (
+            <div key={i} className="flex items-center gap-5 md:gap-8 px-6 md:px-8 py-5 group hover:bg-white/[0.02] transition-colors">
+              <span className="text-3xl md:text-4xl font-light number-display text-muted-foreground/50 w-8 shrink-0 text-center group-hover:text-foreground transition-colors">
+                {s.letter}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">{s.word}</div>
+                <div className="text-sm text-muted-foreground font-light mt-0.5 text-pretty">{s.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
