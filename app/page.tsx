@@ -370,11 +370,11 @@ export default function Dashboard() {
               title="Double-click to access admin"
             >
               <Image
-                src="/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg"
-                alt="KEV PROJECT GTA"
+                src="/images/kev.jpg"
+                alt="Kev López"
                 width={36}
                 height={36}
-                className="rounded-lg"
+                className="rounded-lg object-cover w-9 h-9"
               />
               <div>
                 <span className="text-sm font-semibold text-foreground block">KEV PROJECT GTA</span>
@@ -514,11 +514,11 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 press-effect" onDoubleClick={handleAdminAccess}>
               <Image
-                src="/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg"
-                alt="KEV PROJECT GTA"
+                src="/images/kev.jpg"
+                alt="Kev López"
                 width={28}
                 height={28}
-                className="rounded"
+                className="rounded-full object-cover w-7 h-7"
               />
               <span className="text-sm font-medium">{getViewTitle(activeView)}</span>
               {isAuthenticated && <Lock className="w-3 h-3 text-kev-success" />}

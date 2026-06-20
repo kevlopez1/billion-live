@@ -26,7 +26,7 @@ const profileData = {
   tagline: "De $10 a un Mercedes-AMG Mansory — en público, desde Bolivia",
   bio: "Benjamín Kevin López Mamani, 21, Santa Cruz. Fundador de PRIME (empleados de IA para empresas). El reto: de $10 a un Mercedes-AMG GT 63 Mansory, con el contador alimentado por el revenue real de PRIME. El auto es la carnada; el imperio es la meta. Sin filtro, sin papá.",
   location: "Santa Cruz de la Sierra, Bolivia",
-  avatar: "/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg",
+  avatar: "/images/kev.jpg",
   coverGradient: "from-[#3D5A4C] via-[#2A7D4F] to-[#1E5A3A]",
   socials: {
     tiktok: "https://www.tiktok.com/@kev.project.gta",

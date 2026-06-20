@@ -129,8 +129,14 @@ export function PortfolioOverview() {
 
   return (
     <div className="accent-surface rounded-[var(--radius)] p-7 md:p-12 relative overflow-hidden">
+      {/* Retrato de Kev como fondo del póster (se desvanece hacia el texto) */}
+      <img
+        src="/images/kev.jpg"
+        alt="Kev López"
+        className="absolute right-0 top-0 h-full w-2/3 sm:w-1/2 object-cover object-[center_30%] opacity-[0.28] pointer-events-none select-none [mask-image:linear-gradient(to_left,black_10%,transparent_85%)]"
+      />
       <div className="accent-glow -left-24 -top-24" />
-      <div className="accent-glow accent-glow-violet -right-24 -bottom-28" />
+      <div className="accent-glow accent-glow-violet -right-16 -bottom-28" />
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 relative z-10">
         {/* Main value */}
         <div>
