@@ -124,14 +124,14 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <section className="relative overflow-hidden rounded-[var(--radius)] border border-border bg-card/50 backdrop-blur-xl px-5 py-7 md:px-10 md:py-12 lg:px-12">
+    <section className="relative overflow-hidden rounded-[var(--radius)] border border-border bg-card/50 backdrop-blur-xl px-5 py-5 md:px-8 md:py-7">
       {/* Marca de agua gigante */}
       <span className="pointer-events-none select-none absolute -bottom-10 -left-3 font-display font-extrabold uppercase leading-none tracking-tighter text-foreground/[0.04] text-[32vw] md:text-[17rem] z-0">
         GTA
       </span>
       <div className="accent-glow -top-16 -right-10" />
 
-      <div className="relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center">
+      <div className="relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-7 lg:gap-10 items-center">
         {/* Texto */}
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-kev-primary/25 bg-kev-primary/5 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-foreground/80 mb-6">
@@ -217,7 +217,7 @@ export function PortfolioOverview() {
       </div>
 
       {/* Barra de progreso */}
-      <div className="relative z-10 mt-12 lg:mt-14">
+      <div className="relative z-10 mt-7 lg:mt-8">
         <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
           <span className="number-display">$10</span>
           <span className="font-semibold text-foreground number-display">{progress.toFixed(2)}% al Mansory</span>
