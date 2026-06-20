@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useApp, CHALLENGE_TARGET, SECRET_TARGET } from "@/context/app-context"
-import { Lock, Star, ArrowUpRight } from "lucide-react"
+import { Lock, Star } from "lucide-react"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 
 export function PortfolioOverview() {
@@ -165,20 +165,6 @@ export function PortfolioOverview() {
             </span>
           </div>
 
-          {/* Botones */}
-          <div className="flex flex-wrap items-center gap-3 mt-7">
-            <a
-              href="https://www.tiktok.com/@kev.project.gta"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-accent inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold"
-            >
-              Seguí el reto <ArrowUpRight className="w-4 h-4" />
-            </a>
-            <span className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium border border-border text-foreground">
-              <span className="number-display text-muted-foreground">Día 1</span> · Santa Cruz 🇧🇴
-            </span>
-          </div>
         </div>
 
         {/* Foto + widgets flotantes */}

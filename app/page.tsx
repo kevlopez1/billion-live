@@ -13,6 +13,7 @@ import { ManifestoView } from "@/components/manifesto-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
 import { LatestContent } from "@/components/latest-content"
 import { ChallengeStatement } from "@/components/challenge-statement"
+import { QuickActions } from "@/components/quick-actions"
 import { LayoutDashboard, Activity, BookOpen } from "lucide-react"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
@@ -33,6 +34,7 @@ export default function Dashboard() {
         return (
           <div className={`view-transition stagger-children ${mobile ? "space-y-5" : "space-y-6 md:space-y-8"}`}>
             <PortfolioOverview />
+            <QuickActions />
             <ChallengeStatement />
             <MetricsGrid />
             <div className="glass-card overflow-hidden">
