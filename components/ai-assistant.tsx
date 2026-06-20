@@ -510,7 +510,7 @@ How can I help you today? Try asking about your portfolio, goals, or strategy.`
                     className={`inline-block max-w-[85%] p-3 rounded-xl text-sm ${
                       message.role === "assistant"
                         ? "bg-secondary/50 text-foreground text-left"
-                        : "bg-kev-primary text-background"
+                        : "btn-accent"
                     }`}
                   >
                     <div className="whitespace-pre-wrap prose prose-sm dark:prose-invert prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5">
@@ -578,7 +578,7 @@ How can I help you today? Try asking about your portfolio, goals, or strategy.`
             <Button
               onClick={handleSend}
               disabled={!input.trim() || isTyping}
-              className="bg-kev-primary hover:bg-kev-primary-light text-background rounded-xl px-4"
+              className="btn-accent rounded-xl px-4"
             >
               {isTyping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>

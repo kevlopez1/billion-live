@@ -149,7 +149,7 @@ export function DailyPulseView() {
               <button
                 onClick={handlePost}
                 disabled={isLoading || !newPost.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-kev-primary text-background rounded-lg text-sm font-medium hover:bg-kev-primary-light transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 btn-accent rounded-lg text-sm font-medium hover:bg-kev-primary-light transition-colors disabled:opacity-50"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {t.pulse.post}
