@@ -18,7 +18,7 @@ export function SocialLinks({ className = "" }: { className?: string }) {
           rel="noopener noreferrer"
           aria-label={s.name}
           title={s.name}
-          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/[0.06] transition-colors press-effect"
+          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] transition-colors press-effect"
         >
           <s.icon className="w-4 h-4" strokeWidth={1.5} />
         </a>

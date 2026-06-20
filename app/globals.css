@@ -6,36 +6,35 @@
 /* Complete light/dark mode with Kev Strategy brand colors */
 /* Light mode (default) */
 :root {
-  /* Light mode — neutral, monochrome (rarely used; app defaults to dark) */
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.14 0 0);
-  --card: oklch(1 0 0 / 0.9);
-  --card-foreground: oklch(0.14 0 0);
-  --popover: oklch(0.99 0 0 / 0.98);
-  --popover-foreground: oklch(0.14 0 0);
-  --primary: oklch(0.16 0 0);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.96 0 0);
+  /* Tema CLARO estilo agencia premium (Zenrixa). */
+  --background: oklch(0.95 0.004 85);
+  --foreground: oklch(0.17 0 0);
+  --card: oklch(1 0 0 / 0.7);
+  --card-foreground: oklch(0.17 0 0);
+  --popover: oklch(1 0 0 / 0.98);
+  --popover-foreground: oklch(0.17 0 0);
+  --primary: oklch(0.52 0.2 258);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.92 0.004 85);
   --secondary-foreground: oklch(0.22 0 0);
-  --muted: oklch(0.94 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.16 0 0);
-  --accent-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.9 0.004 85);
+  --muted-foreground: oklch(0.46 0 0);
+  --accent: oklch(0.52 0.2 258);
+  --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0 0 0 / 0.08);
-  --input: oklch(0 0 0 / 0.1);
-  --ring: oklch(0.16 0 0);
+  --border: oklch(0 0 0 / 0.1);
+  --input: oklch(0 0 0 / 0.08);
+  --ring: oklch(0.52 0.2 258);
   --radius: 1.75rem;
 
-  /* Accent system — platinum (monochrome luxury). Green is reserved for the
-     KEV Strategy sub-brand and the single 'live' pulse, not the shell. */
-  --kev-primary: oklch(0.2 0 0);
-  --kev-primary-light: oklch(0.32 0 0);
+  /* Acento azul (legible sobre claro) */
+  --kev-primary: oklch(0.52 0.2 258);
+  --kev-primary-light: oklch(0.58 0.2 262);
   --kev-primary-dim: oklch(0.5 0 0);
-  --kev-success: oklch(0.55 0.11 150);
-  --kev-warning: oklch(0.7 0.12 85);
-  --kev-danger: oklch(0.55 0.18 25);
+  --kev-success: oklch(0.55 0.13 150);
+  --kev-warning: oklch(0.6 0.13 70);
+  --kev-danger: oklch(0.55 0.2 25);
 
   /* Neutral palette - Light */
   --neutral-50: oklch(0.98 0.002 240);
@@ -608,7 +607,7 @@
 /* ── Signature accent (azul eléctrico → violeta): "dark + one bold color" ── */
 /* Texto con gradiente VÍVIDO y claramente coloreado (azul → violeta). */
 .text-accent-gradient {
-  background: linear-gradient(112deg, oklch(0.9 0.09 238) 0%, oklch(0.72 0.2 260) 48%, oklch(0.64 0.24 290) 100%);
+  background: linear-gradient(112deg, oklch(0.55 0.2 250) 0%, oklch(0.5 0.22 268) 55%, oklch(0.46 0.23 292) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -644,7 +643,7 @@
   width: 460px;
   height: 460px;
   border-radius: 9999px;
-  background: radial-gradient(circle, oklch(0.62 0.22 260 / 0.28) 0%, transparent 70%);
+  background: radial-gradient(circle, oklch(0.62 0.22 260 / 0.14) 0%, transparent 70%);
   filter: blur(54px);
   pointer-events: none;
   z-index: 0;

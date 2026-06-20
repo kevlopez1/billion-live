@@ -64,8 +64,8 @@ export function DailyPulseView() {
       <div className="glass-card p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center glow-green-subtle">
-              <span className="text-lg font-semibold text-white">KP</span>
+            <div className="w-14 h-14 rounded-xl bg-foreground/[0.06] border border-border flex items-center justify-center glow-green-subtle">
+              <span className="text-lg font-semibold text-foreground">KP</span>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -114,8 +114,8 @@ export function DailyPulseView() {
       {/* New Post Composer */}
       <div className="glass-card p-4">
         <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
-            <span className="text-xs font-medium text-white">KP</span>
+          <div className="w-10 h-10 rounded-full bg-foreground/[0.06] border border-border flex items-center justify-center shrink-0">
+            <span className="text-xs font-medium text-foreground">KP</span>
           </div>
           <div className="flex-1">
             <textarea
@@ -167,8 +167,8 @@ export function DailyPulseView() {
             <div key={entry.id} className="glass-card p-5 transition-all hover:border-kev-primary/30">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">KP</span>
+                  <div className="w-10 h-10 rounded-full bg-foreground/[0.06] border border-border flex items-center justify-center">
+                    <span className="text-xs font-medium text-foreground">KP</span>
                   </div>
                   <div>
                     <span className="font-medium text-foreground text-sm">Kev · @kev.project.gta</span>

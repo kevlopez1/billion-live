@@ -463,8 +463,8 @@ How can I help you today? Try asking about your portfolio, goals, or strategy.`
         <DialogHeader className="px-4 py-3 border-b border-border/50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-foreground/[0.06] border border-border flex items-center justify-center">
+                <Bot className="w-5 h-5 text-foreground" />
               </div>
               <div>
                 <DialogTitle className="text-base font-semibold flex items-center gap-2">
@@ -495,12 +495,12 @@ How can I help you today? Try asking about your portfolio, goals, or strategy.`
                 <div
                   className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     message.role === "assistant"
-                      ? "bg-white/10 border border-white/10"
+                      ? "bg-foreground/[0.06] border border-border"
                       : "bg-secondary"
                   }`}
                 >
                   {message.role === "assistant" ? (
-                    <Sparkles className="w-4 h-4 text-white" />
+                    <Sparkles className="w-4 h-4 text-foreground" />
                   ) : (
                     <User className="w-4 h-4 text-muted-foreground" />
                   )}
@@ -530,8 +530,8 @@ How can I help you today? Try asking about your portfolio, goals, or strategy.`
 
             {isTyping && (
               <div className="flex gap-3 animate-fade-in-up">
-                <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-lg bg-foreground/[0.06] border border-border flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-foreground" />
                 </div>
                 <div className="bg-secondary/50 rounded-xl p-3 flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-kev-primary" />
@@ -597,11 +597,11 @@ export function AIAssistantButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 w-14 h-14 rounded-full bg-white/10 border border-white/10 shadow-lg shadow-kev-primary/25 flex items-center justify-center hover:scale-110 transition-transform press-effect group"
+        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 w-14 h-14 rounded-full bg-foreground/[0.06] border border-border shadow-lg shadow-kev-primary/25 flex items-center justify-center hover:scale-110 transition-transform press-effect group"
       >
-        <Bot className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+        <Bot className="w-6 h-6 text-foreground group-hover:scale-110 transition-transform" />
         <span className="absolute -top-1 -right-1 w-4 h-4 bg-kev-success rounded-full flex items-center justify-center">
-          <Sparkles className="w-2.5 h-2.5 text-white" />
+          <Sparkles className="w-2.5 h-2.5 text-foreground" />
         </span>
       </button>
       <AIAssistant open={open} onOpenChange={setOpen} />

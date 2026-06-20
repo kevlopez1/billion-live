@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useApp, CHALLENGE_TARGET, SECRET_TARGET } from "@/context/app-context"
-import { Lock } from "lucide-react"
+import { Lock, Star, ArrowUpRight } from "lucide-react"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 
 export function PortfolioOverview() {
@@ -124,88 +124,111 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <section className="relative overflow-hidden rounded-[var(--radius)] min-h-[460px] md:min-h-[580px] flex flex-col justify-end">
-      {/* Foto a sangre completa (estilo póster de las referencias) */}
-      <img
-        src="/images/kev.jpg"
-        alt="Kev López"
-        className="absolute inset-0 w-full h-full object-cover object-[center_22%] pointer-events-none select-none [filter:grayscale(0.25)_contrast(1.06)_brightness(0.74)]"
-      />
-      {/* Duotono azul → violeta (lavado de color sobre la foto) */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-[oklch(0.5_0.23_260)] via-transparent to-[oklch(0.5_0.23_292)] mix-blend-overlay opacity-80" />
-      {/* Oscurecidos para legibilidad del texto */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/10 to-transparent" />
-
-      {/* Palabra gigante de fondo (sello editorial) */}
-      <span className="pointer-events-none select-none absolute -bottom-8 -right-3 font-display font-extrabold uppercase leading-none tracking-tighter text-white/[0.05] text-[34vw] md:text-[18rem] z-[1]">
+    <section className="relative overflow-hidden rounded-[var(--radius)] border border-border bg-card/50 backdrop-blur-xl px-6 py-10 md:px-10 md:py-14 lg:px-14">
+      {/* Marca de agua gigante */}
+      <span className="pointer-events-none select-none absolute -bottom-10 -left-3 font-display font-extrabold uppercase leading-none tracking-tighter text-foreground/[0.04] text-[32vw] md:text-[17rem] z-0">
         GTA
       </span>
+      <div className="accent-glow -top-16 -right-10" />
 
-      <div className="relative z-10 p-7 md:p-12">
-        {/* Eyebrow — español + inglés */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-7 text-[11px] uppercase tracking-[0.24em] text-white/70">
-          <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#6b8cff] animate-pulse shadow-[0_0_10px_#6b8cff]" />
-            Live
-          </span>
-          <span className="text-white/30">/</span>
-          <span>Building in public</span>
-          <span className="text-white/30">/</span>
-          <span>Santa Cruz · Bolivia</span>
+      <div className="relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center">
+        {/* Texto */}
+        <div>
+          <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-muted-foreground mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" />
+            El reto · Building in public
+          </div>
+
+          {/* Titular: mezcla de tipografías */}
+          <h1 className="leading-[0.85]">
+            <span className="block font-serif-display italic text-foreground/70 text-3xl sm:text-4xl md:text-5xl">
+              De $10 al
+            </span>
+            <span className="block font-display font-extrabold uppercase tracking-tighter text-accent-gradient text-6xl sm:text-7xl md:text-8xl -mt-1">
+              Mansory
+            </span>
+          </h1>
+
+          <p className="font-serif-display italic text-muted-foreground text-lg md:text-xl mt-5 max-w-md">
+            El auto es la carnada — el imperio es la meta.
+          </p>
+
+          {/* Rating / prueba social */}
+          <div className="flex items-center gap-2.5 mt-7 text-sm">
+            <div className="flex text-kev-primary">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className="w-3.5 h-3.5 fill-current" />
+              ))}
+            </div>
+            <span className="text-muted-foreground">
+              <b className="text-foreground number-display">1.009</b> siguiendo el reto
+            </span>
+          </div>
+
+          {/* Botones */}
+          <div className="flex flex-wrap items-center gap-3 mt-7">
+            <a
+              href="https://www.tiktok.com/@kev.project.gta"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-accent inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold"
+            >
+              Seguí el reto <ArrowUpRight className="w-4 h-4" />
+            </a>
+            <span className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium border border-border text-foreground">
+              <span className="number-display text-muted-foreground">Día 1</span> · Santa Cruz 🇧🇴
+            </span>
+          </div>
         </div>
 
-        {/* Titular con MEZCLA de tipografías y tamaños (serif + display) */}
-        <h1 className="leading-[0.82]">
-          <span className="block font-serif-display italic text-white/85 text-3xl sm:text-4xl md:text-6xl">
-            De $10 al
-          </span>
-          <span className="block font-display font-extrabold uppercase tracking-tighter text-accent-gradient text-7xl sm:text-8xl md:text-[9.5rem] -mt-1">
-            Mansory
-          </span>
-        </h1>
+        {/* Foto + widgets flotantes */}
+        <div className="relative">
+          <div className="relative rounded-[2rem] overflow-hidden border border-border shadow-2xl aspect-[4/5]">
+            <img
+              src="/images/kev.jpg"
+              alt="Kev López"
+              className="w-full h-full object-cover object-[center_25%]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+            <span className="absolute bottom-3 left-4 font-display font-extrabold uppercase tracking-tighter text-white/90 text-2xl leading-none">
+              Kev López
+            </span>
+          </div>
 
-        <p className="font-serif-display italic text-white/55 text-lg md:text-2xl mt-6 max-w-md">
-          El auto es la carnada — el imperio es la meta.
-        </p>
-
-        {/* Contador odómetro + progreso */}
-        <div className="mt-10 flex flex-wrap items-end gap-x-12 gap-y-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[10px] uppercase tracking-[0.18em] text-white/55">Contador · Revenue PRIME</span>
-              {monthlyGrowth !== 0 && (
-                <span className={`text-[10px] font-medium ${monthlyGrowth > 0 ? "text-[#7ce0a0]" : "text-kev-danger"}`}>
-                  {monthlyGrowth > 0 ? "+" : ""}
-                  {monthlyGrowth.toFixed(1)}%
-                </span>
-              )}
+          {/* Widget: contador (odómetro) */}
+          <div className="absolute -left-3 sm:-left-6 top-6 glass-card px-4 py-3 shadow-xl">
+            <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.16em] text-muted-foreground mb-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" /> Contador · PRIME
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-6xl md:text-7xl font-extrabold number-display text-white tracking-tighter leading-none">
-                ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-              </span>
-              <span className="text-xs text-white/50">USD</span>
+            <div className="text-2xl font-extrabold number-display text-accent-gradient leading-none">
+              ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </div>
           </div>
 
-          <div className="flex-1 min-w-[200px] max-w-sm">
-            <div className="flex items-center justify-between text-[11px] text-white/60 mb-2">
-              <span className="number-display">$10</span>
-              <span className="font-medium text-white number-display">{progress.toFixed(2)}%</span>
-              <span className="number-display">$450K · Mansory</span>
-            </div>
-            <div className="h-1.5 bg-white/15 rounded-full overflow-hidden">
-              <div
-                className="h-full accent-gradient-bg rounded-full transition-all duration-1000 progress-glow"
-                style={{ width: `${Math.max(progress, 0.6)}%` }}
-              />
-            </div>
-            <div className="mt-3 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-white/40">
-              <Lock className="w-2.5 h-2.5" />
-              <span>Secret layer · ${SECRET_TARGET.toLocaleString()}</span>
-            </div>
+          {/* Widget: ubicación en vivo */}
+          <div className="absolute -right-3 sm:-right-6 bottom-10 glass-card px-4 py-3 shadow-xl">
+            <div className="text-[9px] uppercase tracking-[0.16em] text-muted-foreground">En vivo</div>
+            <div className="text-sm font-semibold">Santa Cruz, BO</div>
           </div>
+        </div>
+      </div>
+
+      {/* Barra de progreso */}
+      <div className="relative z-10 mt-12 lg:mt-14">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
+          <span className="number-display">$10</span>
+          <span className="font-semibold text-foreground number-display">{progress.toFixed(2)}% al Mansory</span>
+          <span className="number-display">$450K</span>
+        </div>
+        <div className="h-2 bg-foreground/[0.08] rounded-full overflow-hidden">
+          <div
+            className="h-full accent-gradient-bg rounded-full transition-all duration-1000 progress-glow"
+            style={{ width: `${Math.max(progress, 0.6)}%` }}
+          />
+        </div>
+        <div className="mt-3 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+          <Lock className="w-2.5 h-2.5" />
+          <span>Secret layer · ${SECRET_TARGET.toLocaleString()}</span>
         </div>
       </div>
     </section>
