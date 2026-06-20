@@ -20,8 +20,10 @@ export function ManifestoView() {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-3">{t.manifesto.title}</h1>
-        <p className="text-muted-foreground">{t.manifesto.subtitle}</p>
+        <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight mb-3 text-balance">
+          {t.manifesto.title}
+        </h1>
+        <p className="text-muted-foreground font-light text-pretty">{t.manifesto.subtitle}</p>
       </div>
 
       {/* Mission, Vision, Purpose - using dynamic content */}
@@ -30,7 +32,7 @@ export function ManifestoView() {
           <div className="w-12 h-12 rounded-xl bg-kev-primary/10 border border-kev-primary/20 flex items-center justify-center mx-auto mb-4">
             <Target className="w-6 h-6 text-kev-primary" />
           </div>
-          <h3 className="text-xs uppercase tracking-widest text-kev-primary font-medium mb-2">{t.manifesto.mission}</h3>
+          <h3 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">{t.manifesto.mission}</h3>
           <p className="text-foreground font-medium leading-relaxed">{manifesto.mission}</p>
         </div>
 
@@ -38,7 +40,7 @@ export function ManifestoView() {
           <div className="w-12 h-12 rounded-xl bg-kev-primary/10 border border-kev-primary/20 flex items-center justify-center mx-auto mb-4">
             <Eye className="w-6 h-6 text-kev-primary" />
           </div>
-          <h3 className="text-xs uppercase tracking-widest text-kev-primary font-medium mb-2">{t.manifesto.vision}</h3>
+          <h3 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">{t.manifesto.vision}</h3>
           <p className="text-foreground font-medium leading-relaxed">{manifesto.vision}</p>
         </div>
 
@@ -46,7 +48,7 @@ export function ManifestoView() {
           <div className="w-12 h-12 rounded-xl bg-kev-primary/10 border border-kev-primary/20 flex items-center justify-center mx-auto mb-4">
             <Crown className="w-6 h-6 text-kev-primary" />
           </div>
-          <h3 className="text-xs uppercase tracking-widest text-kev-primary font-medium mb-2">{t.manifesto.purpose}</h3>
+          <h3 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-2">{t.manifesto.purpose}</h3>
           <p className="text-foreground font-medium leading-relaxed">{manifesto.purpose}</p>
         </div>
       </div>

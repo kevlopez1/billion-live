@@ -26,28 +26,32 @@ export function JourneyView() {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-3">{t.journey.title}</h1>
-        <p className="text-muted-foreground">{t.journey.subtitle.replace("${amount}", netWorthInMillions)}</p>
+        <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight mb-3 text-balance">
+          {t.journey.title}
+        </h1>
+        <p className="text-muted-foreground font-light text-pretty">
+          {t.journey.subtitle.replace("${amount}", netWorthInMillions)}
+        </p>
       </div>
 
       {/* Stats Overview - consistent gap */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="glass-card p-4 text-center">
-          <div className="text-2xl font-bold text-kev-primary number-display">{yearsActive}</div>
+          <div className="text-3xl font-light text-foreground number-display">{yearsActive}</div>
           <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{t.journey.years}</div>
         </div>
         <div className="glass-card p-4 text-center">
-          <div className="text-2xl font-bold text-kev-primary number-display">
-            {Math.floor(metrics.netWorth / 2500).toLocaleString()}x
+          <div className="text-3xl font-light text-foreground number-display">
+            {Math.max(1, Math.floor(metrics.netWorth / 10)).toLocaleString()}x
           </div>
           <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{t.journey.growth}</div>
         </div>
         <div className="glass-card p-4 text-center">
-          <div className="text-2xl font-bold text-kev-primary number-display">6</div>
+          <div className="text-3xl font-light text-foreground number-display">6</div>
           <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{t.journey.countries}</div>
         </div>
         <div className="glass-card p-4 text-center">
-          <div className="text-2xl font-bold text-kev-primary number-display">{progress.toFixed(1)}%</div>
+          <div className="text-3xl font-light text-foreground number-display">{progress.toFixed(1)}%</div>
           <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{t.journey.towardBillion}</div>
         </div>
       </div>
@@ -102,9 +106,8 @@ export function JourneyView() {
                     </p>
 
                     <div className={`flex items-center gap-2 text-sm ${isEven ? "md:justify-end" : ""}`}>
-                      <DollarSign className="w-4 h-4 text-kev-success" />
-                      <span className="font-semibold text-kev-success number-display">{milestone.netWorth}</span>
-                      <span className="text-muted-foreground">{t.journey.netWorth}</span>
+                      <span className="font-medium text-foreground number-display">{milestone.netWorth}</span>
+                      <span className="text-muted-foreground text-xs uppercase tracking-wider">{t.journey.netWorth}</span>
                     </div>
                   </div>
                 </div>
