@@ -23,11 +23,10 @@ export function AnalyticsView() {
   ]
 
   const breakdown = [
-    { category: "Venture Capital", percentage: 38, value: "$42.8M", color: "bg-kev-primary" },
-    { category: "Real Estate", percentage: 25, value: "$156M", color: "bg-kev-primary-light" },
-    { category: "AI/ML Startups", percentage: 18, value: "$8.2M", color: "bg-kev-success" },
-    { category: "Trading", percentage: 11, value: "$12.4M", color: "bg-neutral-500" },
-    { category: "Sustainable", percentage: 8, value: "$5.8M", color: "bg-kev-warning" },
+    { category: "PRIME", percentage: 55, value: "El motor", color: "bg-white/85" },
+    { category: "KEV Strategy", percentage: 18, value: "Reputación", color: "bg-white/55" },
+    { category: "Insightful University", percentage: 15, value: "Masificación", color: "bg-white/40" },
+    { category: "@Kev López · El medio", percentage: 12, value: "Audiencia", color: "bg-white/25" },
   ]
 
   const maxValue = Math.max(...monthlyData.map((d) => d.revenue))

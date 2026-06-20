@@ -77,13 +77,13 @@ export function GoalsView() {
     ]
 
     for (let year = 0; year <= 10; year++) {
-      const point: Record<string, number | string> = { year: `${2024 + year}` }
+      const point: Record<string, number | string> = { year: `${2026 + year}` }
       scenarios.forEach((scenario) => {
         const monthlyRate = scenario.rate / 100
         const value = currentWorth * Math.pow(1 + monthlyRate, year * 12)
-        point[scenario.name] = Math.min(value, 2_000_000_000)
+        point[scenario.name] = Math.min(value, CHALLENGE_TARGET * 2)
       })
-      point.target = 1_000_000_000
+      point.target = CHALLENGE_TARGET
       data.push(point)
     }
     return data
@@ -324,7 +324,7 @@ export function GoalsView() {
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles
-                    className={`w-4 h-4 ${i === 0 ? "text-blue-400" : i === 1 ? "text-kev-primary" : "text-amber-400"}`}
+                    className={`w-4 h-4 ${i === 1 ? "text-foreground" : "text-muted-foreground"}`}
                   />
                   <span className="text-sm font-medium">{scenario.name}</span>
                 </div>
@@ -352,25 +352,21 @@ export function GoalsView() {
             <AreaChart data={projectionData}>
               <defs>
                 <linearGradient id="conservativeGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#52525b" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#52525b" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="moderateGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--kev-primary))" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(var(--kev-primary))" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#fafafa" stopOpacity={0.28} />
+                  <stop offset="95%" stopColor="#fafafa" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="aggressiveGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#a1a1aa" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="#a1a1aa" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis dataKey="year" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickFormatter={(v) => `$${(v / 1_000_000_000).toFixed(1)}B`}
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff" opacity={0.06} />
+              <XAxis dataKey="year" stroke="#71717a" fontSize={12} />
+              <YAxis stroke="#71717a" fontSize={12} tickFormatter={(v) => formatCurrency(v)} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
@@ -383,7 +379,7 @@ export function GoalsView() {
               <Area
                 type="monotone"
                 dataKey="conservative"
-                stroke="#3b82f6"
+                stroke="#52525b"
                 fill="url(#conservativeGrad)"
                 strokeWidth={2}
                 name={t.goals.conservative}
@@ -391,7 +387,7 @@ export function GoalsView() {
               <Area
                 type="monotone"
                 dataKey="moderate"
-                stroke="hsl(var(--kev-primary))"
+                stroke="#fafafa"
                 fill="url(#moderateGrad)"
                 strokeWidth={2}
                 name={t.goals.moderate}
@@ -399,7 +395,7 @@ export function GoalsView() {
               <Area
                 type="monotone"
                 dataKey="aggressive"
-                stroke="#f59e0b"
+                stroke="#a1a1aa"
                 fill="url(#aggressiveGrad)"
                 strokeWidth={2}
                 name={t.goals.aggressive}
@@ -407,7 +403,7 @@ export function GoalsView() {
               <Line
                 type="monotone"
                 dataKey="target"
-                stroke="#ef4444"
+                stroke="#3f3f46"
                 strokeDasharray="5 5"
                 strokeWidth={2}
                 dot={false}

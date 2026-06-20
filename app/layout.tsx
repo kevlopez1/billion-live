@@ -66,21 +66,12 @@ export const metadata: Metadata = {
     title: "KEV PROJECT GTA | De $10 a un Mercedes-AMG Mansory",
     description:
       "El reto en vivo: de $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia, construyendo un imperio en público con PRIME. El auto es la carnada; el imperio es la meta.",
-    images: [
-      {
-        url: OG_IMAGE,
-        width: 1200,
-        height: 630,
-        alt: "KEV PROJECT GTA — De $10 al Mansory",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "KEV PROJECT GTA | De $10 a un Mercedes-AMG Mansory",
     description:
       "El reto en vivo desde Bolivia: de $10 al Mansory, construyendo un imperio en público con PRIME (empleados de IA).",
-    images: [OG_IMAGE],
     creator: "@1kevlopez",
   },
   appleWebApp: {
