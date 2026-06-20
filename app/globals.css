@@ -591,13 +591,37 @@
   box-shadow: none;
 }
 
-/* Progress bar — soft platinum sheen, no heavy glow */
+/* Progress bar — emerald signature sheen */
 .progress-glow {
-  box-shadow: 0 0 12px oklch(1 0 0 / 0.12);
+  box-shadow: 0 0 16px oklch(0.72 0.15 158 / 0.45);
 }
 
 :root .progress-glow {
   box-shadow: none;
+}
+
+/* ── Signature accent (emerald): "dark + one bold color" robado de las refs ── */
+.text-accent-gradient {
+  background: linear-gradient(175deg, oklch(0.99 0 0) 8%, oklch(0.74 0.16 158) 125%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.accent-gradient-bg {
+  background: linear-gradient(135deg, oklch(0.82 0.16 156) 0%, oklch(0.6 0.15 162) 100%);
+}
+
+/* Glow ambiental para momentos protagonistas (héroe) */
+.accent-glow {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, oklch(0.7 0.16 158 / 0.16) 0%, transparent 70%);
+  filter: blur(48px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Added smooth page transitions */

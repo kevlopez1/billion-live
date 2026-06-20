@@ -128,8 +128,9 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <div className="glass-card p-6 md:p-10">
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
+    <div className="glass-card p-6 md:p-10 relative overflow-hidden">
+      <div className="accent-glow -left-20 top-1/2 -translate-y-1/2" />
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 relative z-10">
         {/* Main value */}
         <div>
           <div className="flex items-center gap-3 mb-4">
@@ -149,7 +150,7 @@ export function PortfolioOverview() {
             )}
           </div>
           <div className="flex items-baseline gap-3">
-            <span className="text-5xl sm:text-6xl md:text-7xl font-light tracking-tighter number-display leading-none break-all">
+            <span className="text-6xl sm:text-7xl md:text-8xl font-medium tracking-tighter number-display leading-none break-all text-accent-gradient">
               ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </span>
             <span className="text-sm text-muted-foreground font-light">USD</span>
@@ -170,7 +171,7 @@ export function PortfolioOverview() {
           <div className="h-px w-full bg-border mb-3" />
           <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-kev-primary to-kev-primary-light rounded-full transition-all duration-1000 progress-glow"
+              className="h-full accent-gradient-bg rounded-full transition-all duration-1000 progress-glow"
               style={{ width: `${Math.max(progress, 0.6)}%` }}
             />
           </div>
