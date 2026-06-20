@@ -194,6 +194,14 @@ export function PortfolioOverview() {
         {/* Pie: prueba social + capa secreta + ubicación */}
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-white/55">
           <span className="flex items-center gap-2">
+            <img
+              src="/images/kev.jpg"
+              alt="Kev López"
+              className="w-7 h-7 rounded-full object-cover object-[center_30%] ring-1 ring-white/30"
+            />
+            <span className="text-white font-semibold">Kev López</span>
+          </span>
+          <span className="flex items-center gap-2">
             <span className="flex text-white/80">
               {[0, 1, 2, 3, 4].map((i) => (
                 <Star key={i} className="w-3 h-3 fill-current" />
