@@ -125,12 +125,12 @@ export function PortfolioOverview() {
 
   return (
     <section className="relative overflow-hidden rounded-[var(--radius)] bg-[#0a0a0a] text-white min-h-[82vh] lg:min-h-[560px]">
-      {/* Foto cinematográfica: fondo completo en móvil, mitad derecha en desktop */}
-      <div className="absolute inset-0 lg:left-[40%]">
+      {/* El auto del reto (protagonista): fondo completo en móvil, mitad derecha en desktop */}
+      <div className="absolute inset-0 lg:left-[38%]">
         <img
-          src="/images/kev.jpg"
-          alt="Kev López"
-          className="w-full h-full object-cover object-[center_26%]"
+          src="/images/mansory.jpg"
+          alt="Mercedes-AMG S63 P950 por Mansory — el auto del reto"
+          className="w-full h-full object-cover object-[center_42%]"
         />
         {/* Degradados para fundir la foto con el negro y dar legibilidad al texto */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-[#0a0a0a]/10 lg:bg-gradient-to-r lg:from-[#0a0a0a] lg:via-[#0a0a0a]/70 lg:to-transparent" />
