@@ -45,7 +45,7 @@ export function SocialPowerGrid() {
     <div className="glass-card p-6 md:p-8">
       <div className="flex items-end justify-between mb-6">
         <div>
-          <h3 className="text-lg font-medium tracking-tight">Público & Base de Datos</h3>
+          <h3 className="text-2xl font-bold tracking-tight">Público & Base de Datos</h3>
           <p className="text-sm text-muted-foreground mt-1 font-light">La atención como activo · números reales, Día 1</p>
         </div>
         <div className="flex items-baseline gap-2 shrink-0">
