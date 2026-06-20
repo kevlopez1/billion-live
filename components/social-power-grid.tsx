@@ -1,82 +1,46 @@
 "use client"
 
-import { Music2, Instagram, Building2, TrendingUp, Users } from "lucide-react"
+import { Music2, Instagram, Building2, Users } from "lucide-react"
 
 // La atención como ACTIVO: cada plataforma alimenta la base de datos → público real.
 const socialPlatforms = [
-  {
-    name: "TikTok · @kev.project.gta",
-    icon: Music2,
-    followers: "El Reto",
-    change: "Día 1",
-    changePercent: "Relanzado",
-    color: "text-foreground",
-    bgColor: "bg-foreground/5",
-    borderColor: "border-foreground/15",
-  },
-  {
-    name: "@1kevlopez",
-    icon: Instagram,
-    followers: "19.6K",
-    change: "El medio",
-    changePercent: "Personal",
-    color: "text-pink-500",
-    bgColor: "bg-pink-500/10",
-    borderColor: "border-pink-500/20",
-  },
-  {
-    name: "PRIME · primebusiness.live",
-    icon: Building2,
-    followers: "B2B",
-    change: "Leads IA",
-    changePercent: "El motor",
-    color: "text-kev-primary",
-    bgColor: "bg-kev-primary/10",
-    borderColor: "border-kev-primary/20",
-  },
+  { name: "TikTok", handle: "@kev.project.gta", icon: Music2, value: "El reto", role: "El medio" },
+  { name: "Instagram", handle: "@1kevlopez", icon: Instagram, value: "19.6K", role: "La marca personal" },
+  { name: "PRIME", handle: "primebusiness.live", icon: Building2, value: "B2B", role: "El motor" },
 ]
 
 export function SocialPowerGrid() {
   const totalFollowers = "19.6K+"
 
   return (
-    <div className="glass-card p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="glass-card p-6 md:p-8">
+      <div className="flex items-end justify-between mb-6">
         <div>
-          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Público & Base de Datos</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">La atención como activo · se convierte en público real</p>
+          <h3 className="text-lg font-medium tracking-tight">Público & Base de Datos</h3>
+          <p className="text-sm text-muted-foreground mt-1 font-light">La atención como activo</p>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <Users className="w-4 h-4 text-kev-primary" />
-          <span className="font-semibold text-foreground number-display">{totalFollowers}</span>
-          <span className="text-muted-foreground">Audiencia</span>
+        <div className="flex items-baseline gap-2 shrink-0">
+          <Users className="w-3.5 h-3.5 text-muted-foreground self-center" strokeWidth={1.5} />
+          <span className="text-xl font-light text-foreground number-display">{totalFollowers}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
         {socialPlatforms.map((platform) => (
           <div
             key={platform.name}
-            className={`p-4 rounded-xl border ${platform.borderColor} ${platform.bgColor} transition-all hover:scale-[1.02] hover:shadow-lg`}
+            className="p-5 rounded-2xl border border-border transition-colors hover:border-white/[0.16] hover:bg-white/[0.02]"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <platform.icon className={`w-5 h-5 ${platform.color}`} />
-                <span className="text-sm font-medium text-foreground">{platform.name}</span>
-              </div>
+            <div className="flex items-center gap-2 mb-6 text-muted-foreground">
+              <platform.icon className="w-4 h-4" strokeWidth={1.5} />
+              <span className="text-sm text-foreground">{platform.name}</span>
             </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-foreground number-display">{platform.followers}</div>
-                <div className="text-xs text-muted-foreground">{platform.changePercent}</div>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center gap-1 text-kev-success text-sm font-medium">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  {platform.change}
-                </div>
-                <div className="text-xs text-muted-foreground">Función</div>
-              </div>
+            <div className="text-2xl font-light text-foreground number-display">{platform.value}</div>
+            <div className="flex items-center justify-between mt-1.5">
+              <span className="text-[11px] text-muted-foreground font-light truncate">{platform.handle}</span>
+              <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground shrink-0 ml-2">
+                {platform.role}
+              </span>
             </div>
           </div>
         ))}

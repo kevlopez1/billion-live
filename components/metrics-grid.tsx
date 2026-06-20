@@ -1,7 +1,7 @@
 "use client"
 
 import { useApp, CHALLENGE_TARGET } from "@/context/app-context"
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Briefcase, Car } from "lucide-react"
+import { DollarSign, BarChart3, Briefcase, Car } from "lucide-react"
 
 export function MetricsGrid() {
   const { metrics } = useApp()
@@ -47,26 +47,17 @@ export function MetricsGrid() {
   ]
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {dynamicMetrics.map((metric) => (
-        <div key={metric.label} className="glass-card p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div className="p-2 bg-kev-primary/10 border border-kev-primary/20 rounded-lg">
-              <metric.icon className="w-4 h-4 text-kev-primary" />
-            </div>
-            <div
-              className={`flex items-center gap-0.5 text-xs font-medium ${
-                metric.trend === "up" ? "text-kev-success" : "text-kev-danger"
-              }`}
-            >
-              {metric.trend === "up" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {metric.change}
-            </div>
+        <div key={metric.label} className="glass-card p-5 md:p-6 hover-lift">
+          <div className="flex items-center gap-2 mb-5 text-muted-foreground">
+            <metric.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <span className="text-[10px] uppercase tracking-[0.16em]">{metric.label}</span>
           </div>
-          <div>
-            <p className="text-2xl font-semibold tracking-tight number-display">{metric.value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{metric.label}</p>
-          </div>
+          <p className="text-3xl md:text-4xl font-light tracking-tight number-display text-foreground">
+            {metric.value}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-2 font-light truncate">{metric.period}</p>
         </div>
       ))}
     </div>

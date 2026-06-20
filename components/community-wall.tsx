@@ -131,7 +131,7 @@ export function CommunityWall() {
             className="p-4 rounded-xl bg-secondary/30 border border-border/50 hover:border-kev-primary/30 transition-all"
           >
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-kev-primary/60 to-kev-primary-light/60 flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
                 <span className="text-[10px] font-medium text-white">{msg.avatar}</span>
               </div>
               <div className="flex-1 min-w-0">
@@ -189,7 +189,7 @@ export function CommunityWall() {
             <button
               onClick={handleSubmitMessage}
               disabled={isSubmitting || !newMessage.trim() || !userName.trim()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-background rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               {isSubmitting ? "Publicando..." : "Publicar Mensaje"}

@@ -64,7 +64,7 @@ export function DailyPulseView() {
       <div className="glass-card p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center glow-green-subtle">
+            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center glow-green-subtle">
               <span className="text-lg font-semibold text-white">KP</span>
             </div>
             <div>
@@ -114,7 +114,7 @@ export function DailyPulseView() {
       {/* New Post Composer */}
       <div className="glass-card p-4">
         <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
             <span className="text-xs font-medium text-white">KP</span>
           </div>
           <div className="flex-1">
@@ -149,7 +149,7 @@ export function DailyPulseView() {
               <button
                 onClick={handlePost}
                 disabled={isLoading || !newPost.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-kev-primary text-white rounded-lg text-sm font-medium hover:bg-kev-primary-light transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-kev-primary text-background rounded-lg text-sm font-medium hover:bg-kev-primary-light transition-colors disabled:opacity-50"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {t.pulse.post}
@@ -167,7 +167,7 @@ export function DailyPulseView() {
             <div key={entry.id} className="glass-card p-5 transition-all hover:border-kev-primary/30">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
                     <span className="text-xs font-medium text-white">KP</span>
                   </div>
                   <div>

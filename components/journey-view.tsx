@@ -80,7 +80,7 @@ export function JourneyView() {
                       <div
                         className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                           milestone.highlight
-                            ? "bg-kev-primary text-white"
+                            ? "bg-kev-primary text-background"
                             : "bg-kev-primary/10 border border-kev-primary/20 text-kev-primary"
                         }`}
                       >

@@ -8,10 +8,7 @@ import { CommandBar } from "@/components/command-bar"
 import { PortfolioOverview } from "@/components/portfolio-overview"
 import { MetricsGrid } from "@/components/metrics-grid"
 import { ProjectsList } from "@/components/projects-list"
-import { RevenueChart } from "@/components/revenue-chart"
-import { ActivityFeed } from "@/components/activity-feed"
 import { MobileNav } from "@/components/mobile-nav"
-import { ParticlesBackground } from "@/components/particles-background"
 import { AnalyticsView } from "@/components/analytics-view"
 import { ProjectsView } from "@/components/projects-view"
 import { SettingsView } from "@/components/settings-view"
@@ -19,17 +16,13 @@ import { DailyPulseView } from "@/components/daily-pulse-view"
 import { ManifestoView } from "@/components/manifesto-view"
 import { JourneyView } from "@/components/journey-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
-import { GlobalPresenceMap } from "@/components/global-presence-map"
 import { CommunityWall } from "@/components/community-wall"
 import { AdminView } from "@/components/admin-view"
 import { GoalsView } from "@/components/goals-view"
 import { CalendarView } from "@/components/calendar-view"
 import { AchievementsView } from "@/components/achievements-view"
 import { LoginDialog } from "@/components/login-dialog"
-import { InstallPWAPrompt } from "@/components/install-pwa-prompt"
-import { AIAssistantButton } from "@/components/ai-assistant"
 import { NotificationCenter, type Notification } from "@/components/notification-center"
-import { ExportReports } from "@/components/export-reports"
 import { toast } from "sonner"
 import {
   Bell,
@@ -126,7 +119,6 @@ export default function Dashboard() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
-  const [exportOpen, setExportOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
   const { metrics, t } = useApp()
   const { isAuthenticated, user, logout } = useAuth()
@@ -188,40 +180,28 @@ export default function Dashboard() {
     switch (activeView) {
       case "dashboard":
         return (
-          <div className="view-transition stagger-children">
-            <div className="flex items-end justify-between mb-2">
+          <div className="view-transition stagger-children space-y-8">
+            <div className="flex items-end justify-between">
               <div>
-                <h1 className="text-2xl font-semibold text-foreground tracking-tight">{t.dashboard.title}</h1>
-                <p className="text-sm text-muted-foreground mt-1">{t.dashboard.subtitle}</p>
+                <h1 className="text-3xl font-semibold text-foreground tracking-tight text-balance">
+                  {t.dashboard.title}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1.5 max-w-md text-pretty">{t.dashboard.subtitle}</p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="w-2 h-2 rounded-full bg-kev-success animate-pulse" />
+              <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+                <div className="w-1.5 h-1.5 rounded-full bg-kev-success animate-pulse" />
                 <span>{t.dashboard.liveData}</span>
               </div>
             </div>
 
             <PortfolioOverview />
             <MetricsGrid />
-            <SocialPowerGrid />
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <div className="glass-card h-full hover-lift">
-                  <RevenueChart />
-                </div>
-              </div>
-              <div className="lg:col-span-1">
-                <div className="glass-card h-full hover-lift">
-                  <ActivityFeed />
-                </div>
-              </div>
-            </div>
-
-            <GlobalPresenceMap />
 
             <div className="glass-card hover-lift">
               <ProjectsList />
             </div>
+
+            <SocialPowerGrid />
 
             <CommunityWall />
           </div>
@@ -295,13 +275,13 @@ export default function Dashboard() {
     switch (activeView) {
       case "dashboard":
         return (
-          <div className="view-transition stagger-children">
-            <div className="flex items-center justify-between mb-4">
+          <div className="view-transition stagger-children space-y-5">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-xl font-semibold text-foreground">{t.dashboard.title}</h1>
-                <p className="text-xs text-muted-foreground mt-0.5">{t.dashboard.subtitle}</p>
+                <h1 className="text-2xl font-semibold text-foreground tracking-tight">{t.dashboard.title}</h1>
+                <p className="text-xs text-muted-foreground mt-1 text-pretty">{t.dashboard.subtitle}</p>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-kev-success animate-pulse" />
                 <span>Live</span>
               </div>
@@ -309,17 +289,10 @@ export default function Dashboard() {
 
             <PortfolioOverview />
             <MetricsGrid />
-            <SocialPowerGrid />
-            <div className="glass-card">
-              <RevenueChart />
-            </div>
-            <div className="glass-card">
-              <ActivityFeed />
-            </div>
-            <GlobalPresenceMap />
             <div className="glass-card">
               <ProjectsList />
             </div>
+            <SocialPowerGrid />
             <CommunityWall />
           </div>
         )
@@ -367,12 +340,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
-      <ParticlesBackground />
-
       <CommandBar open={commandOpen} onOpenChange={setCommandOpen} />
       <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} onSuccess={() => setActiveView("admin")} />
-      <InstallPWAPrompt />
-      <AIAssistantButton />
 
       <NotificationCenter
         open={notificationsOpen}
@@ -383,7 +352,6 @@ export default function Dashboard() {
         onDelete={deleteNotification}
         onClearAll={clearAllNotifications}
       />
-      <ExportReports open={exportOpen} onOpenChange={setExportOpen} />
 
       {/* Desktop Layout */}
       <div className="hidden lg:flex min-h-screen relative z-10">
@@ -437,7 +405,7 @@ export default function Dashboard() {
               <div className="glass-card p-3 !bg-kev-success/5 !border-kev-success/20">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
                       <span className="text-xs font-medium text-white">KP</span>
                     </div>
                     <div>
@@ -477,7 +445,7 @@ export default function Dashboard() {
         </aside>
 
         {/* Main content area */}
-        <div className="flex-1 flex flex-col pt-32">
+        <div className="flex-1 flex flex-col">
           <header className="px-6 py-4 border-b border-border/50 backdrop-blur-xl bg-background/60">
             <div className="flex items-center justify-between">
               <button
@@ -499,26 +467,19 @@ export default function Dashboard() {
                   </div>
                 )}
                 <button
-                  onClick={() => setExportOpen(true)}
-                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors press-effect"
-                  title="Export Reports"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-                <button
                   onClick={() => setNotificationsOpen(true)}
                   className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors relative press-effect"
                 >
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-kev-primary rounded-full flex items-center justify-center text-[8px] text-white font-bold animate-bounce-in">
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-kev-primary rounded-full flex items-center justify-center text-[8px] text-background font-bold animate-bounce-in">
                       {unreadCount}
                     </span>
                   )}
                 </button>
                 <div className="h-6 w-px bg-border/50 mx-1" />
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center glow-green-subtle">
+                  <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center glow-green-subtle">
                     <span className="text-xs font-medium text-white">KP</span>
                   </div>
                 </div>
@@ -532,14 +493,8 @@ export default function Dashboard() {
 
           <footer className="px-6 py-3 border-t border-border/50 backdrop-blur-xl bg-background/40">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>2026 KEV PROJECT GTA · PRIME. Hecho en Bolivia.</span>
-              <div className="flex items-center gap-4">
-                <span>v2.1.0</span>
-                <span className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-kev-success animate-pulse" />
-                  Status: Operational
-                </span>
-              </div>
+              <span>KEV PROJECT GTA · PRIME</span>
+              <span className="tracking-wide">Hecho en Bolivia 🇧🇴</span>
             </div>
           </footer>
         </div>
@@ -569,12 +524,6 @@ export default function Dashboard() {
                   <Shield className="w-4 h-4" />
                 </button>
               )}
-              <button
-                onClick={() => setExportOpen(true)}
-                className="p-2 text-muted-foreground hover:text-foreground rounded-md press-effect"
-              >
-                <Download className="w-4 h-4" />
-              </button>
               <button
                 onClick={() => setCommandOpen(true)}
                 className="p-2 text-muted-foreground hover:text-foreground rounded-md press-effect"
