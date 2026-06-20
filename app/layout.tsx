@@ -21,7 +21,7 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 const SITE_URL = "https://v0-empire-os-dashboard-rho.vercel.app"
-const OG_IMAGE = "/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg"
+const OG_IMAGE = "/images/kev.jpg"
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -194,7 +194,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg" />
+        <link rel="apple-touch-icon" href="/images/kev.jpg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script
