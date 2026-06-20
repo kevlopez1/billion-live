@@ -65,11 +65,11 @@ export function DailyPulseView() {
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center glow-green-subtle">
-              <span className="text-lg font-semibold text-white">KS</span>
+              <span className="text-lg font-semibold text-white">KP</span>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-semibold text-foreground">Kevin Strategy</span>
+                <span className="font-semibold text-foreground">Kev · @kev.project.gta</span>
                 <div
                   className={`flex items-center gap-1 text-xs ${
                     liveStatus.availability === "available"
@@ -115,7 +115,7 @@ export function DailyPulseView() {
       <div className="glass-card p-4">
         <div className="flex gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center shrink-0">
-            <span className="text-xs font-medium text-white">KS</span>
+            <span className="text-xs font-medium text-white">KP</span>
           </div>
           <div className="flex-1">
             <textarea
@@ -168,10 +168,10 @@ export function DailyPulseView() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">KS</span>
+                    <span className="text-xs font-medium text-white">KP</span>
                   </div>
                   <div>
-                    <span className="font-medium text-foreground text-sm">Kevin Strategy</span>
+                    <span className="font-medium text-foreground text-sm">Kev · @kev.project.gta</span>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{entry.timeAgo}</span>
                       <span>·</span>

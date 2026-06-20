@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { useApp, type Goal } from "@/context/app-context"
+import { useApp, type Goal, CHALLENGE_TARGET } from "@/context/app-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -43,10 +43,10 @@ export function GoalsView() {
     category: "financial" as Goal["category"],
   })
 
-  // Calculate projection to $1B
+  // Proyección hacia el Mercedes-AMG Mansory (meta del reto)
   const calculateProjection = (growthRate: number) => {
     const currentWorth = metrics.netWorth
-    const target = 1_000_000_000
+    const target = CHALLENGE_TARGET
     const monthlyRate = growthRate / 100
 
     if (monthlyRate <= 0) return { months: Number.POSITIVE_INFINITY, years: Number.POSITIVE_INFINITY, date: null }
@@ -272,7 +272,7 @@ export function GoalsView() {
           </div>
           <div className="glass-card p-4 !bg-background/50">
             <div className="text-xs text-muted-foreground mb-1">{t.goals.targetAmount}</div>
-            <div className="text-2xl font-bold text-foreground number-display">$1B</div>
+            <div className="text-2xl font-bold text-foreground number-display">$450K</div>
           </div>
           <div className="glass-card p-4 !bg-background/50">
             <div className="text-xs text-muted-foreground mb-1">{t.goals.yearsToGoal}</div>

@@ -67,54 +67,54 @@ export type ActiveView =
 const initialNotifications: Notification[] = [
   {
     id: "1",
-    title: "New investment received",
-    description: "Apex Ventures Series B - $2.5M funding round completed successfully",
-    time: "2 min ago",
+    title: "Reto relanzado",
+    description: "Día 1: de $10 a un Mercedes-AMG Mansory, desde Bolivia. El contador empieza ahora.",
+    time: "hace 2 min",
     read: false,
-    type: "investment",
+    type: "milestone",
     priority: "high",
   },
   {
     id: "2",
-    title: "Milestone reached",
-    description: "Portfolio value hit $225M - You're 22.5% of the way to $1B!",
-    time: "1 hour ago",
+    title: "Nuevo cliente PRIME",
+    description: "Empleado de IA instalado. El contador se alimenta del revenue real de PRIME.",
+    time: "hace 1 hora",
     read: false,
-    type: "milestone",
-    priority: "medium",
-  },
-  {
-    id: "3",
-    title: "Contract signed",
-    description: "Neural Labs partnership finalized - Expected ROI: 35%",
-    time: "3 hours ago",
-    read: true,
     type: "investment",
     priority: "medium",
   },
   {
+    id: "3",
+    title: "Beca PRIME desbloqueada",
+    description: "IA instalada gratis a un negocio boliviano, en cámara. Hito cumplido.",
+    time: "hace 3 horas",
+    read: true,
+    type: "goal",
+    priority: "medium",
+  },
+  {
     id: "4",
-    title: "Weekly report ready",
-    description: "Q4 performance summary available for download",
-    time: "1 day ago",
+    title: "Ruta EE.UU.",
+    description: "Avance en O-1 → EB-1A. PRIME como C-Corp en Delaware.",
+    time: "hace 1 día",
     read: true,
     type: "info",
     priority: "low",
   },
   {
     id: "5",
-    title: "Goal progress update",
-    description: "You're 45% toward your 'First $500M' goal",
-    time: "2 days ago",
+    title: "Progreso de meta",
+    description: "Racha de consistencia activa. El que no falta, gana.",
+    time: "hace 2 días",
     read: true,
     type: "goal",
     priority: "medium",
   },
   {
     id: "6",
-    title: "Price alert triggered",
-    description: "Quantum Trading ROI exceeded 30% threshold",
-    time: "3 days ago",
+    title: "Viralidad",
+    description: "Respuesta al comentario de los 1.300 likes ganando tracción.",
+    time: "hace 3 días",
     read: true,
     type: "alert",
     priority: "high",
@@ -396,14 +396,14 @@ export default function Dashboard() {
             >
               <Image
                 src="/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg"
-                alt="Kev Strategy"
+                alt="KEV PROJECT GTA"
                 width={36}
                 height={36}
                 className="rounded-lg"
               />
               <div>
-                <span className="text-sm font-semibold text-foreground block">Kev Strategy</span>
-                <span className="text-xs text-muted-foreground">The Billion Live</span>
+                <span className="text-sm font-semibold text-foreground block">KEV PROJECT GTA</span>
+                <span className="text-xs text-muted-foreground">De $10 al Mansory</span>
               </div>
               {isAuthenticated && (
                 <div className="ml-auto">
@@ -438,7 +438,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center">
-                      <span className="text-xs font-medium text-white">KS</span>
+                      <span className="text-xs font-medium text-white">KP</span>
                     </div>
                     <div>
                       <div className="text-xs font-medium">{user?.name}</div>
@@ -467,13 +467,11 @@ export default function Dashboard() {
 
           <div className="p-4 border-t border-border/50">
             <div className="glass-card p-3 !bg-kev-primary/5 !border-kev-primary/20">
-              <div className="text-xs text-muted-foreground mb-1">{t.dashboard.netWorth}</div>
+              <div className="text-xs text-muted-foreground mb-1">Contador del reto · PRIME</div>
               <div className="text-lg font-semibold text-kev-primary number-display">
-                ${(metrics.netWorth / 1_000_000).toFixed(1)}M
+                ${metrics.netWorth.toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </div>
-              <div className="text-xs text-kev-success mt-1">
-                +{metrics.monthlyGrowth}% {t.dashboard.monthlyGrowth.toLowerCase()}
-              </div>
+              <div className="text-xs text-muted-foreground mt-1">Meta: $450.000 · Mansory AMG GT</div>
             </div>
           </div>
         </aside>
@@ -521,7 +519,7 @@ export default function Dashboard() {
                 <div className="h-6 w-px bg-border/50 mx-1" />
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-kev-primary to-kev-primary-light flex items-center justify-center glow-green-subtle">
-                    <span className="text-xs font-medium text-white">KS</span>
+                    <span className="text-xs font-medium text-white">KP</span>
                   </div>
                 </div>
               </div>
@@ -534,7 +532,7 @@ export default function Dashboard() {
 
           <footer className="px-6 py-3 border-t border-border/50 backdrop-blur-xl bg-background/40">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>2024 Kev Strategy. All rights reserved.</span>
+              <span>2026 KEV PROJECT GTA · PRIME. Hecho en Bolivia.</span>
               <div className="flex items-center gap-4">
                 <span>v2.1.0</span>
                 <span className="flex items-center gap-1.5">
@@ -554,7 +552,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-3 press-effect" onDoubleClick={handleAdminAccess}>
               <Image
                 src="/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg"
-                alt="Kev Strategy"
+                alt="KEV PROJECT GTA"
                 width={28}
                 height={28}
                 className="rounded"

@@ -8,45 +8,45 @@ import { toast } from "sonner"
 const initialMessages = [
   {
     id: "1",
-    name: "Alex M.",
+    name: "Andrea M.",
     avatar: "AM",
-    message: "Your transparency is inspiring. Following the journey from day one!",
-    time: "2h ago",
+    message: "Desde Santa Cruz, siguiéndote desde el día 1. Esto sí es real, no flex de papá rico.",
+    time: "hace 2h",
   },
   {
     id: "2",
-    name: "Sarah K.",
-    avatar: "SK",
-    message: "The Manifesto section changed how I think about business. Thank you.",
-    time: "4h ago",
+    name: "Diego R.",
+    avatar: "DR",
+    message: "Que el contador sea revenue REAL de PRIME le da otra credibilidad. Respeto total.",
+    time: "hace 4h",
   },
   {
     id: "3",
-    name: "David L.",
-    avatar: "DL",
-    message: "Watching you build in public gives me hope for my own journey. Keep going!",
-    time: "6h ago",
+    name: "Valeria C.",
+    avatar: "VC",
+    message: "Las Becas PRIME me parecen lo mejor del reto. Ayudar mientras construís. Grande.",
+    time: "hace 6h",
   },
   {
     id: "4",
-    name: "Maria G.",
-    avatar: "MG",
-    message: "Real numbers, real insights, no BS. This is what the internet needs.",
-    time: "8h ago",
+    name: "Mauricio T.",
+    avatar: "MT",
+    message: "Bolivia necesitaba a alguien construyendo en público sin vender humo. Vamos.",
+    time: "hace 8h",
   },
   {
     id: "5",
-    name: "James W.",
-    avatar: "JW",
-    message: "From $2.5K to $225M is insane. The journey view is my favorite section.",
-    time: "12h ago",
+    name: "Camila F.",
+    avatar: "CF",
+    message: "De $10 al Mansory desde la crisis. Si lo logra él, no tengo excusas. Anotada.",
+    time: "hace 12h",
   },
   {
     id: "6",
-    name: "Lisa T.",
-    avatar: "LT",
-    message: "Just shared this with my entire team. Incredible transparency!",
-    time: "1d ago",
+    name: "Sebastián L.",
+    avatar: "SL",
+    message: "Le mandé esto a todo mi equipo. La transparencia del dashboard es otro nivel.",
+    time: "hace 1d",
   },
 ]
 
@@ -61,7 +61,7 @@ export function CommunityWall() {
 
   const handleSubmitMessage = async () => {
     if (!newMessage.trim() || !userName.trim()) {
-      toast.error("Please fill in all fields")
+      toast.error("Por favor completa todos los campos")
       return
     }
 
@@ -87,7 +87,7 @@ export function CommunityWall() {
     setUserName("")
     setShowDialog(false)
     setIsSubmitting(false)
-    toast.success("Message posted successfully!")
+    toast.success("¡Mensaje publicado!")
   }
 
   const handleLike = () => {
@@ -97,7 +97,7 @@ export function CommunityWall() {
     } else {
       setLikeCount((prev) => prev + 1)
       setHasLiked(true)
-      toast.success("Thanks for the support!")
+      toast.success("¡Gracias por el apoyo!")
     }
   }
 
@@ -110,8 +110,8 @@ export function CommunityWall() {
     <div className="glass-card p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Community Support</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">Messages from the community</p>
+          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Apoyo de la Comunidad</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">Mensajes de la gente que sigue el reto</p>
         </div>
         <button
           onClick={handleLike}
@@ -153,7 +153,7 @@ export function CommunityWall() {
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-kev-primary hover:bg-kev-primary/10 rounded-lg transition-colors"
         >
           <MessageCircle className="w-4 h-4" />
-          Leave a message
+          Dejar un mensaje
         </button>
       </div>
 
@@ -162,26 +162,26 @@ export function CommunityWall() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-kev-primary" />
-              Leave a Message
+              Dejar un Mensaje
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Your Name</label>
+              <label className="text-sm font-medium text-foreground mb-2 block">Tu Nombre</label>
               <input
                 type="text"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                placeholder="John Doe"
+                placeholder="Tu nombre"
                 className="w-full px-4 py-2.5 bg-secondary/50 border border-border/50 rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:border-kev-primary/50 transition-colors"
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Message</label>
+              <label className="text-sm font-medium text-foreground mb-2 block">Mensaje</label>
               <textarea
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Share your thoughts..."
+                placeholder="Comparte lo que piensas..."
                 rows={4}
                 className="w-full px-4 py-2.5 bg-secondary/50 border border-border/50 rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:border-kev-primary/50 transition-colors resize-none"
               />
@@ -192,7 +192,7 @@ export function CommunityWall() {
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-kev-primary hover:bg-kev-primary-light text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {isSubmitting ? "Posting..." : "Post Message"}
+              {isSubmitting ? "Publicando..." : "Publicar Mensaje"}
             </button>
           </div>
         </DialogContent>

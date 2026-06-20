@@ -13,23 +13,89 @@ const inter = Inter({
   display: "swap",
 })
 
+const SITE_URL = "https://v0-empire-os-dashboard-rho.vercel.app"
+const OG_IMAGE = "/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg"
+
 export const metadata: Metadata = {
-  title: "Kev Strategy | The Billion Live",
-  description: "Investment portfolio management and performance tracking - Road to $1B",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "KEV PROJECT GTA | De $10 a un Mercedes-AMG Mansory",
+    template: "%s | KEV PROJECT GTA",
+  },
+  description:
+    "Command Center público del reto: de $10 a un Mercedes-AMG GT 63 Mansory (~$450K), desde Bolivia, construyendo un imperio en público con PRIME (empleados de IA). El contador se alimenta del revenue real de PRIME. Sin filtro, sin papá.",
+  applicationName: "KEV PROJECT GTA",
   generator: "v0.app",
   manifest: "/manifest.json",
+  keywords: [
+    "Kev López",
+    "KEV PROJECT GTA",
+    "PRIME",
+    "empleados de IA",
+    "Mercedes-AMG Mansory",
+    "reto de $10",
+    "Bolivia",
+    "Santa Cruz",
+    "construir en público",
+    "build in public",
+    "emprendimiento LatAm",
+    "inteligencia artificial",
+  ],
+  authors: [{ name: "Benjamín Kevin López Mamani", url: "https://primebusiness.live" }],
+  creator: "Kev López (@kev.project.gta)",
+  publisher: "PRIME",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_BO",
+    url: SITE_URL,
+    siteName: "KEV PROJECT GTA",
+    title: "KEV PROJECT GTA | De $10 a un Mercedes-AMG Mansory",
+    description:
+      "El reto en vivo: de $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia, construyendo un imperio en público con PRIME. El auto es la carnada; el imperio es la meta.",
+    images: [
+      {
+        url: OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: "KEV PROJECT GTA — De $10 al Mansory",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "KEV PROJECT GTA | De $10 a un Mercedes-AMG Mansory",
+    description:
+      "El reto en vivo desde Bolivia: de $10 al Mansory, construyendo un imperio en público con PRIME (empleados de IA).",
+    images: [OG_IMAGE],
+    creator: "@1kevlopez",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Kev Strategy",
+    title: "KEV PROJECT GTA",
   },
   formatDetection: {
     telephone: false,
   },
   icons: {
-    icon: "/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg",
-    apple: "/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg",
+    icon: OG_IMAGE,
+    apple: OG_IMAGE,
   },
+  category: "business",
   other: {
     "mobile-web-app-capable": "yes",
   },
@@ -53,7 +119,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/images/logo-20editable-mesa-20de-20trabajo-201-20copia-206.jpg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
