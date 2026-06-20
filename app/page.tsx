@@ -14,6 +14,7 @@ import { SocialPowerGrid } from "@/components/social-power-grid"
 import { LatestContent } from "@/components/latest-content"
 import { ChallengeStatement } from "@/components/challenge-statement"
 import { QuickActions } from "@/components/quick-actions"
+import { IntroSplash } from "@/components/intro-splash"
 import { LayoutDashboard, Activity, BookOpen } from "lucide-react"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
@@ -72,6 +73,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
+      <IntroSplash />
       {/* Desktop Layout */}
       <div className="hidden lg:flex min-h-screen relative z-10">
         <aside className="w-64 border-r border-border/50 backdrop-blur-xl bg-background/60 flex flex-col">
