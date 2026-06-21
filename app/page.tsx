@@ -16,157 +16,184 @@ import { ChallengeStatement } from "@/components/challenge-statement"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
 import { IntroSplash } from "@/components/intro-splash"
-import { LayoutDashboard, Activity, BookOpen } from "lucide-react"
+import { Reveal } from "@/components/reveal"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
+// Etiqueta editorial de sección (estilo sitio pro: "01 — Título")
+function SectionLabel({ index, eyebrow, title }: { index: string; eyebrow: string; title?: string }) {
+  return (
+    <div className="mb-6 flex items-end justify-between gap-4 border-b border-border pb-4">
+      <div>
+        <div className="section-eyebrow">{eyebrow}</div>
+        {title && (
+          <h2 className="mt-2 font-display font-extrabold uppercase tracking-tighter text-2xl md:text-4xl leading-none">
+            {title}
+          </h2>
+        )}
+      </div>
+      <span className="font-display font-extrabold text-foreground/15 text-3xl md:text-5xl leading-none number-display">
+        {index}
+      </span>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard")
-  const { metrics, t } = useApp()
+  const { t } = useApp()
 
   const navItems = [
-    { id: "dashboard" as const, label: t.nav.dashboard, icon: LayoutDashboard },
-    { id: "pulse" as const, label: t.nav.dailyPulse, icon: Activity },
-    { id: "manifesto" as const, label: t.nav.manifesto, icon: BookOpen },
+    { id: "dashboard" as const, label: t.nav.dashboard },
+    { id: "pulse" as const, label: t.nav.dailyPulse },
+    { id: "manifesto" as const, label: t.nav.manifesto },
   ]
 
-  const renderContent = (mobile = false) => {
-    switch (activeView) {
-      case "dashboard":
-        return (
-          <div className={`view-transition stagger-children ${mobile ? "space-y-5" : "space-y-6 md:space-y-8"}`}>
-            <PortfolioOverview />
-            <QuickActions />
-            <ChallengeStatement />
-            <EarlyWall />
-            <MetricsGrid />
-            <div className="glass-card overflow-hidden">
-              <ProjectsList />
-            </div>
-            <LatestContent />
-            <SocialPowerGrid />
+  const renderHome = () => (
+    <div className="space-y-20 md:space-y-28">
+      {/* Hero */}
+      <Reveal>
+        <PortfolioOverview />
+      </Reveal>
+
+      {/* El gancho: la frase del villano */}
+      <Reveal>
+        <ChallengeStatement />
+      </Reveal>
+
+      {/* Seguí el reto */}
+      <section>
+        <Reveal>
+          <SectionLabel index="01" eyebrow="Sumate" title="Seguí el reto" />
+        </Reveal>
+        <Reveal delay={80}>
+          <QuickActions />
+        </Reveal>
+      </section>
+
+      {/* El muro del Día 1 */}
+      <Reveal>
+        <EarlyWall />
+      </Reveal>
+
+      {/* La prueba: números reales de PRIME */}
+      <section>
+        <Reveal>
+          <SectionLabel index="02" eyebrow="La prueba" title="Números reales" />
+        </Reveal>
+        <Reveal delay={80}>
+          <MetricsGrid />
+        </Reveal>
+      </section>
+
+      {/* El imperio: las marcas */}
+      <section>
+        <Reveal>
+          <SectionLabel index="03" eyebrow="El imperio" title="Las marcas" />
+        </Reveal>
+        <Reveal delay={80}>
+          <div className="glass-card overflow-hidden">
+            <ProjectsList />
           </div>
-        )
+        </Reveal>
+      </section>
+
+      {/* Último contenido */}
+      <section>
+        <Reveal>
+          <SectionLabel index="04" eyebrow="En vivo" title="Último contenido" />
+        </Reveal>
+        <Reveal delay={80}>
+          <LatestContent />
+        </Reveal>
+      </section>
+
+      {/* Redes */}
+      <Reveal>
+        <SocialPowerGrid />
+      </Reveal>
+    </div>
+  )
+
+  const renderContent = () => {
+    switch (activeView) {
       case "pulse":
         return (
-          <div className="view-transition">
+          <Reveal>
             <DailyPulseView />
-          </div>
+          </Reveal>
         )
       case "manifesto":
         return (
-          <div className="view-transition">
+          <Reveal>
             <ManifestoView />
-          </div>
+          </Reveal>
         )
       default:
-        return null
+        return renderHome()
     }
-  }
-
-  const getViewTitle = (view: ActiveView) => {
-    const map: Record<ActiveView, string> = {
-      dashboard: t.nav.dashboard,
-      pulse: t.nav.dailyPulse,
-      manifesto: t.nav.manifesto,
-    }
-    return map[view]
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
       <IntroSplash />
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex min-h-screen relative z-10">
-        <aside className="w-64 border-r border-border/50 backdrop-blur-xl bg-background/60 flex flex-col">
-          <div className="p-4 border-b border-border/50">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/images/kev.jpg"
-                alt="Kev López"
-                width={36}
-                height={36}
-                className="rounded-lg object-cover object-[center_32%] w-9 h-9"
-              />
-              <div>
-                <span className="text-sm font-semibold text-foreground block">KEV PROJECT GTA</span>
-                <span className="text-xs text-muted-foreground">De $10 al Mansory</span>
-              </div>
-            </div>
-          </div>
 
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      {/* Glow ambiental superior */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-[40vh] bg-gradient-to-b from-white/[0.04] to-transparent z-0" />
+
+      {/* Navbar minimalista (landing, no dashboard) */}
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/60 border-b border-border/60">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+          <button onClick={() => setActiveView("dashboard")} className="flex items-center gap-2.5 press-effect">
+            <Image
+              src="/images/kev.jpg"
+              alt="Kev López"
+              width={32}
+              height={32}
+              className="rounded-full object-cover object-[center_30%] w-8 h-8 ring-1 ring-white/20"
+            />
+            <div className="text-left leading-none">
+              <span className="block text-sm font-display font-extrabold tracking-tight">KEV PROJECT GTA</span>
+              <span className="block text-[10px] text-muted-foreground tracking-wide mt-0.5">De $10 a un Mercedes</span>
+            </div>
+          </button>
+
+          <nav className="hidden sm:flex items-center gap-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all press-effect ${
+                className={`px-3.5 py-2 rounded-full text-sm transition-all press-effect ${
                   activeView === item.id
-                    ? "bg-kev-primary/15 text-kev-primary border border-kev-primary/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    ? "bg-foreground text-background font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
+                {item.label}
               </button>
             ))}
           </nav>
-
-          <div className="p-4 border-t border-border/50">
-            <div className="glass-card p-3 !bg-kev-primary/5 !border-kev-primary/20">
-              <div className="text-xs text-muted-foreground mb-1">Contador del reto · PRIME</div>
-              <div className="text-lg font-semibold text-kev-primary number-display">
-                ${metrics.netWorth.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Meta: $450.000 · Mansory AMG GT</div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main content area */}
-        <div className="flex-1 flex flex-col">
-          <main className="flex-1 p-6 lg:p-8 overflow-auto">
-            <div className="max-w-[1400px] mx-auto">{renderContent(false)}</div>
-          </main>
-
-          <footer className="px-6 py-3 border-t border-border/50 backdrop-blur-xl bg-background/40">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>KEV PROJECT GTA · PRIME</span>
-              <SocialLinks />
-              <span className="tracking-wide">Hecho en Bolivia 🇧🇴</span>
-            </div>
-          </footer>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile Layout */}
-      <div className="lg:hidden flex flex-col min-h-screen pb-20 relative z-10">
-        <header className="sticky top-0 z-40 px-4 py-3 border-b border-border/50 backdrop-blur-xl bg-background/70">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/images/kev.jpg"
-              alt="Kev López"
-              width={28}
-              height={28}
-              className="rounded-full object-cover object-[center_32%] w-7 h-7"
-            />
-            <span className="text-sm font-medium">{getViewTitle(activeView)}</span>
-          </div>
-        </header>
+      {/* Contenido */}
+      <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-8 md:pt-12 pb-28 lg:pb-20">
+        {renderContent()}
+      </main>
 
-        <main className="flex-1 p-4 overflow-auto">
-          <div className="space-y-4">{renderContent(true)}</div>
-        </main>
-
-        <footer className="px-4 py-6 flex flex-col items-center gap-3 border-t border-border/50">
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-border/60 mt-8">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-10 flex flex-col items-center gap-4 text-center">
+          <span className="font-display font-extrabold uppercase tracking-tighter text-xl">KEV PROJECT GTA</span>
           <SocialLinks />
           <span className="text-[11px] text-muted-foreground tracking-wide">
-            KEV PROJECT GTA · PRIME · Hecho en Bolivia 🇧🇴
+            PRIME · El auto es la carnada, el imperio es la meta · Hecho en Bolivia 🇧🇴
           </span>
-        </footer>
+        </div>
+      </footer>
 
-        <MobileNav activeView={activeView} onViewChange={setActiveView} />
-      </div>
+      {/* Nav flotante (móvil) */}
+      <MobileNav activeView={activeView} onViewChange={setActiveView} />
     </div>
   )
 }

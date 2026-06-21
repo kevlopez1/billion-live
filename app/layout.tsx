@@ -203,7 +203,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" className="dark" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/images/kev.jpg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
