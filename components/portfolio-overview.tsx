@@ -124,42 +124,61 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <section className="relative overflow-hidden rounded-[var(--radius)] bg-[#0a0a0a] text-white min-h-[82vh] lg:min-h-[560px]">
-      {/* El auto del reto (protagonista): fondo completo en móvil, mitad derecha en desktop */}
-      <div className="absolute inset-0 lg:left-[38%]">
-        <img
-          src="/images/mansory.jpg"
-          alt="Mercedes-AMG GT 63 4-door por Mansory — el auto del reto"
-          className="w-full h-full object-cover object-center"
-        />
-        {/* Degradados para fundir la foto con el negro y dar legibilidad al texto */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-[#0a0a0a]/10 lg:bg-gradient-to-r lg:from-[#0a0a0a] lg:via-[#0a0a0a]/70 lg:to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/60 via-transparent to-transparent lg:from-[#0a0a0a]/40" />
-      </div>
-
+    <section className="relative overflow-hidden rounded-[var(--radius)] bg-[#0a0a0a] text-white px-5 py-6 md:px-8 md:py-8">
       {/* Marca de agua gigante */}
-      <span className="pointer-events-none select-none absolute -bottom-12 -left-4 font-display font-extrabold uppercase leading-none tracking-tighter text-white/[0.05] text-[34vw] md:text-[20rem] z-0">
+      <span className="pointer-events-none select-none absolute -bottom-12 -left-4 font-display font-extrabold uppercase leading-none tracking-tighter text-white/[0.04] text-[34vw] md:text-[20rem] z-0">
         GTA
       </span>
 
-      {/* Contenido: alineado al fondo (estilo póster) */}
-      <div className="relative z-10 flex flex-col justify-end min-h-[82vh] lg:min-h-[560px] px-6 py-8 md:px-10 md:py-12 lg:w-[58%]">
-        {/* Badge en vivo */}
-        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-white/80 mb-5">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-60 animate-ping" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-          </span>
-          En vivo · El reto
+      {/* Galería de fotos oficiales del auto (deslizable) */}
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-3">
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-white/80">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-60 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            </span>
+            En vivo · El reto
+          </div>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-white/40">Deslizá →</span>
         </div>
 
-        {/* Titular gigante */}
-        <h1 className="leading-[0.82]">
-          <span className="block font-serif-display italic text-white/60 text-3xl sm:text-4xl md:text-5xl">
-            De $10 al
+        <div
+          className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {[
+            { src: "/images/car/mansory-2.jpg", label: "Frente" },
+            { src: "/images/car/mansory-3.jpg", label: "Perfil" },
+            { src: "/images/car/mansory-4.jpg", label: "Trasera" },
+            { src: "/images/car/mansory-1.jpg", label: "Frontal" },
+          ].map((p, i) => (
+            <div
+              key={i}
+              className="snap-center shrink-0 w-[86%] sm:w-[60%] lg:w-[44%] rounded-2xl overflow-hidden border border-white/10 bg-[#101010]"
+            >
+              <img
+                src={p.src}
+                alt={`Mercedes-AMG GT 63 4-door por Mansory — ${p.label}`}
+                className="w-full aspect-[3/2] object-cover"
+                loading={i === 0 ? "eager" : "lazy"}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mensaje: De $10 a un Mercedes */}
+      <div className="relative z-10 mt-7">
+        <h1 className="leading-[0.85]">
+          <span className="block font-serif-display italic text-white/60 text-2xl sm:text-3xl md:text-4xl">
+            De $10 a un
           </span>
-          <span className="block font-display font-extrabold uppercase tracking-tighter text-white text-7xl sm:text-8xl md:text-9xl -mt-1">
-            Mansory
+          <span className="block font-display font-extrabold uppercase tracking-tighter text-white text-5xl sm:text-7xl md:text-8xl -mt-1">
+            Mercedes
+          </span>
+          <span className="block font-display font-semibold uppercase tracking-[0.12em] text-white/70 text-sm sm:text-lg mt-1.5">
+            AMG GT 63 · by Mansory
           </span>
         </h1>
 
@@ -180,7 +199,7 @@ export function PortfolioOverview() {
         <div className="mt-6 max-w-xl">
           <div className="flex items-center justify-between text-[11px] text-white/45 mb-2">
             <span className="number-display">$10</span>
-            <span className="font-semibold text-white number-display">{progress.toFixed(2)}% al Mansory</span>
+            <span className="font-semibold text-white number-display">{progress.toFixed(2)}% al Mercedes</span>
             <span className="number-display">$450K</span>
           </div>
           <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
