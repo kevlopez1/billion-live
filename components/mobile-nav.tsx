@@ -36,7 +36,7 @@ export function MobileNav({ activeView, onViewChange }: MobileNavProps) {
               activeView === "pulse" ? "accent-gradient-bg" : "accent-gradient-bg"
             }`}
           >
-            <Activity className="w-6 h-6 text-white" />
+            <Activity className="w-6 h-6 text-background" />
           </span>
           <span
             className={`text-[10px] font-medium mt-1 ${

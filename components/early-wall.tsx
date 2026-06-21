@@ -253,7 +253,7 @@ export function EarlyWall() {
                   key={s.id}
                   className="flex items-start gap-3 rounded-xl border border-border bg-background/40 px-3.5 py-3"
                 >
-                  <span className="shrink-0 w-9 h-9 rounded-full accent-gradient-bg text-white flex items-center justify-center text-xs font-bold">
+                  <span className="shrink-0 w-9 h-9 rounded-full accent-gradient-bg text-background flex items-center justify-center text-xs font-bold">
                     {initials(s.name)}
                   </span>
                   <div className="min-w-0">
