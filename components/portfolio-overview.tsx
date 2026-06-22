@@ -168,7 +168,7 @@ export function PortfolioOverview() {
         {/* Contador */}
         <div className="mt-8">
           <div className="text-[10px] uppercase tracking-[0.22em] text-white/45 mb-1.5">
-            Recaudado por PRIME · en tiempo real
+            Recaudado a día de hoy
           </div>
           <div className="flex items-baseline justify-center gap-2.5">
             <span className="number-display font-extrabold text-white text-5xl sm:text-6xl leading-none tabular-nums">
