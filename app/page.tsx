@@ -11,7 +11,6 @@ import { SocialLinks } from "@/components/social-links"
 import { DailyPulseView } from "@/components/daily-pulse-view"
 import { ManifestoView } from "@/components/manifesto-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
-import { LatestContent } from "@/components/latest-content"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
 import { IntroSplash } from "@/components/intro-splash"
@@ -116,16 +115,6 @@ export default function Dashboard() {
           <div className="glass-card overflow-hidden">
             <ProjectsList />
           </div>
-        </Reveal>
-      </section>
-
-      {/* Último contenido */}
-      <section>
-        <Reveal>
-          <SectionLabel index="05" eyebrow="En vivo" title="Último contenido" />
-        </Reveal>
-        <Reveal delay={80}>
-          <LatestContent />
         </Reveal>
       </section>
 
