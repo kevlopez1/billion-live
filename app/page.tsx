@@ -14,7 +14,6 @@ import { SocialPowerGrid } from "@/components/social-power-grid"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
 import { Roadmap } from "@/components/roadmap"
-import { Cronologia } from "@/components/cronologia"
 import { IntroSplash } from "@/components/intro-splash"
 import { Reveal } from "@/components/reveal"
 
@@ -62,20 +61,6 @@ export default function Dashboard() {
           <SectionLabel index="01" eyebrow="La ruta" title="Los hitos" />
         </Reveal>
         <Roadmap />
-      </section>
-
-      {/* La cronología: el plan paso a paso */}
-      <section>
-        <Reveal>
-          <div className="mb-6 border-b border-border pb-4">
-            <div className="section-eyebrow">El plan</div>
-            <h2 className="mt-2 leading-[0.95]">
-              <span className="font-display font-extrabold tracking-tight text-2xl md:text-4xl">Paso </span>
-              <span className="font-serif-display italic text-2xl md:text-4xl">a paso</span>
-            </h2>
-          </div>
-        </Reveal>
-        <Cronologia />
       </section>
 
       {/* Seguí el reto */}

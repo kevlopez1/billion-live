@@ -20,7 +20,6 @@ Tu foto de la web (la del hero) o el logo. La misma en todas.
 ## Bio — versión CORTA (TikTok / IG / X · ~150 caracteres)
 > De $10 a un Mercedes-AMG Mansory, en tiempo récord 🏁
 > Imperio en público desde Bolivia 🇧🇴 con PRIME (empleados de IA).
-> Sin filtro, sin papá.
 
 ## Bio — versión MINI (donde hay poco espacio · ~80)
 > De $10 al Mercedes-AMG Mansory 🏁 Imperio en público · Bolivia 🇧🇴
