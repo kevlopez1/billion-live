@@ -12,7 +12,6 @@ import { DailyPulseView } from "@/components/daily-pulse-view"
 import { ManifestoView } from "@/components/manifesto-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
 import { LatestContent } from "@/components/latest-content"
-import { ChallengeStatement } from "@/components/challenge-statement"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
 import { IntroSplash } from "@/components/intro-splash"
@@ -82,11 +81,6 @@ export default function Dashboard() {
           </div>
         </Reveal>
       </section>
-
-      {/* El gancho: la frase del villano */}
-      <Reveal>
-        <ChallengeStatement />
-      </Reveal>
 
       {/* Seguí el reto */}
       <section>
