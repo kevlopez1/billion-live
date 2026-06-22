@@ -169,11 +169,11 @@ export function PortfolioOverview() {
       </div>
 
       {/* Contador */}
-      <div className="mt-9">
+      <div className="mt-9 text-center">
         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5">
           Recaudado a día de hoy
         </div>
-        <div className="flex items-baseline gap-2.5 flex-wrap">
+        <div className="flex items-baseline justify-center gap-2.5 flex-wrap">
           <span className="number-display font-extrabold text-accent-gradient text-6xl sm:text-7xl leading-none tabular-nums">
             ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
           </span>
@@ -182,7 +182,7 @@ export function PortfolioOverview() {
       </div>
 
       {/* Barra de progreso */}
-      <div className="mt-6 max-w-xl">
+      <div className="mt-6 max-w-xl mx-auto">
         <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
           <span className="number-display">$10</span>
           <span className="font-semibold text-foreground number-display">{progress.toFixed(2)}% al Mercedes</span>
@@ -194,7 +194,7 @@ export function PortfolioOverview() {
             style={{ width: `${Math.max(progress, 0.6)}%` }}
           />
         </div>
-        <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+        <div className="mt-3 flex items-center justify-center gap-x-4 gap-y-1 flex-wrap text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
           <span className="flex items-center gap-1.5">
             <Lock className="w-2.5 h-2.5" /> Secret layer · ${SECRET_TARGET.toLocaleString()}
           </span>
@@ -205,7 +205,7 @@ export function PortfolioOverview() {
       </div>
 
       {/* Cuenta regresiva */}
-      <Countdown className="mt-9" />
+      <Countdown className="mt-9 text-center" />
     </section>
   )
 }
