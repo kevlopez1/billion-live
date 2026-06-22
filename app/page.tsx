@@ -13,6 +13,7 @@ import { ManifestoView } from "@/components/manifesto-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
+import { Roadmap } from "@/components/roadmap"
 import { IntroSplash } from "@/components/intro-splash"
 import { Reveal } from "@/components/reveal"
 
@@ -81,10 +82,18 @@ export default function Dashboard() {
         </Reveal>
       </section>
 
+      {/* La ruta: hitos de dinero + travesía */}
+      <section>
+        <Reveal>
+          <SectionLabel index="02" eyebrow="La ruta" title="Los hitos" />
+        </Reveal>
+        <Roadmap />
+      </section>
+
       {/* Seguí el reto */}
       <section>
         <Reveal>
-          <SectionLabel index="02" eyebrow="Sumate" title="Seguí el reto" />
+          <SectionLabel index="03" eyebrow="Sumate" title="Seguí el reto" />
         </Reveal>
         <Reveal delay={80}>
           <QuickActions />
@@ -99,7 +108,7 @@ export default function Dashboard() {
       {/* La prueba: números reales de PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="03" eyebrow="La prueba" title="Números reales" />
+          <SectionLabel index="04" eyebrow="La prueba" title="Números reales" />
         </Reveal>
         <Reveal delay={80}>
           <MetricsGrid />
@@ -109,7 +118,7 @@ export default function Dashboard() {
       {/* El imperio: las marcas */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="El imperio" title="Las marcas" />
+          <SectionLabel index="05" eyebrow="El imperio" title="Las marcas" />
         </Reveal>
         <Reveal delay={80}>
           <div className="glass-card overflow-hidden">
