@@ -401,14 +401,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [goals, setGoals] = useState<Goal[]>(initialGoals) // Added goals state
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [theme, setThemeState] = useState<"light" | "dark">("dark")
+  const [theme, setThemeState] = useState<"light" | "dark">("light")
   const [locale, setLocaleState] = useState<Locale>("es")
 
   useEffect(() => {
-    // Tema OSCURO forzado (rediseño cinematográfico tipo Bugatti/Lando). Un solo mundo negro.
-    const initialTheme: "light" | "dark" = "dark"
+    // Tema CLARO forzado (estilo LATHOS: blanco minimal, profesional).
+    const initialTheme: "light" | "dark" = "light"
     setThemeState(initialTheme)
-    document.documentElement.classList.add("dark")
+    document.documentElement.classList.remove("dark")
 
     const savedLocale = localStorage.getItem("kev-locale") as Locale | null
     if (savedLocale) {

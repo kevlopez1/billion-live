@@ -14,6 +14,7 @@ import { SocialPowerGrid } from "@/components/social-power-grid"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
 import { Roadmap } from "@/components/roadmap"
+import { Cronologia } from "@/components/cronologia"
 import { IntroSplash } from "@/components/intro-splash"
 import { Reveal } from "@/components/reveal"
 
@@ -90,10 +91,24 @@ export default function Dashboard() {
         <Roadmap />
       </section>
 
+      {/* La cronología: el plan paso a paso */}
+      <section>
+        <Reveal>
+          <div className="mb-6 border-b border-border pb-4">
+            <div className="section-eyebrow">El plan</div>
+            <h2 className="mt-2 leading-[0.95]">
+              <span className="font-display font-extrabold tracking-tight text-2xl md:text-4xl">Paso </span>
+              <span className="font-serif-display italic text-2xl md:text-4xl">a paso</span>
+            </h2>
+          </div>
+        </Reveal>
+        <Cronologia />
+      </section>
+
       {/* Seguí el reto */}
       <section>
         <Reveal>
-          <SectionLabel index="03" eyebrow="Sumate" title="Seguí el reto" />
+          <SectionLabel index="04" eyebrow="Sumate" title="Seguí el reto" />
         </Reveal>
         <Reveal delay={80}>
           <QuickActions />
@@ -108,7 +123,7 @@ export default function Dashboard() {
       {/* La prueba: números reales de PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="La prueba" title="Números reales" />
+          <SectionLabel index="05" eyebrow="La prueba" title="Números reales" />
         </Reveal>
         <Reveal delay={80}>
           <MetricsGrid />
@@ -118,7 +133,7 @@ export default function Dashboard() {
       {/* El imperio: las marcas */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="El imperio" title="Las marcas" />
+          <SectionLabel index="06" eyebrow="El imperio" title="Las marcas" />
         </Reveal>
         <Reveal delay={80}>
           <div className="glass-card overflow-hidden">
