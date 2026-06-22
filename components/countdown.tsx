@@ -40,29 +40,29 @@ export function Countdown({ className = "" }: { className?: string }) {
 
   return (
     <div className={className}>
-      <div className="text-[10px] uppercase tracking-[0.22em] text-white/45 mb-2">
+      <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-2">
         El reloj corre · ritmo récord
       </div>
 
       {/* Reloj grande hacia la meta récord */}
-      <div className="flex items-end justify-center gap-3 sm:gap-5">
+      <div className="flex items-end gap-3 sm:gap-5">
         {blocks.map(([val, label], i) => (
           <div key={i} className="flex flex-col items-center">
-            <span className="number-display font-extrabold text-white text-3xl sm:text-5xl leading-none tabular-nums">
+            <span className="number-display font-extrabold text-foreground text-3xl sm:text-5xl leading-none tabular-nums">
               {val}
             </span>
-            <span className="text-[9px] uppercase tracking-[0.18em] text-white/40 mt-1.5">{label}</span>
+            <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground mt-1.5">{label}</span>
           </div>
         ))}
       </div>
 
       {/* Doble meta: récord + límite */}
-      <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white">
+      <div className="mt-5 flex items-center gap-3 flex-wrap">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/20 bg-foreground/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-foreground">
           🏁 Récord · 6 meses · {metaLabel(CHALLENGE_RECORD_DEADLINE)}
           {mounted && <b className="number-display ml-0.5">({daysLeft(CHALLENGE_RECORD_DEADLINE)}d)</b>}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white/55">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
           Límite · 12 meses · {metaLabel(CHALLENGE_DEADLINE)}
           {mounted && <b className="number-display ml-0.5">({daysLeft(CHALLENGE_DEADLINE)}d)</b>}
         </span>

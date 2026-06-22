@@ -125,81 +125,87 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <section className="relative overflow-hidden rounded-[var(--radius)] bg-[#0a0a0a] text-white min-h-[90vh] flex flex-col">
-      {/* Marca de agua gigante */}
-      <span className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display font-extrabold uppercase leading-none tracking-tighter text-white/[0.03] text-[42vw] z-0">
-        GTA
-      </span>
-
-      {/* Eyebrow arriba, centrado */}
-      <div className="relative z-10 flex justify-center pt-7">
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-3.5 py-1.5 text-[11px] uppercase tracking-[0.24em] text-white/75">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-60 animate-ping" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-          </span>
-          En vivo · El reto
-        </div>
+    <section className="relative">
+      {/* Eyebrow */}
+      <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-muted-foreground mb-5">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-kev-primary opacity-50 animate-ping" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-kev-primary" />
+        </span>
+        En vivo · El reto
       </div>
 
-      {/* El auto, protagonista absoluto */}
-      <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-2 min-h-0">
-        <img
-          src="/images/mansory.jpg"
-          alt="Mercedes-AMG GT 63 4-door por Mansory — el auto del reto"
-          className="w-auto max-w-full max-h-[46vh] object-contain drop-shadow-2xl"
-        />
-      </div>
+      {/* Título — mezcla bold + serif itálica (estilo LATHOS) */}
+      <h1 className="leading-[0.9]">
+        <span className="block font-serif-display italic text-muted-foreground text-3xl sm:text-5xl">
+          De $10 a un
+        </span>
+        <span className="block font-display font-extrabold uppercase tracking-tighter text-foreground text-6xl sm:text-8xl -mt-1">
+          Mercedes
+        </span>
+        <span className="block font-display font-semibold uppercase tracking-[0.2em] text-muted-foreground text-xs sm:text-sm mt-2">
+          AMG GT 63 · by Mansory
+        </span>
+      </h1>
 
-      {/* Texto gigante + contador, centrado, con aire */}
-      <div className="relative z-10 px-6 pb-10 text-center">
-        <h1 className="leading-[0.85]">
-          <span className="block font-serif-display italic text-white/55 text-xl sm:text-2xl">
-            De $10 a un
-          </span>
-          <span className="block font-display font-extrabold uppercase tracking-tighter text-white text-6xl sm:text-8xl -mt-1">
-            Mercedes
-          </span>
-          <span className="block font-display font-semibold uppercase tracking-[0.22em] text-white/65 text-xs sm:text-sm mt-2">
-            AMG GT 63 · by Mansory
-          </span>
-        </h1>
-
-        {/* Contador */}
-        <div className="mt-8">
-          <div className="text-[10px] uppercase tracking-[0.22em] text-white/45 mb-1.5">
-            Recaudado a día de hoy
-          </div>
-          <div className="flex items-baseline justify-center gap-2.5">
-            <span className="number-display font-extrabold text-white text-5xl sm:text-6xl leading-none tabular-nums">
-              ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </span>
-            <span className="text-white/40 text-base number-display">/ $450K</span>
-          </div>
-        </div>
-
-        {/* Barra de progreso */}
-        <div className="mt-6 mx-auto max-w-md">
-          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white rounded-full transition-all duration-1000"
-              style={{ width: `${Math.max(progress, 0.6)}%` }}
+      {/* Galería del auto — fotos oficiales (verde, fondo blanco: se funden) */}
+      <div
+        className="mt-8 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {["green-2", "green-3", "green-4", "green-1"].map((n, i) => (
+          <div
+            key={i}
+            className="snap-center shrink-0 w-[88%] sm:w-[60%] lg:w-[46%] rounded-2xl overflow-hidden border border-border bg-white"
+          >
+            <img
+              src={`/images/car/${n}.jpg`}
+              alt="Mercedes-AMG GT 63 4-door por Mansory"
+              className="w-full aspect-[3/2] object-cover"
+              loading={i === 0 ? "eager" : "lazy"}
             />
           </div>
-          <div className="mt-2.5 flex items-center justify-center gap-x-4 gap-y-1 flex-wrap text-[10px] uppercase tracking-[0.16em] text-white/40">
-            <span className="number-display">{progress.toFixed(2)}% al Mercedes</span>
-            <span className="flex items-center gap-1.5">
-              <Lock className="w-2.5 h-2.5" /> Secret · ${SECRET_TARGET.toLocaleString()}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> Santa Cruz, BO
-            </span>
-          </div>
-        </div>
-
-        {/* Cuenta regresiva */}
-        <Countdown className="mt-9" />
+        ))}
       </div>
+
+      {/* Contador */}
+      <div className="mt-9">
+        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5">
+          Recaudado a día de hoy
+        </div>
+        <div className="flex items-baseline gap-2.5 flex-wrap">
+          <span className="number-display font-extrabold text-accent-gradient text-6xl sm:text-7xl leading-none tabular-nums">
+            ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </span>
+          <span className="text-muted-foreground text-base number-display">/ $450K</span>
+        </div>
+      </div>
+
+      {/* Barra de progreso */}
+      <div className="mt-6 max-w-xl">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
+          <span className="number-display">$10</span>
+          <span className="font-semibold text-foreground number-display">{progress.toFixed(2)}% al Mercedes</span>
+          <span className="number-display">$450K</span>
+        </div>
+        <div className="h-1.5 bg-foreground/10 rounded-full overflow-hidden">
+          <div
+            className="h-full accent-gradient-bg rounded-full transition-all duration-1000"
+            style={{ width: `${Math.max(progress, 0.6)}%` }}
+          />
+        </div>
+        <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+          <span className="flex items-center gap-1.5">
+            <Lock className="w-2.5 h-2.5" /> Secret layer · ${SECRET_TARGET.toLocaleString()}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" /> Santa Cruz, BO
+          </span>
+        </div>
+      </div>
+
+      {/* Cuenta regresiva */}
+      <Countdown className="mt-9" />
     </section>
   )
 }
