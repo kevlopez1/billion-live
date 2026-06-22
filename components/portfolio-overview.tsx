@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useApp, CHALLENGE_TARGET, SECRET_TARGET } from "@/context/app-context"
-import { Lock, Star } from "lucide-react"
+import { Lock } from "lucide-react"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 
 export function PortfolioOverview() {
@@ -124,118 +124,76 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <section className="relative overflow-hidden rounded-[var(--radius)] bg-[#0a0a0a] text-white px-5 py-6 md:px-8 md:py-8">
+    <section className="relative overflow-hidden rounded-[var(--radius)] bg-[#0a0a0a] text-white min-h-[90vh] flex flex-col">
       {/* Marca de agua gigante */}
-      <span className="pointer-events-none select-none absolute -bottom-12 -left-4 font-display font-extrabold uppercase leading-none tracking-tighter text-white/[0.04] text-[34vw] md:text-[20rem] z-0">
+      <span className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display font-extrabold uppercase leading-none tracking-tighter text-white/[0.03] text-[42vw] z-0">
         GTA
       </span>
 
-      {/* Galería de fotos oficiales del auto (deslizable) */}
-      <div className="relative z-10">
-        <div className="flex items-center justify-between mb-3">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-white/80">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-60 animate-ping" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-            </span>
-            En vivo · El reto
-          </div>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-white/40">Deslizá →</span>
-        </div>
-
-        <div
-          className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {[
-            { src: "/images/car/mansory-2.jpg", label: "Frente" },
-            { src: "/images/car/mansory-3.jpg", label: "Perfil" },
-            { src: "/images/car/mansory-4.jpg", label: "Trasera" },
-            { src: "/images/car/mansory-1.jpg", label: "Frontal" },
-          ].map((p, i) => (
-            <div
-              key={i}
-              className="snap-center shrink-0 w-[86%] sm:w-[60%] lg:w-[44%] rounded-2xl overflow-hidden border border-white/10 bg-[#101010]"
-            >
-              <img
-                src={p.src}
-                alt={`Mercedes-AMG GT 63 4-door por Mansory — ${p.label}`}
-                className="w-full aspect-[3/2] object-cover"
-                loading={i === 0 ? "eager" : "lazy"}
-              />
-            </div>
-          ))}
+      {/* Eyebrow arriba, centrado */}
+      <div className="relative z-10 flex justify-center pt-7">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-3.5 py-1.5 text-[11px] uppercase tracking-[0.24em] text-white/75">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-60 animate-ping" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+          </span>
+          En vivo · El reto
         </div>
       </div>
 
-      {/* Mensaje: De $10 a un Mercedes */}
-      <div className="relative z-10 mt-7">
+      {/* El auto, protagonista absoluto */}
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-2 min-h-0">
+        <img
+          src="/images/mansory.jpg"
+          alt="Mercedes-AMG GT 63 4-door por Mansory — el auto del reto"
+          className="w-auto max-w-full max-h-[46vh] object-contain drop-shadow-2xl"
+        />
+      </div>
+
+      {/* Texto gigante + contador, centrado, con aire */}
+      <div className="relative z-10 px-6 pb-10 text-center">
         <h1 className="leading-[0.85]">
-          <span className="block font-serif-display italic text-white/60 text-2xl sm:text-3xl md:text-4xl">
+          <span className="block font-serif-display italic text-white/55 text-xl sm:text-2xl">
             De $10 a un
           </span>
-          <span className="block font-display font-extrabold uppercase tracking-tighter text-white text-5xl sm:text-7xl md:text-8xl -mt-1">
+          <span className="block font-display font-extrabold uppercase tracking-tighter text-white text-6xl sm:text-8xl -mt-1">
             Mercedes
           </span>
-          <span className="block font-display font-semibold uppercase tracking-[0.12em] text-white/70 text-sm sm:text-lg mt-1.5">
+          <span className="block font-display font-semibold uppercase tracking-[0.22em] text-white/65 text-xs sm:text-sm mt-2">
             AMG GT 63 · by Mansory
           </span>
         </h1>
 
-        {/* Contador gigante — el corazón del reto */}
-        <div className="mt-7">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-white/50 mb-1">
+        {/* Contador */}
+        <div className="mt-8">
+          <div className="text-[10px] uppercase tracking-[0.22em] text-white/45 mb-1.5">
             Recaudado por PRIME · en tiempo real
           </div>
-          <div className="flex items-baseline gap-2.5 flex-wrap">
-            <span className="number-display font-extrabold text-white text-6xl sm:text-7xl leading-none tabular-nums">
+          <div className="flex items-baseline justify-center gap-2.5">
+            <span className="number-display font-extrabold text-white text-5xl sm:text-6xl leading-none tabular-nums">
               ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-white/45 text-base number-display">/ $450K</span>
+            <span className="text-white/40 text-base number-display">/ $450K</span>
           </div>
         </div>
 
         {/* Barra de progreso */}
-        <div className="mt-6 max-w-xl">
-          <div className="flex items-center justify-between text-[11px] text-white/45 mb-2">
-            <span className="number-display">$10</span>
-            <span className="font-semibold text-white number-display">{progress.toFixed(2)}% al Mercedes</span>
-            <span className="number-display">$450K</span>
-          </div>
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div className="mt-6 mx-auto max-w-md">
+          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-white rounded-full transition-all duration-1000"
               style={{ width: `${Math.max(progress, 0.6)}%` }}
             />
           </div>
-        </div>
-
-        {/* Pie: prueba social + capa secreta + ubicación */}
-        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-white/55">
-          <span className="flex items-center gap-2">
-            <img
-              src="/images/kev.jpg"
-              alt="Kev López"
-              className="w-7 h-7 rounded-full object-cover object-[center_30%] ring-1 ring-white/30"
-            />
-            <span className="text-white font-semibold">Kev López</span>
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="flex text-white/80">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Star key={i} className="w-3 h-3 fill-current" />
-              ))}
+          <div className="mt-2.5 flex items-center justify-center gap-x-4 gap-y-1 flex-wrap text-[10px] uppercase tracking-[0.16em] text-white/40">
+            <span className="number-display">{progress.toFixed(2)}% al Mercedes</span>
+            <span className="flex items-center gap-1.5">
+              <Lock className="w-2.5 h-2.5" /> Secret · ${SECRET_TARGET.toLocaleString()}
             </span>
-            <span><b className="text-white number-display">1.009</b> siguiendo</span>
-          </span>
-          <span className="flex items-center gap-1.5 uppercase tracking-[0.16em]">
-            <Lock className="w-2.5 h-2.5" />
-            Secret layer · ${SECRET_TARGET.toLocaleString()}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            Santa Cruz, BO
-          </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> Santa Cruz, BO
+            </span>
+          </div>
         </div>
       </div>
     </section>
