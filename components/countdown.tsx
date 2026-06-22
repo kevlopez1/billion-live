@@ -45,7 +45,7 @@ export function Countdown({ className = "" }: { className?: string }) {
       </div>
 
       {/* Reloj grande hacia la meta récord */}
-      <div className="flex items-end gap-3 sm:gap-5">
+      <div className="flex items-end justify-center gap-3 sm:gap-5">
         {blocks.map(([val, label], i) => (
           <div key={i} className="flex flex-col items-center">
             <span className="number-display font-extrabold text-foreground text-3xl sm:text-5xl leading-none tabular-nums">
@@ -57,7 +57,7 @@ export function Countdown({ className = "" }: { className?: string }) {
       </div>
 
       {/* Doble meta: récord + límite */}
-      <div className="mt-5 flex items-center gap-3 flex-wrap">
+      <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/20 bg-foreground/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-foreground">
           🏁 Récord · 6 meses · {metaLabel(CHALLENGE_RECORD_DEADLINE)}
           {mounted && <b className="number-display ml-0.5">({daysLeft(CHALLENGE_RECORD_DEADLINE)}d)</b>}
