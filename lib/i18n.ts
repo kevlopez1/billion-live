@@ -11,7 +11,7 @@ export const translations = {
     // Navigation
     nav: {
       dashboard: "Dashboard",
-      dailyPulse: "Daily Pulse",
+      dailyPulse: "Feed",
       projects: "Projects",
       analytics: "Analytics",
       manifesto: "Manifesto",
@@ -93,9 +93,9 @@ export const translations = {
       openingDashboard: "Opening external dashboard...",
       editComingSoon: "Edit feature coming soon",
     },
-    // Daily Pulse
+    // Feed
     pulse: {
-      title: "Daily Pulse",
+      title: "Feed",
       subtitle: "Live updates from the $10-to-Mansory challenge",
       liveNow: "LIVE NOW",
       localTime: "Local time",
@@ -139,7 +139,7 @@ export const translations = {
       towardBillion: "Toward the Mansory",
       thePathAhead: "The Path Ahead",
       pathAheadDesc:
-        "The car is the bait; the empire is the goal. Every milestone unlocks a free PRIME install for a Bolivian business. Follow it live on Daily Pulse.",
+        "The car is the bait; the empire is the goal. Every milestone unlocks a free PRIME install for a Bolivian business. Follow it live on Feed.",
     },
     // Analytics
     analytics: {
@@ -223,7 +223,7 @@ export const translations = {
       title: "Admin Command Center",
       subtitle: "Manage your empire's data and content",
       metrics: "Metrics",
-      pulse: "Daily Pulse",
+      pulse: "Feed",
       projects: "Projects",
       manifesto: "Manifesto",
       journey: "Journey",
@@ -535,7 +535,7 @@ export const translations = {
     // Navegacion
     nav: {
       dashboard: "Panel",
-      dailyPulse: "Pulso Diario",
+      dailyPulse: "Feed",
       projects: "Proyectos",
       analytics: "Analíticas",
       manifesto: "Manifiesto",
@@ -619,8 +619,8 @@ export const translations = {
     },
     // Pulso Diario
     pulse: {
-      title: "Pulso Diario",
-      subtitle: "Actualizaciones en vivo del reto: de $10 al Mansory",
+      title: "Feed",
+      subtitle: "Actualizaciones en vivo del reto: de $10 al Mercedes",
       liveNow: "EN VIVO",
       localTime: "Hora local",
       currently: "Actualmente",
@@ -748,7 +748,7 @@ export const translations = {
       title: "Centro de Control Admin",
       subtitle: "Gestiona los datos y contenido de tu imperio",
       metrics: "Métricas",
-      pulse: "Pulso Diario",
+      pulse: "Feed",
       projects: "Proyectos",
       manifesto: "Manifiesto",
       journey: "El Camino",
