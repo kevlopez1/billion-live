@@ -321,7 +321,7 @@ const initialMilestones: Milestone[] = [
     year: "2026",
     title: "El Relanzamiento · Día 1",
     description:
-      "Vuelvo. De $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia en crisis, en cámara. El contador se alimenta del revenue real de PRIME. Sin filtro, sin papá.",
+      "Vuelvo. De $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia en crisis, en cámara. El contador se alimenta del revenue real de PRIME.",
     netWorth: "$10",
     iconName: "Star",
     highlight: true,

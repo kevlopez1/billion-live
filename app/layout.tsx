@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     template: "%s | KEV PROJECT GTA",
   },
   description:
-    "Command Center público del reto: de $10 a un Mercedes-AMG GT 63 Mansory (~$450K), desde Bolivia, construyendo un imperio en público con PRIME (empleados de IA). El contador se alimenta del revenue real de PRIME. Sin filtro, sin papá.",
+    "Command Center público del reto: de $10 a un Mercedes-AMG GT 63 Mansory (~$450K), desde Bolivia, construyendo un imperio en público con PRIME (empleados de IA). El contador se alimenta del revenue real de PRIME.",
   applicationName: "KEV PROJECT GTA",
   generator: "v0.app",
   manifest: "/manifest.json",
