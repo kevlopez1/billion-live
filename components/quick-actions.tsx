@@ -1,9 +1,7 @@
-import { Play, Gift, Building2, Share2, ArrowUpRight } from "lucide-react"
+import { Play, Share2, ArrowUpRight } from "lucide-react"
 
 // Accesos rápidos estilo app de banco (BNB): 2 botones grandes + fila de círculos.
 const quickCircles = [
-  { label: "Becas PRIME", icon: Gift, href: "/prensa" },
-  { label: "Contratar PRIME", icon: Building2, href: "https://primebusiness.live" },
   { label: "YouTube", icon: Play, href: "https://www.youtube.com/@KevProjectGTA" },
   { label: "Compartir", icon: Share2, href: "https://www.tiktok.com/@kev.project.gta" },
 ]
@@ -34,7 +32,7 @@ export function QuickActions() {
       </div>
 
       {/* Fila de accesos circulares */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="flex justify-center gap-12">
         {quickCircles.map((a) => (
           <a
             key={a.label}
