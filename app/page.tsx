@@ -56,37 +56,10 @@ export default function Dashboard() {
         <PortfolioOverview />
       </Reveal>
 
-      {/* El auto: galería de fotos oficiales */}
-      <section>
-        <Reveal>
-          <SectionLabel index="01" eyebrow="El auto" title="AMG GT 63 · Mansory" />
-        </Reveal>
-        <Reveal delay={80}>
-          <div
-            className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
-            style={{ scrollbarWidth: "none" }}
-          >
-            {["mansory-2", "mansory-3", "mansory-4", "mansory-1"].map((n, i) => (
-              <div
-                key={i}
-                className="snap-center shrink-0 w-[86%] sm:w-[58%] lg:w-[48%] rounded-2xl overflow-hidden border border-border bg-[#101010]"
-              >
-                <img
-                  src={`/images/car/${n}.jpg`}
-                  alt="Mercedes-AMG GT 63 4-door por Mansory"
-                  className="w-full aspect-[3/2] object-cover"
-                  loading="lazy"
-                />
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </section>
-
       {/* La ruta: hitos de dinero + travesía */}
       <section>
         <Reveal>
-          <SectionLabel index="02" eyebrow="La ruta" title="Los hitos" />
+          <SectionLabel index="01" eyebrow="La ruta" title="Los hitos" />
         </Reveal>
         <Roadmap />
       </section>
@@ -108,7 +81,7 @@ export default function Dashboard() {
       {/* Seguí el reto */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="Sumate" title="Seguí el reto" />
+          <SectionLabel index="02" eyebrow="Sumate" title="Seguí el reto" />
         </Reveal>
         <Reveal delay={80}>
           <QuickActions />
@@ -123,7 +96,7 @@ export default function Dashboard() {
       {/* La prueba: números reales de PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="La prueba" title="Números reales" />
+          <SectionLabel index="03" eyebrow="La prueba" title="Números reales" />
         </Reveal>
         <Reveal delay={80}>
           <MetricsGrid />
@@ -133,7 +106,7 @@ export default function Dashboard() {
       {/* El imperio: las marcas */}
       <section>
         <Reveal>
-          <SectionLabel index="06" eyebrow="El imperio" title="Las marcas" />
+          <SectionLabel index="04" eyebrow="El imperio" title="Las marcas" />
         </Reveal>
         <Reveal delay={80}>
           <div className="glass-card overflow-hidden">
