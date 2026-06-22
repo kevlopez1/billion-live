@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useApp, CHALLENGE_TARGET, SECRET_TARGET } from "@/context/app-context"
 import { Lock } from "lucide-react"
+import { Countdown } from "@/components/countdown"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 
 export function PortfolioOverview() {
@@ -195,6 +196,9 @@ export function PortfolioOverview() {
             </span>
           </div>
         </div>
+
+        {/* Cuenta regresiva */}
+        <Countdown className="mt-9" />
       </div>
     </section>
   )
