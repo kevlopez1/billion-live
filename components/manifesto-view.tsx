@@ -38,6 +38,44 @@ export function ManifestoView() {
         <p className="text-muted-foreground font-light text-pretty">{t.manifesto.subtitle}</p>
       </div>
 
+      {/* Método STRATEGY — bloque negro, acróstico (primero) */}
+      <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white p-6 md:p-8">
+        <h2 className="text-[11px] uppercase tracking-[0.18em] text-white/50 mb-1">Método STRATEGY</h2>
+        <p className="text-sm text-white/55 font-light mb-6">El método con el que voy a construir todo</p>
+
+        {/* Acróstico: STRATEGY en horizontal, cada palabra cae hacia abajo */}
+        <div className="flex justify-center gap-2.5 md:gap-5 overflow-x-auto pb-1">
+          {strategyMethod.map((s, i) => (
+            <div key={i} className="flex flex-col items-center shrink-0">
+              {s.word.toUpperCase().split("").map((ch, j) => (
+                <span
+                  key={j}
+                  className={
+                    j === 0
+                      ? "font-display font-extrabold leading-none text-2xl md:text-4xl text-white mb-2"
+                      : "font-display leading-[1.15] text-xs md:text-base text-white/35 uppercase tracking-wide"
+                  }
+                >
+                  {ch}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Definiciones */}
+        <div className="mt-8 space-y-2.5 border-t border-white/10 pt-6">
+          {strategyMethod.map((s, i) => (
+            <div key={i} className="flex gap-3 text-sm">
+              <span className="font-display font-extrabold text-white w-4 shrink-0">{s.letter}</span>
+              <span>
+                <b className="text-white">{s.word}.</b> <span className="text-white/55">{s.desc}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Mission, Vision, Purpose - using dynamic content */}
       <div className="grid md:grid-cols-3 gap-4">
         <div className="glass-card p-6 text-center">
@@ -101,23 +139,6 @@ export function ManifestoView() {
               </div>
             )
           })}
-        </div>
-      </div>
-
-      {/* Método STRATEGY — bloque negro */}
-      <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white p-6 md:p-8">
-        <h2 className="text-[11px] uppercase tracking-[0.18em] text-white/50 mb-1">Método STRATEGY</h2>
-        <p className="text-sm text-white/55 font-light mb-5">El método con el que voy a construir todo</p>
-        <div className="rounded-2xl border border-white/10 divide-y divide-white/10 overflow-hidden">
-          {strategyMethod.map((s, i) => (
-            <div key={i} className="px-6 md:px-8 py-6 group hover:bg-white/[0.04] transition-colors">
-              <span className="block font-display font-extrabold leading-none number-display text-5xl md:text-6xl text-white/30 group-hover:text-white transition-colors">
-                {s.letter}
-              </span>
-              <div className="mt-3 font-semibold text-white text-lg">{s.word}</div>
-              <div className="text-sm text-white/55 font-light mt-1 text-pretty">{s.desc}</div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
