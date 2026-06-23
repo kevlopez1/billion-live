@@ -67,46 +67,34 @@ export async function downloadStoryCard(netWorth: number): Promise<void> {
   ctx.fillText("KEV PROJECT GTA", W / 2, 234)
   setLS(0)
 
-  // ── Foto del auto (tarjeta blanca, estilo galería del sitio) ──
-  const carImg = (await loadImg("/images/car/green-2.jpg")) || (await loadImg("/images/car/green-1.jpg"))
-  const cardX = 120
-  const cardY = 300
-  const cardW = W - cardX * 2
-  const cardH = 560
-  ctx.save()
-  ctx.shadowColor = "rgba(0,0,0,0.55)"
-  ctx.shadowBlur = 60
-  ctx.shadowOffsetY = 30
-  ctx.fillStyle = "#ffffff"
-  roundRect(cardX, cardY, cardW, cardH, 30)
-  ctx.fill()
-  ctx.restore()
+  // ── Auto recortado, flotando (look poster de presentación) ──
+  const carImg = await loadImg("/images/car/green-2-cut.png")
+  // Spotlight detrás del auto
+  const spot = ctx.createRadialGradient(W / 2, 560, 60, W / 2, 560, 560)
+  spot.addColorStop(0, "rgba(255,255,255,0.11)")
+  spot.addColorStop(1, "rgba(255,255,255,0)")
+  ctx.fillStyle = spot
+  ctx.fillRect(40, 280, W - 80, 600)
   if (carImg) {
+    const cw = 948
+    const ch = cw * (carImg.height / carImg.width)
+    const cx = (W - cw) / 2
+    const cy = 360
+    const shY = cy + ch - 16
+    // Sombra elíptica suave debajo
     ctx.save()
-    roundRect(cardX, cardY, cardW, cardH, 30)
-    ctx.clip()
-    const ir = carImg.width / carImg.height
-    const r = cardW / cardH
-    let dw = cardW
-    let dh = cardH
-    let dx = cardX
-    let dy = cardY
-    if (ir > r) {
-      dh = cardH
-      dw = cardH * ir
-      dx = cardX - (dw - cardW) / 2
-    } else {
-      dw = cardW
-      dh = cardW / ir
-      dy = cardY - (dh - cardH) / 2
-    }
-    ctx.drawImage(carImg, dx, dy, dw, dh)
+    ctx.translate(W / 2, shY)
+    ctx.scale(1, 0.15)
+    const sh = ctx.createRadialGradient(0, 0, 12, 0, 0, cw / 2)
+    sh.addColorStop(0, "rgba(0,0,0,0.6)")
+    sh.addColorStop(1, "rgba(0,0,0,0)")
+    ctx.fillStyle = sh
+    ctx.beginPath()
+    ctx.arc(0, 0, cw / 2, 0, Math.PI * 2)
+    ctx.fill()
     ctx.restore()
+    ctx.drawImage(carImg, cx, cy, cw, ch)
   }
-  ctx.strokeStyle = "rgba(255,255,255,0.1)"
-  ctx.lineWidth = 1.5
-  roundRect(cardX, cardY, cardW, cardH, 30)
-  ctx.stroke()
 
   // ── Contador ──
   ctx.fillStyle = "#ffffff"
