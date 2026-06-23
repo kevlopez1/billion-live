@@ -70,7 +70,7 @@ export function Sponsors() {
       {/* Value props */}
       <div className="grid sm:grid-cols-3 gap-3 mb-6">
         {valueProps.map((v) => (
-          <div key={v.t} className="rounded-2xl border border-border bg-card/40 px-4 py-4">
+          <div key={v.t} className="lift rounded-2xl border border-border bg-card/40 px-4 py-4 hover:border-foreground/20">
             <v.icon className="w-5 h-5 text-kev-primary mb-2" strokeWidth={1.75} />
             <div className="font-semibold text-sm">{v.t}</div>
             <div className="text-xs text-muted-foreground mt-0.5">{v.d}</div>

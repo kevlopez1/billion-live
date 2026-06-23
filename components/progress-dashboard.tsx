@@ -15,10 +15,10 @@ const SEGUIDORES = 1009 // suma de todas las redes
 
 function Stat({ value, label, sub }: { value: string; label: string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card/60 px-4 py-4">
-      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-1.5">{label}</div>
-      <div className="number-display font-extrabold text-3xl md:text-4xl leading-none tabular-nums">{value}</div>
-      {sub && <div className="text-[11px] text-muted-foreground mt-1.5">{sub}</div>}
+    <div className="lift rounded-2xl border border-border bg-card/60 px-4 py-5 hover:border-foreground/20">
+      <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-2">{label}</div>
+      <div className="number-display font-extrabold text-4xl md:text-5xl leading-none tabular-nums">{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground mt-2">{sub}</div>}
     </div>
   )
 }

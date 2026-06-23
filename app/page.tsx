@@ -20,19 +20,23 @@ import { ShareButton } from "@/components/share-button"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
-// Etiqueta editorial de sección (estilo sitio pro: "01 — Título")
+// Etiqueta editorial de sección (estilo LATHOS: mezcla bold + serif itálica)
 function SectionLabel({ index, eyebrow, title }: { index: string; eyebrow: string; title?: string }) {
+  const [first, ...rest] = (title ?? "").split(" ")
   return (
-    <div className="mb-6 flex items-end justify-between gap-4 border-b border-border pb-4">
+    <div className="mb-7 flex items-end justify-between gap-4 border-b border-border pb-4">
       <div>
         <div className="section-eyebrow">{eyebrow}</div>
         {title && (
-          <h2 className="mt-2 font-display font-extrabold uppercase tracking-tighter text-2xl md:text-4xl leading-none">
-            {title}
+          <h2 className="mt-2 leading-[0.95]">
+            <span className="font-display font-extrabold tracking-tight text-3xl md:text-5xl">{first}</span>
+            {rest.length > 0 && (
+              <span className="font-serif-display italic text-3xl md:text-5xl"> {rest.join(" ")}</span>
+            )}
           </h2>
         )}
       </div>
-      <span className="font-display font-extrabold text-foreground/15 text-3xl md:text-5xl leading-none number-display">
+      <span className="font-display font-extrabold text-foreground/[0.12] text-4xl md:text-6xl leading-none number-display">
         {index}
       </span>
     </div>
@@ -94,6 +98,20 @@ export default function Dashboard() {
       {/* Sponsors */}
       <Reveal>
         <Sponsors />
+      </Reveal>
+
+      {/* Cierre — bloque negro de statement (ritmo claro/oscuro) */}
+      <Reveal>
+        <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white px-6 py-14 md:py-20 text-center">
+          <p className="font-serif-display italic text-white/55 text-xl md:text-2xl">El auto es la carnada</p>
+          <p className="font-display font-extrabold uppercase tracking-tighter text-4xl md:text-6xl leading-[0.9] mt-1">
+            El imperio<br />es la meta
+          </p>
+          <div className="mt-7 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            De $10 al Mercedes · desde Bolivia
+          </div>
+        </div>
       </Reveal>
     </div>
   )
