@@ -145,7 +145,7 @@ export default function Dashboard() {
               alt="Kev López"
               width={32}
               height={32}
-              className="rounded-full object-cover object-[center_62%] w-8 h-8 ring-1 ring-black/10"
+              className="rounded-full object-cover object-[center_72%] w-8 h-8 ring-1 ring-black/10"
             />
             <div className="text-left leading-none">
               <span className="block text-sm font-display font-extrabold tracking-tight">KEV PROJECT GTA</span>
