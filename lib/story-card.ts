@@ -116,13 +116,13 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
   }
 
   // ── Contador ──
-  fitText(`$${net.toLocaleString("en-US")}`, 1100, 210, "900", "#ffffff", { maxW: 820 })
-  fitText(`DE $${target.toLocaleString("en-US")}`, 1162, 46, "600", "rgba(255,255,255,0.42)", { ls: 1, maxW: 700 })
+  fitText(`$${net.toLocaleString("en-US")}`, 1058, 168, "900", "#ffffff", { maxW: 780 })
+  fitText(`DE $${target.toLocaleString("en-US")}`, 1150, 40, "600", "rgba(255,255,255,0.42)", { ls: 1, maxW: 680 })
 
   // Barra de progreso
   const barX = 160
   const barW = W - barX * 2
-  const barY = 1240
+  const barY = 1232
   const barH = 22
   ctx.fillStyle = "rgba(255,255,255,0.14)"
   roundRect(barX, barY, barW, barH, barH / 2)
@@ -131,7 +131,7 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
   roundRect(barX, barY, Math.max((barW * pct) / 100, barH), barH, barH / 2)
   ctx.fill()
 
-  fitText(`${pct.toFixed(pct < 1 ? 4 : 1)}% AL MERCEDES   ·   DÍA ${day}`, 1340, 32, "600", "rgba(255,255,255,0.55)", { ls: 2, maxW: 840 })
+  fitText(`${pct.toFixed(pct < 1 ? 4 : 1)}% AL MERCEDES   ·   DÍA ${day}`, 1322, 32, "600", "rgba(255,255,255,0.55)", { ls: 2, maxW: 840 })
 
   // ── Frase ──
   fitText("De $10 a un", 1500, 54, "600", "rgba(255,255,255,0.55)", {
