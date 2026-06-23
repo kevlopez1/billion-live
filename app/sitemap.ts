@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-const SITE_URL = "https://v0-empire-os-dashboard-rho.vercel.app"
+const SITE_URL = "https://billion-live.vercel.app"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()

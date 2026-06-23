@@ -31,8 +31,8 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 })
 
-const SITE_URL = "https://v0-empire-os-dashboard-rho.vercel.app"
-const OG_IMAGE = "/images/kev.jpg"
+const SITE_URL = "https://billion-live.vercel.app"
+const OG_IMAGE = "/icon.png"
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -205,7 +205,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/images/kev.jpg" />
+        <link rel="apple-touch-icon" href="/icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script

@@ -165,7 +165,9 @@ export function EarlyWall() {
               <div className="text-xl font-extrabold number-display text-accent-gradient leading-none">
                 {total.toLocaleString("es-BO")}
               </div>
-              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">huellas</div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" /> huellas · en vivo
+              </div>
             </div>
           </div>
         </div>
