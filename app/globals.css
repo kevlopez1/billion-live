@@ -764,6 +764,26 @@ body::after {
   animation: view-fade 0.45s cubic-bezier(0.2, 0.6, 0.2, 1);
 }
 
+/* ── Ticker de actividad en vivo (marquee) ── */
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: ticker 32s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+}
+
 /* Added smooth page transitions */
 .page-transition-enter {
   opacity: 0;

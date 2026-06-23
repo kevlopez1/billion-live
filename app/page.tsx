@@ -17,6 +17,7 @@ import { Roadmap } from "@/components/roadmap"
 import { IntroSplash } from "@/components/intro-splash"
 import { Reveal } from "@/components/reveal"
 import { ShareButton } from "@/components/share-button"
+import { LiveTicker } from "@/components/live-ticker"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -55,10 +56,13 @@ export default function Dashboard() {
 
   const renderHome = () => (
     <div className="space-y-24 md:space-y-32">
-      {/* Hero */}
-      <Reveal>
-        <PortfolioOverview />
-      </Reveal>
+      {/* Hero + ticker de actividad en vivo */}
+      <div className="space-y-6 md:space-y-8">
+        <LiveTicker />
+        <Reveal>
+          <PortfolioOverview />
+        </Reveal>
+      </div>
 
       {/* La ruta: hitos de dinero + travesía */}
       <section>
