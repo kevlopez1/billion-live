@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboard, Activity, BookOpen } from "lucide-react"
+import { LayoutDashboard, BarChart3, BookOpen } from "lucide-react"
 import type { ActiveView } from "@/app/page"
 import { useApp } from "@/context/app-context"
 
@@ -36,7 +36,7 @@ export function MobileNav({ activeView, onViewChange }: MobileNavProps) {
               activeView === "pulse" ? "accent-gradient-bg" : "accent-gradient-bg"
             }`}
           >
-            <Activity className="w-6 h-6 text-background" />
+            <BarChart3 className="w-6 h-6 text-background" />
           </span>
           <span
             className={`text-[10px] font-medium mt-1 ${
