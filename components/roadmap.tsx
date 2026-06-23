@@ -1,6 +1,7 @@
 "use client"
 
 import { Reveal } from "@/components/reveal"
+import { useApp } from "@/context/app-context"
 
 type Status = "done" | "now" | "next"
 
@@ -9,20 +10,21 @@ interface Milestone {
   sub: string
   status: Status
   tag?: string
+  amount?: number // si lo tiene, el estado se calcula solo según el contador
 }
 
-// La travesía: hitos de dinero + hitos de vida (viajes, EE.UU.), como niveles.
+// La travesía: hitos de dinero (se marcan solos) + hitos de vida (viajes, EE.UU.).
 const milestones: Milestone[] = [
-  { title: "$10 · El inicio", sub: "Desde la crisis, en cámara.", status: "done" },
+  { title: "$10 · El inicio", sub: "Desde la crisis, en cámara.", status: "done", amount: 10 },
   { title: "Escalar PRIME", sub: "Más clientes, más MRR — el motor a fondo", status: "now" },
-  { title: "$10.000 recaudado", sub: "Prueba de que el modelo funciona", status: "next" },
+  { title: "$10.000 recaudado", sub: "Prueba de que el modelo funciona", status: "next", amount: 10_000 },
   { title: "Token2049 · Singapur", sub: "El epicentro cripto, en persona", status: "next", tag: "✈️ Viaje" },
-  { title: "$100.000", sub: "Un cuarto del camino al auto", status: "next" },
+  { title: "$100.000", sub: "Un cuarto del camino al auto", status: "next", amount: 100_000 },
   { title: "Devcon · evento cripto", sub: "Networking de élite mundial", status: "next", tag: "✈️ Viaje" },
   { title: "Silicon Valley · California", sub: "El corazón de la tecnología", status: "next", tag: "✈️ Viaje" },
-  { title: "$450.000 · Mercedes-AMG Mansory", sub: "La meta pública del reto", status: "next", tag: "🏁 Meta" },
+  { title: "$450.000 · Mercedes-AMG Mansory", sub: "La meta pública del reto", status: "next", tag: "🏁 Meta", amount: 450_000 },
   { title: "Establecerme en Estados Unidos", sub: "Vía O-1 / EB-1A — el objetivo final", status: "next", tag: "🇺🇸 Sueño" },
-  { title: "$1.000.000.000 · El imperio", sub: "La capa secreta de largo plazo", status: "next", tag: "🔒 Secreto" },
+  { title: "$1.000.000.000 · El imperio", sub: "La capa secreta de largo plazo", status: "next", tag: "🔒 Secreto", amount: 1_000_000_000 },
 ]
 
 const dot: Record<Status, string> = {
@@ -38,13 +40,22 @@ const statusChip: Record<Status, { label: string; cls: string }> = {
 }
 
 export function Roadmap() {
+  const { metrics } = useApp()
+  const net = metrics.netWorth
+
+  // Los hitos con monto se marcan solos según el contador.
+  const resolved = milestones.map((m) => {
+    if (m.amount == null) return m
+    return { ...m, status: (net >= m.amount ? "done" : "next") as Status }
+  })
+
   return (
     <div className="relative pl-6">
       {/* Línea vertical */}
       <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gradient-to-b from-foreground/40 via-border to-transparent" />
 
       <div className="space-y-7">
-        {milestones.map((m, i) => (
+        {resolved.map((m, i) => (
           <Reveal key={i} delay={i * 50}>
             <div className="relative">
               {/* Punto */}
