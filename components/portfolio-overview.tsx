@@ -140,7 +140,7 @@ export function PortfolioOverview() {
         <span className="block font-serif-display italic text-muted-foreground text-3xl sm:text-5xl">
           De $10 a un
         </span>
-        <span className="block font-display font-extrabold uppercase tracking-tighter text-foreground text-6xl sm:text-8xl -mt-1">
+        <span className="block font-display font-extrabold uppercase tracking-tighter text-foreground text-7xl sm:text-8xl md:text-9xl -mt-1">
           Mercedes
         </span>
         <span className="block font-display font-semibold uppercase tracking-[0.2em] text-muted-foreground text-xs sm:text-sm mt-2">
@@ -174,7 +174,7 @@ export function PortfolioOverview() {
           Recaudado a día de hoy
         </div>
         <div className="flex items-baseline justify-center gap-2.5 flex-wrap">
-          <span className="number-display font-extrabold text-accent-gradient text-6xl sm:text-7xl leading-none tabular-nums">
+          <span className="number-display font-extrabold text-metal text-7xl sm:text-8xl leading-none tabular-nums">
             ${displayValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}
           </span>
           <span className="text-muted-foreground text-base number-display">/ $450K</span>

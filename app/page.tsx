@@ -54,7 +54,7 @@ export default function Dashboard() {
   ]
 
   const renderHome = () => (
-    <div className="space-y-20 md:space-y-28">
+    <div className="space-y-24 md:space-y-32">
       {/* Hero */}
       <Reveal>
         <PortfolioOverview />
@@ -100,16 +100,22 @@ export default function Dashboard() {
         <Sponsors />
       </Reveal>
 
-      {/* Cierre — bloque negro de statement (ritmo claro/oscuro) */}
+      {/* Cierre — statement a sangre, tipografía gigante + motivo racing */}
       <Reveal>
-        <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white px-6 py-14 md:py-20 text-center border border-white/10">
-          <p className="font-serif-display italic text-white/55 text-xl md:text-2xl">El auto es la carnada</p>
-          <p className="font-display font-extrabold uppercase tracking-tighter text-4xl md:text-6xl leading-[0.9] mt-1">
-            El imperio<br />es la meta
-          </p>
-          <div className="mt-7 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            De $10 al Mercedes · desde Bolivia
+        <div className="-mx-4 md:-mx-6 relative overflow-hidden bg-[#0a0a0a] text-white border-y border-white/10 px-6 py-20 md:py-28 text-center">
+          {/* Líneas de velocidad (sutil) */}
+          <div className="pointer-events-none absolute inset-0 text-white opacity-[0.05] speed-lines" />
+          <div className="relative max-w-5xl mx-auto">
+            <p className="font-serif-display italic text-white/50 text-xl md:text-3xl">El auto es la carnada</p>
+            <p className="font-display font-extrabold uppercase tracking-tighter text-6xl sm:text-8xl md:text-9xl leading-[0.85] mt-1">
+              El imperio<br />es la meta
+            </p>
+            {/* Bandera a cuadros (divisor) */}
+            <div className="checker text-white/25 h-2 w-28 mx-auto mt-9" />
+            <div className="mt-5 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              De $10 al Mercedes · desde Bolivia
+            </div>
           </div>
         </div>
       </Reveal>
@@ -199,7 +205,7 @@ export default function Dashboard() {
 
       {/* Contenido */}
       <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-8 md:pt-12 pb-12 lg:pb-16">
-        {renderContent()}
+        <div key={activeView} className="view-fade">{renderContent()}</div>
       </main>
 
       {/* Footer */}
