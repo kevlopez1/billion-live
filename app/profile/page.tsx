@@ -120,7 +120,7 @@ export default function PublicProfile() {
                 alt={profileData.name}
                 width={112}
                 height={112}
-                className="w-full h-full rounded-xl object-cover object-[center_60%]"
+                className="w-full h-full rounded-xl object-cover object-[center_70%]"
               />
             </div>
             <div className="flex-1">
