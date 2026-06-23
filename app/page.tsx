@@ -12,6 +12,7 @@ import { ManifestoView } from "@/components/manifesto-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
+import { Sponsors } from "@/components/sponsors"
 import { PrimePipeline } from "@/components/prime-pipeline"
 import { Roadmap } from "@/components/roadmap"
 import { IntroSplash } from "@/components/intro-splash"
@@ -90,6 +91,11 @@ export default function Dashboard() {
           </div>
         </Reveal>
       </section>
+
+      {/* Sponsors */}
+      <Reveal>
+        <Sponsors />
+      </Reveal>
 
       {/* Redes */}
       <Reveal>
