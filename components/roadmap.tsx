@@ -14,7 +14,7 @@ interface Milestone {
 // La travesía: hitos de dinero + hitos de vida (viajes, EE.UU.), como niveles.
 const milestones: Milestone[] = [
   { title: "$10 · El inicio", sub: "Desde la crisis, en cámara.", status: "done" },
-  { title: "Primer cliente de PRIME", sub: "El motor económico se enciende", status: "now" },
+  { title: "Escalar PRIME", sub: "Más clientes, más MRR — el motor a fondo", status: "now" },
   { title: "$10.000 recaudado", sub: "Prueba de que el modelo funciona", status: "next" },
   { title: "Token2049 · Singapur", sub: "El epicentro cripto, en persona", status: "next", tag: "✈️ Viaje" },
   { title: "$100.000", sub: "Un cuarto del camino al auto", status: "next" },
