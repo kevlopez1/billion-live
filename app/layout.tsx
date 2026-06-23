@@ -209,6 +209,12 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var h=new Date().getHours();if(h<7||h>=19)document.documentElement.classList.add('dark')}catch(e){}})()",
+          }}
+        />
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
