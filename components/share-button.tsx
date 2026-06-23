@@ -48,10 +48,14 @@ export function ShareButton({ className = "" }: { className?: string }) {
     if (busy) return
     setBusy(true)
     try {
-      await downloadStoryCard(metrics.netWorth)
-      toast.success("¡Tarjeta lista! Subila a tu story 🔥")
+      const res = await downloadStoryCard(metrics.netWorth)
+      // En móvil se abre el compartir nativo (ya es su confirmación) → sin toast.
+      // En escritorio se descarga el archivo → avisamos brevemente.
+      if (res === "downloaded") {
+        toast.success("¡Imagen guardada! Ya podés compartirla 🔥", { duration: 4000 })
+      }
     } catch {
-      toast.error("No se pudo generar la imagen. Probá de nuevo.")
+      toast.error("No se pudo generar la imagen. Probá de nuevo.", { duration: 4000 })
     } finally {
       setBusy(false)
       setOpen(false)
@@ -98,8 +102,8 @@ export function ShareButton({ className = "" }: { className?: string }) {
               <ImageDown className="w-4 h-4 text-kev-primary shrink-0" />
             )}
             <span>
-              <span className="block text-sm font-semibold">Tarjeta para story</span>
-              <span className="block text-[11px] text-muted-foreground">Imagen 9:16 con el contador</span>
+              <span className="block text-sm font-semibold">Imagen para compartir</span>
+              <span className="block text-[11px] text-muted-foreground">Story, WhatsApp, TikTok…</span>
             </span>
           </button>
         </div>

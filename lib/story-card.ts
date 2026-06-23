@@ -3,7 +3,8 @@ import { CHALLENGE_LAUNCH, CHALLENGE_TARGET } from "@/context/app-context"
 // Genera la tarjeta 9:16 (story) editorial con la foto real del auto y la
 // comparte (Web Share API con archivo) o la descarga. Mismo origen → el
 // canvas no se "ensucia" y se puede exportar. Sin URL en la imagen.
-export async function downloadStoryCard(netWorth: number): Promise<void> {
+// Devuelve "shared" si usó el compartir nativo, "downloaded" si la bajó.
+export async function downloadStoryCard(netWorth: number): Promise<"shared" | "downloaded"> {
   const W = 1080
   const H = 1920
   const c = document.createElement("canvas")
@@ -163,12 +164,13 @@ export async function downloadStoryCard(netWorth: number): Promise<void> {
       title: "KEV PROJECT GTA",
       text: `De $10 a un Mercedes-AMG Mansory · Día ${day} 🏁`,
     })
-  } else {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "kev-project-gta.png"
-    a.click()
-    URL.revokeObjectURL(url)
+    return "shared"
   }
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = "kev-project-gta.png"
+  a.click()
+  URL.revokeObjectURL(url)
+  return "downloaded"
 }
