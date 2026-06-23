@@ -89,7 +89,7 @@ export default function Dashboard() {
           <SectionLabel index="03" eyebrow="El imperio" title="Las marcas" />
         </Reveal>
         <Reveal delay={80}>
-          <div className="glass-card overflow-hidden">
+          <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
             <ProjectsList />
           </div>
         </Reveal>
@@ -208,7 +208,7 @@ export default function Dashboard() {
           <span className="font-display font-extrabold uppercase tracking-tighter text-xl">KEV PROJECT GTA</span>
           <SocialLinks />
           <span className="text-[11px] text-muted-foreground tracking-wide">
-            PRIME · El auto es la carnada, el imperio es la meta · Hecho en Bolivia 🇧🇴
+            PRIME · empleados de IA · Hecho en Bolivia 🇧🇴
           </span>
         </div>
       </footer>
