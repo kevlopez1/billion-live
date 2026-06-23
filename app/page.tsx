@@ -9,7 +9,6 @@ import { ProjectsList } from "@/components/projects-list"
 import { MobileNav } from "@/components/mobile-nav"
 import { SocialLinks } from "@/components/social-links"
 import { ManifestoView } from "@/components/manifesto-view"
-import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
 import { Sponsors } from "@/components/sponsors"
 import { PrimePipeline } from "@/components/prime-pipeline"
@@ -20,7 +19,6 @@ import { ShareButton } from "@/components/share-button"
 import { LiveTicker } from "@/components/live-ticker"
 import { LiveViewers } from "@/components/live-viewers"
 import { Changelog } from "@/components/changelog"
-import { ShareCard } from "@/components/share-card"
 import { NotifyForm } from "@/components/notify-form"
 import { Clips } from "@/components/clips"
 
@@ -86,23 +84,13 @@ export default function Dashboard() {
         <Roadmap />
       </section>
 
-      {/* Seguí el reto: acciones + tarjeta para compartir + aviso de hitos */}
+      {/* Sumate: aviso de hitos (el seguir/compartir vive en la barra y el footer) */}
       <section>
         <Reveal>
-          <SectionLabel index="03" eyebrow="Sumate" title="Seguí el reto" />
+          <SectionLabel index="03" eyebrow="Sumate" title="No te lo pierdas" />
         </Reveal>
         <Reveal delay={80}>
-          <QuickActions />
-        </Reveal>
-        <Reveal delay={120}>
-          <div className="mt-4">
-            <ShareCard />
-          </div>
-        </Reveal>
-        <Reveal delay={160}>
-          <div className="mt-6">
-            <NotifyForm />
-          </div>
+          <NotifyForm />
         </Reveal>
       </section>
 
