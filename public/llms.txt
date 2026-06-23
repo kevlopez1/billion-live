@@ -31,8 +31,8 @@ KEV PROJECT GTA es un reto de "build in public" (construir en público) liderado
 
 ## Enlaces
 
-- Centro de Mando (dashboard del reto en vivo): https://v0-empire-os-dashboard-rho.vercel.app
-- Prensa & Prueba: https://v0-empire-os-dashboard-rho.vercel.app/prensa
+- Centro de Mando (dashboard del reto en vivo): https://billion-live.vercel.app
+- Prensa & Prueba: https://billion-live.vercel.app/prensa
 - PRIME: https://primebusiness.live
 - TikTok: https://www.tiktok.com/@kev.project.gta
 - YouTube: https://www.youtube.com/@KevProjectGTA

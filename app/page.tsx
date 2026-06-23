@@ -16,6 +16,7 @@ import { PrimePipeline } from "@/components/prime-pipeline"
 import { Roadmap } from "@/components/roadmap"
 import { IntroSplash } from "@/components/intro-splash"
 import { Reveal } from "@/components/reveal"
+import { ShareButton } from "@/components/share-button"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -157,21 +158,24 @@ export default function Dashboard() {
             </div>
           </button>
 
-          <nav className="hidden sm:flex items-center gap-1">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveView(item.id)}
-                className={`px-3.5 py-2 rounded-full text-sm transition-all press-effect ${
-                  activeView === item.id
-                    ? "bg-foreground text-background font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          <div className="flex items-center gap-2">
+            <nav className="hidden sm:flex items-center gap-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveView(item.id)}
+                  className={`px-3.5 py-2 rounded-full text-sm transition-all press-effect ${
+                    activeView === item.id
+                      ? "bg-foreground text-background font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+            <ShareButton />
+          </div>
         </div>
       </header>
 
