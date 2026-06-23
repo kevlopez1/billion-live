@@ -1,15 +1,12 @@
 "use client"
 
-import { CheckCircle2, Flame } from "lucide-react"
+import { Flame } from "lucide-react"
 
 // ──────────────────────────────────────────────────────────────
-// EDITAR ACÁ: clientes y pipeline de PRIME.
-// activeClients = cuántos clientes ya pagan.
-// pipeline = tratos en proceso. status: "propuesta" | "negociacion" | "cerrado".
+// EDITAR ACÁ: pipeline de PRIME (tratos en proceso del reto, desde cero).
+// status: "propuesta" | "negociacion" | "cerrado".
 // Para nombrar a un prospecto públicamente, cambiá "name" (con su permiso).
 // ──────────────────────────────────────────────────────────────
-const activeClients = 2
-
 const pipeline: { name: string; note: string; status: "propuesta" | "negociacion" | "cerrado" }[] = [
   {
     name: "Cerámica líder · Santa Cruz",
@@ -30,19 +27,7 @@ export function PrimePipeline() {
       <div className="flex items-center justify-between border-b border-border pb-3">
         <div>
           <div className="section-eyebrow">PRIME · ventas en público</div>
-          <h3 className="mt-2 font-display font-bold tracking-tight text-xl md:text-2xl">Clientes & Pipeline</h3>
-        </div>
-      </div>
-
-      {/* Clientes activos (stat grande, estilo LATHOS) */}
-      <div className="rounded-2xl border border-border bg-card/60 px-5 py-5 flex items-center gap-4">
-        <CheckCircle2 className="w-7 h-7 text-foreground shrink-0" strokeWidth={1.75} />
-        <div>
-          <div className="flex items-baseline gap-2">
-            <span className="number-display font-extrabold text-4xl md:text-5xl leading-none">{activeClients}</span>
-            <span className="text-sm text-muted-foreground">clientes activos</span>
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">Pagando hoy · alimentan el contador</div>
+          <h3 className="mt-2 font-display font-bold tracking-tight text-xl md:text-2xl">En negociación</h3>
         </div>
       </div>
 
