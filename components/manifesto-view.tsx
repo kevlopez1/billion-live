@@ -110,14 +110,12 @@ export function ManifestoView() {
         <p className="text-sm text-white/55 font-light mb-5">El método con el que voy a construir todo</p>
         <div className="rounded-2xl border border-white/10 divide-y divide-white/10 overflow-hidden">
           {strategyMethod.map((s, i) => (
-            <div key={i} className="flex items-center gap-5 md:gap-8 px-5 md:px-7 py-5 group hover:bg-white/[0.04] transition-colors">
-              <span className="text-3xl md:text-4xl font-light number-display text-white/35 w-8 shrink-0 text-center group-hover:text-white transition-colors">
+            <div key={i} className="px-6 md:px-8 py-6 group hover:bg-white/[0.04] transition-colors">
+              <span className="block font-display font-extrabold leading-none number-display text-5xl md:text-6xl text-white/30 group-hover:text-white transition-colors">
                 {s.letter}
               </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-white">{s.word}</div>
-                <div className="text-sm text-white/55 font-light mt-0.5 text-pretty">{s.desc}</div>
-              </div>
+              <div className="mt-3 font-semibold text-white text-lg">{s.word}</div>
+              <div className="text-sm text-white/55 font-light mt-1 text-pretty">{s.desc}</div>
             </div>
           ))}
         </div>
