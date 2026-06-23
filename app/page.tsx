@@ -136,16 +136,16 @@ export default function Dashboard() {
       {/* Glow ambiental superior */}
       <div className="pointer-events-none fixed inset-x-0 top-0 h-[40vh] bg-gradient-to-b from-white/[0.04] to-transparent z-0" />
 
-      {/* Navbar minimalista (landing, no dashboard) */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/60 border-b border-border/60">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+      {/* Navbar flotante (isla redondeada) */}
+      <header className="sticky top-3 z-40 px-3 md:px-6">
+        <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-background/70 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(0,0,0,0.18)] px-4 md:px-5 h-14 flex items-center justify-between">
           <button onClick={() => setActiveView("dashboard")} className="flex items-center gap-2.5 press-effect">
             <Image
               src="/images/kev.jpg"
               alt="Kev López"
               width={32}
               height={32}
-              className="rounded-full object-cover object-[center_30%] w-8 h-8 ring-1 ring-white/20"
+              className="rounded-full object-cover object-[center_30%] w-8 h-8 ring-1 ring-black/10"
             />
             <div className="text-left leading-none">
               <span className="block text-sm font-display font-extrabold tracking-tight">KEV PROJECT GTA</span>
