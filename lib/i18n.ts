@@ -14,7 +14,7 @@ export const translations = {
       dailyPulse: "Números",
       projects: "Projects",
       analytics: "Analytics",
-      manifesto: "Manifesto",
+      manifesto: "Vision",
       journey: "The Journey",
       settings: "Settings",
       admin: "Admin",
@@ -118,7 +118,7 @@ export const translations = {
     },
     // Manifesto
     manifesto: {
-      title: "The KEV PROJECT GTA Manifesto",
+      title: "Vision",
       subtitle: "The principles that guide the challenge: from $10 to the Mansory, and the empire beyond",
       corePrinciples: "Core Principles",
       clickToExpand: "Click to expand",
@@ -225,7 +225,7 @@ export const translations = {
       metrics: "Metrics",
       pulse: "Números",
       projects: "Projects",
-      manifesto: "Manifesto",
+      manifesto: "Vision",
       journey: "Journey",
       save: "Save",
       saving: "Saving...",
@@ -538,7 +538,7 @@ export const translations = {
       dailyPulse: "Números",
       projects: "Proyectos",
       analytics: "Analíticas",
-      manifesto: "Manifiesto",
+      manifesto: "La Visión",
       journey: "El Camino",
       settings: "Ajustes",
       admin: "Admin",
@@ -642,7 +642,7 @@ export const translations = {
     },
     // Manifiesto
     manifesto: {
-      title: "El Manifiesto de KEV PROJECT GTA",
+      title: "La Visión",
       subtitle: "Los principios que guían el reto: de $10 al Mansory, y al imperio que viene después",
       corePrinciples: "Principios Fundamentales",
       clickToExpand: "Clic para expandir",
@@ -750,7 +750,7 @@ export const translations = {
       metrics: "Métricas",
       pulse: "Números",
       projects: "Proyectos",
-      manifesto: "Manifiesto",
+      manifesto: "La Visión",
       journey: "El Camino",
       save: "Guardar",
       saving: "Guardando...",
