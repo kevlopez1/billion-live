@@ -156,7 +156,7 @@ export function PortfolioOverview() {
         {["green-2", "green-3", "green-4", "green-1"].map((n, i) => (
           <div
             key={i}
-            className="snap-center shrink-0 w-[88%] sm:w-[60%] lg:w-[46%] rounded-2xl overflow-hidden border border-border bg-white shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
+            className="img-zoom snap-center shrink-0 w-[88%] sm:w-[60%] lg:w-[46%] rounded-2xl overflow-hidden border border-border bg-white shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
           >
             <img
               src={`/images/car/${n}.jpg`}
