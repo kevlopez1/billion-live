@@ -104,31 +104,23 @@ export function ManifestoView() {
         </div>
       </div>
 
-      {/* Método STRATEGY */}
-      <div>
-        <h2 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-1">Método STRATEGY</h2>
-        <p className="text-sm text-muted-foreground font-light mb-5">El método con el que voy a construir todo</p>
-        <div className="glass-card divide-y divide-border overflow-hidden">
+      {/* Método STRATEGY — bloque negro */}
+      <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white p-6 md:p-8">
+        <h2 className="text-[11px] uppercase tracking-[0.18em] text-white/50 mb-1">Método STRATEGY</h2>
+        <p className="text-sm text-white/55 font-light mb-5">El método con el que voy a construir todo</p>
+        <div className="rounded-2xl border border-white/10 divide-y divide-white/10 overflow-hidden">
           {strategyMethod.map((s, i) => (
-            <div key={i} className="flex items-center gap-5 md:gap-8 px-6 md:px-8 py-5 group hover:bg-foreground/[0.03] transition-colors">
-              <span className="text-3xl md:text-4xl font-light number-display text-muted-foreground/50 w-8 shrink-0 text-center group-hover:text-foreground transition-colors">
+            <div key={i} className="flex items-center gap-5 md:gap-8 px-5 md:px-7 py-5 group hover:bg-white/[0.04] transition-colors">
+              <span className="text-3xl md:text-4xl font-light number-display text-white/35 w-8 shrink-0 text-center group-hover:text-white transition-colors">
                 {s.letter}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="font-medium">{s.word}</div>
-                <div className="text-sm text-muted-foreground font-light mt-0.5 text-pretty">{s.desc}</div>
+                <div className="font-medium text-white">{s.word}</div>
+                <div className="text-sm text-white/55 font-light mt-0.5 text-pretty">{s.desc}</div>
               </div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Quote Section - using dynamic content */}
-      <div className="glass-card p-8 text-center !bg-kev-primary/5 !border-kev-primary/20">
-        <blockquote className="text-xl md:text-2xl font-medium text-foreground italic mb-4">
-          "{manifesto.quote}"
-        </blockquote>
-        <cite className="text-sm text-kev-primary font-medium">— {manifesto.quoteAuthor}</cite>
       </div>
     </div>
   )

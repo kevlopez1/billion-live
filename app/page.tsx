@@ -4,7 +4,7 @@ import { useState } from "react"
 import Image from "next/image"
 import { useApp } from "@/context/app-context"
 import { PortfolioOverview } from "@/components/portfolio-overview"
-import { MetricsGrid } from "@/components/metrics-grid"
+import { ProgressDashboard } from "@/components/progress-dashboard"
 import { ProjectsList } from "@/components/projects-list"
 import { MobileNav } from "@/components/mobile-nav"
 import { SocialLinks } from "@/components/social-links"
@@ -115,7 +115,7 @@ export default function Dashboard() {
               </div>
             </Reveal>
             <Reveal delay={80}>
-              <MetricsGrid />
+              <ProgressDashboard />
             </Reveal>
             <Reveal delay={120}>
               <PrimePipeline />
