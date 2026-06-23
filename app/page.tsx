@@ -204,12 +204,12 @@ export default function Dashboard() {
       </header>
 
       {/* Contenido */}
-      <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-8 md:pt-12 pb-12 lg:pb-16">
+      <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-8 md:pt-12 pb-0">
         <div key={activeView} className="view-fade">{renderContent()}</div>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-border/60 mt-8">
+      <footer className="relative z-10">
         <div className="max-w-5xl mx-auto px-4 md:px-6 pt-10 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-10 flex flex-col items-center gap-4 text-center">
           <span className="font-display font-extrabold uppercase tracking-tighter text-xl">KEV PROJECT GTA</span>
           <SocialLinks />
