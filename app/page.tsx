@@ -9,7 +9,6 @@ import { ProjectsList } from "@/components/projects-list"
 import { MobileNav } from "@/components/mobile-nav"
 import { SocialLinks } from "@/components/social-links"
 import { ManifestoView } from "@/components/manifesto-view"
-import { SocialPowerGrid } from "@/components/social-power-grid"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
 import { Sponsors } from "@/components/sponsors"
@@ -95,11 +94,6 @@ export default function Dashboard() {
       {/* Sponsors */}
       <Reveal>
         <Sponsors />
-      </Reveal>
-
-      {/* Redes */}
-      <Reveal>
-        <SocialPowerGrid />
       </Reveal>
     </div>
   )
