@@ -11,7 +11,7 @@ export const translations = {
     // Navigation
     nav: {
       dashboard: "Dashboard",
-      dailyPulse: "Feed",
+      dailyPulse: "Números",
       projects: "Projects",
       analytics: "Analytics",
       manifesto: "Manifesto",
@@ -95,7 +95,7 @@ export const translations = {
     },
     // Feed
     pulse: {
-      title: "Feed",
+      title: "Números reales",
       subtitle: "Live updates from the $10-to-Mansory challenge",
       liveNow: "LIVE NOW",
       localTime: "Local time",
@@ -223,7 +223,7 @@ export const translations = {
       title: "Admin Command Center",
       subtitle: "Manage your empire's data and content",
       metrics: "Metrics",
-      pulse: "Feed",
+      pulse: "Números",
       projects: "Projects",
       manifesto: "Manifesto",
       journey: "Journey",
@@ -535,7 +535,7 @@ export const translations = {
     // Navegacion
     nav: {
       dashboard: "Panel",
-      dailyPulse: "Feed",
+      dailyPulse: "Números",
       projects: "Proyectos",
       analytics: "Analíticas",
       manifesto: "Manifiesto",
@@ -619,8 +619,8 @@ export const translations = {
     },
     // Pulso Diario
     pulse: {
-      title: "Feed",
-      subtitle: "Actualizaciones en vivo del reto: de $10 al Mercedes",
+      title: "Números reales",
+      subtitle: "Las estadísticas reales del reto: cuánto, cómo y cuándo. En vivo.",
       liveNow: "EN VIVO",
       localTime: "Hora local",
       currently: "Actualmente",
@@ -748,7 +748,7 @@ export const translations = {
       title: "Centro de Control Admin",
       subtitle: "Gestiona los datos y contenido de tu imperio",
       metrics: "Métricas",
-      pulse: "Feed",
+      pulse: "Números",
       projects: "Proyectos",
       manifesto: "Manifiesto",
       journey: "El Camino",

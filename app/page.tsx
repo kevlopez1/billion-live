@@ -8,7 +8,6 @@ import { MetricsGrid } from "@/components/metrics-grid"
 import { ProjectsList } from "@/components/projects-list"
 import { MobileNav } from "@/components/mobile-nav"
 import { SocialLinks } from "@/components/social-links"
-import { DailyPulseView } from "@/components/daily-pulse-view"
 import { ManifestoView } from "@/components/manifesto-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
 import { QuickActions } from "@/components/quick-actions"
@@ -78,20 +77,10 @@ export default function Dashboard() {
         <EarlyWall />
       </Reveal>
 
-      {/* La prueba: números reales de PRIME */}
-      <section>
-        <Reveal>
-          <SectionLabel index="03" eyebrow="La prueba" title="Números reales" />
-        </Reveal>
-        <Reveal delay={80}>
-          <MetricsGrid />
-        </Reveal>
-      </section>
-
       {/* El imperio: las marcas */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="El imperio" title="Las marcas" />
+          <SectionLabel index="03" eyebrow="El imperio" title="Las marcas" />
         </Reveal>
         <Reveal delay={80}>
           <div className="glass-card overflow-hidden">
@@ -111,9 +100,23 @@ export default function Dashboard() {
     switch (activeView) {
       case "pulse":
         return (
-          <Reveal>
-            <DailyPulseView />
-          </Reveal>
+          <div className="space-y-7">
+            <Reveal>
+              <div className="border-b border-border pb-4">
+                <div className="section-eyebrow">El reto en vivo</div>
+                <h2 className="mt-2 leading-[0.95]">
+                  <span className="font-display font-extrabold uppercase tracking-tighter text-3xl md:text-5xl">Números </span>
+                  <span className="font-serif-display italic text-3xl md:text-5xl">reales</span>
+                </h2>
+                <p className="text-sm text-muted-foreground mt-3 max-w-lg">
+                  Las estadísticas reales del reto: cuánto, cómo y cuándo. Cada número es revenue real de PRIME, no inventado.
+                </p>
+              </div>
+            </Reveal>
+            <Reveal delay={80}>
+              <MetricsGrid />
+            </Reveal>
+          </div>
         )
       case "manifesto":
         return (
@@ -169,13 +172,13 @@ export default function Dashboard() {
       </header>
 
       {/* Contenido */}
-      <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-8 md:pt-12 pb-28 lg:pb-20">
+      <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-8 md:pt-12 pb-12 lg:pb-16">
         {renderContent()}
       </main>
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/60 mt-8">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-10 flex flex-col items-center gap-4 text-center">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-10 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-10 flex flex-col items-center gap-4 text-center">
           <span className="font-display font-extrabold uppercase tracking-tighter text-xl">KEV PROJECT GTA</span>
           <SocialLinks />
           <span className="text-[11px] text-muted-foreground tracking-wide">
