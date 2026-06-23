@@ -39,6 +39,32 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
       im.src = src
     })
 
+  // Dibuja texto centrado, encogiendo el tamaño hasta que entre en maxW.
+  // Así nunca se sale del marco, da igual la fuente del dispositivo (SF Pro, etc.).
+  const fitText = (
+    text: string,
+    y: number,
+    size: number,
+    weight: string,
+    color: string,
+    o: { maxW?: number; ls?: number; family?: string; style?: string } = {},
+  ) => {
+    const maxW = o.maxW ?? 840
+    const fam = o.family ?? sans
+    const style = o.style ?? ""
+    setLS(o.ls ?? 0)
+    let s = size
+    const apply = () => (ctx.font = `${style} ${weight} ${s}px ${fam}`.trim())
+    apply()
+    while (ctx.measureText(text).width > maxW && s > 12) {
+      s -= 2
+      apply()
+    }
+    ctx.fillStyle = color
+    ctx.fillText(text, W / 2, y)
+    setLS(0)
+  }
+
   // ── Fondo ──
   ctx.fillStyle = "#0b0b0c"
   ctx.fillRect(0, 0, W, H)
@@ -57,16 +83,8 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
   ctx.textAlign = "center"
 
   // ── Encabezado ──
-  ctx.fillStyle = "rgba(255,255,255,0.5)"
-  ctx.font = `600 26px ${sans}`
-  setLS(7)
-  ctx.fillText("EN VIVO · EL RETO", W / 2, 170)
-
-  ctx.fillStyle = "#ffffff"
-  ctx.font = `800 50px ${sans}`
-  setLS(2)
-  ctx.fillText("KEV PROJECT GTA", W / 2, 234)
-  setLS(0)
+  fitText("EN VIVO · EL RETO", 170, 26, "600", "rgba(255,255,255,0.5)", { ls: 7, maxW: 820 })
+  fitText("KEV PROJECT GTA", 234, 50, "800", "#ffffff", { ls: 2, maxW: 840 })
 
   // ── Auto recortado, flotando (look poster de presentación) ──
   const carImg = await loadImg("/images/car/green-2-cut.png")
@@ -98,15 +116,8 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
   }
 
   // ── Contador ──
-  ctx.fillStyle = "#ffffff"
-  ctx.font = `900 210px ${sans}`
-  ctx.fillText(`$${net.toLocaleString("en-US")}`, W / 2, 1100)
-
-  ctx.fillStyle = "rgba(255,255,255,0.42)"
-  ctx.font = `600 46px ${sans}`
-  setLS(1)
-  ctx.fillText(`DE $${target.toLocaleString("en-US")}`, W / 2, 1162)
-  setLS(0)
+  fitText(`$${net.toLocaleString("en-US")}`, 1100, 210, "900", "#ffffff", { maxW: 820 })
+  fitText(`DE $${target.toLocaleString("en-US")}`, 1162, 46, "600", "rgba(255,255,255,0.42)", { ls: 1, maxW: 700 })
 
   // Barra de progreso
   const barX = 160
@@ -120,35 +131,20 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
   roundRect(barX, barY, Math.max((barW * pct) / 100, barH), barH, barH / 2)
   ctx.fill()
 
-  ctx.fillStyle = "rgba(255,255,255,0.55)"
-  ctx.font = `600 32px ${sans}`
-  setLS(2)
-  ctx.fillText(`${pct.toFixed(pct < 1 ? 4 : 1)}% AL MERCEDES   ·   DÍA ${day}`, W / 2, 1340)
-  setLS(0)
+  fitText(`${pct.toFixed(pct < 1 ? 4 : 1)}% AL MERCEDES   ·   DÍA ${day}`, 1340, 32, "600", "rgba(255,255,255,0.55)", { ls: 2, maxW: 840 })
 
   // ── Frase ──
-  ctx.fillStyle = "rgba(255,255,255,0.55)"
-  ctx.font = `italic 600 54px Georgia, "Times New Roman", serif`
-  ctx.fillText("De $10 a un", W / 2, 1500)
-  ctx.fillStyle = "#ffffff"
-  ctx.font = `800 92px ${sans}`
-  ctx.fillText("MERCEDES-AMG GT 63", W / 2, 1590)
-  ctx.fillStyle = "rgba(255,255,255,0.5)"
-  ctx.font = `600 44px ${sans}`
-  setLS(3)
-  ctx.fillText("BY MANSORY", W / 2, 1655)
-  setLS(0)
+  fitText("De $10 a un", 1500, 54, "600", "rgba(255,255,255,0.55)", {
+    style: "italic",
+    family: 'Georgia, "Times New Roman", serif',
+    maxW: 820,
+  })
+  fitText("MERCEDES-AMG GT 63", 1592, 90, "800", "#ffffff", { maxW: 840 })
+  fitText("BY MANSORY", 1658, 44, "600", "rgba(255,255,255,0.5)", { ls: 3, maxW: 700 })
 
   // ── Pie (sin URL) ──
-  ctx.fillStyle = "rgba(255,255,255,0.55)"
-  ctx.font = `600 40px ${sans}`
-  setLS(2)
-  ctx.fillText("@KEV.PROJECT.GTA", W / 2, 1800)
-  ctx.fillStyle = "rgba(255,255,255,0.32)"
-  ctx.font = `500 30px ${sans}`
-  setLS(3)
-  ctx.fillText("SANTA CRUZ · BOLIVIA", W / 2, 1850)
-  setLS(0)
+  fitText("@KEV.PROJECT.GTA", 1800, 40, "600", "rgba(255,255,255,0.55)", { ls: 2, maxW: 760 })
+  fitText("SANTA CRUZ · BOLIVIA", 1850, 30, "500", "rgba(255,255,255,0.32)", { ls: 3, maxW: 760 })
 
   const blob: Blob = await new Promise((res, rej) =>
     c.toBlob((b) => (b ? res(b) : rej(new Error("no-blob"))), "image/png"),
