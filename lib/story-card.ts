@@ -65,86 +65,109 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
     setLS(0)
   }
 
-  // ── Fondo ──
-  ctx.fillStyle = "#0b0b0c"
-  ctx.fillRect(0, 0, W, H)
-  const glow = ctx.createRadialGradient(W / 2, 360, 80, W / 2, 360, 760)
-  glow.addColorStop(0, "rgba(255,255,255,0.07)")
-  glow.addColorStop(1, "rgba(255,255,255,0)")
-  ctx.fillStyle = glow
-  ctx.fillRect(0, 0, W, 1000)
+  // Render en alta calidad
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = "high"
 
-  // Marco editorial
-  ctx.strokeStyle = "rgba(255,255,255,0.14)"
+  // ── Paleta luxury (crema editorial, igual que la web) ──
+  const INK = "#1b1710"
+  const mut = (a: number) => `rgba(27,23,16,${a})`
+  const GOLD = "#b0894e"
+
+  // ── Fondo crema ──
+  ctx.fillStyle = "#f2ede3"
+  ctx.fillRect(0, 0, W, H)
+  // Luz cálida superior (profundidad sutil)
+  const top = ctx.createRadialGradient(W / 2, 300, 80, W / 2, 300, 820)
+  top.addColorStop(0, "rgba(255,255,255,0.55)")
+  top.addColorStop(1, "rgba(255,255,255,0)")
+  ctx.fillStyle = top
+  ctx.fillRect(0, 0, W, 900)
+  // Viñeta muy sutil (look impreso premium)
+  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.62)
+  vig.addColorStop(0, "rgba(27,23,16,0)")
+  vig.addColorStop(1, "rgba(27,23,16,0.05)")
+  ctx.fillStyle = vig
+  ctx.fillRect(0, 0, W, H)
+
+  // ── Marco doble fino (invitación de lujo) ──
+  ctx.strokeStyle = mut(0.22)
   ctx.lineWidth = 2
   roundRect(46, 46, W - 92, H - 92, 44)
+  ctx.stroke()
+  ctx.strokeStyle = mut(0.1)
+  ctx.lineWidth = 1
+  roundRect(62, 62, W - 124, H - 124, 34)
   ctx.stroke()
 
   ctx.textAlign = "center"
 
   // ── Encabezado ──
-  fitText("EN VIVO · EL RETO", 170, 26, "600", "rgba(255,255,255,0.5)", { ls: 7, maxW: 820 })
-  fitText("KEV PROJECT GTA", 234, 50, "800", "#ffffff", { ls: 2, maxW: 840 })
+  fitText("EL RETO · EN VIVO", 166, 25, "600", mut(0.5), { ls: 7, maxW: 820 })
+  fitText("KEV PROJECT GTA", 230, 50, "800", INK, { ls: 2, maxW: 840 })
+  // Acento dorado fino
+  ctx.strokeStyle = GOLD
+  ctx.lineWidth = 3
+  ctx.lineCap = "round"
+  ctx.beginPath()
+  ctx.moveTo(W / 2 - 46, 262)
+  ctx.lineTo(W / 2 + 46, 262)
+  ctx.stroke()
+  ctx.lineCap = "butt"
 
-  // ── Auto recortado, flotando (look poster de presentación) ──
+  // ── Auto recortado, flotando ──
   const carImg = await loadImg("/images/car/green-2-cut.png")
-  // Spotlight detrás del auto
-  const spot = ctx.createRadialGradient(W / 2, 560, 60, W / 2, 560, 560)
-  spot.addColorStop(0, "rgba(255,255,255,0.11)")
-  spot.addColorStop(1, "rgba(255,255,255,0)")
-  ctx.fillStyle = spot
-  ctx.fillRect(40, 280, W - 80, 600)
   if (carImg) {
-    const cw = 948
+    const cw = 968
     const ch = cw * (carImg.height / carImg.width)
     const cx = (W - cw) / 2
-    const cy = 360
-    const shY = cy + ch - 16
-    // Sombra elíptica suave debajo
+    const cy = 326
+    const shY = cy + ch - 14
+    // Sombra de contacto suave (gris cálido)
     ctx.save()
     ctx.translate(W / 2, shY)
-    ctx.scale(1, 0.15)
-    const sh = ctx.createRadialGradient(0, 0, 12, 0, 0, cw / 2)
-    sh.addColorStop(0, "rgba(0,0,0,0.6)")
-    sh.addColorStop(1, "rgba(0,0,0,0)")
+    ctx.scale(1, 0.14)
+    const sh = ctx.createRadialGradient(0, 0, 12, 0, 0, cw / 2.1)
+    sh.addColorStop(0, "rgba(27,23,16,0.26)")
+    sh.addColorStop(1, "rgba(27,23,16,0)")
     ctx.fillStyle = sh
     ctx.beginPath()
-    ctx.arc(0, 0, cw / 2, 0, Math.PI * 2)
+    ctx.arc(0, 0, cw / 2.1, 0, Math.PI * 2)
     ctx.fill()
     ctx.restore()
     ctx.drawImage(carImg, cx, cy, cw, ch)
   }
 
   // ── Contador ──
-  fitText(`$${net.toLocaleString("en-US")}`, 1058, 168, "900", "#ffffff", { maxW: 780 })
-  fitText(`DE $${target.toLocaleString("en-US")}`, 1150, 40, "600", "rgba(255,255,255,0.42)", { ls: 1, maxW: 680 })
+  fitText(`$${net.toLocaleString("en-US")}`, 1058, 168, "900", INK, { maxW: 780 })
+  fitText(`DE $${target.toLocaleString("en-US")}`, 1150, 40, "600", mut(0.5), { ls: 1, maxW: 680 })
 
   // Barra de progreso
   const barX = 160
   const barW = W - barX * 2
   const barY = 1232
-  const barH = 22
-  ctx.fillStyle = "rgba(255,255,255,0.14)"
+  const barH = 20
+  ctx.fillStyle = mut(0.13)
   roundRect(barX, barY, barW, barH, barH / 2)
   ctx.fill()
-  ctx.fillStyle = "#ffffff"
+  ctx.fillStyle = INK
   roundRect(barX, barY, Math.max((barW * pct) / 100, barH), barH, barH / 2)
   ctx.fill()
 
-  fitText(`${pct.toFixed(pct < 1 ? 4 : 1)}% AL MERCEDES   ·   DÍA ${day}`, 1322, 32, "600", "rgba(255,255,255,0.55)", { ls: 2, maxW: 840 })
+  fitText(`${pct.toFixed(pct < 1 ? 4 : 1)}% AL MERCEDES   ·   DÍA ${day}`, 1320, 32, "600", mut(0.55), { ls: 2, maxW: 840 })
 
   // ── Frase ──
-  fitText("De $10 a un", 1500, 54, "600", "rgba(255,255,255,0.55)", {
+  fitText("De $10 a un", 1500, 54, "600", mut(0.5), {
     style: "italic",
     family: 'Georgia, "Times New Roman", serif',
     maxW: 820,
   })
-  fitText("MERCEDES-AMG GT 63", 1592, 90, "800", "#ffffff", { maxW: 840 })
-  fitText("BY MANSORY", 1658, 44, "600", "rgba(255,255,255,0.5)", { ls: 3, maxW: 700 })
+  fitText("MERCEDES-AMG GT 63", 1592, 90, "800", INK, { maxW: 840 })
+  fitText("BY MANSORY", 1658, 44, "600", mut(0.5), { ls: 3, maxW: 700 })
 
   // ── Pie (sin URL) ──
-  fitText("@KEV.PROJECT.GTA", 1800, 40, "600", "rgba(255,255,255,0.55)", { ls: 2, maxW: 760 })
-  fitText("SANTA CRUZ · BOLIVIA", 1850, 30, "500", "rgba(255,255,255,0.32)", { ls: 3, maxW: 760 })
+  fitText("@KEV.PROJECT.GTA", 1800, 40, "600", mut(0.62), { ls: 2, maxW: 760 })
+  fitText("SANTA CRUZ · BOLIVIA", 1850, 30, "500", mut(0.4), { ls: 3, maxW: 760 })
 
   const blob: Blob = await new Promise((res, rej) =>
     c.toBlob((b) => (b ? res(b) : rej(new Error("no-blob"))), "image/png"),
