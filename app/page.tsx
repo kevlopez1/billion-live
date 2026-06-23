@@ -102,7 +102,7 @@ export default function Dashboard() {
 
       {/* Cierre — bloque negro de statement (ritmo claro/oscuro) */}
       <Reveal>
-        <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white px-6 py-14 md:py-20 text-center">
+        <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white px-6 py-14 md:py-20 text-center border border-white/10">
           <p className="font-serif-display italic text-white/55 text-xl md:text-2xl">El auto es la carnada</p>
           <p className="font-display font-extrabold uppercase tracking-tighter text-4xl md:text-6xl leading-[0.9] mt-1">
             El imperio<br />es la meta
@@ -168,7 +168,7 @@ export default function Dashboard() {
               alt="Kev López"
               width={32}
               height={32}
-              className="rounded-full object-cover object-[center_80%] w-8 h-8 ring-1 ring-black/10"
+              className="rounded-full object-cover object-[center_80%] w-8 h-8 ring-1 ring-foreground/15"
             />
             <div className="text-left leading-none">
               <span className="block text-sm font-display font-extrabold tracking-tight">KEV PROJECT GTA</span>

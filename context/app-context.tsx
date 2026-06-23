@@ -406,10 +406,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("es")
 
   useEffect(() => {
-    // Tema CLARO forzado (estilo LATHOS: blanco minimal, profesional).
-    const initialTheme: "light" | "dark" = "light"
+    // Tema según la hora LOCAL del visitante: claro de día, oscuro de noche.
+    const h = new Date().getHours()
+    const initialTheme: "light" | "dark" = h < 7 || h >= 19 ? "dark" : "light"
     setThemeState(initialTheme)
-    document.documentElement.classList.remove("dark")
+    document.documentElement.classList.toggle("dark", initialTheme === "dark")
 
     const savedLocale = localStorage.getItem("kev-locale") as Locale | null
     if (savedLocale) {

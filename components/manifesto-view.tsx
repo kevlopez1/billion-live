@@ -39,7 +39,7 @@ export function ManifestoView() {
       </div>
 
       {/* Método STRATEGY — bloque negro, acróstico (primero) */}
-      <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white p-6 md:p-8">
+      <div className="rounded-[var(--radius)] bg-[#0a0a0a] text-white p-6 md:p-8 border border-white/10">
         <h2 className="text-[11px] uppercase tracking-[0.18em] text-white/50 mb-1">Método STRATEGY</h2>
         <p className="text-sm text-white/55 font-light mb-6">El método con el que voy a construir todo</p>
 
