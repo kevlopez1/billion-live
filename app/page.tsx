@@ -18,6 +18,11 @@ import { IntroSplash } from "@/components/intro-splash"
 import { Reveal } from "@/components/reveal"
 import { ShareButton } from "@/components/share-button"
 import { LiveTicker } from "@/components/live-ticker"
+import { LiveViewers } from "@/components/live-viewers"
+import { Changelog } from "@/components/changelog"
+import { ShareCard } from "@/components/share-card"
+import { NotifyForm } from "@/components/notify-form"
+import { Clips } from "@/components/clips"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -56,29 +61,48 @@ export default function Dashboard() {
 
   const renderHome = () => (
     <div className="space-y-24 md:space-y-32">
-      {/* Hero + ticker de actividad en vivo */}
+      {/* Hero + ticker + espectadores en vivo */}
       <div className="space-y-6 md:space-y-8">
         <LiveTicker />
         <Reveal>
           <PortfolioOverview />
         </Reveal>
+        <LiveViewers />
       </div>
+
+      {/* La bitácora: actualizaciones del reto */}
+      <section>
+        <Reveal>
+          <SectionLabel index="01" eyebrow="En vivo" title="La bitácora" />
+        </Reveal>
+        <Changelog />
+      </section>
 
       {/* La ruta: hitos de dinero + travesía */}
       <section>
         <Reveal>
-          <SectionLabel index="01" eyebrow="La ruta" title="Los hitos" />
+          <SectionLabel index="02" eyebrow="La ruta" title="Los hitos" />
         </Reveal>
         <Roadmap />
       </section>
 
-      {/* Seguí el reto */}
+      {/* Seguí el reto: acciones + tarjeta para compartir + aviso de hitos */}
       <section>
         <Reveal>
-          <SectionLabel index="02" eyebrow="Sumate" title="Seguí el reto" />
+          <SectionLabel index="03" eyebrow="Sumate" title="Seguí el reto" />
         </Reveal>
         <Reveal delay={80}>
           <QuickActions />
+        </Reveal>
+        <Reveal delay={120}>
+          <div className="mt-4">
+            <ShareCard />
+          </div>
+        </Reveal>
+        <Reveal delay={160}>
+          <div className="mt-6">
+            <NotifyForm />
+          </div>
         </Reveal>
       </section>
 
@@ -87,10 +111,20 @@ export default function Dashboard() {
         <EarlyWall />
       </Reveal>
 
+      {/* Clips del reto */}
+      <section>
+        <Reveal>
+          <SectionLabel index="04" eyebrow="Contenido" title="Los clips" />
+        </Reveal>
+        <Reveal delay={80}>
+          <Clips />
+        </Reveal>
+      </section>
+
       {/* El imperio: las marcas */}
       <section>
         <Reveal>
-          <SectionLabel index="03" eyebrow="El imperio" title="Las marcas" />
+          <SectionLabel index="05" eyebrow="El imperio" title="Las marcas" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
