@@ -701,6 +701,29 @@
   color: var(--muted-foreground);
 }
 
+/* ── Micro-interacciones (sensación pro) ── */
+.btn-accent:active {
+  transform: scale(0.985);
+}
+.lift {
+  transition: transform 0.28s cubic-bezier(0.2, 0.6, 0.2, 1), border-color 0.28s ease,
+    box-shadow 0.28s ease;
+}
+.lift:hover {
+  transform: translateY(-3px);
+}
+
+/* ── Grano sutil de fondo (textura premium) ── */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 /* Added smooth page transitions */
 .page-transition-enter {
   opacity: 0;
