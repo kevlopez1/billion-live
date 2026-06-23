@@ -12,6 +12,7 @@ import { ManifestoView } from "@/components/manifesto-view"
 import { SocialPowerGrid } from "@/components/social-power-grid"
 import { QuickActions } from "@/components/quick-actions"
 import { EarlyWall } from "@/components/early-wall"
+import { PrimePipeline } from "@/components/prime-pipeline"
 import { Roadmap } from "@/components/roadmap"
 import { IntroSplash } from "@/components/intro-splash"
 import { Reveal } from "@/components/reveal"
@@ -115,6 +116,9 @@ export default function Dashboard() {
             </Reveal>
             <Reveal delay={80}>
               <MetricsGrid />
+            </Reveal>
+            <Reveal delay={120}>
+              <PrimePipeline />
             </Reveal>
           </div>
         )
