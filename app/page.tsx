@@ -21,6 +21,7 @@ import { LiveViewers } from "@/components/live-viewers"
 import { Changelog } from "@/components/changelog"
 import { NotifyForm } from "@/components/notify-form"
 import { Clips } from "@/components/clips"
+import { CarSpecs } from "@/components/car-specs"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -68,10 +69,18 @@ export default function Dashboard() {
         <LiveViewers />
       </div>
 
+      {/* El auto: la meta — ficha técnica */}
+      <section>
+        <Reveal>
+          <SectionLabel index="01" eyebrow="La meta" title="El auto" />
+        </Reveal>
+        <CarSpecs />
+      </section>
+
       {/* La bitácora: actualizaciones del reto */}
       <section>
         <Reveal>
-          <SectionLabel index="01" eyebrow="En vivo" title="La bitácora" />
+          <SectionLabel index="02" eyebrow="En vivo" title="La bitácora" />
         </Reveal>
         <Changelog />
       </section>
@@ -79,7 +88,7 @@ export default function Dashboard() {
       {/* La ruta: hitos de dinero + travesía */}
       <section>
         <Reveal>
-          <SectionLabel index="02" eyebrow="La ruta" title="Los hitos" />
+          <SectionLabel index="03" eyebrow="La ruta" title="Los hitos" />
         </Reveal>
         <Roadmap />
       </section>
@@ -87,7 +96,7 @@ export default function Dashboard() {
       {/* Sumate: aviso de hitos (el seguir/compartir vive en la barra y el footer) */}
       <section>
         <Reveal>
-          <SectionLabel index="03" eyebrow="Sumate" title="No te lo pierdas" />
+          <SectionLabel index="04" eyebrow="Sumate" title="No te lo pierdas" />
         </Reveal>
         <Reveal delay={80}>
           <NotifyForm />
@@ -102,7 +111,7 @@ export default function Dashboard() {
       {/* Clips del reto */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="Contenido" title="Los clips" />
+          <SectionLabel index="05" eyebrow="Contenido" title="Los clips" />
         </Reveal>
         <Reveal delay={80}>
           <Clips />
@@ -112,7 +121,7 @@ export default function Dashboard() {
       {/* El imperio: las marcas */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="El imperio" title="Las marcas" />
+          <SectionLabel index="06" eyebrow="El imperio" title="Las marcas" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
