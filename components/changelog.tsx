@@ -17,7 +17,7 @@ type Entry = {
 // hace que la web se sienta VIVA y que la gente vuelva.
 const entries: Entry[] = [
   {
-    date: "2026-06-23",
+    date: "2026-06-29",
     title: "Día 1 · El relanzamiento",
     body:
       "Vuelvo al reto, ahora en público y desde cero. El contador arranca en $10 — cada peso es revenue real de PRIME, nada inventado. Esta semana: re-promoción en redes y las primeras reuniones con clientes.",
