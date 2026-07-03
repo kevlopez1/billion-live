@@ -47,18 +47,24 @@ export function ManifestoView() {
         <div className="flex justify-center gap-2.5 md:gap-5 overflow-x-auto pb-1">
           {strategyMethod.map((s, i) => (
             <div key={i} className="flex flex-col items-center shrink-0">
-              {s.word.toUpperCase().split("").map((ch, j) => (
-                <span
-                  key={j}
-                  className={
-                    j === 0
-                      ? "font-display font-extrabold leading-none text-2xl md:text-4xl text-white mb-2"
-                      : "font-display leading-[1.15] text-xs md:text-base text-white/35 uppercase tracking-wide"
-                  }
-                >
-                  {ch}
-                </span>
-              ))}
+              {s.word.toUpperCase().split("").map((ch, j) => {
+                const isFirst = j === 0
+                // Difumina algunas letras (dispersas y fijas) para el aire de "clasificado".
+                const secret = !isFirst && (i * 2 + j) % 3 === 1
+                return (
+                  <span
+                    key={j}
+                    className={
+                      (isFirst
+                        ? "font-display font-extrabold leading-none text-2xl md:text-4xl text-white mb-2"
+                        : "font-display leading-[1.15] text-xs md:text-base text-white/35 uppercase tracking-wide") +
+                      (secret ? " blur-[3px] select-none" : "")
+                    }
+                  >
+                    {ch}
+                  </span>
+                )
+              })}
             </div>
           ))}
         </div>
