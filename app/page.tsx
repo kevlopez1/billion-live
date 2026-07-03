@@ -118,10 +118,10 @@ export default function Dashboard() {
         </Reveal>
       </section>
 
-      {/* El imperio: las marcas */}
+      {/* El motor: PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="06" eyebrow="El imperio" title="Las marcas" />
+          <SectionLabel index="06" eyebrow="El motor" title="PRIME" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">

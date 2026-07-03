@@ -1,59 +1,38 @@
 "use client"
 
-import { useApp } from "@/context/app-context"
+import { ArrowUpRight } from "lucide-react"
 
+// Sección del ecosistema: ahora enfocada solo en PRIME, con link directo a la web.
 export function ProjectsList() {
-  const { projects } = useApp()
-
   return (
-    <div className="overflow-hidden">
-      <div className="px-6 md:px-8 pt-5 pb-4 border-b border-border">
-        <p className="text-sm text-muted-foreground font-light">Una máquina, tres funciones</p>
+    <a
+      href="https://primebusiness.live"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group block px-6 md:px-8 py-7 md:py-9 transition-colors hover:bg-foreground/[0.03]"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="font-display font-extrabold text-2xl md:text-3xl tracking-tight">PRIME</span>
+            <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground border border-border rounded-full px-2 py-0.5">
+              Empleados de IA · SaaS
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-3 max-w-xl leading-relaxed">
+            El motor de dinero del reto: el contador se alimenta del revenue real de PRIME. Empleados de IA
+            para empresas — ventas primero, después procesos.
+          </p>
+          <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground group-hover:gap-2.5 transition-all">
+            Visitar primebusiness.live
+            <ArrowUpRight className="w-4 h-4" />
+          </span>
+        </div>
+        <span className="hidden sm:flex items-center gap-1.5 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-kev-success animate-pulse" />
+          <span className="text-[11px] text-muted-foreground">Active</span>
+        </span>
       </div>
-
-      <div className="divide-y divide-border">
-        {projects.map((project) => {
-          const isActive = project.status === "Active"
-          return (
-            <div
-              key={project.id}
-              className="group flex items-center gap-4 md:gap-6 px-6 md:px-8 py-5 transition-colors hover:bg-foreground/[0.03]"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2.5">
-                  <span className="font-medium truncate">{project.name}</span>
-                  <span className="hidden sm:inline text-[10px] uppercase tracking-[0.12em] text-muted-foreground border border-border rounded-full px-2 py-0.5 shrink-0">
-                    {project.type}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1.5 font-light line-clamp-1 leading-relaxed">
-                  {project.description}
-                </p>
-              </div>
-
-              <div className="w-24 shrink-0 hidden md:block">
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1.5">
-                  <span className="uppercase tracking-wider">Peso</span>
-                  <span className="number-display">{project.allocation}%</span>
-                </div>
-                <div className="h-1 bg-foreground/[0.06] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-foreground/30 rounded-full transition-all duration-700"
-                    style={{ width: `${project.allocation}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 shrink-0 w-20 justify-end">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-kev-success animate-pulse" : "bg-muted-foreground/40"}`}
-                />
-                <span className="text-[11px] text-muted-foreground">{project.status}</span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
+    </a>
   )
 }
