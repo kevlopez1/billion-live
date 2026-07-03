@@ -13,6 +13,12 @@ const PROPUESTAS = 1 // propuestas enviadas
 const EN_NEGOCIACION = 1 // tratos en pipeline
 const SEGUIDORES = 1009 // suma de todas las redes
 
+// Reinversión en las herramientas del motor (USD). Editá a medida que gastás.
+const GASTO_CLAUDE = 100 // suscripción Claude
+const GASTO_GITHUB = 21 // GitHub empresarial
+const GASTO_SERVIDOR = 30 // servidor en la nube
+const GASTOS_TOTAL = GASTO_CLAUDE + GASTO_GITHUB + GASTO_SERVIDOR
+
 function Stat({ value, label, sub }: { value: string; label: string; sub?: string }) {
   return (
     <div className="lift rounded-2xl border border-border bg-card/60 px-4 py-5 hover:border-foreground/20">
@@ -81,6 +87,17 @@ export function ProgressDashboard() {
           <Stat value={`${CLIENTES_RETO}`} label="Clientes" sub="cerrados en el reto" />
           <Stat value={`${EN_NEGOCIACION}`} label="En negociación" sub="en el pipeline" />
           <Stat value={`${PROPUESTAS}`} label="Propuestas" sub="enviadas" />
+        </div>
+      </div>
+
+      {/* REINVERSIÓN / GASTOS */}
+      <div>
+        <GroupLabel>Reinversión · en el motor</GroupLabel>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Stat value={`$${GASTOS_TOTAL}`} label="Total reinvertido" sub="en herramientas" />
+          <Stat value={`$${GASTO_CLAUDE}`} label="Claude" sub="suscripción de IA" />
+          <Stat value={`$${GASTO_GITHUB}`} label="GitHub" sub="empresarial" />
+          <Stat value={`$${GASTO_SERVIDOR}`} label="Servidor" sub="en la nube" />
         </div>
       </div>
 
