@@ -24,6 +24,22 @@ const strategyMethod = [
   { letter: "Y", word: "Yo", desc: "Todo empieza y termina en uno. La responsabilidad es propia." },
 ]
 
+// Difumina letras dispersas de un texto (aire "clasificado"). rate = fracción censurada.
+function Redacted({ text, seed, rate }: { text: string; seed: number; rate: number }) {
+  return (
+    <>
+      {text.split("").map((ch, k) => {
+        const blur = ch !== " " && (seed * 31 + k * 17) % 100 < rate * 100
+        return (
+          <span key={k} className={blur ? "blur-[3px] select-none" : undefined}>
+            {ch}
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
 export function ManifestoView() {
   const [expandedPrinciple, setExpandedPrinciple] = useState<string | null>(null)
   const { manifesto, t } = useApp()
@@ -49,8 +65,8 @@ export function ManifestoView() {
             <div key={i} className="flex flex-col items-center shrink-0">
               {s.word.toUpperCase().split("").map((ch, j) => {
                 const isFirst = j === 0
-                // Difumina algunas letras (dispersas y fijas) para el aire de "clasificado".
-                const secret = !isFirst && (i * 2 + j) % 3 === 1
+                // Difumina más letras (dispersas y fijas) para el aire de "clasificado".
+                const secret = !isFirst && (i * 4 + j * 7) % 9 < 5
                 return (
                   <span
                     key={j}
@@ -75,7 +91,12 @@ export function ManifestoView() {
             <div key={i} className="flex gap-3 text-sm">
               <span className="font-display font-extrabold text-white w-4 shrink-0">{s.letter}</span>
               <span>
-                <b className="text-white">{s.word}.</b> <span className="text-white/55">{s.desc}</span>
+                <b className="text-white">
+                  <Redacted text={s.word} seed={i + 1} rate={0.45} />.
+                </b>{" "}
+                <span className="text-white/55">
+                  <Redacted text={s.desc} seed={i + 7} rate={0.3} />
+                </span>
               </span>
             </div>
           ))}
