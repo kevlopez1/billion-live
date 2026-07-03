@@ -155,7 +155,7 @@ const initialMetrics: GlobalMetrics = {
   monthlyGrowth: 0,
   roi: 0,
   targetRevenue: CHALLENGE_TARGET,
-  activeProjects: 4,
+  activeProjects: 3,
   ytdReturn: 0,
 }
 
@@ -207,7 +207,7 @@ const initialProjects: Project[] = [
     change: 0,
     trend: "up",
     status: "Active",
-    allocation: 55,
+    allocation: 60,
     description:
       "Empleados de IA para empresas (primebusiness.live). El MOTOR DE DINERO del reto: el contador se alimenta del revenue real de PRIME. Moat = datos propios + nicho. Métricas que importan: MRR, clientes, retención.",
     lastUpdate: "Ahora mismo",
@@ -222,7 +222,7 @@ const initialProjects: Project[] = [
     change: 0,
     trend: "neutral",
     status: "Growth",
-    allocation: 18,
+    allocation: 22,
     description: "Inmobiliaria. La función REPUTACIÓN: activos reales y credibilidad de largo plazo.",
     lastUpdate: "Hoy",
     position: { x: 420, y: 90 },
@@ -236,25 +236,10 @@ const initialProjects: Project[] = [
     change: 0,
     trend: "up",
     status: "Growth",
-    allocation: 15,
+    allocation: 18,
     description: "Educación. La función MASIFICACIÓN: convierte la atención del reto en alumnos y comunidad.",
     lastUpdate: "Hoy",
     position: { x: 260, y: 300 },
-  },
-  {
-    id: "4",
-    name: "@Kev López · KEV PROJECT GTA",
-    type: "Medios · Audiencia",
-    value: 0,
-    invested: 0,
-    change: 0,
-    trend: "up",
-    status: "Active",
-    allocation: 12,
-    description:
-      "El MEDIO: @1kevlopez (~19.6K) + @kev.project.gta. Genera HYPE → VIRALIDAD → BASE DE DATOS → PÚBLICO REAL. La atención que se convierte en 10x/100x/1000x.",
-    lastUpdate: "Ahora mismo",
-    position: { x: 560, y: 230 },
   },
 ]
 
