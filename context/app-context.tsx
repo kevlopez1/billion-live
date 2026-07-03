@@ -146,9 +146,9 @@ export const CHALLENGE_TARGET = 450_000 // Mercedes-AMG GT 63 Mansory
 export const SECRET_TARGET = 1_000_000_000 // El imperio (capa secreta)
 export const CHALLENGE_START = 10 // Empezamos desde $10
 // Fecha límite del reto. Cambiar acá el plazo (formato AAAA-MM-DD).
-export const CHALLENGE_DEADLINE = "2027-06-29" // límite: 12 meses
-export const CHALLENGE_RECORD_DEADLINE = "2026-12-29" // ritmo récord: 6 meses
-export const CHALLENGE_LAUNCH = "2026-06-29" // fecha del relanzamiento (Día 1)
+export const CHALLENGE_DEADLINE = "2027-06-30" // límite: 12 meses
+export const CHALLENGE_RECORD_DEADLINE = "2026-12-30" // ritmo récord: 6 meses
+export const CHALLENGE_LAUNCH = "2026-06-30" // Día 1: martes del primer video
 
 const initialMetrics: GlobalMetrics = {
   netWorth: 350, // recaudado a la fecha (real) — editá acá o desde /control
