@@ -22,6 +22,9 @@ import { Changelog } from "@/components/changelog"
 import { NotifyForm } from "@/components/notify-form"
 import { Clips } from "@/components/clips"
 import { CarSpecs } from "@/components/car-specs"
+import { BecasPrime } from "@/components/becas-prime"
+import { SociosLatam } from "@/components/socios-latam"
+import { Transparencia } from "@/components/transparencia"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -93,10 +96,30 @@ export default function Dashboard() {
         <Roadmap />
       </section>
 
+      {/* Becas PRIME: la idea ancla — cada hito devuelve a Bolivia */}
+      <section>
+        <Reveal>
+          <SectionLabel index="04" eyebrow="Cada hito devuelve" title="Becas PRIME" />
+        </Reveal>
+        <Reveal delay={80}>
+          <BecasPrime />
+        </Reveal>
+      </section>
+
+      {/* Socios LATAM: un socio por país, cobrando en dólares */}
+      <section>
+        <Reveal>
+          <SectionLabel index="05" eyebrow="El reto se expande" title="Socios LATAM" />
+        </Reveal>
+        <Reveal delay={80}>
+          <SociosLatam />
+        </Reveal>
+      </section>
+
       {/* Sumate: aviso de hitos (el seguir/compartir vive en la barra y el footer) */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="Sumate" title="No te lo pierdas" />
+          <SectionLabel index="06" eyebrow="Sumate" title="No te lo pierdas" />
         </Reveal>
         <Reveal delay={80}>
           <NotifyForm />
@@ -111,17 +134,27 @@ export default function Dashboard() {
       {/* Clips del reto */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="Contenido" title="Los clips" />
+          <SectionLabel index="07" eyebrow="Contenido" title="Los clips" />
         </Reveal>
         <Reveal delay={80}>
           <Clips />
         </Reveal>
       </section>
 
+      {/* Transparencia radical: cómo verificar que el contador es real */}
+      <section>
+        <Reveal>
+          <SectionLabel index="08" eyebrow="Números reales" title="¿Es real?" />
+        </Reveal>
+        <Reveal delay={80}>
+          <Transparencia />
+        </Reveal>
+      </section>
+
       {/* El imperio: las marcas */}
       <section>
         <Reveal>
-          <SectionLabel index="06" eyebrow="El imperio" title="Las marcas" />
+          <SectionLabel index="09" eyebrow="El imperio" title="Las marcas" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">

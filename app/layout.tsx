@@ -192,6 +192,22 @@ const jsonLd = {
             text: "No. El reto empieza desde $10, en público y desde la crisis, como respuesta auténtica al comentario 'me lo compró mi papá'.",
           },
         },
+        {
+          "@type": "Question",
+          name: "¿Qué son las Becas PRIME?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Por cada hito del reto, Kev instala un Empleado AI de PRIME gratis a un negocio boliviano, en cámara. El éxito se comparte con la economía que lo formó.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "¿Cómo ser socio de PRIME en mi país?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "El reto busca un socio por país en LATAM vía el programa Prime Partners: vendés en tu territorio, PRIME implementa la tecnología y ganás comisión recurrente. Detalles en primebusiness.live/franquicias.",
+          },
+        },
       ],
     },
   ],
