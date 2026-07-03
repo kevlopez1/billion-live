@@ -8,7 +8,7 @@ export function ProjectsList() {
   return (
     <div className="overflow-hidden">
       <div className="px-6 md:px-8 pt-5 pb-4 border-b border-border">
-        <p className="text-sm text-muted-foreground font-light">Una máquina, cuatro funciones</p>
+        <p className="text-sm text-muted-foreground font-light">Una máquina, tres funciones</p>
       </div>
 
       <div className="divide-y divide-border">
