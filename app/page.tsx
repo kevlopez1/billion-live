@@ -7,7 +7,8 @@ import { PortfolioOverview } from "@/components/portfolio-overview"
 import { ProgressDashboard } from "@/components/progress-dashboard"
 import { ProjectsList } from "@/components/projects-list"
 import { MobileNav } from "@/components/mobile-nav"
-import { SocialLinks } from "@/components/social-links"
+import { SocialLinks, WHATSAPP_COMMUNITY } from "@/components/social-links"
+import { MessageCircle, ArrowUpRight } from "lucide-react"
 import { ManifestoView } from "@/components/manifesto-view"
 import { EarlyWall } from "@/components/early-wall"
 import { Sponsors } from "@/components/sponsors"
@@ -93,12 +94,35 @@ export default function Dashboard() {
         <Roadmap />
       </section>
 
-      {/* Sumate: aviso de hitos (el seguir/compartir vive en la barra y el footer) */}
+      {/* Sumate: comunidad de WhatsApp + aviso de hitos */}
       <section>
         <Reveal>
           <SectionLabel index="04" eyebrow="Sumate" title="No te lo pierdas" />
         </Reveal>
-        <Reveal delay={80}>
+        <Reveal delay={60}>
+          <a
+            href={WHATSAPP_COMMUNITY}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="lift mb-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-card/40 px-5 py-5 md:px-7 hover:border-foreground/20 transition-colors"
+          >
+            <div className="flex items-center gap-3.5">
+              <span className="shrink-0 w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center">
+                <MessageCircle className="w-5 h-5" />
+              </span>
+              <div>
+                <div className="font-display font-bold text-base md:text-lg tracking-tight">
+                  Unite a la comunidad
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Grupo de WhatsApp del reto · detrás de escena y avisos en vivo
+                </div>
+              </div>
+            </div>
+            <ArrowUpRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          </a>
+        </Reveal>
+        <Reveal delay={100}>
           <NotifyForm />
         </Reveal>
       </section>
