@@ -16,7 +16,7 @@ export function ProjectsList() {
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="font-display font-extrabold text-2xl md:text-3xl tracking-tight">PRIME</span>
             <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground border border-border rounded-full px-2 py-0.5">
-              Empleados de IA · SaaS
+              Empleados de IA · Agent as a Service
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-3 max-w-xl leading-relaxed">

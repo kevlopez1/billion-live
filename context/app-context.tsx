@@ -201,7 +201,7 @@ const initialProjects: Project[] = [
   {
     id: "1",
     name: "PRIME",
-    type: "Empleados de IA · SaaS",
+    type: "Empleados de IA · Agent as a Service",
     value: 10,
     invested: 0,
     change: 0,
