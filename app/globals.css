@@ -28,6 +28,9 @@
   --ring: oklch(0.22 0.015 265);
   --radius: 1.75rem;
 
+  /* Acento firma: champagne/dorado sutil (identidad de marca) */
+  --gold: oklch(0.66 0.09 74);
+
   /* Acento monocromo elegante (tinta, no color), estilo Mansory */
   --kev-primary: oklch(0.26 0.02 265);
   --kev-primary-light: oklch(0.38 0.02 265);
@@ -76,6 +79,9 @@
   --border: oklch(1 0 0 / 0.08);
   --input: oklch(1 0 0 / 0.1);
   --ring: oklch(0.97 0 0);
+
+  /* Acento firma dorado (más claro en oscuro) */
+  --gold: oklch(0.82 0.085 82);
 
   /* Accent system — platinum/white (monochrome luxury) */
   --kev-primary: oklch(0.97 0 0);
@@ -127,6 +133,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-gold: var(--gold);
   --color-kev-primary: var(--kev-primary);
   --color-kev-primary-light: var(--kev-primary-light);
   --color-kev-primary-dim: var(--kev-primary-dim);
@@ -730,6 +737,39 @@
 }
 .lift:hover {
   transform: translateY(-3px);
+}
+
+/* ── Acento dorado (identidad de marca, uso sutil) ── */
+.gold-tick {
+  height: 2px;
+  width: 26px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+.gold-rule {
+  height: 2px;
+  width: 44px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.gold-fill {
+  background: linear-gradient(90deg, oklch(from var(--gold) calc(l - 0.06) c h), var(--gold));
+}
+.text-gold {
+  color: var(--gold);
+}
+
+/* ── Barra de progreso de scroll (detalle premium) ── */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  z-index: 60;
+  background: linear-gradient(90deg, oklch(from var(--gold) calc(l - 0.05) c h), var(--gold));
+  box-shadow: 0 0 12px oklch(from var(--gold) l c h / 0.5);
+  transition: width 0.12s ease-out;
+  pointer-events: none;
 }
 
 /* ── Galería tipo lookbook: zoom suave de la imagen al pasar el cursor ── */

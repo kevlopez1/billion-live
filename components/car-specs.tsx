@@ -41,7 +41,7 @@ export function CarSpecs() {
         {stats.map((s, i) => (
           <Reveal key={s.label} delay={i * 60}>
             <div className="lift rounded-2xl border border-border bg-card/40 px-4 py-5 h-full hover:border-foreground/20">
-              <s.icon className="w-5 h-5 text-kev-primary mb-2.5" strokeWidth={1.75} />
+              <s.icon className="w-5 h-5 text-gold mb-2.5" strokeWidth={1.75} />
               <div className="number-display font-extrabold text-3xl md:text-4xl leading-none">{s.value}</div>
               <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mt-2">{s.label}</div>
             </div>
@@ -56,7 +56,7 @@ export function CarSpecs() {
           <ul className="space-y-3">
             {mansory.map((m) => (
               <li key={m} className="flex gap-3 text-sm">
-                <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-kev-primary" />
+                <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-gold" />
                 <span className="text-muted-foreground leading-relaxed">{m}</span>
               </li>
             ))}
