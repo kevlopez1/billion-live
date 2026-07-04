@@ -21,7 +21,6 @@ import { LiveTicker } from "@/components/live-ticker"
 import { LiveViewers } from "@/components/live-viewers"
 import { Changelog } from "@/components/changelog"
 import { NotifyForm } from "@/components/notify-form"
-import { Clips } from "@/components/clips"
 import { CarSpecs } from "@/components/car-specs"
 import { ScrollProgress } from "@/components/scroll-progress"
 
@@ -136,20 +135,10 @@ export default function Dashboard() {
         <EarlyWall />
       </Reveal>
 
-      {/* Clips del reto */}
-      <section>
-        <Reveal>
-          <SectionLabel index="05" eyebrow="Contenido" title="Los clips" />
-        </Reveal>
-        <Reveal delay={80}>
-          <Clips />
-        </Reveal>
-      </section>
-
       {/* El motor: PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="06" eyebrow="El motor" title="PRIME" />
+          <SectionLabel index="05" eyebrow="El motor" title="PRIME" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
