@@ -60,7 +60,11 @@ export function Changelog() {
           {sorted.map((e, i) => (
             <Reveal key={e.date + i} delay={i * 60}>
               <div className="relative">
-                <span className="absolute -left-[22px] top-1.5 w-3.5 h-3.5 rounded-full border-2 bg-foreground border-foreground" />
+                <span
+                  className={`absolute -left-[22px] top-1.5 w-3.5 h-3.5 rounded-full border-2 ${
+                    i === 0 ? "bg-gold border-gold" : "bg-foreground border-foreground"
+                  }`}
+                />
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[10px] uppercase tracking-[0.14em] rounded-full border border-border px-2.5 py-1 text-muted-foreground number-display">
                     Día {dayNumber(e.date)}

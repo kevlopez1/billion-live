@@ -148,21 +148,35 @@ export function PortfolioOverview() {
         </span>
       </h1>
 
-      {/* Galería del auto — fotos oficiales (verde, fondo blanco: se funden) */}
+      {/* El auto — flotando sobre el fondo (look poster de showroom) */}
+      <div className="relative mt-8 md:mt-6">
+        <div
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[2%] w-[72%] h-10 md:h-14 rounded-full blur-2xl"
+          style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(27,23,16,0.32), transparent 70%)" }}
+        />
+        <img
+          src="/images/car/green-2-cut.png"
+          alt="Mercedes-AMG GT 63 4-door por Mansory"
+          className="relative w-full max-w-3xl mx-auto"
+          loading="eager"
+        />
+      </div>
+
+      {/* Otros ángulos (fotos oficiales) */}
       <div
-        className="mt-8 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
+        className="mt-6 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: "none" }}
       >
-        {["green-2", "green-3", "green-4", "green-1"].map((n, i) => (
+        {["green-3", "green-4", "green-1"].map((n, i) => (
           <div
             key={i}
-            className="img-zoom snap-center shrink-0 w-[88%] sm:w-[60%] lg:w-[46%] rounded-2xl overflow-hidden border border-border bg-white shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
+            className="img-zoom snap-center shrink-0 w-[58%] sm:w-[38%] lg:w-[31.5%] rounded-2xl overflow-hidden border border-border bg-white shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
           >
             <img
               src={`/images/car/${n}.jpg`}
               alt="Mercedes-AMG GT 63 4-door por Mansory"
               className="w-full aspect-[3/2] object-cover"
-              loading={i === 0 ? "eager" : "lazy"}
+              loading="lazy"
             />
           </div>
         ))}
