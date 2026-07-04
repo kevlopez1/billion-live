@@ -274,8 +274,14 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="relative z-10">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-10 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-10 flex flex-col items-center gap-4 text-center">
-          <span className="font-display font-extrabold uppercase tracking-tighter text-xl">KEV PROJECT GTA</span>
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-14 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-12 flex flex-col items-center gap-3 text-center">
+          <span className="font-display font-extrabold uppercase tracking-tighter text-2xl md:text-3xl">
+            KEV PROJECT GTA
+          </span>
+          <p className="font-serif-display italic text-muted-foreground text-sm md:text-base">
+            De $10 a un Mercedes — en público, desde Bolivia.
+          </p>
+          <div className="gold-rule my-2" />
           <SocialLinks />
           <span className="text-[11px] text-muted-foreground tracking-wide">
             PRIME · empleados de IA · Hecho en Bolivia 🇧🇴

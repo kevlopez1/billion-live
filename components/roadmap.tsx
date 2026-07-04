@@ -29,7 +29,7 @@ const milestones: Milestone[] = [
 
 const dot: Record<Status, string> = {
   done: "bg-foreground border-foreground",
-  now: "bg-foreground border-foreground animate-pulse",
+  now: "bg-gold border-gold animate-pulse",
   next: "bg-transparent border-foreground/30",
 }
 
