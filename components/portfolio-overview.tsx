@@ -126,8 +126,8 @@ export function PortfolioOverview() {
 
   return (
     <section className="relative">
-      {/* Eyebrow */}
-      <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-muted-foreground mb-5">
+      {/* Eyebrow (pill) */}
+      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3.5 py-1.5 text-[11px] uppercase tracking-[0.22em] text-muted-foreground mb-6">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full rounded-full bg-kev-primary opacity-50 animate-ping" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-kev-primary" />
@@ -179,6 +179,7 @@ export function PortfolioOverview() {
           </span>
           <span className="text-muted-foreground text-base number-display">/ $450K</span>
         </div>
+        <div className="gold-rule mx-auto mt-4" />
       </div>
 
       {/* Barra de progreso */}
@@ -190,7 +191,7 @@ export function PortfolioOverview() {
         </div>
         <div className="h-1.5 bg-foreground/10 rounded-full overflow-hidden">
           <div
-            className="h-full accent-gradient-bg rounded-full transition-all duration-1000"
+            className="h-full gold-fill rounded-full transition-all duration-1000"
             style={{ width: `${Math.max(progress, 0.6)}%` }}
           />
         </div>

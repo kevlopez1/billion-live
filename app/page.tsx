@@ -23,6 +23,7 @@ import { Changelog } from "@/components/changelog"
 import { NotifyForm } from "@/components/notify-form"
 import { Clips } from "@/components/clips"
 import { CarSpecs } from "@/components/car-specs"
+import { ScrollProgress } from "@/components/scroll-progress"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -32,9 +33,12 @@ function SectionLabel({ index, eyebrow, title }: { index: string; eyebrow: strin
   return (
     <div className="mb-7 flex items-end justify-between gap-4 border-b border-border pb-4">
       <div>
-        <div className="section-eyebrow">{eyebrow}</div>
+        <div className="flex items-center gap-2.5">
+          <span className="gold-tick" />
+          <div className="section-eyebrow">{eyebrow}</div>
+        </div>
         {title && (
-          <h2 className="mt-2 leading-[0.95]">
+          <h2 className="mt-2.5 leading-[0.95]">
             <span className="font-display font-extrabold tracking-tight text-3xl md:text-5xl">{first}</span>
             {rest.length > 0 && (
               <span className="font-serif-display italic text-3xl md:text-5xl"> {rest.join(" ")}</span>
@@ -42,7 +46,7 @@ function SectionLabel({ index, eyebrow, title }: { index: string; eyebrow: strin
           </h2>
         )}
       </div>
-      <span className="font-display font-extrabold text-foreground/[0.12] text-4xl md:text-6xl leading-none number-display">
+      <span className="font-display font-extrabold text-foreground/[0.10] text-4xl md:text-6xl leading-none number-display">
         {index}
       </span>
     </div>
@@ -169,8 +173,8 @@ export default function Dashboard() {
             <p className="font-display font-extrabold uppercase tracking-tighter text-6xl sm:text-8xl md:text-9xl leading-[0.85] mt-1">
               El imperio<br />es la meta
             </p>
-            {/* Bandera a cuadros (divisor) */}
-            <div className="checker text-white/25 h-2 w-28 mx-auto mt-9" />
+            {/* Bandera a cuadros (divisor) — acento dorado */}
+            <div className="checker h-2 w-28 mx-auto mt-9" style={{ color: "var(--gold)", opacity: 0.55 }} />
             <div className="mt-5 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               De $10 al Mercedes · desde Bolivia
@@ -220,6 +224,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground relative">
       <IntroSplash />
+      <ScrollProgress />
 
       {/* Glow ambiental superior */}
       <div className="pointer-events-none fixed inset-x-0 top-0 h-[40vh] bg-gradient-to-b from-white/[0.04] to-transparent z-0" />
