@@ -272,9 +272,6 @@ export default function Dashboard() {
           </p>
           <div className="gold-rule my-2" />
           <SocialLinks />
-          <span className="text-[11px] text-muted-foreground tracking-wide">
-            PRIME · empleados de IA · Hecho en Bolivia 🇧🇴
-          </span>
         </div>
       </footer>
 
