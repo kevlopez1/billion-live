@@ -23,6 +23,7 @@ import { Changelog } from "@/components/changelog"
 import { NotifyForm } from "@/components/notify-form"
 import { CarSpecs } from "@/components/car-specs"
 import { ScrollProgress } from "@/components/scroll-progress"
+import { WhatsAppPopup } from "@/components/whatsapp-popup"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -277,6 +278,9 @@ export default function Dashboard() {
 
       {/* Nav flotante (móvil) */}
       <MobileNav activeView={activeView} onViewChange={setActiveView} />
+
+      {/* Invitación a la comunidad de WhatsApp */}
+      <WhatsAppPopup />
     </div>
   )
 }
