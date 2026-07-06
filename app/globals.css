@@ -28,8 +28,8 @@
   --ring: oklch(0.22 0.015 265);
   --radius: 1.75rem;
 
-  /* Acento firma: champagne/dorado sutil (identidad de marca) */
-  --gold: oklch(0.66 0.09 74);
+  /* Acento firma: celeste/azul de la marca (el color del auto y de PRIME) */
+  --gold: oklch(0.60 0.11 240);
 
   /* Acento monocromo elegante (tinta, no color), estilo Mansory */
   --kev-primary: oklch(0.26 0.02 265);
@@ -80,8 +80,8 @@
   --input: oklch(1 0 0 / 0.1);
   --ring: oklch(0.97 0 0);
 
-  /* Acento firma dorado (más claro en oscuro) */
-  --gold: oklch(0.82 0.085 82);
+  /* Acento firma celeste (más claro en oscuro) */
+  --gold: oklch(0.78 0.09 230);
 
   /* Accent system — platinum/white (monochrome luxury) */
   --kev-primary: oklch(0.97 0 0);
@@ -650,9 +650,9 @@
   border: 1px solid var(--border);
 }
 
-/* Botón firma: tinta casi negra con texto blanco (elegante) */
+/* Botón firma: azul profundo de la marca con texto blanco */
 .btn-accent {
-  background: linear-gradient(135deg, oklch(0.26 0.02 265), oklch(0.12 0 0));
+  background: linear-gradient(135deg, oklch(0.55 0.12 245), oklch(0.4 0.12 250));
   color: #fff;
   box-shadow: 0 10px 30px -12px oklch(0 0 0 / 0.4);
   transition: filter 0.2s ease, transform 0.1s ease;
@@ -687,8 +687,8 @@
   background: linear-gradient(135deg, oklch(0.98 0 0) 0%, oklch(0.78 0 0) 100%);
 }
 .dark .btn-accent {
-  background: linear-gradient(135deg, oklch(1 0 0), oklch(0.82 0 0));
-  color: #0a0a0a;
+  background: linear-gradient(135deg, oklch(0.68 0.11 238), oklch(0.5 0.12 245));
+  color: #fff;
   box-shadow: 0 10px 30px -12px oklch(0 0 0 / 0.6);
 }
 .dark .btn-accent:hover {
