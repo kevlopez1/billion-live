@@ -60,7 +60,7 @@ export function Sponsors() {
         <div className="section-eyebrow">Sponsors</div>
         <h2 className="mt-2 leading-[0.95]">
           <span className="font-display font-extrabold uppercase tracking-tighter text-2xl md:text-4xl">Poné tu marca </span>
-          <span className="font-serif-display italic text-2xl md:text-4xl">en el reto</span>
+          <span className="font-serif-display italic text-2xl md:text-4xl text-rojo">en el reto</span>
         </h2>
         <p className="text-sm text-muted-foreground mt-3 max-w-lg">
           Sponsor del día o de la semana: tu marca frente a la audiencia que sigue el reto en vivo, desde el Día 1.

@@ -6,30 +6,32 @@
 /* Complete light/dark mode with Kev Strategy brand colors */
 /* Light mode (default) */
 :root {
-  /* Tema CLARO editorial — base CREMA cálida (papel), tinta cálida (look revista). */
-  --background: oklch(0.965 0.014 84);
-  --foreground: oklch(0.18 0.008 60);
-  --card: oklch(0.995 0.006 84 / 0.72);
-  --card-foreground: oklch(0.18 0.008 60);
-  --popover: oklch(0.99 0.006 84 / 0.98);
-  --popover-foreground: oklch(0.18 0.008 60);
-  --primary: oklch(0.22 0.015 265);
+  /* Tema CLARO "cielo" — luz radial arriba, celeste en los bordes, tinta NAVY. */
+  --background: oklch(0.99 0.004 240);
+  --foreground: oklch(0.27 0.05 252);
+  --card: oklch(1 0 0 / 0.72);
+  --card-foreground: oklch(0.27 0.05 252);
+  --popover: oklch(0.995 0.003 240 / 0.98);
+  --popover-foreground: oklch(0.27 0.05 252);
+  --primary: oklch(0.27 0.05 252);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.93 0.012 84);
-  --secondary-foreground: oklch(0.22 0 0);
-  --muted: oklch(0.91 0.012 84);
-  --muted-foreground: oklch(0.47 0.012 70);
-  --accent: oklch(0.22 0.015 265);
+  --secondary: oklch(0.94 0.015 240);
+  --secondary-foreground: oklch(0.27 0.05 252);
+  --muted: oklch(0.92 0.018 240);
+  --muted-foreground: oklch(0.46 0.04 250);
+  --accent: oklch(0.27 0.05 252);
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.28 0.02 70 / 0.12);
-  --input: oklch(0.28 0.02 70 / 0.1);
-  --ring: oklch(0.22 0.015 265);
+  --border: oklch(0.3 0.06 250 / 0.14);
+  --input: oklch(0.3 0.06 250 / 0.1);
+  --ring: oklch(0.5 0.1 245);
   --radius: 1.75rem;
 
-  /* Acento firma: champagne/dorado sutil (identidad de marca) */
-  --gold: oklch(0.66 0.09 74);
+  /* Acento firma: AZUL de la marca (el plan, la visión, PRIME) */
+  --gold: oklch(0.52 0.1 245);
+  /* Acento ROJO: dinero y urgencia (uso estratégico) */
+  --rojo: oklch(0.55 0.19 28);
 
   /* Acento monocromo elegante (tinta, no color), estilo Mansory */
   --kev-primary: oklch(0.26 0.02 265);
@@ -80,8 +82,10 @@
   --input: oklch(1 0 0 / 0.1);
   --ring: oklch(0.97 0 0);
 
-  /* Acento firma dorado (más claro en oscuro) */
-  --gold: oklch(0.82 0.085 82);
+  /* Acento firma celeste (más claro en oscuro) */
+  --gold: oklch(0.78 0.09 230);
+  /* Rojo (más brillante en oscuro) */
+  --rojo: oklch(0.66 0.19 28);
 
   /* Accent system — platinum/white (monochrome luxury) */
   --kev-primary: oklch(0.97 0 0);
@@ -134,6 +138,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-gold: var(--gold);
+  --color-rojo: var(--rojo);
   --color-kev-primary: var(--kev-primary);
   --color-kev-primary-light: var(--kev-primary-light);
   --color-kev-primary-dim: var(--kev-primary-dim);
@@ -650,9 +655,9 @@
   border: 1px solid var(--border);
 }
 
-/* Botón firma: tinta casi negra con texto blanco (elegante) */
+/* Botón firma: NAVY profundo con texto blanco (como el mockup del cielo) */
 .btn-accent {
-  background: linear-gradient(135deg, oklch(0.26 0.02 265), oklch(0.12 0 0));
+  background: linear-gradient(135deg, oklch(0.32 0.06 252), oklch(0.2 0.05 255));
   color: #fff;
   box-shadow: 0 10px 30px -12px oklch(0 0 0 / 0.4);
   transition: filter 0.2s ease, transform 0.1s ease;
@@ -758,6 +763,16 @@
 .text-gold {
   color: var(--gold);
 }
+/* Colores estratégicos de la marca: azul = visión/plan · rojo = dinero/urgencia */
+.text-azul {
+  color: var(--gold);
+}
+.text-rojo {
+  color: var(--rojo);
+}
+.tick-rojo {
+  background: linear-gradient(90deg, var(--rojo), transparent) !important;
+}
 
 /* ── Barra de progreso de scroll (detalle premium) ── */
 .scroll-progress {
@@ -800,9 +815,9 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* ── Texto metálico (acero/grafito) — toque de lujo de auto ── */
+/* ── Texto metálico — ahora en NAVY profundo (tinta del cielo) ── */
 .text-metal {
-  background: linear-gradient(165deg, #9aa0a6 0%, #41444a 45%, #0c0c0d 100%);
+  background: linear-gradient(165deg, #3a5a80 0%, #1c3350 45%, #0d1b2e 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

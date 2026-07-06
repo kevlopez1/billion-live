@@ -27,21 +27,32 @@ import { WhatsAppPopup } from "@/components/whatsapp-popup"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
-// Etiqueta editorial de sección (estilo LATHOS: mezcla bold + serif itálica)
-function SectionLabel({ index, eyebrow, title }: { index: string; eyebrow: string; title?: string }) {
+// Etiqueta editorial de sección. accent estratégico: azul = visión/plan · rojo = dinero/urgencia.
+function SectionLabel({
+  index,
+  eyebrow,
+  title,
+  accent,
+}: {
+  index: string
+  eyebrow: string
+  title?: string
+  accent?: "azul" | "rojo"
+}) {
   const [first, ...rest] = (title ?? "").split(" ")
+  const serifCls = accent === "rojo" ? " text-rojo" : accent === "azul" ? " text-azul" : ""
   return (
     <div className="mb-7 flex items-end justify-between gap-4 border-b border-border pb-4">
       <div>
         <div className="flex items-center gap-2.5">
-          <span className="gold-tick" />
+          <span className={`gold-tick${accent === "rojo" ? " tick-rojo" : ""}`} />
           <div className="section-eyebrow">{eyebrow}</div>
         </div>
         {title && (
           <h2 className="mt-2.5 leading-[0.95]">
             <span className="font-display font-extrabold tracking-tight text-3xl md:text-5xl">{first}</span>
             {rest.length > 0 && (
-              <span className="font-serif-display italic text-3xl md:text-5xl"> {rest.join(" ")}</span>
+              <span className={`font-serif-display italic text-3xl md:text-5xl${serifCls}`}> {rest.join(" ")}</span>
             )}
           </h2>
         )}
@@ -77,7 +88,7 @@ export default function Dashboard() {
       {/* El auto: la meta — ficha técnica */}
       <section>
         <Reveal>
-          <SectionLabel index="01" eyebrow="La meta" title="El auto" />
+          <SectionLabel index="01" eyebrow="La meta" title="El auto" accent="azul" />
         </Reveal>
         <CarSpecs />
       </section>
@@ -101,7 +112,7 @@ export default function Dashboard() {
       {/* Sumate: comunidad de WhatsApp + aviso de hitos */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="Sumate" title="No te lo pierdas" />
+          <SectionLabel index="04" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
         </Reveal>
         <Reveal delay={60}>
           <a
@@ -139,7 +150,7 @@ export default function Dashboard() {
       {/* El motor: PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="El motor" title="PRIME" />
+          <SectionLabel index="05" eyebrow="El motor" title="PRIME" accent="azul" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
@@ -185,7 +196,7 @@ export default function Dashboard() {
                 <div className="section-eyebrow">El reto en vivo</div>
                 <h2 className="mt-2 leading-[0.95]">
                   <span className="font-display font-extrabold uppercase tracking-tighter text-3xl md:text-5xl">Números </span>
-                  <span className="font-serif-display italic text-3xl md:text-5xl">reales</span>
+                  <span className="font-serif-display italic text-3xl md:text-5xl text-rojo">reales</span>
                 </h2>
                 <p className="text-sm text-muted-foreground mt-3 max-w-lg">
                   Las estadísticas reales del reto: cuánto, cómo y cuándo. Cada número es revenue real de PRIME, no inventado.
@@ -216,8 +227,16 @@ export default function Dashboard() {
       <IntroSplash />
       <ScrollProgress />
 
-      {/* Glow ambiental superior */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-[40vh] bg-gradient-to-b from-white/[0.04] to-transparent z-0" />
+      {/* Cielo F2.3: luz radial arriba al centro, celeste en los bordes, fundido a blanco */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0 dark:hidden"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(252,253,254,0) 0%, rgba(252,253,254,0) 20%, rgba(252,253,254,0.9) 55%, #fcfdfe 75%), radial-gradient(130% 90% at 50% -8%, #fdfdfc 0%, #cfe4f5 55%, #a8cdea 100%)",
+        }}
+      />
+      {/* Glow ambiental (solo oscuro) */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-[40vh] bg-gradient-to-b from-white/[0.04] to-transparent z-0 hidden dark:block" />
 
       {/* Navbar flotante (isla redondeada) */}
       <header className="sticky top-3 z-40 px-3 md:px-6">
