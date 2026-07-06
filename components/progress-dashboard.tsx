@@ -13,11 +13,12 @@ const PROPUESTAS = 1 // propuestas enviadas
 const EN_NEGOCIACION = 1 // tratos en pipeline
 const SEGUIDORES = 1009 // suma de todas las redes
 
-// Reinversión en las herramientas del motor (USD). Editá a medida que gastás.
-const GASTO_CLAUDE = 100 // suscripción Claude
+// Reinversión del reto (USD). Editá a medida que gastás.
+const GASTO_CLAUDE = 200 // plan de Claude
 const GASTO_GITHUB = 21 // GitHub empresarial
 const GASTO_SERVIDOR = 30 // servidor en la nube
-const GASTOS_TOTAL = GASTO_CLAUDE + GASTO_GITHUB + GASTO_SERVIDOR
+const GASTO_CAINCO = 78 // evento CAINCO Santa Cruz
+const GASTOS_TOTAL = GASTO_CLAUDE + GASTO_GITHUB + GASTO_SERVIDOR + GASTO_CAINCO
 
 function Stat({ value, label, sub }: { value: string; label: string; sub?: string }) {
   return (
@@ -93,11 +94,12 @@ export function ProgressDashboard() {
       {/* REINVERSIÓN / GASTOS */}
       <div>
         <GroupLabel>Reinversión · en el motor</GroupLabel>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Stat value={`$${GASTOS_TOTAL}`} label="Total reinvertido" sub="en herramientas" />
-          <Stat value={`$${GASTO_CLAUDE}`} label="Claude" sub="suscripción de IA" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Stat value={`$${GASTOS_TOTAL}`} label="Total reinvertido" sub="en el reto" />
+          <Stat value={`$${GASTO_CLAUDE}`} label="Claude" sub="plan de IA" />
           <Stat value={`$${GASTO_GITHUB}`} label="GitHub" sub="empresarial" />
           <Stat value={`$${GASTO_SERVIDOR}`} label="Servidor" sub="en la nube" />
+          <Stat value={`$${GASTO_CAINCO}`} label="CAINCO" sub="evento networking" />
         </div>
       </div>
 
