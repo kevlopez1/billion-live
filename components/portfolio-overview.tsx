@@ -125,20 +125,20 @@ export function PortfolioOverview() {
   const secretProgress = Math.min(Math.max((netWorth / SECRET_TARGET) * 100, 0), 100)
 
   return (
-    <section className="relative">
-      {/* Eyebrow (pill) */}
+    <section className="relative text-center">
+      {/* Eyebrow (pill) — el punto rojo = EN VIVO */}
       <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3.5 py-1.5 text-[11px] uppercase tracking-[0.22em] text-muted-foreground mb-6">
         <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-kev-primary opacity-50 animate-ping" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-kev-primary" />
+          <span className="absolute inline-flex h-full w-full rounded-full bg-rojo opacity-50 animate-ping" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-rojo" />
         </span>
         En vivo · El reto
       </div>
 
-      {/* Título — mezcla bold + serif itálica (estilo LATHOS) */}
+      {/* Título centrado — "$10" en rojo (dinero) sobre tinta navy */}
       <h1 className="leading-[0.9]">
         <span className="block font-serif-display italic text-muted-foreground text-3xl sm:text-5xl">
-          De $10 a un
+          De <span className="text-rojo">$10</span> a un
         </span>
         <span className="block font-display font-extrabold uppercase tracking-tighter text-foreground text-7xl sm:text-8xl md:text-9xl -mt-1">
           Mercedes
