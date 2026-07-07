@@ -69,33 +69,34 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = "high"
 
-  // ── Paleta luxury (crema editorial, igual que la web) ──
-  const INK = "#1b1710"
-  const mut = (a: number) => `rgba(27,23,16,${a})`
-  const GOLD = "#b0894e"
+  // ── Paleta CIELO (la marca: navy + celeste + rojo/azul estratégicos) ──
+  const NAVY = "#16283f"
+  const mut = (a: number) => `rgba(22,40,63,${a})`
+  const ROJO = "#d12b1f"
+  const AZUL = "#2d6eaa"
 
-  // ── Fondo crema ──
-  ctx.fillStyle = "#f2ede3"
+  // ── Fondo cielo F2.3: luz radial arriba al centro, celeste en los bordes ──
+  ctx.fillStyle = "#a8cdea"
   ctx.fillRect(0, 0, W, H)
-  // Luz cálida superior (profundidad sutil)
-  const top = ctx.createRadialGradient(W / 2, 300, 80, W / 2, 300, 820)
-  top.addColorStop(0, "rgba(255,255,255,0.55)")
-  top.addColorStop(1, "rgba(255,255,255,0)")
-  ctx.fillStyle = top
-  ctx.fillRect(0, 0, W, 900)
-  // Viñeta muy sutil (look impreso premium)
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.62)
-  vig.addColorStop(0, "rgba(27,23,16,0)")
-  vig.addColorStop(1, "rgba(27,23,16,0.05)")
-  ctx.fillStyle = vig
+  const sun = ctx.createRadialGradient(W / 2, -150, 80, W / 2, -150, 1500)
+  sun.addColorStop(0, "rgba(253,253,252,1)")
+  sun.addColorStop(0.45, "rgba(253,253,252,0.55)")
+  sun.addColorStop(1, "rgba(253,253,252,0)")
+  ctx.fillStyle = sun
+  ctx.fillRect(0, 0, W, H)
+  // Fundido a blanco hacia abajo
+  const fade = ctx.createLinearGradient(0, H * 0.32, 0, H * 0.72)
+  fade.addColorStop(0, "rgba(252,253,254,0)")
+  fade.addColorStop(1, "#fcfdfe")
+  ctx.fillStyle = fade
   ctx.fillRect(0, 0, W, H)
 
-  // ── Marco doble fino (invitación de lujo) ──
-  ctx.strokeStyle = mut(0.22)
+  // ── Marco doble fino (navy) ──
+  ctx.strokeStyle = mut(0.2)
   ctx.lineWidth = 2
   roundRect(46, 46, W - 92, H - 92, 44)
   ctx.stroke()
-  ctx.strokeStyle = mut(0.1)
+  ctx.strokeStyle = mut(0.09)
   ctx.lineWidth = 1
   roundRect(62, 62, W - 124, H - 124, 34)
   ctx.stroke()
@@ -103,10 +104,10 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
   ctx.textAlign = "center"
 
   // ── Encabezado ──
-  fitText("EL RETO · EN VIVO", 166, 25, "600", mut(0.5), { ls: 7, maxW: 820 })
-  fitText("KEV PROJECT GTA", 230, 50, "800", INK, { ls: 2, maxW: 840 })
-  // Acento dorado fino
-  ctx.strokeStyle = GOLD
+  fitText("EL RETO · EN VIVO", 166, 25, "600", mut(0.55), { ls: 7, maxW: 820 })
+  fitText("KEV PROJECT GTA", 230, 50, "800", NAVY, { ls: 2, maxW: 840 })
+  // Acento azul fino
+  ctx.strokeStyle = AZUL
   ctx.lineWidth = 3
   ctx.lineCap = "round"
   ctx.beginPath()
@@ -123,13 +124,13 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
     const cx = (W - cw) / 2
     const cy = 326
     const shY = cy + ch - 14
-    // Sombra de contacto suave (gris cálido)
+    // Sombra de contacto suave (navy)
     ctx.save()
     ctx.translate(W / 2, shY)
     ctx.scale(1, 0.14)
     const sh = ctx.createRadialGradient(0, 0, 12, 0, 0, cw / 2.1)
-    sh.addColorStop(0, "rgba(27,23,16,0.26)")
-    sh.addColorStop(1, "rgba(27,23,16,0)")
+    sh.addColorStop(0, "rgba(22,40,63,0.25)")
+    sh.addColorStop(1, "rgba(22,40,63,0)")
     ctx.fillStyle = sh
     ctx.beginPath()
     ctx.arc(0, 0, cw / 2.1, 0, Math.PI * 2)
@@ -138,31 +139,47 @@ export async function downloadStoryCard(netWorth: number): Promise<"shared" | "d
     ctx.drawImage(carImg, cx, cy, cw, ch)
   }
 
-  // ── Contador ──
-  fitText(`$${net.toLocaleString("en-US")}`, 1058, 168, "900", INK, { maxW: 780 })
+  // ── Contador — ROJO (dinero) ──
+  fitText(`$${net.toLocaleString("en-US")}`, 1058, 168, "900", ROJO, { maxW: 780 })
   fitText(`DE $${target.toLocaleString("en-US")}`, 1150, 40, "600", mut(0.5), { ls: 1, maxW: 680 })
 
-  // Barra de progreso
+  // Barra de progreso — riel navy, avance AZUL
   const barX = 160
   const barW = W - barX * 2
   const barY = 1232
   const barH = 20
-  ctx.fillStyle = mut(0.13)
+  ctx.fillStyle = mut(0.14)
   roundRect(barX, barY, barW, barH, barH / 2)
   ctx.fill()
-  ctx.fillStyle = INK
+  ctx.fillStyle = AZUL
   roundRect(barX, barY, Math.max((barW * pct) / 100, barH), barH, barH / 2)
   ctx.fill()
 
   fitText(`${pct.toFixed(pct < 1 ? 4 : 1)}% AL MERCEDES   ·   DÍA ${day}`, 1320, 32, "600", mut(0.55), { ls: 2, maxW: 840 })
 
-  // ── Frase ──
-  fitText("De $10 a un", 1500, 54, "600", mut(0.5), {
-    style: "italic",
-    family: 'Georgia, "Times New Roman", serif',
-    maxW: 820,
-  })
-  fitText("MERCEDES-AMG GT 63", 1592, 90, "800", INK, { maxW: 840 })
+  // ── Frase — "$10" en rojo (dinero), resto en navy serif ──
+  {
+    const serif = 'italic 600 54px Georgia, "Times New Roman", serif'
+    ctx.font = serif
+    const s1 = "De "
+    const s2 = "$10"
+    const s3 = " a un"
+    const w1 = ctx.measureText(s1).width
+    const w2 = ctx.measureText(s2).width
+    const w3 = ctx.measureText(s3).width
+    let x = (W - (w1 + w2 + w3)) / 2
+    ctx.textAlign = "left"
+    ctx.fillStyle = mut(0.55)
+    ctx.fillText(s1, x, 1500)
+    x += w1
+    ctx.fillStyle = ROJO
+    ctx.fillText(s2, x, 1500)
+    x += w2
+    ctx.fillStyle = mut(0.55)
+    ctx.fillText(s3, x, 1500)
+    ctx.textAlign = "center"
+  }
+  fitText("MERCEDES-AMG GT 63", 1592, 90, "800", NAVY, { maxW: 840 })
   fitText("BY MANSORY", 1658, 44, "600", mut(0.5), { ls: 3, maxW: 700 })
 
   // ── Pie (sin URL) ──
