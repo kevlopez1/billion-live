@@ -151,7 +151,7 @@ export const CHALLENGE_RECORD_DEADLINE = "2026-12-30" // ritmo récord: 6 meses
 export const CHALLENGE_LAUNCH = "2026-06-30" // Día 1: martes del primer video
 
 const initialMetrics: GlobalMetrics = {
-  netWorth: 668, // recaudado a la fecha (real) — editá acá o desde /control
+  netWorth: 878, // recaudado a la fecha (real) — editá acá o desde /control
   monthlyGrowth: 0,
   roi: 0,
   targetRevenue: CHALLENGE_TARGET,
