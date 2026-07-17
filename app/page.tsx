@@ -24,6 +24,7 @@ import { NotifyForm } from "@/components/notify-form"
 import { CarSpecs } from "@/components/car-specs"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
+import { Comprobantes } from "@/components/comprobantes"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -156,6 +157,16 @@ export default function Dashboard() {
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
             <ProjectsList />
           </div>
+        </Reveal>
+      </section>
+
+      {/* Comprobantes: pruebas reales de pagos de clientes de PRIME */}
+      <section>
+        <Reveal>
+          <SectionLabel index="06" eyebrow="Pruebas reales" title="Los comprobantes" accent="azul" />
+        </Reveal>
+        <Reveal delay={80}>
+          <Comprobantes />
         </Reveal>
       </section>
 
