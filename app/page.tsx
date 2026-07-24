@@ -277,7 +277,7 @@ export default function Dashboard() {
               ))}
               <button
                 onClick={goToRanking}
-                className="px-3.5 py-2 rounded-full text-sm transition-all press-effect text-azul hover:bg-gold/10 font-semibold"
+                className="px-3.5 py-2 rounded-full text-sm transition-all press-effect text-muted-foreground hover:text-foreground"
               >
                 Ranking
               </button>
