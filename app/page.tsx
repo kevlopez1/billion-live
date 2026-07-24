@@ -20,7 +20,6 @@ import { ShareButton } from "@/components/share-button"
 import { LiveViewers } from "@/components/live-viewers"
 import { Changelog } from "@/components/changelog"
 import { NotifyForm } from "@/components/notify-form"
-import { CarSpecs } from "@/components/car-specs"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
@@ -93,18 +92,10 @@ export default function Dashboard() {
         <LiveViewers />
       </div>
 
-      {/* El auto: la meta — ficha técnica */}
-      <section>
-        <Reveal>
-          <SectionLabel index="01" eyebrow="La meta" title="El auto" accent="azul" />
-        </Reveal>
-        <CarSpecs />
-      </section>
-
       {/* La bitácora: actualizaciones del reto */}
       <section>
         <Reveal>
-          <SectionLabel index="02" eyebrow="En vivo" title="La bitácora" />
+          <SectionLabel index="01" eyebrow="En vivo" title="La bitácora" />
         </Reveal>
         <Changelog />
       </section>
@@ -112,7 +103,7 @@ export default function Dashboard() {
       {/* La ruta: hitos de dinero + travesía */}
       <section>
         <Reveal>
-          <SectionLabel index="03" eyebrow="La ruta" title="Los hitos" />
+          <SectionLabel index="02" eyebrow="La ruta" title="Los hitos" />
         </Reveal>
         <Roadmap />
       </section>
@@ -120,7 +111,7 @@ export default function Dashboard() {
       {/* Sumate: comunidad de WhatsApp + aviso de hitos */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
+          <SectionLabel index="03" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
         </Reveal>
         <Reveal delay={60}>
           <a
@@ -158,7 +149,7 @@ export default function Dashboard() {
       {/* El motor: PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="El motor" title="PRIME" accent="azul" />
+          <SectionLabel index="04" eyebrow="El motor" title="PRIME" accent="azul" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
@@ -170,7 +161,7 @@ export default function Dashboard() {
       {/* Comprobantes: pruebas reales de pagos de clientes de PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="06" eyebrow="Pruebas reales" title="Los comprobantes" accent="azul" />
+          <SectionLabel index="05" eyebrow="Pruebas reales" title="Los comprobantes" accent="azul" />
         </Reveal>
         <Reveal delay={80}>
           <Comprobantes />
@@ -180,7 +171,7 @@ export default function Dashboard() {
       {/* El ranking de vendedores + postulación */}
       <section id="ranking" className="scroll-mt-24">
         <Reveal>
-          <SectionLabel index="07" eyebrow="Los que venden" title="El ranking" accent="azul" />
+          <SectionLabel index="06" eyebrow="Los que venden" title="El ranking" accent="azul" />
         </Reveal>
         <Reveal delay={80}>
           <SellerRanking />
