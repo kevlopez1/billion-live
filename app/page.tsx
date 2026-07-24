@@ -25,6 +25,7 @@ import { CarSpecs } from "@/components/car-specs"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
+import { SellerRanking } from "@/components/seller-ranking"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -68,6 +69,14 @@ function SectionLabel({
 export default function Dashboard() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard")
   const { t } = useApp()
+
+  // "Ranking" no es una vista: es una sección del home. El botón vuelve al home y baja hasta ella.
+  const goToRanking = () => {
+    setActiveView("dashboard")
+    setTimeout(() => {
+      document.getElementById("ranking")?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 60)
+  }
 
   const navItems = [
     { id: "dashboard" as const, label: t.nav.dashboard },
@@ -167,6 +176,16 @@ export default function Dashboard() {
         </Reveal>
         <Reveal delay={80}>
           <Comprobantes />
+        </Reveal>
+      </section>
+
+      {/* El ranking de vendedores + postulación */}
+      <section id="ranking" className="scroll-mt-24">
+        <Reveal>
+          <SectionLabel index="07" eyebrow="Los que venden" title="El ranking" accent="azul" />
+        </Reveal>
+        <Reveal delay={80}>
+          <SellerRanking />
         </Reveal>
       </section>
 
@@ -281,6 +300,12 @@ export default function Dashboard() {
                   {item.label}
                 </button>
               ))}
+              <button
+                onClick={goToRanking}
+                className="px-3.5 py-2 rounded-full text-sm transition-all press-effect text-azul hover:bg-gold/10 font-semibold"
+              >
+                Ranking
+              </button>
             </nav>
             <ShareButton />
           </div>
@@ -307,7 +332,7 @@ export default function Dashboard() {
       </footer>
 
       {/* Nav flotante (móvil) */}
-      <MobileNav activeView={activeView} onViewChange={setActiveView} />
+      <MobileNav activeView={activeView} onViewChange={setActiveView} onRanking={goToRanking} />
 
       {/* Invitación a la comunidad de WhatsApp */}
       <WhatsAppPopup />
