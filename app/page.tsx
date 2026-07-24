@@ -23,7 +23,7 @@ import { NotifyForm } from "@/components/notify-form"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
-import { SellerRanking } from "@/components/seller-ranking"
+import { useRouter } from "next/navigation"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -67,14 +67,10 @@ function SectionLabel({
 export default function Dashboard() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard")
   const { t } = useApp()
+  const router = useRouter()
 
-  // "Ranking" no es una vista: es una sección del home. El botón vuelve al home y baja hasta ella.
-  const goToRanking = () => {
-    setActiveView("dashboard")
-    setTimeout(() => {
-      document.getElementById("ranking")?.scrollIntoView({ behavior: "smooth", block: "start" })
-    }, 60)
-  }
+  // "Ranking" vive en su propia página (/ranking).
+  const goToRanking = () => router.push("/ranking")
 
   const navItems = [
     { id: "dashboard" as const, label: t.nav.dashboard },
@@ -165,16 +161,6 @@ export default function Dashboard() {
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
             <ProjectsList />
           </div>
-        </Reveal>
-      </section>
-
-      {/* El ranking de vendedores + postulación */}
-      <section id="ranking" className="scroll-mt-24">
-        <Reveal>
-          <SectionLabel index="06" eyebrow="Los que venden" title="El ranking" accent="azul" />
-        </Reveal>
-        <Reveal delay={80}>
-          <SellerRanking />
         </Reveal>
       </section>
 
