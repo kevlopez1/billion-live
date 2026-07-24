@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useApp } from "@/context/app-context"
 import { PortfolioOverview } from "@/components/portfolio-overview"
@@ -68,6 +68,18 @@ export default function Dashboard() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard")
   const { t } = useApp()
   const router = useRouter()
+
+  // Al cambiar de pestaña (Panel/Números/Manifiesto), subir al tope — que no quede a media altura.
+  useEffect(() => {
+    const toTop = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior })
+    toTop()
+    // repetir tras el layout, por si el cambio de vista reacomoda la altura
+    const r = requestAnimationFrame(() => {
+      toTop()
+      requestAnimationFrame(toTop)
+    })
+    return () => cancelAnimationFrame(r)
+  }, [activeView])
 
   // "Ranking" vive en su propia página (/ranking).
   const goToRanking = () => router.push("/ranking")
