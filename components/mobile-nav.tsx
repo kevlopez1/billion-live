@@ -40,12 +40,6 @@ export function MobileNav({ activeView, onViewChange, onRanking }: MobileNavProp
           <span className="text-[10px] font-medium">{t.nav.dailyPulse.split(" ")[0]}</span>
         </button>
 
-        {/* Ranking — página propia (equipo de vendedores) */}
-        <button onClick={onRanking} className={`${tabBase} text-muted-foreground hover:text-foreground`}>
-          <Trophy className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Ranking</span>
-        </button>
-
         {/* Manifiesto */}
         <button
           onClick={() => onViewChange("manifesto")}
@@ -55,6 +49,12 @@ export function MobileNav({ activeView, onViewChange, onRanking }: MobileNavProp
         >
           <BookOpen className="w-5 h-5" />
           <span className="text-[10px] font-medium">{t.nav.manifesto}</span>
+        </button>
+
+        {/* Ranking — página propia (equipo de vendedores) · última posición */}
+        <button onClick={onRanking} className={`${tabBase} text-muted-foreground hover:text-foreground`}>
+          <Trophy className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Ranking</span>
         </button>
       </div>
     </nav>
