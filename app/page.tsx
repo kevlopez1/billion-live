@@ -108,10 +108,20 @@ export default function Dashboard() {
         <Roadmap />
       </section>
 
+      {/* Comprobantes: pruebas reales de pagos de clientes de PRIME */}
+      <section>
+        <Reveal>
+          <SectionLabel index="03" eyebrow="Pruebas reales" title="Los comprobantes" accent="azul" />
+        </Reveal>
+        <Reveal delay={80}>
+          <Comprobantes />
+        </Reveal>
+      </section>
+
       {/* Sumate: comunidad de WhatsApp + aviso de hitos */}
       <section>
         <Reveal>
-          <SectionLabel index="03" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
+          <SectionLabel index="04" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
         </Reveal>
         <Reveal delay={60}>
           <a
@@ -149,22 +159,12 @@ export default function Dashboard() {
       {/* El motor: PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="El motor" title="PRIME" accent="azul" />
+          <SectionLabel index="05" eyebrow="El motor" title="PRIME" accent="azul" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
             <ProjectsList />
           </div>
-        </Reveal>
-      </section>
-
-      {/* Comprobantes: pruebas reales de pagos de clientes de PRIME */}
-      <section>
-        <Reveal>
-          <SectionLabel index="05" eyebrow="Pruebas reales" title="Los comprobantes" accent="azul" />
-        </Reveal>
-        <Reveal delay={80}>
-          <Comprobantes />
         </Reveal>
       </section>
 
