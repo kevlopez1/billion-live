@@ -22,7 +22,7 @@ export function MobileNav({ activeView, onViewChange, onRanking }: MobileNavProp
         <button
           onClick={() => onViewChange("dashboard")}
           className={`${tabBase} ${
-            activeView === "dashboard" ? "text-kev-primary" : "text-muted-foreground hover:text-foreground"
+            activeView === "dashboard" ? "text-azul" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <LayoutDashboard className="w-5 h-5" />
@@ -33,24 +33,24 @@ export function MobileNav({ activeView, onViewChange, onRanking }: MobileNavProp
         <button
           onClick={() => onViewChange("pulse")}
           className={`${tabBase} ${
-            activeView === "pulse" ? "text-kev-primary" : "text-muted-foreground hover:text-foreground"
+            activeView === "pulse" ? "text-azul" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <BarChart3 className="w-5 h-5" />
           <span className="text-[10px] font-medium">{t.nav.dailyPulse.split(" ")[0]}</span>
         </button>
 
-        {/* Ranking — sección del home (equipo de vendedores) */}
-        <button onClick={onRanking} className={`${tabBase} text-azul`}>
+        {/* Ranking — página propia (equipo de vendedores) */}
+        <button onClick={onRanking} className={`${tabBase} text-muted-foreground hover:text-foreground`}>
           <Trophy className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Ranking</span>
+          <span className="text-[10px] font-medium">Ranking</span>
         </button>
 
         {/* Manifiesto */}
         <button
           onClick={() => onViewChange("manifesto")}
           className={`${tabBase} ${
-            activeView === "manifesto" ? "text-kev-primary" : "text-muted-foreground hover:text-foreground"
+            activeView === "manifesto" ? "text-azul" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <BookOpen className="w-5 h-5" />
