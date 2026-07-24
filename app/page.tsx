@@ -25,6 +25,7 @@ import { CarSpecs } from "@/components/car-specs"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
+import { SellerRanking } from "@/components/seller-ranking"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -167,6 +168,16 @@ export default function Dashboard() {
         </Reveal>
         <Reveal delay={80}>
           <Comprobantes />
+        </Reveal>
+      </section>
+
+      {/* El ranking de vendedores + postulación */}
+      <section>
+        <Reveal>
+          <SectionLabel index="07" eyebrow="Los que venden" title="El ranking" accent="azul" />
+        </Reveal>
+        <Reveal delay={80}>
+          <SellerRanking />
         </Reveal>
       </section>
 
