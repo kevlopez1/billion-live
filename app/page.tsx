@@ -17,7 +17,6 @@ import { Roadmap } from "@/components/roadmap"
 import { IntroSplash } from "@/components/intro-splash"
 import { Reveal } from "@/components/reveal"
 import { ShareButton } from "@/components/share-button"
-import { LiveTicker } from "@/components/live-ticker"
 import { LiveViewers } from "@/components/live-viewers"
 import { Changelog } from "@/components/changelog"
 import { NotifyForm } from "@/components/notify-form"
@@ -86,9 +85,8 @@ export default function Dashboard() {
 
   const renderHome = () => (
     <div className="space-y-24 md:space-y-32">
-      {/* Hero + ticker + espectadores en vivo */}
+      {/* Hero + espectadores en vivo */}
       <div className="space-y-6 md:space-y-8">
-        <LiveTicker />
         <Reveal>
           <PortfolioOverview />
         </Reveal>
