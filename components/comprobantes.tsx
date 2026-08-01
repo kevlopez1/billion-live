@@ -7,6 +7,8 @@ import { ShieldCheck, X } from "lucide-react"
 // terceros (nombres, cuentas) van censurados EN LA IMAGEN (barra sólida), no con
 // CSS — así el archivo servido nunca contiene el dato sensible.
 const receipts = [
+  { src: "/images/comprobantes/mercantil.jpg", amount: "Bs 3.645", bank: "Mercantil Santa Cruz", date: "31 jul 2026" },
+  { src: "/images/comprobantes/ganadero2.jpg", amount: "Bs 2.300", bank: "Banco Ganadero", date: "31 jul 2026" },
   { src: "/images/comprobantes/bancosol.jpg", amount: "Bs 1.800", bank: "BancoSol", date: "16 jul 2026" },
   { src: "/images/comprobantes/bnb.jpg", amount: "Bs 2.100", bank: "BNB", date: "13 jul 2026" },
   { src: "/images/comprobantes/bcp2.jpg", amount: "Bs 1.770", bank: "Banco de Crédito", date: "7 jul 2026" },
