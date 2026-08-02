@@ -84,8 +84,8 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
             onClick={onEnter}
             className="lift relative flex flex-col items-center justify-center rounded-2xl bg-foreground px-5 py-4 text-center shadow-[0_8px_20px_rgba(40,55,80,0.28)]"
           >
-            <span className="font-display text-base font-semibold text-background">Ver la web del reto</span>
-            <span className="mt-0.5 text-xs text-background/70">El contador y los comprobantes, en vivo</span>
+            <span className="font-display text-base font-semibold text-background">Ver Kev Project GTA en vivo</span>
+            <span className="mt-0.5 text-xs text-background/70">El contador y los comprobantes del reto</span>
             <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-background/70">→</span>
           </button>
 
