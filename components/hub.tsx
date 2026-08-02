@@ -9,6 +9,7 @@ const PRIME_MSG = encodeURIComponent(
 )
 const PRIME_WA_URL = `https://wa.me/${PRIME_WA}?text=${PRIME_MSG}`
 const PRIME_WEB = "https://primebusiness.live"
+const PRIME_MERCADO = "https://www.primebusiness.live/mercado-2030#sistema"
 
 // Alitas Mansory del logo (idénticas al intro).
 function Wing({ flip = false }: { flip?: boolean }) {
@@ -98,6 +99,18 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
             <Image src="/images/prime-wordmark.png" alt="PRIME" width={110} height={26} className="h-[26px] w-auto" />
             <span className="mt-1 text-xs text-muted-foreground">Empleados de AI para tu empresa</span>
             <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">→</span>
+          </a>
+
+          {/* PRIME · Mercado 2030 (acceso exclusivo) */}
+          <a
+            href={PRIME_MERCADO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="lift relative flex flex-col items-center justify-center rounded-2xl border border-gold/50 bg-gold/[0.05] px-5 py-4 text-center"
+          >
+            <span className="font-display text-base font-semibold text-foreground">PRIME solo para invasores</span>
+            <span className="mt-0.5 text-xs text-muted-foreground">Mercado 2030 · el sistema</span>
+            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-gold">→</span>
           </a>
         </div>
 
