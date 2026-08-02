@@ -5,7 +5,6 @@ import Image from "next/image"
 import { useApp } from "@/context/app-context"
 import { PortfolioOverview } from "@/components/portfolio-overview"
 import { ProgressDashboard } from "@/components/progress-dashboard"
-import { ProjectsList } from "@/components/projects-list"
 import { MobileNav } from "@/components/mobile-nav"
 import { SocialLinks, WHATSAPP_COMMUNITY } from "@/components/social-links"
 import { MessageCircle, ArrowUpRight } from "lucide-react"
@@ -194,18 +193,6 @@ export default function Dashboard() {
       <Reveal>
         <EarlyWall />
       </Reveal>
-
-      {/* El motor: PRIME */}
-      <section>
-        <Reveal>
-          <SectionLabel index="06" eyebrow="El motor" title="PRIME" accent="azul" />
-        </Reveal>
-        <Reveal delay={80}>
-          <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
-            <ProjectsList />
-          </div>
-        </Reveal>
-      </section>
 
       {/* Sponsors */}
       <Reveal>
