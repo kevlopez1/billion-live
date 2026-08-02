@@ -108,7 +108,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
             rel="noopener noreferrer"
             className="lift relative flex flex-col items-center justify-center rounded-2xl border border-gold/50 bg-gold/[0.05] px-5 py-4 text-center"
           >
-            <span className="font-display text-base font-semibold text-foreground">PRIME solo para invasores</span>
+            <span className="font-display text-base font-semibold text-foreground">PRIME solo para inversores</span>
             <span className="mt-0.5 text-xs text-muted-foreground">Mercado 2030 · el sistema</span>
             <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-gold">→</span>
           </a>
