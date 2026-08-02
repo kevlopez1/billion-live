@@ -97,7 +97,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
             className="lift relative flex flex-col items-center justify-center rounded-2xl border border-border bg-card/70 px-5 py-4 text-center shadow-[0_2px_10px_rgba(40,60,90,0.05)]"
           >
             <Image src="/images/prime-wordmark.png" alt="PRIME" width={110} height={26} className="h-[26px] w-auto" />
-            <span className="mt-1 text-xs text-muted-foreground">Empleados de AI para tu empresa</span>
+            <span className="mt-1 text-xs text-muted-foreground">Solo para clientes · tu empleado de AI</span>
             <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">→</span>
           </a>
 
