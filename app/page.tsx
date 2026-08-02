@@ -25,6 +25,7 @@ import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
 import { FirmasComprobantes } from "@/components/firmas-comprobantes"
+import { MuroFirmas } from "@/components/muro-firmas"
 import { useRouter } from "next/navigation"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
@@ -150,6 +151,9 @@ export default function Dashboard() {
         </Reveal>
         <Reveal delay={80}>
           <FirmasComprobantes />
+        </Reveal>
+        <Reveal delay={120}>
+          <MuroFirmas />
         </Reveal>
       </section>
 
