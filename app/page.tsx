@@ -24,6 +24,7 @@ import { NotifyForm } from "@/components/notify-form"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
+import { FirmasComprobantes } from "@/components/firmas-comprobantes"
 import { useRouter } from "next/navigation"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
@@ -142,10 +143,20 @@ export default function Dashboard() {
         </Reveal>
       </section>
 
+      {/* Firmas del Mercedes: pagos por firmar el auto ($10 la firma) */}
+      <section>
+        <Reveal>
+          <SectionLabel index="04" eyebrow="El auto es de todos" title="Las firmas" accent="azul" />
+        </Reveal>
+        <Reveal delay={80}>
+          <FirmasComprobantes />
+        </Reveal>
+      </section>
+
       {/* Sumate: comunidad de WhatsApp + aviso de hitos */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
+          <SectionLabel index="05" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
         </Reveal>
         <Reveal delay={60}>
           <a
@@ -183,7 +194,7 @@ export default function Dashboard() {
       {/* El motor: PRIME */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="El motor" title="PRIME" accent="azul" />
+          <SectionLabel index="06" eyebrow="El motor" title="PRIME" accent="azul" />
         </Reveal>
         <Reveal delay={80}>
           <div className="rounded-2xl border border-border bg-card/60 overflow-hidden">
