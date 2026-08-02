@@ -98,7 +98,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
           >
             <Image src="/images/prime-badge.png" alt="PRIME" width={44} height={44} className="w-11 h-11 rounded-xl shadow-sm" />
             <span className="mt-2 font-display text-base font-semibold text-foreground">Solo para clientes</span>
-            <span className="mt-0.5 text-xs text-muted-foreground">PRIME · tu empleado de AI</span>
+            <span className="mt-0.5 text-xs text-muted-foreground">Tu empleado de AI</span>
             <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">→</span>
           </a>
 
@@ -111,7 +111,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
           >
             <Image src="/images/prime-badge.png" alt="PRIME" width={44} height={44} className="w-11 h-11 rounded-xl shadow-sm" />
             <span className="mt-2 font-display text-base font-semibold text-foreground">Solo para inversores</span>
-            <span className="mt-0.5 text-xs text-muted-foreground">PRIME · Mercado 2030</span>
+            <span className="mt-0.5 text-xs text-muted-foreground">Mercado 2030 · el sistema</span>
             <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-gold">→</span>
           </a>
         </div>
