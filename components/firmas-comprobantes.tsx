@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { createPortal } from "react-dom"
 import { X, PenLine } from "lucide-react"
 
 // Comprobantes de las firmas en el Mercedes ($10 la firma). Cada pago = una persona
@@ -42,27 +43,30 @@ export function FirmasComprobantes() {
         <span>Cada pago es una firma real que va grabada en el Mercedes. Datos de los firmantes censurados por privacidad.</span>
       </div>
 
-      {/* Lightbox */}
-      {open && (
-        <div
-          onClick={() => setOpen(null)}
-          className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-        >
-          <button
+      {/* Lightbox — portal a <body> para escapar el stacking context de Reveal */}
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
             onClick={() => setOpen(null)}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center"
-            aria-label="Cerrar"
+            className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
           >
-            <X className="w-5 h-5" />
-          </button>
-          <img
-            src={open}
-            alt="Comprobante de firma"
-            className="max-h-[88vh] max-w-full rounded-2xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+            <button
+              onClick={() => setOpen(null)}
+              className="fixed top-[max(1rem,env(safe-area-inset-top))] right-4 z-[121] w-11 h-11 rounded-full bg-black/60 ring-1 ring-white/30 text-white flex items-center justify-center backdrop-blur"
+              aria-label="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={open}
+              alt="Comprobante de firma"
+              className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
