@@ -11,7 +11,6 @@ const MRR = 0 // ingreso recurrente mensual del reto (USD)
 const CLIENTES_RETO = 0 // clientes cerrados DESDE el relanzamiento
 const PROPUESTAS = 1 // propuestas enviadas
 const EN_NEGOCIACION = 1 // tratos en pipeline
-const SEGUIDORES = 1009 // suma de todas las redes
 
 // Reinversión del reto (USD). Editá a medida que gastás.
 const GASTO_CLAUDE = 200 // plan de Claude
@@ -109,7 +108,6 @@ export function ProgressDashboard() {
       <div>
         <GroupLabel>Alcance · la atención</GroupLabel>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Stat value={SEGUIDORES.toLocaleString("es-BO")} label="Seguidores" sub="todas las redes" />
           <Stat
             value={mounted && huellas !== null ? huellas.toLocaleString("es-BO") : "—"}
             label="Huellas"
