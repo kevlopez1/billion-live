@@ -15,6 +15,7 @@ import { Sponsors } from "@/components/sponsors"
 import { PrimePipeline } from "@/components/prime-pipeline"
 import { Roadmap } from "@/components/roadmap"
 import { IntroSplash } from "@/components/intro-splash"
+import { Hub } from "@/components/hub"
 import { Reveal } from "@/components/reveal"
 import { ShareButton } from "@/components/share-button"
 import { LiveViewers } from "@/components/live-viewers"
@@ -68,6 +69,21 @@ export default function Dashboard() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard")
   const { t } = useApp()
   const router = useRouter()
+
+  // Hub / linktree: primera pantalla del link (contactar empleado AI · ver el reto · PRIME).
+  // Se muestra una vez por sesión; "Ver la web del reto" entra al sitio.
+  const [showHub, setShowHub] = useState(false)
+  useEffect(() => {
+    try {
+      if (!sessionStorage.getItem("kev-hub-seen")) setShowHub(true)
+    } catch {}
+  }, [])
+  const enterSite = () => {
+    setShowHub(false)
+    try {
+      sessionStorage.setItem("kev-hub-seen", "1")
+    } catch {}
+  }
 
   // Al cambiar de pestaña (Panel/Números/Manifiesto), subir al tope — que no quede a media altura.
   useEffect(() => {
@@ -242,6 +258,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground relative">
       <IntroSplash />
+      {showHub && <Hub onEnter={enterSite} />}
       <ScrollProgress />
 
       {/* Cielo F2.3: luz radial arriba al centro, celeste en los bordes, fundido a blanco */}
