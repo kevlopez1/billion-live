@@ -11,7 +11,7 @@ type Tier = "vip" | "clasica"
 type Firmante = { n: number; name: string; tier: Tier }
 
 // Los que ya tienen su nombre camino al Mercedes. Sumá acá cada firma nueva.
-const firmantes: Firmante[] = [{ n: 1, name: "Dayson Leónel Busto", tier: "clasica" }]
+const firmantes: Firmante[] = [{ n: 1, name: "Dyson Leónel Busto", tier: "clasica" }]
 
 function num(n: number) {
   return `#${String(n).padStart(3, "0")}`
