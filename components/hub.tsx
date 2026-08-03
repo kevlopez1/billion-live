@@ -1,5 +1,6 @@
 "use client"
 
+import type { CSSProperties } from "react"
 import Image from "next/image"
 
 // WhatsApp del empleado AI de PRIME (número real).
@@ -27,10 +28,22 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
   return (
     <div
       className="fixed inset-0 z-[70] overflow-y-auto"
-      style={{
-        background:
-          "linear-gradient(to bottom, rgba(252,253,254,0) 0%, rgba(252,253,254,0) 20%, rgba(252,253,254,0.92) 60%, #fcfdfe 80%), radial-gradient(130% 70% at 50% -6%, #fdfdfc 0%, #cfe4f5 55%, #a8cdea 100%)",
-      }}
+      style={
+        {
+          // Forzamos el tema CLARO acá dentro: el hub siempre es claro, aunque el
+          // celular esté en modo oscuro (si no, los textos se invertían y no se leían).
+          "--background": "oklch(0.99 0.004 240)",
+          "--foreground": "oklch(0.27 0.05 252)",
+          "--card": "oklch(1 0 0 / 0.72)",
+          "--card-foreground": "oklch(0.27 0.05 252)",
+          "--muted-foreground": "oklch(0.46 0.04 250)",
+          "--border": "oklch(0.3 0.06 250 / 0.14)",
+          "--gold": "oklch(0.52 0.1 245)",
+          "--rojo": "oklch(0.55 0.19 28)",
+          background:
+            "linear-gradient(to bottom, rgba(252,253,254,0) 0%, rgba(252,253,254,0) 20%, rgba(252,253,254,0.92) 60%, #fcfdfe 80%), radial-gradient(130% 70% at 50% -6%, #fdfdfc 0%, #cfe4f5 55%, #a8cdea 100%)",
+        } as CSSProperties
+      }
     >
       <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center px-6 py-10 text-center text-foreground">
         {/* Logo lockup */}
@@ -78,7 +91,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
             className="lift relative flex flex-col items-center justify-center rounded-2xl px-5 py-4 text-center"
             style={{ background: "#25d366", boxShadow: "0 8px 22px rgba(37,211,102,0.32)" }}
           >
-            <Image src="/images/empleado-ai-logo.png" alt="Empleado AI" width={56} height={56} className="w-14 h-14" />
+            <Image src="/images/empleado-ai-badge.png" alt="Empleado AI" width={44} height={44} className="w-11 h-11 rounded-xl" />
             <span className="mt-2 font-display text-base font-semibold" style={{ color: "#06341c" }}>
               Hablar con mi empleado AI
             </span>
