@@ -78,7 +78,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
             className="lift relative flex flex-col items-center justify-center rounded-2xl px-5 py-4 text-center"
             style={{ background: "#25d366", boxShadow: "0 8px 22px rgba(37,211,102,0.32)" }}
           >
-            <Image src="/images/empleado-ai-badge.png" alt="Empleado AI" width={44} height={44} className="w-11 h-11 rounded-xl" />
+            <Image src="/images/empleado-ai-logo.png" alt="Empleado AI" width={56} height={56} className="w-14 h-14" />
             <span className="mt-2 font-display text-base font-semibold" style={{ color: "#06341c" }}>
               Hablar con mi empleado AI
             </span>
