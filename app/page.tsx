@@ -5,9 +5,8 @@ import Image from "next/image"
 import { useApp } from "@/context/app-context"
 import { PortfolioOverview } from "@/components/portfolio-overview"
 import { ProgressDashboard } from "@/components/progress-dashboard"
-import { MobileNav } from "@/components/mobile-nav"
 import { SocialLinks, WHATSAPP_COMMUNITY } from "@/components/social-links"
-import { MessageCircle, ArrowUpRight } from "lucide-react"
+import { MessageCircle, ArrowUpRight, Menu, X, LayoutDashboard, BarChart3, BookOpen, Trophy } from "lucide-react"
 import { ManifestoView } from "@/components/manifesto-view"
 import { EarlyWall } from "@/components/early-wall"
 import { Sponsors } from "@/components/sponsors"
@@ -84,6 +83,14 @@ export default function Dashboard() {
     try {
       sessionStorage.setItem("kev-hub-seen", "1")
     } catch {}
+  }
+
+  // Menú lateral (drawer): reemplaza la barra inferior.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const navIcon: Record<ActiveView, typeof LayoutDashboard> = {
+    dashboard: LayoutDashboard,
+    pulse: BarChart3,
+    manifesto: BookOpen,
   }
 
   // Al cambiar de pestaña (Panel/Números/Manifiesto), subir al tope — que no quede a media altura.
@@ -261,6 +268,65 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background text-foreground relative">
       <IntroSplash />
       {showHub && <Hub onEnter={enterSite} />}
+
+      {/* Menú lateral (drawer) — reemplaza la barra inferior */}
+      <div className={`fixed inset-0 z-[80] ${menuOpen ? "" : "pointer-events-none"}`} aria-hidden={!menuOpen}>
+        <div
+          onClick={() => setMenuOpen(false)}
+          className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
+            menuOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <aside
+          className={`absolute right-0 top-0 h-full w-72 max-w-[82%] bg-background/95 backdrop-blur-xl border-l border-border shadow-2xl flex flex-col p-5 pt-[max(1.25rem,env(safe-area-inset-top))] transition-transform duration-300 ${
+            menuOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-7">
+            <span className="text-[11px] font-display font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Menú
+            </span>
+            <button
+              onClick={() => setMenuOpen(false)}
+              aria-label="Cerrar"
+              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <nav className="flex flex-col gap-1.5">
+            {navItems.map((item) => {
+              const Icon = navIcon[item.id]
+              const active = activeView === item.id
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveView(item.id)
+                    setMenuOpen(false)
+                  }}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-[15px] transition-colors ${
+                    active ? "bg-foreground text-background font-semibold" : "text-foreground hover:bg-foreground/[0.06]"
+                  }`}
+                >
+                  <Icon className="w-[18px] h-[18px]" />
+                  {item.label}
+                </button>
+              )
+            })}
+            <button
+              onClick={() => {
+                goToRanking()
+                setMenuOpen(false)
+              }}
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-[15px] text-foreground hover:bg-foreground/[0.06]"
+            >
+              <Trophy className="w-[18px] h-[18px]" />
+              Ranking
+            </button>
+          </nav>
+        </aside>
+      </div>
       <ScrollProgress />
 
       {/* Cielo F2.3: luz radial arriba al centro, celeste en los bordes, fundido a blanco */}
@@ -314,6 +380,13 @@ export default function Dashboard() {
               </button>
             </nav>
             <ShareButton />
+            <button
+              onClick={() => setMenuOpen(true)}
+              aria-label="Menú"
+              className="sm:hidden w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground press-effect"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
@@ -325,7 +398,7 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="relative z-10">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-14 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-12 flex flex-col items-center gap-3 text-center">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-14 pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-12 flex flex-col items-center gap-3 text-center">
           <span className="font-display font-extrabold uppercase tracking-tighter text-2xl md:text-3xl">
             KEV PROJECT GTA
           </span>
@@ -336,9 +409,6 @@ export default function Dashboard() {
           <SocialLinks />
         </div>
       </footer>
-
-      {/* Nav flotante (móvil) */}
-      <MobileNav activeView={activeView} onViewChange={setActiveView} onRanking={goToRanking} />
 
       {/* Invitación a la comunidad de WhatsApp */}
       <WhatsAppPopup />
