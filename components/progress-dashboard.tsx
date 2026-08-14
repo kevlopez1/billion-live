@@ -13,7 +13,7 @@ const PROPUESTAS = 1 // propuestas enviadas
 const EN_NEGOCIACION = 1 // tratos en pipeline
 
 // Reinversión del reto (USD). Editá a medida que gastás.
-const GASTO_CLAUDE = 200 // plan de Claude
+const GASTO_CLAUDE = 300 // plan de Claude
 const GASTO_CREDITOS = 100 // créditos de IA (generación de contenido)
 const GASTO_GITHUB = 21 // GitHub empresarial
 const GASTO_SERVIDOR = 30 // servidor en la nube
