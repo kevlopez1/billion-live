@@ -24,6 +24,7 @@ import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
 import { FirmasComprobantes } from "@/components/firmas-comprobantes"
 import { MuroFirmas } from "@/components/muro-firmas"
+import { FirmaCta } from "@/components/firma-cta"
 import { useRouter } from "next/navigation"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
@@ -155,7 +156,10 @@ export default function Dashboard() {
         <Reveal>
           <SectionLabel index="04" eyebrow="El auto es de todos" title="Las firmas" accent="azul" />
         </Reveal>
-        <Reveal delay={80}>
+        <Reveal delay={60}>
+          <FirmaCta />
+        </Reveal>
+        <Reveal delay={100}>
           <FirmasComprobantes />
         </Reveal>
         <Reveal delay={120}>
