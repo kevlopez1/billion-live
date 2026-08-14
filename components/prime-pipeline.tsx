@@ -8,11 +8,7 @@ import { Flame } from "lucide-react"
 // Para nombrar a un prospecto públicamente, cambiá "name" (con su permiso).
 // ──────────────────────────────────────────────────────────────
 const pipeline: { name: string; note: string; status: "propuesta" | "negociacion" | "cerrado" }[] = [
-  {
-    name: "Cerámica líder · Santa Cruz",
-    note: "Propuesta comercial + CRM con IA",
-    status: "negociacion",
-  },
+  // Sin tratos públicos por ahora. Agregá acá un trato para que la sección reaparezca.
 ]
 
 const statusChip: Record<string, { label: string; cls: string }> = {
@@ -22,6 +18,9 @@ const statusChip: Record<string, { label: string; cls: string }> = {
 }
 
 export function PrimePipeline() {
+  // Si no hay tratos, la sección entera no se muestra (no deja hueco vacío).
+  if (pipeline.length === 0) return null
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between border-b border-border pb-3">
