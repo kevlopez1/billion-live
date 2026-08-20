@@ -11,6 +11,8 @@ const PRIME_MSG = encodeURIComponent(
 const PRIME_WA_URL = `https://wa.me/${PRIME_WA}?text=${PRIME_MSG}`
 const PRIME_WEB = "https://primebusiness.live"
 const PRIME_MERCADO = "https://www.primebusiness.live/mercado-2030#sistema"
+// Formación externa (Insightful University).
+const VACA_MORADA_URL = "https://www.insightfuluniversity.com/vaca-morada"
 
 // Alitas Mansory del logo (idénticas al intro).
 function Wing({ flip = false }: { flip?: boolean }) {
@@ -127,6 +129,24 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
             <span className="mt-2 font-display text-base font-semibold text-foreground">Solo para inversores</span>
             <span className="mt-0.5 text-xs text-muted-foreground">Mercado 2030 · el sistema</span>
             <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-gold">→</span>
+          </a>
+
+          {/* 5 · Formación Vaca Morada (Insightful University) */}
+          <a
+            href={VACA_MORADA_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="lift relative flex flex-col items-center justify-center rounded-2xl border border-border bg-card/70 px-5 py-4 text-center shadow-[0_2px_10px_rgba(40,60,90,0.05)]"
+          >
+            <span
+              className="flex h-11 w-11 items-center justify-center rounded-xl font-serif-display text-2xl leading-none text-white shadow-sm"
+              style={{ background: "#6d3f9c" }}
+            >
+              I
+            </span>
+            <span className="mt-2 font-display text-base font-semibold text-foreground">Formación Vaca Morada I</span>
+            <span className="mt-0.5 text-xs text-muted-foreground">Insightful University</span>
+            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">→</span>
           </a>
         </div>
 
