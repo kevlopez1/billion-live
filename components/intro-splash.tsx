@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 // Intro premium: planeta imponente con red de IA (toques rojos) + una flota de
 // naves/robots/vehículos sleek alrededor. Título como marca de agua tenue.
 const CX = 200
-const CY = 222
+const CY = 290
 const R = 100
 const C = "#9fe0ff"
 const RED = "#ff3b5c"
@@ -134,13 +134,62 @@ const Drone = () => (
   </>
 )
 
+const Mech = () => (
+  <>
+    <rect x={-4.5} y={-14} width={9} height={6} rx={2} fill={FILL} stroke={C} strokeWidth={1.1} />
+    <line x1={-3} y1={-11.5} x2={3} y2={-11.5} stroke={RED} strokeWidth={1.3} />
+    <rect x={-9} y={-8} width={5} height={4.5} rx={1.6} fill={FILL} stroke={C} strokeWidth={1} />
+    <rect x={4} y={-8} width={5} height={4.5} rx={1.6} fill={FILL} stroke={C} strokeWidth={1} />
+    <path d="M-6,-7.5 L6,-7.5 L5,4 L-5,4 Z" fill={FILL} stroke={C} strokeWidth={1.15} />
+    <circle cx={0} cy={-2} r={1.6} fill={RED} />
+    <path d="M-9,-3 L-11,6 L-8,6.5 L-6,-2 Z" fill={FILL} stroke={C} strokeWidth={1} />
+    <path d="M9,-3 L11,6 L8,6.5 L6,-2 Z" fill={FILL} stroke={C} strokeWidth={1} />
+    <path d="M-5,4 L-6,15 L-2.5,15 L-1.5,4 Z" fill={FILL} stroke={C} strokeWidth={1.05} />
+    <path d="M5,4 L6,15 L2.5,15 L1.5,4 Z" fill={FILL} stroke={C} strokeWidth={1.05} />
+    <line x1={-4.2} y1={14} x2={-4.6} y2={17} stroke={C} strokeWidth={2} />
+    <line x1={4.2} y1={14} x2={4.6} y2={17} stroke={C} strokeWidth={2} />
+  </>
+)
+const Station = () => (
+  <>
+    <circle cx={0} cy={0} r={6} fill={FILL} stroke={C} strokeWidth={1.2} />
+    <circle cx={0} cy={0} r={2.4} fill="none" stroke={C} strokeWidth={0.9} />
+    <circle cx={0} cy={0} r={1} fill={RED} />
+    <rect x={-3} y={-13} width={6} height={6} rx={1.4} fill={FILL} stroke={C} strokeWidth={1} />
+    <rect x={-3} y={7} width={6} height={6} rx={1.4} fill={FILL} stroke={C} strokeWidth={1} />
+    <path d="M-6,-2 L-20,-4 L-20,4 L-6,2 Z" fill={FILL} stroke={C} strokeWidth={1} />
+    <path d="M6,-2 L20,-4 L20,4 L6,2 Z" fill={FILL} stroke={C} strokeWidth={1} />
+    <line x1={-16} y1={-3} x2={-16} y2={3} stroke={C} strokeOpacity={0.6} strokeWidth={0.7} />
+    <line x1={-11} y1={-3.2} x2={-11} y2={3.2} stroke={C} strokeOpacity={0.6} strokeWidth={0.7} />
+    <line x1={16} y1={-3} x2={16} y2={3} stroke={C} strokeOpacity={0.6} strokeWidth={0.7} />
+    <line x1={11} y1={-3.2} x2={11} y2={3.2} stroke={C} strokeOpacity={0.6} strokeWidth={0.7} />
+    <circle cx={0} cy={-10} r={1} fill={RED} />
+  </>
+)
+const Starship = () => (
+  <>
+    <path d="M0,-16 C3,-11 4,-4 4,3 L7,7 L7,10 L3,8 L2,13 L-2,13 L-3,8 L-7,10 L-7,7 L-4,3 C-4,-4 -3,-11 0,-16 Z" fill={FILL} stroke={C} strokeWidth={1.15} />
+    <path d="M-4,-1 L-11,4 L-11,7 L-4,4 Z" fill={FILL} stroke={C} strokeWidth={1} />
+    <path d="M4,-1 L11,4 L11,7 L4,4 Z" fill={FILL} stroke={C} strokeWidth={1} />
+    <circle cx={0} cy={-6} r={1.6} fill="none" stroke={C} strokeWidth={1} />
+    <circle cx={0} cy={-6} r={0.8} fill={RED} />
+    <path d="M-2,13 L0,18 L2,13" fill="none" stroke={RED} strokeWidth={1.3} strokeOpacity={0.8} />
+  </>
+)
+
 const SHIPS = [
-  { k: "sat", x: 58, y: 150, s: 1.05, r: -8, d: 5 },
-  { k: "rocket", x: 342, y: 110, s: 1.05, r: 12, d: 6 },
-  { k: "jet", x: 352, y: 255, s: 1.0, r: 60, d: 4.5 },
-  { k: "human", x: 56, y: 330, s: 1.05, r: 0, d: 5.5 },
-  { k: "hover", x: 165, y: 405, s: 1.05, r: 0, d: 4 },
-  { k: "drone", x: 330, y: 350, s: 1.0, r: 0, d: 3.5 },
+  { k: "station", x: 205, y: 70, s: 1.15, r: 0, d: 6, o: 1 },
+  { k: "rocket", x: 335, y: 110, s: 1.0, r: 14, d: 5, o: 1 },
+  { k: "sat", x: 52, y: 170, s: 1.0, r: -8, d: 5.5, o: 1 },
+  { k: "jet", x: 352, y: 215, s: 0.95, r: 58, d: 4.5, o: 1 },
+  { k: "drone", x: 345, y: 395, s: 0.95, r: 0, d: 3.5, o: 1 },
+  { k: "mech", x: 58, y: 420, s: 1.25, r: 0, d: 6, o: 1 },
+  { k: "hover", x: 120, y: 520, s: 1.1, r: 0, d: 4, o: 1 },
+  { k: "human", x: 255, y: 515, s: 1.05, r: 0, d: 5.5, o: 1 },
+  { k: "starship", x: 340, y: 500, s: 1.05, r: -12, d: 5, o: 1 },
+  { k: "drone", x: 150, y: 150, s: 0.6, r: 0, d: 4, o: 0.5 },
+  { k: "sat", x: 300, y: 300, s: 0.55, r: 20, d: 5, o: 0.45 },
+  { k: "jet", x: 90, y: 300, s: 0.55, r: 40, d: 4.5, o: 0.45 },
 ]
 function renderShip(k: string) {
   switch (k) {
@@ -149,6 +198,9 @@ function renderShip(k: string) {
     case "jet": return <Jet />
     case "human": return <Humanoid />
     case "hover": return <Hovercar />
+    case "mech": return <Mech />
+    case "station": return <Station />
+    case "starship": return <Starship />
     default: return <Drone />
   }
 }
@@ -196,7 +248,7 @@ export function IntroSplash() {
         @keyframes kevFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
         @keyframes kevIntroIn{0%{opacity:0;transform:scale(.66);filter:blur(9px)}60%{opacity:1}100%{opacity:1;transform:scale(1);filter:blur(0)}}
         @keyframes kevWm{0%{opacity:0;transform:translate(-50%,-8px)}100%{opacity:.34;transform:translate(-50%,0)}}
-        @keyframes kevShip{0%{opacity:0}100%{opacity:1}}
+        @keyframes kevPop{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
       `}</style>
 
       {/* Galaxias en tonos joya (con un toque rojo) */}
@@ -222,7 +274,7 @@ export function IntroSplash() {
 
       {/* Planeta + flota */}
       <div className="relative z-[3] flex items-center justify-center">
-        <svg width="400" height="440" viewBox="0 0 400 440" className="w-[92vw] max-w-[420px]" style={{ animation: "kevIntroIn 1.2s cubic-bezier(.2,.7,.2,1) both" }}>
+        <svg width="400" height="580" viewBox="0 0 400 580" className="h-[86vh] max-h-[720px]" style={{ animation: "kevIntroIn 1.2s cubic-bezier(.2,.7,.2,1) both" }}>
           <defs>
             <radialGradient id="kevSph" cx="40%" cy="34%" r="80%">
               <stop offset="0%" stopColor="#1c2438" />
@@ -265,8 +317,10 @@ export function IntroSplash() {
 
           {/* Flota de naves / robots / vehículos */}
           {SHIPS.map((sh, i) => (
-            <g key={`s${i}`} transform={`translate(${sh.x} ${sh.y}) rotate(${sh.r}) scale(${sh.s})`} filter="url(#kevSGlow)" style={{ animation: `kevShip 0.8s ease ${0.6 + i * 0.12}s both` }}>
-              <g style={{ animation: `kevFloat ${sh.d}s ease-in-out infinite` }}>{renderShip(sh.k)}</g>
+            <g key={`s${i}`} opacity={sh.o} transform={`translate(${sh.x} ${sh.y}) rotate(${sh.r}) scale(${sh.s})`} filter="url(#kevSGlow)">
+              <g style={{ animation: `kevFloat ${sh.d}s ease-in-out infinite` }}>
+                <g style={{ animation: `kevPop 0.7s ease ${0.6 + i * 0.1}s both` }}>{renderShip(sh.k)}</g>
+              </g>
             </g>
           ))}
         </svg>
