@@ -43,7 +43,8 @@ const ARCS = EDGES.map(([i, j], k) => {
 
 const SIL_TYPES = ["human", "mech", "rocket", "sat", "jet", "drone", "jet", "station", "human", "mech", "rocket", "drone"]
 const ORDER = NODES3D.map((v, i) => [i, v[2]]).sort((a, b) => b[1] - a[1]).map((p) => p[0])
-const SILSET = new Set(ORDER.slice(0, 12))
+// Sin figuras: el planeta queda limpio, solo la red (nodos + conexiones).
+const SILSET = new Set<number>()
 const FIGS: { x: number; y: number; s: number; op: number; rot: number; type: string }[] = []
 const DOTS: { x: number; y: number; r: number; op: number; red: boolean }[] = []
 {
