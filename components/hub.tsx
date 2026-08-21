@@ -138,11 +138,9 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
             rel="noopener noreferrer"
             className="lift relative flex flex-col items-center justify-center rounded-2xl border border-border bg-card/70 px-5 py-4 text-center shadow-[0_2px_10px_rgba(40,60,90,0.05)]"
           >
-            <span
-              className="flex h-11 w-11 items-center justify-center rounded-xl font-serif-display text-2xl leading-none text-white shadow-sm"
-              style={{ background: "#6d3f9c" }}
-            >
-              I
+            <span className="flex items-center gap-2">
+              <Image src="/images/iu-logo.jpg" alt="Insightful University" width={44} height={44} className="w-11 h-11 rounded-xl shadow-sm" />
+              <Image src="/images/vaca-morada.png" alt="Vaca Morada" width={44} height={44} className="w-11 h-11 rounded-xl shadow-sm" />
             </span>
             <span className="mt-2 font-display text-base font-semibold text-foreground">Formación Vaca Morada I</span>
             <span className="mt-0.5 text-xs text-muted-foreground">Insightful University</span>
