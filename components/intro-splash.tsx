@@ -60,10 +60,7 @@ export function IntroSplash() {
       className={`fixed inset-0 z-[100] flex items-center justify-center transition-opacity duration-700 ${
         hide ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
-      style={{
-        background:
-          "radial-gradient(circle at 50% 38%, #0b1c39 0%, #060d1c 62%, #02040a 100%)",
-      }}
+      style={{ background: "#000000" }}
     >
       <style>{`@keyframes kevSpin{to{transform:rotate(360deg)}}@keyframes kevPulse{0%,100%{opacity:.7}50%{opacity:1}}@keyframes kevTw{0%,100%{opacity:.25}50%{opacity:.9}}`}</style>
 
@@ -149,10 +146,6 @@ export function IntroSplash() {
           </g>
           <circle cx={CX} cy={CY} r={R} fill="none" stroke="#7fc0ff" strokeOpacity="0.5" strokeWidth="1.2" />
         </svg>
-
-        <span className="mt-2 font-serif-display text-[10px] md:text-xs uppercase tracking-[0.42em] text-white/40">
-          Kev Project GTA
-        </span>
       </div>
     </div>
   )
