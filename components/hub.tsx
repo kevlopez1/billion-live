@@ -62,8 +62,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
         <p className="mt-0.5 font-serif-display text-[17px] italic text-muted-foreground">
           De $10 a un Mercedes, desde Bolivia
         </p>
-        <p className="mt-2 text-xs font-medium tracking-wide text-gold">@kev.project.gta</p>
-        <p className="mt-1 font-display text-sm font-bold tracking-wide text-foreground">kevproject.world</p>
+        <p className="mt-2 font-display text-sm font-bold tracking-wide text-foreground">kevproject.world</p>
 
         {/* Botones */}
         <div className="mt-7 flex w-full flex-col gap-3.5">
