@@ -145,9 +145,6 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
           </a>
         </div>
 
-        <p className="mt-7 text-[10px] font-medium uppercase tracking-[0.4em] text-muted-foreground">
-          El auto es la carnada · el imperio es la meta
-        </p>
       </div>
     </div>
   )
