@@ -41,7 +41,7 @@ const ARCS = EDGES.map(([i, j], k) => {
   return { d: `M${a[0].toFixed(1)},${a[1].toFixed(1)} Q${c[0].toFixed(1)},${c[1].toFixed(1)} ${b[0].toFixed(1)},${b[1].toFixed(1)}`, op: +(0.06 + 0.22 * depth).toFixed(2), red: k % 8 === 0 }
 })
 
-const SIL_TYPES = ["human", "mech", "rocket", "sat", "hover", "drone", "jet", "station", "human", "mech", "rocket", "drone"]
+const SIL_TYPES = ["human", "mech", "rocket", "sat", "jet", "drone", "jet", "station", "human", "mech", "rocket", "drone"]
 const ORDER = NODES3D.map((v, i) => [i, v[2]]).sort((a, b) => b[1] - a[1]).map((p) => p[0])
 const SILSET = new Set(ORDER.slice(0, 12))
 const FIGS: { x: number; y: number; s: number; op: number; rot: number; type: string }[] = []
