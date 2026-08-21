@@ -59,6 +59,9 @@ export function IntroSplash() {
         <span className="mt-5 text-[9px] md:text-[11px] uppercase tracking-[0.4em] text-white/40">
           De $10 al Mercedes
         </span>
+        <span className="mt-4 text-xs md:text-sm tracking-[0.3em] text-white/80">
+          kevproject.world
+        </span>
       </div>
     </div>
   )
