@@ -13,12 +13,13 @@ const PROPUESTAS = 1 // propuestas enviadas
 const EN_NEGOCIACION = 1 // tratos en pipeline
 
 // Reinversión del reto (USD). Editá a medida que gastás.
-const GASTO_CLAUDE = 300 // plan de Claude
+const GASTO_CLAUDE = 500 // plan de Claude
 const GASTO_CREDITOS = 100 // créditos de IA (generación de contenido)
 const GASTO_GITHUB = 21 // GitHub empresarial
 const GASTO_SERVIDOR = 30 // servidor en la nube
 const GASTO_CAINCO = 78 // evento CAINCO Santa Cruz
-const GASTOS_TOTAL = GASTO_CLAUDE + GASTO_CREDITOS + GASTO_GITHUB + GASTO_SERVIDOR + GASTO_CAINCO
+const GASTO_BLOCKCHAIN = 86 // entrada VIP Blockchain 2040 (Bs 1.000 ÷ 11,58)
+const GASTOS_TOTAL = GASTO_CLAUDE + GASTO_CREDITOS + GASTO_GITHUB + GASTO_SERVIDOR + GASTO_CAINCO + GASTO_BLOCKCHAIN
 
 function Stat({ value, label, sub }: { value: string; label: string; sub?: string }) {
   return (
@@ -101,6 +102,7 @@ export function ProgressDashboard() {
           <Stat value={`$${GASTO_GITHUB}`} label="GitHub" sub="empresarial" />
           <Stat value={`$${GASTO_SERVIDOR}`} label="Servidor" sub="en la nube" />
           <Stat value={`$${GASTO_CAINCO}`} label="CAINCO" sub="evento networking" />
+          <Stat value={`$${GASTO_BLOCKCHAIN}`} label="Blockchain 2040" sub="VIP · evento" />
         </div>
       </div>
 
