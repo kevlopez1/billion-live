@@ -22,6 +22,7 @@ import { NotifyForm } from "@/components/notify-form"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
+import { Eventos } from "@/components/eventos"
 import { FirmasComprobantes } from "@/components/firmas-comprobantes"
 import { MuroFirmas } from "@/components/muro-firmas"
 import { FirmaCta } from "@/components/firma-cta"
@@ -151,10 +152,20 @@ export default function Dashboard() {
         </Reveal>
       </section>
 
+      {/* Eventos: presencia real de PRIME en el ecosistema */}
+      <section>
+        <Reveal>
+          <SectionLabel index="04" eyebrow="En la cancha" title="Los eventos" accent="azul" />
+        </Reveal>
+        <Reveal delay={80}>
+          <Eventos />
+        </Reveal>
+      </section>
+
       {/* Firmas del Mercedes: pagos por firmar el auto ($10 la firma) */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="El auto es de todos" title="Las firmas" accent="azul" />
+          <SectionLabel index="05" eyebrow="El auto es de todos" title="Las firmas" accent="azul" />
         </Reveal>
         <Reveal delay={60}>
           <FirmaCta />
@@ -170,7 +181,7 @@ export default function Dashboard() {
       {/* Sumate: comunidad de WhatsApp + aviso de hitos */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
+          <SectionLabel index="06" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
         </Reveal>
         <Reveal delay={60}>
           <a
