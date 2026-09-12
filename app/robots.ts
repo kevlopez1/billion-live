@@ -28,13 +28,13 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/control", "/api/"],
+        disallow: ["/control", "/cuenta", "/api/"],
       },
       // Acceso explícito para motores de IA (excepto rutas privadas).
       {
         userAgent: AI_BOTS,
         allow: "/",
-        disallow: ["/control", "/api/"],
+        disallow: ["/control", "/cuenta", "/api/"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

@@ -26,9 +26,13 @@ export const EV = {
   PIXEL_RESERVA: "pixel_reserva",
   PIXEL_PAGAR: "pixel_pagar",
   SPONSOR_ENVIADO: "sponsor_enviado",
+  // Cuentas
+  CUENTA_CREADA: "cuenta_creada",
+  CUENTA_ENTRO: "cuenta_entro",
+  CUENTA_RECUPERAR: "cuenta_recuperar",
+  CUENTA_BAJA_NOVEDADES: "cuenta_baja_novedades",
   // Audiencia
   COMUNIDAD_WHATSAPP: "comunidad_whatsapp",
-  NOTIFY_SUSCRITO: "notify_suscrito",
   COMPARTIR: "compartir",
 } as const
 

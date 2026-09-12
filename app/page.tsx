@@ -17,7 +17,7 @@ import { Reveal } from "@/components/reveal"
 import { ShareButton } from "@/components/share-button"
 import { LiveViewers } from "@/components/live-viewers"
 import { Changelog } from "@/components/changelog"
-import { NotifyForm } from "@/components/notify-form"
+import { CuentaPanel } from "@/components/cuenta-panel"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
@@ -193,7 +193,7 @@ export default function Dashboard() {
         </Reveal>
       </section>
 
-      {/* Sumate: comunidad de WhatsApp + aviso de hitos */}
+      {/* Sumate: comunidad de WhatsApp + crear cuenta */}
       <section>
         <Reveal>
           <SectionLabel index="06" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
@@ -223,7 +223,7 @@ export default function Dashboard() {
           </a>
         </Reveal>
         <Reveal delay={100}>
-          <NotifyForm />
+          <CuentaPanel />
         </Reveal>
       </section>
 

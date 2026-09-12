@@ -1,106 +1,172 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
-import { toast } from "sonner"
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
+import type { Session } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 
-interface User {
+// ──────────────────────────────────────────────────────────────
+// CUENTAS DEL RETO
+//
+// La identidad la maneja Supabase Auth. Acá NO se toca una contraseña: el
+// hash, la verificación del correo y el reseteo los hace Supabase.
+//
+// Lo anterior era un usuario y una contraseña escritos a mano en el código,
+// que viajaban dentro del bundle público: cualquiera que abriera las
+// herramientas del navegador las leía. Eso se eliminó por completo.
+// ──────────────────────────────────────────────────────────────
+
+export type Perfil = {
   id: string
   email: string
-  name: string
-  role: "admin" | "viewer"
-  avatar?: string
+  nombre: string
+  novedades: boolean
 }
 
-interface AuthState {
-  user: User | null
-  isAuthenticated: boolean
-  isLoading: boolean
+type AuthContextType = {
+  perfil: Perfil | null
+  cargando: boolean
+  /** true mientras el correo no esté verificado. */
+  faltaVerificar: boolean
+  registrar: (d: { email: string; password: string; nombre: string; novedades: boolean }) => Promise<Resultado>
+  entrar: (email: string, password: string) => Promise<Resultado>
+  salir: () => Promise<void>
+  recuperar: (email: string) => Promise<Resultado>
+  cambiarNovedades: (quiere: boolean) => Promise<Resultado>
 }
 
-interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<boolean>
-  logout: () => void
-  checkAuth: () => boolean
-}
-
-const ADMIN_CREDENTIALS = {
-  email: "admin@kevstrategy.com",
-  password: "billion2024",
-}
-
-const ADMIN_USER: User = {
-  id: "1",
-  email: "admin@kevstrategy.com",
-  name: "Kev López",
-  role: "admin",
-}
+export type Resultado = { ok: true; aviso?: string } | { ok: false; error: string }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Supabase devuelve los errores en inglés y con jerga. La gente que entra acá
+// merece leer qué pasó, no "Invalid login credentials".
+function traducir(msg: string): string {
+  const m = msg.toLowerCase()
+  if (m.includes("invalid login credentials")) return "Correo o contraseña incorrectos."
+  if (m.includes("email not confirmed")) return "Te falta confirmar el correo. Revisá tu bandeja."
+  if (m.includes("user already registered") || m.includes("already been registered"))
+    return "Ese correo ya tiene cuenta. Probá entrar."
+  if (m.includes("password should be at least")) return "La contraseña necesita al menos 8 caracteres."
+  if (m.includes("unable to validate email") || m.includes("invalid email")) return "Ese correo no parece válido."
+  if (m.includes("rate limit") || m.includes("too many")) return "Demasiados intentos. Esperá un momento."
+  if (m.includes("failed to fetch") || m.includes("network")) return "No hay conexión. Probá de nuevo."
+  return "No se pudo completar. Probá de nuevo en un momento."
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [session, setSession] = useState<Session | null>(null)
+  const [perfil, setPerfil] = useState<Perfil | null>(null)
+  const [cargando, setCargando] = useState(true)
+
+  // Trae el perfil propio. RLS garantiza que solo devuelve el de uno mismo.
+  const traerPerfil = useCallback(async (s: Session | null) => {
+    if (!s?.user) {
+      setPerfil(null)
+      return
+    }
+    const { data } = await supabase
+      .from("perfiles")
+      .select("id, email, nombre, novedades")
+      .eq("id", s.user.id)
+      .maybeSingle()
+
+    // Si el perfil todavía no existe (el trigger corre un instante después del
+    // alta), no dejamos la sesión sin datos: mostramos lo que ya sabemos.
+    setPerfil(
+      data ?? {
+        id: s.user.id,
+        email: s.user.email ?? "",
+        nombre: (s.user.user_metadata?.nombre as string) ?? "",
+        novedades: Boolean(s.user.user_metadata?.novedades),
+      },
+    )
+  }, [])
 
   useEffect(() => {
-    const savedAuth = localStorage.getItem("kev-auth")
-    if (savedAuth) {
-      try {
-        const parsed = JSON.parse(savedAuth)
-        if (parsed.expiry && new Date(parsed.expiry) > new Date()) {
-          setUser(parsed.user)
-        } else {
-          localStorage.removeItem("kev-auth")
-        }
-      } catch (e) {
-        localStorage.removeItem("kev-auth")
-      }
+    let vivo = true
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!vivo) return
+      setSession(data.session)
+      traerPerfil(data.session).finally(() => vivo && setCargando(false))
+    })
+
+    // Mantiene la sesión al día entre pestañas y cuando el token se renueva.
+    const { data: sub } = supabase.auth.onAuthStateChange((_evento, s) => {
+      if (!vivo) return
+      setSession(s)
+      traerPerfil(s)
+    })
+
+    return () => {
+      vivo = false
+      sub.subscription.unsubscribe()
     }
-    setIsLoading(false)
-  }, [])
+  }, [traerPerfil])
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-      setUser(ADMIN_USER)
-
-      // Save to localStorage with 24h expiry
-      const expiry = new Date()
-      expiry.setHours(expiry.getHours() + 24)
-      localStorage.setItem("kev-auth", JSON.stringify({ user: ADMIN_USER, expiry: expiry.toISOString() }))
-
-      setIsLoading(false)
-      toast.success("Welcome back, Kevin!")
-      return true
+  const registrar: AuthContextType["registrar"] = useCallback(async ({ email, password, nombre, novedades }) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        // El trigger de la base lee esto para armar el perfil.
+        data: { nombre: nombre.trim(), novedades },
+        emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/cuenta` : undefined,
+      },
+    })
+    if (error) return { ok: false, error: traducir(error.message) }
+    if (data.user && !data.session) {
+      return { ok: true, aviso: "Te mandamos un correo para confirmar la cuenta. Revisá tu bandeja (y el spam)." }
     }
-
-    setIsLoading(false)
-    toast.error("Invalid credentials")
-    return false
+    return { ok: true }
   }, [])
 
-  const logout = useCallback(() => {
-    setUser(null)
-    localStorage.removeItem("kev-auth")
-    toast.success("Logged out successfully")
+  const entrar: AuthContextType["entrar"] = useCallback(async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    if (error) return { ok: false, error: traducir(error.message) }
+    return { ok: true }
   }, [])
 
-  const checkAuth = useCallback(() => {
-    return user !== null && user.role === "admin"
-  }, [user])
+  const salir = useCallback(async () => {
+    await supabase.auth.signOut()
+    setPerfil(null)
+  }, [])
+
+  const recuperar: AuthContextType["recuperar"] = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: typeof window !== "undefined" ? `${window.location.origin}/cuenta` : undefined,
+    })
+    // A propósito no decimos si el correo existe o no: eso permitiría averiguar
+    // quién tiene cuenta probando correos uno por uno.
+    if (error) return { ok: false, error: traducir(error.message) }
+    return { ok: true, aviso: "Si ese correo tiene cuenta, te llega un enlace para cambiar la contraseña." }
+  }, [])
+
+  const cambiarNovedades: AuthContextType["cambiarNovedades"] = useCallback(
+    async (quiere) => {
+      if (!perfil) return { ok: false, error: "Entrá a tu cuenta primero." }
+      const { error } = await supabase
+        .from("perfiles")
+        .update({ novedades: quiere, novedades_desde: quiere ? new Date().toISOString() : null })
+        .eq("id", perfil.id)
+      if (error) return { ok: false, error: traducir(error.message) }
+      setPerfil({ ...perfil, novedades: quiere })
+      return { ok: true }
+    },
+    [perfil],
+  )
 
   return (
     <AuthContext.Provider
       value={{
-        user,
-        isAuthenticated: user !== null,
-        isLoading,
-        login,
-        logout,
-        checkAuth,
+        perfil,
+        cargando,
+        faltaVerificar: Boolean(session?.user && !session.user.email_confirmed_at),
+        registrar,
+        entrar,
+        salir,
+        recuperar,
+        cambiarNovedades,
       }}
     >
       {children}
@@ -109,9 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error("useAuth necesita estar dentro de AuthProvider")
+  return ctx
 }
