@@ -1,4 +1,5 @@
 "use client"
+import { SITE_URL } from "@/lib/site"
 
 import { useEffect, useRef, useState } from "react"
 import { Share2, Link2, ImageDown, Loader2 } from "lucide-react"
@@ -7,7 +8,7 @@ import { useApp } from "@/context/app-context"
 import { downloadStoryCard } from "@/lib/story-card"
 import { EV, track } from "@/lib/track"
 
-const URL_SITE = "https://billion-live.vercel.app"
+const URL_SITE = SITE_URL
 const TEXT = "De $10 a un Mercedes-AMG Mansory, en público desde Bolivia 🏁 Mirá el reto en vivo:"
 
 export function ShareButton({ className = "" }: { className?: string }) {

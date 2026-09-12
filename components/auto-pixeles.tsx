@@ -166,7 +166,16 @@ export function AutoPixeles() {
       </div>
 
       {/* ── Comprar ── */}
-      {!compra && (
+      {!compra && est?.configured === false && (
+        <div className="mt-5 rounded-3xl border border-border bg-card/40 px-5 py-6 text-center">
+          <div className="font-display text-lg font-bold tracking-tight">Muy pronto</div>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Los lugares en el auto se abren en unos días. Mientras tanto, mirá cómo se va armando.
+          </p>
+        </div>
+      )}
+
+      {!compra && est?.configured !== false && (
         <div className="mt-5 rounded-3xl border border-border bg-card/40 px-5 py-6 md:px-7">
           <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">Poné tu nombre en el auto</h4>
           <p className="mt-1.5 text-sm text-muted-foreground">
