@@ -8,7 +8,6 @@ import { ProgressDashboard } from "@/components/progress-dashboard"
 import { SocialLinks, WHATSAPP_COMMUNITY } from "@/components/social-links"
 import { MessageCircle, ArrowUpRight, Menu, X, LayoutDashboard, BarChart3, BookOpen, Trophy, Handshake } from "lucide-react"
 import { ManifestoView } from "@/components/manifesto-view"
-import { EarlyWall } from "@/components/early-wall"
 import { Sponsors } from "@/components/sponsors"
 import { PrimePipeline } from "@/components/prime-pipeline"
 import { Roadmap } from "@/components/roadmap"
@@ -227,11 +226,6 @@ export default function Dashboard() {
           <NotifyForm />
         </Reveal>
       </section>
-
-      {/* El muro del Día 1 */}
-      <Reveal>
-        <EarlyWall />
-      </Reveal>
 
       {/* Sponsors */}
       <Reveal>
