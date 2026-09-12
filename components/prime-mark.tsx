@@ -14,7 +14,27 @@ import Image from "next/image"
 
 const PRIME_WEB = "https://www.primebusiness.live/"
 
-export function PrimeMark({ className = "" }: { className?: string }) {
+const CHIP =
+  "inline-flex translate-y-[0.1em] items-center rounded-[5px] bg-[#31abc4] px-[0.45em] py-[0.28em] align-baseline"
+
+/**
+ * `link={false}` para cuando el logo va DENTRO de otro enlace o de un botón:
+ * un <a> anidado en un <a> es HTML inválido y el navegador lo rompe.
+ */
+export function PrimeMark({ className = "", link = true }: { className?: string; link?: boolean }) {
+  const logo = (
+    <Image
+      src="/logos/prime-wordmark.png"
+      alt="PRIME"
+      width={600}
+      height={107}
+      className="h-[0.62em] w-auto"
+      unoptimized
+    />
+  )
+
+  if (!link) return <span className={`${CHIP} ${className}`}>{logo}</span>
+
   return (
     <a
       href={PRIME_WEB}
@@ -22,16 +42,9 @@ export function PrimeMark({ className = "" }: { className?: string }) {
       rel="noopener noreferrer"
       aria-label="PRIME — ir al sitio de la empresa"
       title="primebusiness.live"
-      className={`inline-flex translate-y-[0.1em] items-center rounded-[5px] bg-[#31abc4] px-[0.45em] py-[0.28em] align-baseline transition-opacity hover:opacity-85 ${className}`}
+      className={`${CHIP} transition-opacity hover:opacity-85 ${className}`}
     >
-      <Image
-        src="/logos/prime-wordmark.png"
-        alt="PRIME"
-        width={600}
-        height={107}
-        className="h-[0.62em] w-auto"
-        unoptimized
-      />
+      {logo}
     </a>
   )
 }

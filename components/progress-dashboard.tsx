@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useApp, CHALLENGE_TARGET, CHALLENGE_LAUNCH, CHALLENGE_RECORD_DEADLINE } from "@/context/app-context"
+import { PrimeMark } from "@/components/prime-mark"
 
 // ──────────────────────────────────────────────────────────────
 // EDITAR ACÁ: números manuales del reto (actualizá a medida que avanzás).
@@ -63,7 +64,7 @@ export function ProgressDashboard() {
       {/* Sello de transparencia */}
       <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
         <span className="w-1.5 h-1.5 rounded-full bg-kev-primary animate-pulse" />
-        Todo real, sin filtros · el contador = revenue real de PRIME
+        Todo real, sin filtros · el contador = revenue real de <PrimeMark />
       </div>
 
       {/* EL RETO */}
@@ -83,7 +84,9 @@ export function ProgressDashboard() {
 
       {/* PRIME (MOTOR) */}
       <div>
-        <GroupLabel>PRIME · el motor</GroupLabel>
+        <GroupLabel>
+          <PrimeMark /> · el motor
+        </GroupLabel>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat value={`$${MRR.toLocaleString("en-US")}`} label="MRR" sub="ingreso recurrente/mes" />
           <Stat value={`${CLIENTES_RETO}`} label="Clientes" sub="cerrados en el reto" />

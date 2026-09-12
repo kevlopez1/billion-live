@@ -9,6 +9,7 @@ import { Countdown } from "@/components/countdown"
 import { MansoryMark } from "@/components/mansory-mark"
 import { EV, track } from "@/lib/track"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
+import { PrimeMark } from "@/components/prime-mark"
 
 export function PortfolioOverview() {
   const { metrics } = useApp()
@@ -268,7 +269,7 @@ export function PortfolioOverview() {
             <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </span>
           <span className="text-[11px] text-muted-foreground">
-            Todos son pagos de clientes de PRIME
+            Todos son pagos de clientes de <PrimeMark link={false} />
           </span>
         </Link>
       </div>

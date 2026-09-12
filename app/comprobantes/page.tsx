@@ -79,8 +79,8 @@ export default function ComprobantesPage() {
         <h2 className="font-display text-base font-bold tracking-tight md:text-lg">Cómo leer esto</h2>
         <ul className="mt-2.5 space-y-2 text-sm leading-relaxed text-muted-foreground">
           <li>
-            <b className="text-foreground">Son ingresos, no ganancia.</b> Es lo que entró por servicios de PRIME,
-            antes de costos e impuestos.
+            <b className="text-foreground">Son ingresos, no ganancia.</b> Es lo que entró por servicios de{" "}
+            <PrimeMark />, antes de costos e impuestos.
           </li>
           <li>
             <b className="text-foreground">Están en bolivianos.</b> El contador del reto los convierte a dólares al

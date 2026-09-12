@@ -1,6 +1,7 @@
 "use client"
 
 import { Flame } from "lucide-react"
+import { PrimeMark } from "@/components/prime-mark"
 
 // ──────────────────────────────────────────────────────────────
 // EDITAR ACÁ: pipeline de PRIME (tratos en proceso del reto, desde cero).
@@ -25,7 +26,9 @@ export function PrimePipeline() {
     <div className="space-y-5">
       <div className="flex items-center justify-between border-b border-border pb-3">
         <div>
-          <div className="section-eyebrow">PRIME · ventas en público</div>
+          <div className="section-eyebrow">
+            <PrimeMark /> · ventas en público
+          </div>
           <h3 className="mt-2 font-display font-bold tracking-tight text-xl md:text-2xl">En negociación</h3>
         </div>
       </div>

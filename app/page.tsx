@@ -28,6 +28,7 @@ import { FirmaCta } from "@/components/firma-cta"
 import { AutoPixeles } from "@/components/auto-pixeles"
 import { useRouter } from "next/navigation"
 import { EV, track } from "@/lib/track"
+import { PrimeMark } from "@/components/prime-mark"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -233,7 +234,7 @@ export default function Dashboard() {
                   <span className="font-serif-display italic text-3xl md:text-5xl text-rojo">reales</span>
                 </h2>
                 <p className="text-sm text-muted-foreground mt-3 max-w-lg">
-                  Las estadísticas reales del reto: cuánto, cómo y cuándo. Cada número es revenue real de PRIME, no inventado.
+                  Las estadísticas reales del reto: cuánto, cómo y cuándo. Cada número es revenue real de <PrimeMark />, no inventado.
                 </p>
               </div>
             </Reveal>
