@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react"
 import Image from "next/image"
+import { X } from "lucide-react"
 
 // WhatsApp del empleado AI de PRIME (número real).
 const PRIME_WA = "59172258926"
@@ -45,6 +46,16 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
         } as CSSProperties
       }
     >
+      {/* Cerrar: el hub ahora se puede reabrir desde el header, así que tiene
+          que poder cerrarse sin obligar a "entrar al reto". */}
+      <button
+        onClick={onEnter}
+        aria-label="Cerrar"
+        className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white/70 text-muted-foreground backdrop-blur hover:text-foreground"
+      >
+        <X className="h-4 w-4" />
+      </button>
+
       <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center px-6 py-10 text-center text-foreground">
         {/* Avatar */}
         <Image
