@@ -153,13 +153,13 @@ export function PortfolioOverview() {
       {/* El auto — flotando sobre el fondo (look poster de showroom) */}
       <div className="relative mt-8 md:mt-6">
         <div
-          className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[2%] w-[72%] h-10 md:h-14 rounded-full blur-2xl"
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[6%] w-[52%] h-8 md:h-10 rounded-full blur-2xl"
           style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(27,23,16,0.32), transparent 70%)" }}
         />
         <img
           src="/images/car/green-2-cut.png"
           alt="Mercedes-AMG GT 63 4-door por Mansory"
-          className="relative w-full max-w-3xl mx-auto"
+          className="relative mx-auto w-[78%] max-w-xl sm:w-[70%]"
           loading="eager"
         />
       </div>
@@ -172,12 +172,12 @@ export function PortfolioOverview() {
         {["green-3", "green-4", "green-1"].map((n, i) => (
           <div
             key={i}
-            className="img-zoom snap-center shrink-0 w-[58%] sm:w-[38%] lg:w-[31.5%] rounded-2xl overflow-hidden border border-border bg-white shadow-[0_10px_40px_-18px_rgba(0,0,0,0.25)]"
+            className="img-zoom snap-center shrink-0 w-[44%] sm:w-[29%] lg:w-[23%] rounded-2xl overflow-hidden border border-border bg-white shadow-[0_8px_30px_-16px_rgba(0,0,0,0.22)]"
           >
             <img
               src={`/images/car/${n}.jpg`}
               alt="Mercedes-AMG GT 63 4-door por Mansory"
-              className="w-full aspect-[3/2] object-cover"
+              className="w-full aspect-[3/2] object-contain p-2.5"
               loading="lazy"
             />
           </div>
