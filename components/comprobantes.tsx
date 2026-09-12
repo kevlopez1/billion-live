@@ -4,6 +4,7 @@ import { useState } from "react"
 import { createPortal } from "react-dom"
 import { ShieldCheck, X } from "lucide-react"
 import { COMPROBANTES, monto, type Comprobante } from "@/lib/comprobantes"
+import { PrimeMark } from "@/components/prime-mark"
 
 // Grilla de comprobantes con lupa. Se usa en la home (recortada) y en la
 // página /comprobantes (entera).
@@ -38,7 +39,7 @@ export function Comprobantes({ items = COMPROBANTES, nota = true }: { items?: Co
       {nota && (
         <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-muted-foreground/80">
           <ShieldCheck className="w-3.5 h-3.5 text-kev-primary" />
-          <span><b className="text-foreground">Todos son clientes de PRIME.</b> Cada monto es un pago real por servicios de la empresa; los datos personales van censurados por privacidad.</span>
+          <span><b className="text-foreground">Todos son clientes de</b> <PrimeMark />. Cada monto es un pago real por servicios de la empresa; los datos personales van censurados por privacidad.</span>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { ArrowLeft, ArrowUpRight, Building2, CalendarDays, Receipt, ShieldCheck } from "lucide-react"
 import { Comprobantes } from "@/components/comprobantes"
+import { PrimeMark } from "@/components/prime-mark"
 import { Volver } from "@/components/volver"
 import { CANTIDAD, DESDE, ENTIDADES, HASTA, TOTAL_BS } from "@/lib/comprobantes"
 import { SITE_URL } from "@/lib/site"
@@ -56,7 +57,7 @@ export default function ComprobantesPage() {
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-muted-foreground md:text-base">
           Todo el mundo muestra el auto. Acá está la factura. Cada peso que mueve el contador entró por un pago
-          real de un <b className="text-foreground">cliente de PRIME</b>, y acá está el recibo de cada uno.
+          real de un <b className="text-foreground">cliente de</b> <PrimeMark />, y acá está el recibo de cada uno.
         </p>
       </div>
 
@@ -98,7 +99,7 @@ export default function ComprobantesPage() {
           Esta plata sale de un negocio que existe
         </h2>
         <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
-          PRIME les arma empleados de IA a empresas. Los de arriba son sus clientes.
+          <PrimeMark /> les arma empleados de IA a empresas. Los de arriba son sus clientes.
         </p>
         <a
           href="https://primebusiness.live"
