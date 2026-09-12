@@ -21,8 +21,6 @@ import { Changelog } from "@/components/changelog"
 import { CuentaPanel } from "@/components/cuenta-panel"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
-import { Comprobantes } from "@/components/comprobantes"
-import { CANTIDAD, COMPROBANTES, TOTAL_BS } from "@/lib/comprobantes"
 import { MemoriaScroll } from "@/components/memoria-scroll"
 import { Eventos } from "@/components/eventos"
 import { FirmasComprobantes } from "@/components/firmas-comprobantes"
@@ -156,40 +154,11 @@ export default function Dashboard() {
         <Roadmap />
       </section>
 
-      {/* Comprobantes: acá va solo un adelanto. Los 15 viven en /comprobantes,
-          que es su propia página: así el link se puede compartir solo y la home
-          no se convierte en un muro de imágenes. */}
-      <section id="comprobantes" className="scroll-mt-24">
-        <Reveal>
-          <SectionLabel index="03" eyebrow="Pruebas reales" title="Los comprobantes" accent="azul" />
-        </Reveal>
-        <Reveal delay={80}>
-          <Comprobantes items={COMPROBANTES.slice(0, 6)} nota={false} />
-        </Reveal>
-        <Reveal delay={100}>
-          <Link
-            href="/comprobantes"
-            onClick={() => track(EV.VER_COMPROBANTES)}
-            className="lift group mt-4 flex items-center justify-between gap-4 rounded-2xl border border-kev-primary/40 bg-kev-primary/[0.06] px-5 py-4 md:px-7"
-          >
-            <div>
-              <div className="font-display text-[15px] font-bold tracking-tight md:text-base">
-                Ver los {CANTIDAD} comprobantes
-              </div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                Bs {TOTAL_BS.toLocaleString("es-BO")} cobrados · todos son clientes de PRIME
-              </div>
-            </div>
-            <ArrowUpRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </Reveal>
-      </section>
-
-      {/* El auto por partes: la monetización directa del reto. Va pegada a los
-          comprobantes a propósito — primero la prueba, después el pedido. */}
+      {/* El auto por partes: la monetización directa del reto. La prueba ya no
+          vive acá — el botón del hero lleva a /comprobantes, que es su página. */}
       <section id="el-auto" className="scroll-mt-24">
         <Reveal>
-          <SectionLabel index="04" eyebrow="El auto es de todos" title="El auto por partes" accent="azul" />
+          <SectionLabel index="03" eyebrow="El auto es de todos" title="El auto por partes" accent="azul" />
         </Reveal>
         <Reveal delay={60}>
           <FirmaCta />
@@ -208,7 +177,7 @@ export default function Dashboard() {
       {/* Eventos: presencia real de PRIME en el ecosistema */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="En la cancha" title="Los eventos" accent="azul" />
+          <SectionLabel index="04" eyebrow="En la cancha" title="Los eventos" accent="azul" />
         </Reveal>
         <Reveal delay={80}>
           <Eventos />
@@ -218,7 +187,7 @@ export default function Dashboard() {
       {/* Sumate: comunidad de WhatsApp + crear cuenta */}
       <section>
         <Reveal>
-          <SectionLabel index="06" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
+          <SectionLabel index="05" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
         </Reveal>
         <Reveal delay={60}>
           <a
