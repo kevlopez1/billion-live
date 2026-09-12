@@ -3,7 +3,18 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { PenLine, Loader2, Check, ArrowUpRight } from "lucide-react"
-import { BODY_PATH, CELL, SLOTS, SUELO, VIEW_H, VIEW_W, type Slot } from "@/lib/car-grid"
+import {
+  BODY_PATH,
+  CELL,
+  PIXEL_PRICE,
+  SLOTS,
+  SUELO,
+  TOTAL_PIXELS,
+  TOTAL_VALUE,
+  VIEW_H,
+  VIEW_W,
+  type Slot,
+} from "@/lib/car-grid"
 import { EV, track } from "@/lib/track"
 
 // WhatsApp de Kev para pagar (el mismo de las firmas).
@@ -35,11 +46,39 @@ export function AutoPixeles() {
   const [enviando, setEnviando] = useState(false)
   const [listo, setListo] = useState<{ code: string; price: number } | null>(null)
 
+  // Estado seguro: lo que se muestra si la API no responde o responde otra cosa.
+  // Sin esto, un {error} del servidor dejaba a `est` sin `cells`/`slots` y el
+  // render tiraba una excepción que se llevaba TODA la web puesta.
+  const VACIO: Estado = {
+    configured: false,
+    cells: [],
+    slots: {},
+    total_pixels: TOTAL_PIXELS,
+    total_value: TOTAL_VALUE,
+    pixel_price: PIXEL_PRICE,
+    sold_pixels: 0,
+    sold_usd: 0,
+  }
+
+  const normalizar = (d: unknown): Estado => {
+    const o = (d ?? {}) as Partial<Estado>
+    return {
+      configured: o.configured === true,
+      cells: Array.isArray(o.cells) ? o.cells : [],
+      slots: o.slots && typeof o.slots === "object" ? o.slots : {},
+      total_pixels: typeof o.total_pixels === "number" ? o.total_pixels : TOTAL_PIXELS,
+      total_value: typeof o.total_value === "number" ? o.total_value : TOTAL_VALUE,
+      pixel_price: typeof o.pixel_price === "number" ? o.pixel_price : PIXEL_PRICE,
+      sold_pixels: typeof o.sold_pixels === "number" ? o.sold_pixels : 0,
+      sold_usd: typeof o.sold_usd === "number" ? o.sold_usd : 0,
+    }
+  }
+
   const cargar = () =>
     fetch("/api/pixels", { cache: "no-store" })
       .then((r) => r.json())
-      .then(setEst)
-      .catch(() => {})
+      .then((d) => setEst(normalizar(d)))
+      .catch(() => setEst(VACIO))
 
   useEffect(() => {
     cargar()
@@ -100,7 +139,7 @@ export function AutoPixeles() {
 
           {/* Ruedas (detrás del cuerpo) */}
           {SLOTS.filter((s) => s.id.startsWith("rueda")).map((s) => {
-            const dueño = est?.slots[s.id]
+            const dueño = est?.slots?.[s.id]
             return (
               <g key={s.id} onClick={() => !dueño && setCompra({ kind: "slot", slot: s })}
                 className={dueño ? "" : "cursor-pointer"}>
@@ -122,7 +161,7 @@ export function AutoPixeles() {
 
           {/* Píxeles vendidos: se encienden dentro del cuerpo */}
           <g>
-            {est?.cells.map((c) => (
+            {(est?.cells ?? []).map((c) => (
               <rect key={`${c.x}-${c.y}`} x={c.x * CELL} y={c.y * CELL} width={CELL - 0.6} height={CELL - 0.6}
                 rx={1} fill="var(--gold)" />
             ))}
@@ -134,7 +173,7 @@ export function AutoPixeles() {
 
           {/* Capó: espacio premium */}
           {SLOTS.filter((s) => s.id === "puerta").map((s) => {
-            const dueño = est?.slots[s.id]
+            const dueño = est?.slots?.[s.id]
             return (
               <g key={s.id} onClick={() => !dueño && setCompra({ kind: "slot", slot: s })}
                 className={dueño ? "" : "cursor-pointer"}>
@@ -166,7 +205,7 @@ export function AutoPixeles() {
       </div>
 
       {/* ── Comprar ── */}
-      {!compra && est?.configured === false && (
+      {!compra && est !== null && !est.configured && (
         <div className="mt-5 rounded-3xl border border-border bg-card/40 px-5 py-6 text-center">
           <div className="font-display text-lg font-bold tracking-tight">Muy pronto</div>
           <p className="mt-1.5 text-sm text-muted-foreground">
@@ -175,7 +214,7 @@ export function AutoPixeles() {
         </div>
       )}
 
-      {!compra && est?.configured !== false && (
+      {!compra && est?.configured === true && (
         <div className="mt-5 rounded-3xl border border-border bg-card/40 px-5 py-6 md:px-7">
           <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">Poné tu nombre en el auto</h4>
           <p className="mt-1.5 text-sm text-muted-foreground">
@@ -198,7 +237,7 @@ export function AutoPixeles() {
           <div className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-gold">Los 3 lugares del auto</div>
           <div className="mt-2 flex flex-wrap gap-2.5">
             {SLOTS.map((s) => {
-              const tomado = !!est?.slots[s.id]
+              const tomado = !!est?.slots?.[s.id]
               return (
                 <button key={s.id} disabled={tomado} onClick={() => setCompra({ kind: "slot", slot: s })}
                   className={`rounded-2xl border px-4 py-3 text-left ${
@@ -208,7 +247,7 @@ export function AutoPixeles() {
                   }`}>
                   <div className="font-display text-base font-bold">{s.label}</div>
                   <div className="text-xs text-muted-foreground">
-                    {tomado ? `Tomado · ${est?.slots[s.id].name}` : `$${s.price} · tu logo o marca`}
+                    {tomado ? `Tomado · ${est?.slots?.[s.id]?.name}` : `$${s.price} · tu logo o marca`}
                   </div>
                 </button>
               )
