@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { ArrowLeft, ArrowUpRight, Building2, CalendarDays, Receipt, ShieldCheck } from "lucide-react"
 import { Comprobantes } from "@/components/comprobantes"
+import { Volver } from "@/components/volver"
 import { CANTIDAD, DESDE, ENTIDADES, HASTA, TOTAL_BS } from "@/lib/comprobantes"
 import { SITE_URL } from "@/lib/site"
 
@@ -42,9 +42,9 @@ function Dato({ icono, valor, sub }: { icono: React.ReactNode; valor: string; su
 export default function ComprobantesPage() {
   return (
     <main className="mx-auto min-h-dvh w-full max-w-3xl px-5 py-10 md:py-16">
-      <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+      <Volver className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> Volver al reto
-      </Link>
+      </Volver>
 
       {/* Encabezado */}
       <div className="mt-6 text-center">
@@ -110,9 +110,9 @@ export default function ComprobantesPage() {
         </a>
       </div>
 
-      <Link href="/" className="mt-8 block text-center text-xs text-muted-foreground underline">
+      <Volver className="mt-8 block text-center text-xs text-muted-foreground underline">
         Volver al reto
-      </Link>
+      </Volver>
     </main>
   )
 }

@@ -1,11 +1,11 @@
 "use client"
 
-import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
 import { ArrowLeft, Bell, BellOff, Loader2, LogOut, Mail, ShieldCheck } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 import { CuentaPanel } from "@/components/cuenta-panel"
+import { Volver } from "@/components/volver"
 import { EV, track } from "@/lib/track"
 
 export default function CuentaPage() {
@@ -25,9 +25,9 @@ export default function CuentaPage() {
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-lg px-5 py-10 md:py-16">
-      <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+      <Volver className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> Volver al reto
-      </Link>
+      </Volver>
 
       <h1 className="mt-6 font-display text-3xl font-extrabold tracking-tight md:text-4xl">Tu cuenta</h1>
 

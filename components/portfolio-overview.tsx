@@ -94,9 +94,19 @@ export function PortfolioOverview() {
     // Don't animate if the value hasn't changed
     if (displayValue === supabaseMetrics.net_worth) return
 
-    // Odómetro: en la primera carga anima desde 0 (efecto dramático); luego desde el valor actual.
-    const initial = isInitialLoad.current
+    // Odómetro: anima desde 0 (efecto dramático) SOLO la primera vez de la
+    // pestaña. Antes usaba un ref, que se reinicia en cada montaje: al volver
+    // de otra página el número contaba de nuevo desde cero y parecía que la
+    // web se había recargado.
+    let yaPaso = false
+    try {
+      yaPaso = sessionStorage.getItem("kpg-odometro") === "1"
+    } catch {}
+    const initial = isInitialLoad.current && !yaPaso
     isInitialLoad.current = false
+    try {
+      sessionStorage.setItem("kpg-odometro", "1")
+    } catch {}
     const startValue = initial ? 0 : displayValue
     const endValue = supabaseMetrics.net_worth
     const duration = initial ? 1600 : 800
