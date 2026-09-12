@@ -55,7 +55,14 @@ export async function GET() {
     .select("kind, idx, slot_id, name, link, price_usd, status")
     .neq("status", "anulado")
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // Si la lectura falla (p.ej. la tabla todavía no existe), NO devolvemos una
+  // forma que el cliente no sabe leer: degradamos a "sin configurar" con la
+  // forma completa. Un 500 con {error} dejaba a la web sin `cells`/`slots` y
+  // rompía TODA la página al renderizar.
+  if (error) {
+    console.error("[api/pixels] lectura fallida:", error.message)
+    return NextResponse.json({ ...base, configured: false, cells: [], slots: {}, sold_usd: 0, sold_pixels: 0 })
+  }
 
   const rows = data ?? []
   // Solo lo CONFIRMADO se enciende en el auto. Lo pendiente reserva el lugar
