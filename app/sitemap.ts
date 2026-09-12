@@ -12,6 +12,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
+      // Es la página que sostiene toda la credibilidad del reto: va alto.
+      url: `${SITE_URL}/comprobantes`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: `${SITE_URL}/prensa`,
       lastModified: now,
       changeFrequency: "weekly",
