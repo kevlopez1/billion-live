@@ -23,6 +23,7 @@ import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { Comprobantes } from "@/components/comprobantes"
 import { CANTIDAD, COMPROBANTES, TOTAL_BS } from "@/lib/comprobantes"
+import { MemoriaScroll } from "@/components/memoria-scroll"
 import { Eventos } from "@/components/eventos"
 import { FirmasComprobantes } from "@/components/firmas-comprobantes"
 import { MuroFirmas } from "@/components/muro-firmas"
@@ -313,6 +314,9 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
+      {/* Recuerda dónde quedó el scroll para que volver de una página interna
+          no te deje arriba de todo, como si se hubiera recargado. */}
+      <MemoriaScroll />
       <IntroSplash />
       {showHub && <Hub onEnter={enterSite} />}
 
