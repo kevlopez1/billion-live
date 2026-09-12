@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-const SITE_URL = "https://billion-live.vercel.app"
+import { SITE_URL } from "@/lib/site"
 
 // Bots de IA a los que damos la BIENVENIDA explícita (GEO/AEO):
 // que ChatGPT, Perplexity, Claude, Gemini, etc. puedan leer e indexar el reto.

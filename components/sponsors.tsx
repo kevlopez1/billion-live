@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import { Megaphone, Eye, Users, Clock, Handshake } from "lucide-react"
 import { toast } from "sonner"
+import { EV, track } from "@/lib/track"
 
 const plans = [
   { id: "dia", label: "Sponsor del día" },
@@ -45,6 +46,7 @@ export function Sponsors() {
         return
       }
       if (!res.ok) return toast.error(data.error || "No se pudo enviar. Probá de nuevo.")
+      track(EV.SPONSOR_ENVIADO, { plan })
       setDone(true)
       toast.success("¡Recibido! Te contacto pronto 🤝")
     } catch {

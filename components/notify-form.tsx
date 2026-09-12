@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import { BellRing, Check } from "lucide-react"
 import { toast } from "sonner"
+import { EV, track } from "@/lib/track"
 
 const triggers = [
   { id: "1000", label: "Llegue a $1.000" },
@@ -37,6 +38,7 @@ export function NotifyForm() {
         return
       }
       if (!res.ok) return toast.error(data.error || "No se pudo guardar. Probá de nuevo.")
+      track(EV.NOTIFY_SUSCRITO, { trigger })
       setDone(true)
       toast.success("¡Listo! Te aviso cuando pase 🔔")
     } catch {

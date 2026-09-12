@@ -6,6 +6,7 @@ import { AppProvider } from "@/context/app-context"
 import { AuthProvider } from "@/context/auth-context"
 import { Toaster } from "sonner"
 import "./globals.css"
+import { SITE_URL } from "@/lib/site"
 
 // Mezcla de 3 tipografías (look único):
 // Manrope = cuerpo · Bricolage Grotesque = títulos display · Instrument Serif = acentos editoriales.
@@ -31,7 +32,7 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 })
 
-const SITE_URL = "https://billion-live.vercel.app"
+
 const OG_IMAGE = "/icon.png"
 
 export const metadata: Metadata = {

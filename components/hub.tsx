@@ -2,6 +2,8 @@
 
 import type { CSSProperties } from "react"
 import Image from "next/image"
+import { X } from "lucide-react"
+import { EV, track } from "@/lib/track"
 
 // WhatsApp del empleado AI de PRIME (número real).
 const PRIME_WA = "59172258926"
@@ -45,6 +47,16 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
         } as CSSProperties
       }
     >
+      {/* Cerrar: el hub ahora se puede reabrir desde el header, así que tiene
+          que poder cerrarse sin obligar a "entrar al reto". */}
+      <button
+        onClick={onEnter}
+        aria-label="Cerrar"
+        className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white/70 text-muted-foreground backdrop-blur hover:text-foreground"
+      >
+        <X className="h-4 w-4" />
+      </button>
+
       <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center px-6 py-10 text-center text-foreground">
         {/* Avatar */}
         <Image
@@ -66,7 +78,10 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
         <div className="mt-7 flex w-full flex-col gap-3.5">
           {/* 1 · El reto → entra al sitio */}
           <button
-            onClick={onEnter}
+            onClick={() => {
+              track(EV.HUB_ENTRAR_RETO)
+              onEnter()
+            }}
             className="lift relative flex flex-col items-center justify-center rounded-2xl bg-foreground px-5 py-4 text-center shadow-[0_8px_20px_rgba(40,55,80,0.28)]"
           >
             <span className="flex items-center justify-center gap-3">
@@ -83,6 +98,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
           {/* 2 · Empleado AI → WhatsApp de PRIME */}
           <a
             href={PRIME_WA_URL}
+            onClick={() => track(EV.PRIME_WHATSAPP)}
             target="_blank"
             rel="noopener noreferrer"
             className="lift relative flex flex-col items-center justify-center rounded-2xl px-5 py-4 text-center"
@@ -103,6 +119,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
           {/* Conocer PRIME → primebusiness.live */}
           <a
             href={PRIME_WEB}
+            onClick={() => track(EV.PRIME_CLIENTES)}
             target="_blank"
             rel="noopener noreferrer"
             className="lift relative flex flex-col items-center justify-center rounded-2xl border border-border bg-card/70 px-5 py-4 text-center shadow-[0_2px_10px_rgba(40,60,90,0.05)]"
@@ -116,6 +133,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
           {/* PRIME · Mercado 2030 (acceso exclusivo) */}
           <a
             href={PRIME_MERCADO}
+            onClick={() => track(EV.PRIME_INVERSORES)}
             target="_blank"
             rel="noopener noreferrer"
             className="lift relative flex flex-col items-center justify-center rounded-2xl border border-gold/50 bg-gold/[0.05] px-5 py-4 text-center"

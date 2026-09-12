@@ -1,6 +1,7 @@
 "use client"
 
 import { PenLine, ArrowUpRight } from "lucide-react"
+import { EV, track } from "@/lib/track"
 
 // WhatsApp de Kev para comprar/firmar (mismo número que el muro).
 const WA_KEV = "59174234380"
@@ -31,6 +32,7 @@ export function FirmaCta() {
 
       <a
         href={WA_URL}
+        onClick={() => track(EV.FIRMA_CLICK)}
         target="_blank"
         rel="noopener noreferrer"
         className="lift mt-6 inline-flex items-center gap-2 rounded-2xl bg-foreground px-7 py-4 font-display font-semibold text-background shadow-[0_8px_20px_rgba(40,55,80,0.28)]"

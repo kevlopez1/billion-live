@@ -6,7 +6,7 @@ import { useApp } from "@/context/app-context"
 import { PortfolioOverview } from "@/components/portfolio-overview"
 import { ProgressDashboard } from "@/components/progress-dashboard"
 import { SocialLinks, WHATSAPP_COMMUNITY } from "@/components/social-links"
-import { MessageCircle, ArrowUpRight, Menu, X, LayoutDashboard, BarChart3, BookOpen, Trophy } from "lucide-react"
+import { MessageCircle, ArrowUpRight, Menu, X, LayoutDashboard, BarChart3, BookOpen, Trophy, Handshake } from "lucide-react"
 import { ManifestoView } from "@/components/manifesto-view"
 import { EarlyWall } from "@/components/early-wall"
 import { Sponsors } from "@/components/sponsors"
@@ -26,7 +26,9 @@ import { Eventos } from "@/components/eventos"
 import { FirmasComprobantes } from "@/components/firmas-comprobantes"
 import { MuroFirmas } from "@/components/muro-firmas"
 import { FirmaCta } from "@/components/firma-cta"
+import { AutoPixeles } from "@/components/auto-pixeles"
 import { useRouter } from "next/navigation"
+import { EV, track } from "@/lib/track"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -89,6 +91,16 @@ export default function Dashboard() {
 
   // Menú lateral (drawer): reemplaza la barra inferior.
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Reabrir el hub: es el ÚNICO lugar con los caminos a PRIME (clientes,
+  // inversores, empleado AI). Antes se veía una vez por sesión y desaparecía,
+  // así que un visitante recurrente no volvía a encontrar cómo contratar.
+  const openHub = (origen: "header" | "menu") => {
+    track(EV.HUB_ABIERTO, { origen })
+    setShowHub(true)
+    setMenuOpen(false)
+  }
+
   const navIcon: Record<ActiveView, typeof LayoutDashboard> = {
     dashboard: LayoutDashboard,
     pulse: BarChart3,
@@ -170,6 +182,9 @@ export default function Dashboard() {
         <Reveal delay={60}>
           <FirmaCta />
         </Reveal>
+        <Reveal delay={80}>
+          <AutoPixeles />
+        </Reveal>
         <Reveal delay={100}>
           <FirmasComprobantes />
         </Reveal>
@@ -186,6 +201,7 @@ export default function Dashboard() {
         <Reveal delay={60}>
           <a
             href={WHATSAPP_COMMUNITY}
+            onClick={() => track(EV.COMUNIDAD_WHATSAPP)}
             target="_blank"
             rel="noopener noreferrer"
             className="lift mb-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-card/40 px-5 py-5 md:px-7 hover:border-foreground/20 transition-colors"
@@ -310,6 +326,14 @@ export default function Dashboard() {
             </button>
           </div>
           <nav className="flex flex-col gap-1.5">
+            <button
+              onClick={() => openHub("menu")}
+              className="flex items-center gap-3 rounded-xl border border-gold/45 bg-gold/[0.08] px-4 py-3 text-left text-[15px] font-semibold text-foreground hover:border-gold"
+            >
+              <Handshake className="w-[18px] h-[18px] text-gold" />
+              Trabajar conmigo
+            </button>
+            <div className="my-2 h-px bg-border" />
             {navItems.map((item) => {
               const Icon = navIcon[item.id]
               const active = activeView === item.id
@@ -394,6 +418,15 @@ export default function Dashboard() {
                 Ranking
               </button>
             </nav>
+            <button
+              onClick={() => openHub("header")}
+              aria-label="Trabajar conmigo"
+              title="Trabajar conmigo"
+              className="press-effect flex items-center gap-2 rounded-full border border-gold/45 bg-gold/[0.08] px-3 py-2 text-sm font-medium text-foreground hover:border-gold"
+            >
+              <Handshake className="h-4 w-4 text-gold" />
+              <span className="hidden md:inline">Trabajar conmigo</span>
+            </button>
             <ShareButton />
             <button
               onClick={() => setMenuOpen(true)}
