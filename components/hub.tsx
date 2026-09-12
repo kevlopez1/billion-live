@@ -59,13 +59,17 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
 
       <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center px-6 py-10 text-center text-foreground">
         {/* Avatar */}
+        {/* La foto ENTERA en vertical, el mismo formato que "El origen" de la
+            home: en un círculo chico el recorte a la cara quedaba como un
+            fotograma congelado y se perdían los $10, que son toda la historia.
+            La imagen es 4:5, así que en este marco entra sin recortar nada. */}
         <Image
-          src="/images/kev-avatar-2026.jpg"
-          alt="Kev López"
-          width={108}
-          height={108}
+          src="/images/kev-avatar-origen.jpg"
+          alt="Kev López con los $10 con los que arrancó el reto"
+          width={116}
+          height={145}
           priority
-          className="mb-3.5 rounded-full border-2 border-white object-cover shadow-[0_6px_22px_rgba(40,60,90,0.18)]"
+          className="mb-3.5 rounded-3xl border-2 border-white object-cover shadow-[0_10px_28px_rgba(40,60,90,0.22)]"
         />
 
         <h1 className="font-display text-[26px] font-extrabold tracking-tight">Kev López</h1>
