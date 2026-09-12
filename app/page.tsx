@@ -217,25 +217,6 @@ export default function Dashboard() {
         </Reveal>
       </section>
 
-      {/* Cierre — statement a sangre, tipografía gigante + motivo racing */}
-      <Reveal>
-        <div className="-mx-4 md:-mx-6 relative overflow-hidden bg-[#0a0a0a] text-white border-y border-white/10 px-6 py-20 md:py-28 text-center">
-          {/* Líneas de velocidad (sutil) */}
-          <div className="pointer-events-none absolute inset-0 text-white opacity-[0.05] speed-lines" />
-          <div className="relative max-w-5xl mx-auto">
-            <p className="font-serif-display italic text-white/50 text-xl md:text-3xl">El auto es la carnada</p>
-            <p className="font-display font-extrabold uppercase tracking-tighter text-6xl sm:text-8xl md:text-9xl leading-[0.85] mt-1">
-              El imperio<br />es la meta
-            </p>
-            {/* Bandera a cuadros (divisor) — acento dorado */}
-            <div className="checker h-2 w-28 mx-auto mt-9" style={{ color: "var(--gold)", opacity: 0.55 }} />
-            <div className="mt-5 flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              De $10 al Mercedes · desde Bolivia
-            </div>
-          </div>
-        </div>
-      </Reveal>
     </div>
   )
 
