@@ -194,6 +194,23 @@ export function PortfolioOverview() {
           <span className="text-muted-foreground text-base number-display">/ $450K</span>
         </div>
         <div className="gold-rule mx-auto mt-4" />
+
+        {/* El origen: la foto del arranque. Al lado del número de hoy, el
+            contraste cuenta toda la historia sin explicarla. */}
+        <div className="mt-7 flex items-center justify-center gap-4">
+          <img
+            src="/images/kev-10-dolares.jpg"
+            alt="Kev López con los $10 con los que arrancó el reto"
+            className="w-20 h-24 sm:w-24 sm:h-28 rounded-2xl object-cover object-top border border-border shadow-[0_10px_30px_-14px_rgba(0,0,0,0.45)]"
+            loading="lazy"
+          />
+          <div className="max-w-[230px] text-left">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">El origen</div>
+            <div className="mt-1 font-serif-display italic text-base sm:text-lg leading-snug text-foreground">
+              Todo empezó con estos <span className="text-rojo">$10</span>.
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Barra de progreso */}
