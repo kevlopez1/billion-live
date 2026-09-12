@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { createPortal } from "react-dom"
 import { MapPin, X } from "lucide-react"
+import { PrimeMark } from "@/components/prime-mark"
 
 // Eventos a los que Kev asiste como fundador de PRIME. Prueba de que el reto se
 // juega también fuera de la pantalla: networking, ecosistema, presencia real.
@@ -62,7 +63,7 @@ export function Eventos() {
       </div>
 
       <div className="mt-4 flex items-center justify-center gap-2 text-center text-[11px] text-muted-foreground/80">
-        <span>El reto no vive solo en la pantalla: PRIME está en los eventos donde se mueve el ecosistema. Credenciales reales, QR censurado por privacidad.</span>
+        <span>El reto no vive solo en la pantalla: <PrimeMark /> está en los eventos donde se mueve el ecosistema. Credenciales reales, QR censurado por privacidad.</span>
       </div>
 
       {/* Lightbox */}

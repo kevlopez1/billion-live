@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { ChevronRight, ShieldCheck, TrendingUp, Users, Target, Quote, Mail, Building2 } from "lucide-react"
 import { SocialLinks } from "@/components/social-links"
+import { PrimeMark } from "@/components/prime-mark"
 
 export const metadata: Metadata = {
   title: "Prensa & Prueba",
@@ -64,7 +65,7 @@ export default function PrensaPage() {
           </h1>
           <p className="text-lg text-muted-foreground mt-6 font-light text-pretty leading-relaxed">
             De $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia, en público. A diferencia del flex tradicional, acá el
-            contador no se inventa: se alimenta del <span className="text-foreground">revenue real de PRIME</span>{" "}
+            contador no se inventa: se alimenta del <span className="text-foreground">revenue real de <PrimeMark /></span>{" "}
             (empleados de IA para empresas). El auto es la carnada; el imperio es la meta.
           </p>
         </header>
@@ -88,7 +89,7 @@ export default function PrensaPage() {
         <section className="mb-20 glass-card p-8 md:p-10">
           <h2 className="text-lg font-medium tracking-tight mb-4">Cómo se calcula el contador</h2>
           <p className="text-muted-foreground font-light leading-relaxed max-w-3xl">
-            El número grande del Centro de Mando representa el revenue acumulado real de PRIME, la empresa de empleados de
+            El número grande del Centro de Mando representa el revenue acumulado real de <PrimeMark />, la empresa de empleados de
             IA fundada por Kev López. Se actualiza desde el servidor con una llave privada — no desde el navegador — para
             que sea imposible de manipular. La hoja de ruta contempla conectar el contador directamente al procesador de
             pagos, de modo que cada dólar mostrado sea trazable hasta una transacción real.
@@ -142,7 +143,7 @@ export default function PrensaPage() {
             <span className="text-[11px] uppercase tracking-[0.18em]">Sobre Kev & PRIME</span>
           </div>
           <p className="text-muted-foreground font-light leading-relaxed max-w-3xl">
-            Benjamín Kevin López Mamani (21), Santa Cruz de la Sierra. Fundador de PRIME — empleados de IA para empresas.
+            Benjamín Kevin López Mamani (21), Santa Cruz de la Sierra. Fundador de <PrimeMark /> — empleados de IA para empresas.
             Construye su ecosistema (PRIME · KEV Strategy · Insightful University) en público, con una ruta clara hacia
             EE.UU. (O-1 → EB-1A) y PRIME como Delaware C-Corp. Cada hito del reto desbloquea una Beca PRIME: IA instalada
             gratis a un negocio boliviano, en cámara.
