@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-// --- TUS CREDENCIALES ---
-const supabaseUrl = "https://llhvnzlbnmoufilxgshv.supabase.co"
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsaHZuemxibm1vdWZpbHhnc2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4OTQ1OTUsImV4cCI6MjA4MzQ3MDU5NX0.rdIM39PWW6U90JfeRix6B8xdybX-wCFjEnzngsIYrrQ"
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase-config"
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 // --- TIPOS ---
 export interface GlobalMetrics {

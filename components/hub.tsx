@@ -60,7 +60,7 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
       <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center px-6 py-10 text-center text-foreground">
         {/* Avatar */}
         <Image
-          src="/images/kev-avatar.jpg"
+          src="/images/kev-avatar-2026.jpg"
           alt="Kev López"
           width={108}
           height={108}
