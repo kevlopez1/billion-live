@@ -3,35 +3,17 @@
 import { useState } from "react"
 import { createPortal } from "react-dom"
 import { ShieldCheck, X } from "lucide-react"
+import { COMPROBANTES, monto, type Comprobante } from "@/lib/comprobantes"
 
-// Comprobantes reales de pagos de clientes de PRIME. Los datos personales de
-// terceros (nombres, cuentas) van censurados EN LA IMAGEN (barra sólida), no con
-// CSS — así el archivo servido nunca contiene el dato sensible.
-const receipts = [
-  { src: "/images/comprobantes/economico-qr.jpg", amount: "Bs 1.000", bank: "Banco Económico · QR", date: "11 sep 2026" },
-  { src: "/images/comprobantes/bnb-empresa.jpg", amount: "Bs 14.000", bank: "Empresa · Banco Solidario", date: "10 sep 2026" },
-  { src: "/images/comprobantes/fie-cuizaguana.jpg", amount: "Bs 2.290", bank: "Banco Fie · QR", date: "1 sep 2026" },
-  { src: "/images/comprobantes/deposito-cliente.jpg", amount: "Bs 11.000", bank: "Efectivo · cliente Santa Cruz", date: "20 ago 2026" },
-  { src: "/images/comprobantes/union.jpg", amount: "Bs 4.000", bank: "Banco Unión", date: "17 ago 2026" },
-  { src: "/images/comprobantes/ecofuturo.jpg", amount: "Bs 4.500", bank: "Banco Ecofuturo", date: "14 ago 2026" },
-  { src: "/images/comprobantes/yape.jpg", amount: "Bs 3.000", bank: "Yape", date: "17 ago 2026" },
-  { src: "/images/comprobantes/bancosol2.jpg", amount: "Bs 1.187", bank: "BancoSol", date: "17 ago 2026" },
-  { src: "/images/comprobantes/mercantil.jpg", amount: "Bs 3.645", bank: "Mercantil Santa Cruz", date: "31 jul 2026" },
-  { src: "/images/comprobantes/ganadero2.jpg", amount: "Bs 2.300", bank: "Banco Ganadero", date: "31 jul 2026" },
-  { src: "/images/comprobantes/bancosol.jpg", amount: "Bs 1.800", bank: "BancoSol", date: "16 jul 2026" },
-  { src: "/images/comprobantes/bnb.jpg", amount: "Bs 2.100", bank: "BNB", date: "13 jul 2026" },
-  { src: "/images/comprobantes/bcp2.jpg", amount: "Bs 1.770", bank: "Banco de Crédito", date: "7 jul 2026" },
-  { src: "/images/comprobantes/ganadero.jpg", amount: "Bs 3.180", bank: "Banco Ganadero", date: "4 jul 2026" },
-  { src: "/images/comprobantes/bcp1.jpg", amount: "Bs 1.730", bank: "Banco de Crédito", date: "29 jun 2026" },
-]
-
-export function Comprobantes() {
+// Grilla de comprobantes con lupa. Se usa en la home (recortada) y en la
+// página /comprobantes (entera).
+export function Comprobantes({ items = COMPROBANTES, nota = true }: { items?: Comprobante[]; nota?: boolean }) {
   const [open, setOpen] = useState<string | null>(null)
 
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
-        {receipts.map((r) => (
+        {items.map((r) => (
           <button
             key={r.src}
             onClick={() => setOpen(r.src)}
@@ -46,17 +28,19 @@ export function Comprobantes() {
               />
             </div>
             <div className="px-3 py-2.5">
-              <div className="font-display font-extrabold text-sm md:text-base tracking-tight">{r.amount}</div>
+              <div className="font-display font-extrabold text-sm md:text-base tracking-tight">{monto(r.bs)}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">{r.bank} · {r.date}</div>
             </div>
           </button>
         ))}
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-muted-foreground/80">
-        <ShieldCheck className="w-3.5 h-3.5 text-kev-primary" />
-        <span><b className="text-foreground">Todos son clientes de PRIME.</b> Cada monto es un pago real por servicios de la empresa; los datos personales van censurados por privacidad.</span>
-      </div>
+      {nota && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-muted-foreground/80">
+          <ShieldCheck className="w-3.5 h-3.5 text-kev-primary" />
+          <span><b className="text-foreground">Todos son clientes de PRIME.</b> Cada monto es un pago real por servicios de la empresa; los datos personales van censurados por privacidad.</span>
+        </div>
+      )}
 
       {/* Lightbox — portal a <body> para escapar el stacking context de Reveal */}
       {open &&
