@@ -129,7 +129,7 @@ export default function Dashboard() {
   ]
 
   const renderHome = () => (
-    <div className="space-y-24 md:space-y-32">
+    <div className="space-y-14 md:space-y-20">
       {/* Hero + espectadores en vivo */}
       <div className="space-y-6 md:space-y-8">
         <Reveal>
@@ -155,7 +155,7 @@ export default function Dashboard() {
       </section>
 
       {/* Comprobantes: pruebas reales de pagos de clientes de PRIME */}
-      <section>
+      <section id="comprobantes" className="scroll-mt-24">
         <Reveal>
           <SectionLabel index="03" eyebrow="Pruebas reales" title="Los comprobantes" accent="azul" />
         </Reveal>

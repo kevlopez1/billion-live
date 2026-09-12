@@ -21,6 +21,7 @@ export const EV = {
   PRIME_INVERSORES: "prime_inversores",
   HUB_ENTRAR_RETO: "hub_entrar_reto",
   // Monetización directa del reto
+  VER_COMPROBANTES: "ver_comprobantes",
   FIRMA_CLICK: "firma_click",
   PIXEL_RESERVA: "pixel_reserva",
   PIXEL_PAGAR: "pixel_pagar",
