@@ -9,7 +9,6 @@ import { ProgressDashboard } from "@/components/progress-dashboard"
 import { SocialLinks, WHATSAPP_COMMUNITY } from "@/components/social-links"
 import { MessageCircle, ArrowUpRight, Menu, X, LayoutDashboard, BarChart3, BookOpen, Trophy, Handshake } from "lucide-react"
 import { ManifestoView } from "@/components/manifesto-view"
-import { Sponsors } from "@/components/sponsors"
 import { PrimePipeline } from "@/components/prime-pipeline"
 import { Roadmap } from "@/components/roadmap"
 import { IntroSplash } from "@/components/intro-splash"
@@ -217,11 +216,6 @@ export default function Dashboard() {
           <CuentaPanel />
         </Reveal>
       </section>
-
-      {/* Sponsors */}
-      <Reveal>
-        <Sponsors />
-      </Reveal>
 
       {/* Cierre — statement a sangre, tipografía gigante + motivo racing */}
       <Reveal>

@@ -25,7 +25,6 @@ export const EV = {
   FIRMA_CLICK: "firma_click",
   PIXEL_RESERVA: "pixel_reserva",
   PIXEL_PAGAR: "pixel_pagar",
-  SPONSOR_ENVIADO: "sponsor_enviado",
   // Cuentas
   CUENTA_CREADA: "cuenta_creada",
   CUENTA_ENTRO: "cuenta_entro",
