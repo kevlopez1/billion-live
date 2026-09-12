@@ -26,6 +26,7 @@ import { Eventos } from "@/components/eventos"
 import { FirmasComprobantes } from "@/components/firmas-comprobantes"
 import { MuroFirmas } from "@/components/muro-firmas"
 import { FirmaCta } from "@/components/firma-cta"
+import { AutoPixeles } from "@/components/auto-pixeles"
 import { useRouter } from "next/navigation"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
@@ -169,6 +170,9 @@ export default function Dashboard() {
         </Reveal>
         <Reveal delay={60}>
           <FirmaCta />
+        </Reveal>
+        <Reveal delay={80}>
+          <AutoPixeles />
         </Reveal>
         <Reveal delay={100}>
           <FirmasComprobantes />
