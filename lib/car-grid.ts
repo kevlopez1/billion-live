@@ -1,66 +1,163 @@
 // ──────────────────────────────────────────────────────────────
-// EL AUTO DE PÍXELES — geometría, precios y orden de llenado.
+// EL AUTO POR PARTES — geometría, precios y orden de llenado.
 //
 // Fuente ÚNICA de verdad: la importan el componente (para dibujar) y la API
 // (para validar). El precio lo recalcula siempre el servidor, así no se puede
 // falsificar desde el navegador.
 //
-// Decisión de diseño: el comprador NO elige la celda. Compra cantidad y las
-// celdas se asignan en orden (de la trompa hacia atrás). Motivos:
-//  1. En un celular una celda mide ~2px: sería imposible de tocar.
-//  2. El auto se "materializa" en orden, que se ve mucho mejor que píxeles
-//     sueltos y desparramados.
-// Los 3 lugares premium SÍ se eligen: son grandes y son EL lugar del auto.
+// Dos productos sobre el mismo auto:
+//  1. LAS PARTES ($60–$500) — piezas con nombre (capó, techo, puerta, cola,
+//     faldón, las dos ruedas). Una sola por pieza. El precio sale de cuánto se
+//     VE esa parte, igual que el patrocinio de un auto de carrera.
+//  2. LA FIRMA ($10) — el resto de la carrocería, en celdas. El comprador NO
+//     elige la celda: compra cantidad y se asignan de la trompa hacia atrás.
+//     En un celular una celda mide ~2px; elegirla sería imposible, y además
+//     así el auto se "materializa" en orden en vez de quedar salpicado.
 // ──────────────────────────────────────────────────────────────
 
 export const VIEW_W = 1000
-export const VIEW_H = 420
-export const CELL = 6
+export const VIEW_H = 400
+export const CELL = 7
 export const COLS = Math.floor(VIEW_W / CELL)
 export const ROWS = Math.floor(VIEW_H / CELL)
 
 // Silueta como POLÍGONO (no bezier) a propósito: el mismo listado de puntos
 // dibuja el SVG y resuelve el test "¿está dentro?" en el servidor.
-// Perfil de coupé GT: trompa corta, capó largo, cabina atrás, cola fastback.
+//
+// Proporciones tomadas del AMG GT 63 de 4 puertas (5,05 m × 1,45 m, batalla
+// 2,95 m): alto = 0,287 del largo, batalla = 0,58 del largo, rueda = 0,14.
+// De ahí el perfil: nariz baja, capó largo, parabrisas muy tumbado, techo bajo
+// adelantado y caída fastback continua hasta una cola corta y alta.
 // Los arcos de rueda están RECORTADOS del cuerpo para que las ruedas encajen.
 const TOP: [number, number][] = [
-  [66, 318], [54, 292], [52, 262], [66, 234], [96, 212], [140, 201], [200, 194],
-  [270, 189], [340, 185], [386, 181], [416, 168], [448, 144], [482, 126], [524, 118],
-  [576, 116], [624, 119], [668, 127], [712, 142], [756, 163], [800, 185], [842, 200],
-  [886, 209], [922, 218], [946, 232], [956, 254], [956, 284], [948, 310], [938, 318],
+  // Nariz: alta y casi vertical — así es la parrilla Panamericana del AMG,
+  // no una punta baja de prototipo.
+  [62, 302], [59, 278], [68, 258], [96, 245], [142, 238], [200, 233], [268, 229],
+  [340, 225], [400, 221],
+  // Parabrisas muy tumbado
+  [438, 188], [472, 160], [512, 138], [556, 124],
+  // Techo bajo y corto
+  [600, 120], [646, 124],
+  // Caída fastback continua hasta la cola
+  [694, 136], [742, 156], [790, 180], [838, 200], [878, 212], [910, 222],
+  // Cola corta y alta, con el borde del spoiler
+  [932, 232], [941, 250], [940, 278], [932, 300], [918, 316],
 ]
 const ARCO_TRAS: [number, number][] = [
-  [840, 318], [832, 288], [816, 262], [794, 246], [768, 241], [742, 246], [720, 262],
-  [704, 288], [696, 318],
+  [826, 318], [821, 292], [808, 268], [788, 252], [758, 246], [728, 252], [708, 268],
+  [695, 292], [690, 318],
 ]
 const ARCO_DEL: [number, number][] = [
-  [324, 318], [316, 288], [300, 262], [278, 246], [252, 241], [226, 246], [204, 262],
-  [188, 288], [180, 318],
+  [316, 318], [311, 292], [298, 268], [278, 252], [248, 246], [218, 252], [198, 268],
+  [185, 292], [180, 318],
 ]
 
-export const BODY: [number, number][] = [...TOP, ...ARCO_TRAS, [500, 320], ...ARCO_DEL]
+export const BODY: [number, number][] = [
+  ...TOP, ...ARCO_TRAS, [500, 322], ...ARCO_DEL, [72, 318],
+]
 
 export const SUELO = 360
 
 export const BODY_PATH = `M ${BODY.map(([x, y]) => `${x},${y}`).join(" L ")} Z`
 
-// Los lugares premium son ESPACIOS ÚNICOS, como el patrocinio real de un auto
-// de carrera: la puerta y las ruedas son EL lugar, no un píxel más.
-export type SlotId = "puerta" | "rueda-del" | "rueda-tras"
+// El vidrio no se vende: se dibuja encima para que se lea "auto" y no "mancha".
+export const VIDRIO_PATH =
+  "M 410,216 L 448,180 L 492,150 L 548,131 L 600,126 L 648,131 L 690,146 L 628,150 L 548,168 L 470,196 Z"
+
+// ── LAS PARTES ──────────────────────────────────────────────────
+// Las zonas se dibujan RECORTADAS contra la silueta (clipPath), así una
+// región rectangular simple sigue exactamente la forma del auto: no hay que
+// calzar curvas a mano y nunca se sale del cuerpo.
+export type Forma =
+  | { tipo: "circulo"; cx: number; cy: number; r: number }
+  | { tipo: "zona"; x: number; y: number; w: number; h: number }
 
 export type Slot = {
-  id: SlotId
+  id: string
+  /** El número que se ve sobre el auto y en la tarjeta de abajo. */
+  n: number
   label: string
   price: number
-  cx: number
-  cy: number
-  r: number
+  nota: string
+  /** Dónde va el número sobre el auto. */
+  mx: number
+  my: number
+  forma: Forma
 }
 
+// El precio sale de cuánto se VE la parte, igual que el patrocinio real de un
+// auto de carrera: el capó y las ruedas salen en cada foto; el faldón casi no.
 export const SLOTS: Slot[] = [
-  { id: "rueda-del", label: "Rueda delantera", price: 500, cx: 252, cy: 300, r: 60 },
-  { id: "rueda-tras", label: "Rueda trasera", price: 500, cx: 768, cy: 300, r: 60 },
-  { id: "puerta", label: "La puerta", price: 250, cx: 520, cy: 265, r: 50 },
+  {
+    id: "capo",
+    n: 1,
+    label: "El capó",
+    price: 500,
+    nota: "La parte más fotografiada del auto",
+    mx: 352,
+    my: 268,
+    forma: { tipo: "zona", x: 78, y: 232, w: 312, h: 66 },
+  },
+  {
+    id: "rueda-del",
+    n: 2,
+    label: "Rueda delantera",
+    price: 500,
+    nota: "Gira en cada video que grabo",
+    mx: 248,
+    my: 298,
+    forma: { tipo: "circulo", cx: 248, cy: 298, r: 62 },
+  },
+  {
+    id: "rueda-tras",
+    n: 3,
+    label: "Rueda trasera",
+    price: 500,
+    nota: "Gira en cada video que grabo",
+    mx: 758,
+    my: 298,
+    forma: { tipo: "circulo", cx: 758, cy: 298, r: 62 },
+  },
+  {
+    id: "puerta",
+    n: 4,
+    label: "La puerta",
+    price: 250,
+    nota: "El lugar clásico del patrocinio",
+    mx: 560,
+    my: 262,
+    forma: { tipo: "zona", x: 440, y: 222, w: 240, h: 78 },
+  },
+  {
+    id: "techo",
+    n: 5,
+    label: "El techo",
+    price: 200,
+    nota: "Se ve entero en las tomas con drone",
+    mx: 600,
+    my: 136,
+    forma: { tipo: "zona", x: 540, y: 120, w: 130, h: 32 },
+  },
+  {
+    id: "cola",
+    n: 6,
+    label: "La cola",
+    price: 150,
+    nota: "Lo último que ve el que te quiere pasar",
+    mx: 890,
+    my: 250,
+    forma: { tipo: "zona", x: 846, y: 202, w: 98, h: 90 },
+  },
+  {
+    id: "faldon",
+    n: 7,
+    label: "El faldón",
+    price: 60,
+    nota: "De rueda a rueda, todo el costado",
+    mx: 500,
+    my: 311,
+    forma: { tipo: "zona", x: 322, y: 300, w: 364, h: 22 },
+  },
 ]
 
 export const PIXEL_PRICE = 10
@@ -81,8 +178,13 @@ export function insideBody(px: number, py: number): boolean {
   return hit
 }
 
+/** Las partes con nombre no entran al pozo de firmas de $10. */
 function pisaSlot(px: number, py: number): boolean {
-  return SLOTS.some((s) => (px - s.cx) ** 2 + (py - s.cy) ** 2 <= (s.r + 3) ** 2)
+  return SLOTS.some((s) => {
+    const f = s.forma
+    if (f.tipo === "circulo") return (px - f.cx) ** 2 + (py - f.cy) ** 2 <= (f.r + 3) ** 2
+    return px >= f.x - 2 && px <= f.x + f.w + 2 && py >= f.y - 2 && py <= f.y + f.h + 2
+  })
 }
 
 /**

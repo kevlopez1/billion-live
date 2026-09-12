@@ -164,20 +164,11 @@ export default function Dashboard() {
         </Reveal>
       </section>
 
-      {/* Eventos: presencia real de PRIME en el ecosistema */}
-      <section>
+      {/* El auto por partes: la monetización directa del reto. Va pegada a los
+          comprobantes a propósito — primero la prueba, después el pedido. */}
+      <section id="el-auto" className="scroll-mt-24">
         <Reveal>
-          <SectionLabel index="04" eyebrow="En la cancha" title="Los eventos" accent="azul" />
-        </Reveal>
-        <Reveal delay={80}>
-          <Eventos />
-        </Reveal>
-      </section>
-
-      {/* Firmas del Mercedes: pagos por firmar el auto ($10 la firma) */}
-      <section>
-        <Reveal>
-          <SectionLabel index="05" eyebrow="El auto es de todos" title="Las firmas" accent="azul" />
+          <SectionLabel index="04" eyebrow="El auto es de todos" title="El auto por partes" accent="azul" />
         </Reveal>
         <Reveal delay={60}>
           <FirmaCta />
@@ -190,6 +181,16 @@ export default function Dashboard() {
         </Reveal>
         <Reveal delay={120}>
           <MuroFirmas />
+        </Reveal>
+      </section>
+
+      {/* Eventos: presencia real de PRIME en el ecosistema */}
+      <section>
+        <Reveal>
+          <SectionLabel index="05" eyebrow="En la cancha" title="Los eventos" accent="azul" />
+        </Reveal>
+        <Reveal delay={80}>
+          <Eventos />
         </Reveal>
       </section>
 

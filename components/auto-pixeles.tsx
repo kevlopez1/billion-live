@@ -11,6 +11,7 @@ import {
   SUELO,
   TOTAL_PIXELS,
   TOTAL_VALUE,
+  VIDRIO_PATH,
   VIEW_H,
   VIEW_W,
   type Slot,
@@ -45,6 +46,9 @@ export function AutoPixeles() {
   const [whatsapp, setWhatsapp] = useState("")
   const [enviando, setEnviando] = useState(false)
   const [listo, setListo] = useState<{ code: string; price: number } | null>(null)
+  // Qué parte está resaltada. En el celular el auto es chico: el que manda es
+  // el listado de tarjetas de abajo, y tocar una prende la zona en el dibujo.
+  const [mirando, setMirando] = useState<string | null>(null)
 
   // Estado seguro: lo que se muestra si la API no responde o responde otra cosa.
   // Sin esto, un {error} del servidor dejaba a `est` sin `cells`/`slots` y el
@@ -130,59 +134,96 @@ export function AutoPixeles() {
 
   return (
     <div>
-      {/* ── El auto ── */}
-      <div className="rounded-3xl border border-border bg-card/40 p-4 md:p-7">
+      {/* ── El auto ──
+          El arte va en ESTE bloque y en ningún otro: el día que entre un render
+          en vez del vector, se cambia acá adentro y las zonas, los precios y la
+          compra siguen funcionando igual. */}
+      <div className="rounded-3xl border border-border bg-card/40 p-3 md:p-7">
         <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full h-auto" role="img"
-          aria-label="El Mercedes del reto, formado por píxeles comprados">
-          {/* Línea de suelo: asienta el auto */}
-          <line x1={30} y1={SUELO} x2={VIEW_W - 30} y2={SUELO} stroke="var(--foreground)" strokeWidth={1} opacity={0.15} />
+          aria-label="El Mercedes del reto, con las partes que se pueden comprar">
+          <defs>
+            <clipPath id="carroceria">
+              <path d={BODY_PATH} />
+            </clipPath>
+          </defs>
 
-          {/* Ruedas (detrás del cuerpo) */}
-          {SLOTS.filter((s) => s.id.startsWith("rueda")).map((s) => {
+          {/* El suelo asienta el auto: sin esto parece que flota */}
+          <line x1={30} y1={SUELO} x2={VIEW_W - 30} y2={SUELO}
+            stroke="var(--foreground)" strokeWidth={1} opacity={0.16} />
+
+          {/* Ruedas: van detrás del cuerpo para que el arco las recorte */}
+          {SLOTS.filter((s) => s.forma.tipo === "circulo").map((s) => {
+            const f = s.forma as { tipo: "circulo"; cx: number; cy: number; r: number }
             const dueño = est?.slots?.[s.id]
+            const activa = mirando === s.id
             return (
-              <g key={s.id} onClick={() => !dueño && setCompra({ kind: "slot", slot: s })}
-                className={dueño ? "" : "cursor-pointer"}>
-                <circle cx={s.cx} cy={s.cy} r={s.r} fill="var(--kev-primary)" opacity={0.85} />
-                <circle cx={s.cx} cy={s.cy} r={s.r} fill="none" stroke="var(--gold)"
-                  strokeWidth={dueño ? 3 : 1.5} strokeDasharray={dueño ? undefined : "5 5"}
-                  opacity={dueño ? 1 : 0.5} />
-                <circle cx={s.cx} cy={s.cy} r={s.r * 0.44} fill="var(--background)" />
-                <text x={s.cx} y={s.cy + 4} textAnchor="middle" fontSize={dueño ? 15 : 13}
-                  fontWeight={700} fill={dueño ? "var(--gold)" : "var(--muted-foreground)"}>
-                  {dueño ? dueño.name.slice(0, 9) : `$${s.price}`}
-                </text>
+              <g key={s.id} onClick={() => setMirando(activa ? null : s.id)} className="cursor-pointer">
+                {/* El neumático va en negro FIJO, no en un token del tema: una
+                    goma es negra con luz y con sombra, y con var(--kev-primary)
+                    quedaban dos platos blancos en el tema oscuro. */}
+                <circle cx={f.cx} cy={f.cy} r={f.r} fill="#151a24" />
+                <circle cx={f.cx} cy={f.cy} r={f.r} fill="none" stroke="var(--gold)"
+                  strokeWidth={dueño || activa ? 3 : 1.5}
+                  strokeDasharray={dueño ? undefined : "7 5"}
+                  opacity={dueño || activa ? 1 : 0.55} />
+                <circle cx={f.cx} cy={f.cy} r={f.r * 0.52} fill="var(--gold)"
+                  opacity={dueño ? 0.32 : 0.16} />
+                <circle cx={f.cx} cy={f.cy} r={f.r * 0.52} fill="none" stroke="var(--gold)"
+                  strokeWidth={1} opacity={0.4} />
               </g>
             )
           })}
 
-          {/* Cuerpo vacío: la silueta tenue que se va llenando */}
-          <path d={BODY_PATH} fill="var(--muted)" opacity={0.35} />
+          {/* Carrocería vacía: la silueta tenue que se va llenando */}
+          <path d={BODY_PATH} fill="var(--muted)" opacity={0.75} />
 
-          {/* Píxeles vendidos: se encienden dentro del cuerpo */}
-          <g>
+          <g clipPath="url(#carroceria)">
+            {/* Las firmas de $10, encendidas de la trompa hacia atrás */}
             {(est?.cells ?? []).map((c) => (
-              <rect key={`${c.x}-${c.y}`} x={c.x * CELL} y={c.y * CELL} width={CELL - 0.6} height={CELL - 0.6}
-                rx={1} fill="var(--gold)" />
+              <rect key={`${c.x}-${c.y}`} x={c.x * CELL} y={c.y * CELL}
+                width={CELL - 0.7} height={CELL - 0.7} rx={1} fill="var(--gold)" opacity={0.95} />
             ))}
+
+            {/* Las partes con nombre. Recortadas contra la silueta: una región
+                rectangular simple sigue exactamente la forma del auto. */}
+            {SLOTS.filter((s) => s.forma.tipo === "zona").map((s) => {
+              const f = s.forma as { tipo: "zona"; x: number; y: number; w: number; h: number }
+              const dueño = est?.slots?.[s.id]
+              const activa = mirando === s.id
+              return (
+                <g key={s.id} onClick={() => setMirando(activa ? null : s.id)} className="cursor-pointer">
+                  <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={3} fill="var(--gold)"
+                    opacity={dueño ? 0.5 : activa ? 0.3 : 0.12} />
+                  <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={3} fill="none" stroke="var(--gold)"
+                    strokeWidth={dueño || activa ? 2.5 : 1.4}
+                    strokeDasharray={dueño ? undefined : "7 5"}
+                    opacity={dueño || activa ? 1 : 0.6} />
+                </g>
+              )
+            })}
           </g>
 
-          {/* Contorno del auto por encima */}
-          <path d={BODY_PATH} fill="none" stroke="var(--foreground)" strokeWidth={2.5} opacity={0.55}
-            strokeLinejoin="round" />
+          {/* El vidrio no se vende: se dibuja encima para que se lea "auto" */}
+          <path d={VIDRIO_PATH} fill="var(--foreground)" opacity={0.28} />
 
-          {/* Capó: espacio premium */}
-          {SLOTS.filter((s) => s.id === "puerta").map((s) => {
+          {/* Contorno por encima de todo */}
+          <path d={BODY_PATH} fill="none" stroke="var(--foreground)" strokeWidth={2.5}
+            opacity={0.55} strokeLinejoin="round" />
+
+          {/* Los números. Van FUERA del recorte y arriba de todo: en un celular
+              el auto mide ~350 px, así que un número es lo único que se lee.
+              El nombre de la parte y el precio viven en las tarjetas de abajo. */}
+          {SLOTS.map((s) => {
             const dueño = est?.slots?.[s.id]
+            const activa = mirando === s.id
             return (
-              <g key={s.id} onClick={() => !dueño && setCompra({ kind: "slot", slot: s })}
-                className={dueño ? "" : "cursor-pointer"}>
-                <circle cx={s.cx} cy={s.cy} r={s.r} fill="var(--background)" opacity={dueño ? 0.92 : 0.75} />
-                <circle cx={s.cx} cy={s.cy} r={s.r} fill="none" stroke="var(--gold)"
-                  strokeWidth={dueño ? 3 : 1.5} strokeDasharray={dueño ? undefined : "5 5"} />
-                <text x={s.cx} y={s.cy + 5} textAnchor="middle" fontSize={dueño ? 15 : 13} fontWeight={700}
-                  fill={dueño ? "var(--gold)" : "var(--muted-foreground)"}>
-                  {dueño ? dueño.name.slice(0, 10) : `Puerta $${s.price}`}
+              <g key={`n-${s.id}`} onClick={() => setMirando(activa ? null : s.id)} className="cursor-pointer">
+                <circle cx={s.mx} cy={s.my} r={15}
+                  fill={dueño || activa ? "var(--gold)" : "var(--background)"}
+                  stroke="var(--gold)" strokeWidth={2} />
+                <text x={s.mx} y={s.my + 5.5} textAnchor="middle" fontSize={16} fontWeight={800}
+                  fill={dueño || activa ? "var(--background)" : "var(--gold)"}>
+                  {s.n}
                 </text>
               </g>
             )
@@ -192,7 +233,7 @@ export function AutoPixeles() {
         {/* Progreso real */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[11px] md:text-xs text-muted-foreground">
           <span>
-            <b className="text-foreground">{est?.sold_pixels ?? 0}</b> de {est?.total_pixels ?? 0} píxeles encendidos
+            <b className="text-foreground">{est?.sold_pixels ?? 0}</b> de {est?.total_pixels ?? 0} firmas encendidas
           </span>
           <span>
             Recaudado acá: <b className="text-foreground">${(est?.sold_usd ?? 0).toLocaleString("en-US")}</b> de $
@@ -209,49 +250,72 @@ export function AutoPixeles() {
         <div className="mt-5 rounded-3xl border border-border bg-card/40 px-5 py-6 text-center">
           <div className="font-display text-lg font-bold tracking-tight">Muy pronto</div>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Los lugares en el auto se abren en unos días. Mientras tanto, mirá cómo se va armando.
+            Las partes del auto se abren en unos días. Mientras tanto, mirá cómo se va armando.
           </p>
         </div>
       )}
 
       {!compra && est?.configured === true && (
-        <div className="mt-5 rounded-3xl border border-border bg-card/40 px-5 py-6 md:px-7">
-          <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">Poné tu nombre en el auto</h4>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Cada píxel cuesta ${est?.pixel_price ?? 10} y se asigna solo, de la trompa hacia atrás. El auto se va
-            armando en vivo con cada compra.
-          </p>
+        <div className="mt-5 space-y-5">
+          {/* Las partes, de la más cara a la más barata: el precio sale de
+              cuánto se VE, como el patrocinio de un auto de carrera. */}
+          <div className="rounded-3xl border border-border bg-card/40 px-4 py-5 md:px-7 md:py-6">
+            <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">Elegí tu parte del auto</h4>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Cada parte vale según cuánto se ve. Hay una sola de cada una: cuando se toma, se toma.
+            </p>
 
-          <div className="mt-4 flex flex-wrap gap-2.5">
-            {PACKS.map((q) => (
-              <button key={q} onClick={() => setCompra({ kind: "pixel", qty: q })}
-                className="lift rounded-2xl border border-border bg-background/60 px-4 py-3 text-left hover:border-gold/50">
-                <div className="font-display text-base font-bold">
-                  {q} {q === 1 ? "píxel" : "píxeles"}
-                </div>
-                <div className="text-xs text-muted-foreground">${q * (est?.pixel_price ?? 10)}</div>
-              </button>
-            ))}
+            <div className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+              {SLOTS.map((s) => {
+                const dueño = est?.slots?.[s.id]
+                return (
+                  <button key={s.id} disabled={!!dueño}
+                    onClick={() => setCompra({ kind: "slot", slot: s })}
+                    onMouseEnter={() => setMirando(s.id)}
+                    onMouseLeave={() => setMirando(null)}
+                    onFocus={() => setMirando(s.id)}
+                    className={`rounded-2xl border px-3.5 py-3 text-left transition-colors ${
+                      dueño
+                        ? "cursor-not-allowed border-border bg-muted/40 opacity-70"
+                        : "lift border-gold/40 bg-gold/[0.06] hover:border-gold"
+                    }`}>
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gold">
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[10px] text-background">
+                        {s.n}
+                      </span>
+                      {s.label}
+                    </div>
+                    <div className="mt-1 font-display text-xl font-extrabold tracking-tight">${s.price}</div>
+                    <div className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                      {dueño ? `Tomado · ${dueño.name}` : s.nota}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          <div className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-gold">Los 3 lugares del auto</div>
-          <div className="mt-2 flex flex-wrap gap-2.5">
-            {SLOTS.map((s) => {
-              const tomado = !!est?.slots?.[s.id]
-              return (
-                <button key={s.id} disabled={tomado} onClick={() => setCompra({ kind: "slot", slot: s })}
-                  className={`rounded-2xl border px-4 py-3 text-left ${
-                    tomado
-                      ? "cursor-not-allowed border-border bg-muted/40 opacity-60"
-                      : "lift border-gold/40 bg-gold/[0.06] hover:border-gold"
-                  }`}>
-                  <div className="font-display text-base font-bold">{s.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {tomado ? `Tomado · ${est?.slots?.[s.id]?.name}` : `$${s.price} · tu logo o marca`}
+          {/* La firma de $10: el producto masivo, el que sostiene la promesa. */}
+          <div className="rounded-3xl border border-border bg-card/40 px-4 py-5 md:px-7 md:py-6">
+            <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">
+              O firmá la carrocería por ${est?.pixel_price ?? 10}
+            </h4>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Tu firma se enciende sola, de la trompa hacia atrás. No elegís el lugar: el auto se va armando en
+              orden con cada persona que entra.
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2.5">
+              {PACKS.map((q) => (
+                <button key={q} onClick={() => setCompra({ kind: "pixel", qty: q })}
+                  className="lift rounded-2xl border border-border bg-background/60 px-4 py-3 text-left hover:border-gold/50">
+                  <div className="font-display text-base font-bold">
+                    {q} {q === 1 ? "firma" : "firmas"}
                   </div>
+                  <div className="text-xs text-muted-foreground">${q * (est?.pixel_price ?? 10)}</div>
                 </button>
-              )
-            })}
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -273,7 +337,7 @@ export function AutoPixeles() {
                 {listo.code}
               </div>
               <a href={`https://wa.me/${WA_KEV}?text=${encodeURIComponent(
-                  `Hola Kev, reservé mi lugar en el Auto de Píxeles. Código: ${listo.code} — $${listo.price}. ¿Cómo pago?`,
+                  `Hola Kev, reservé mi lugar en el auto del reto. Código: ${listo.code} — $${listo.price}. ¿Cómo pago?`,
                 )}`}
                 target="_blank" rel="noopener noreferrer"
                 onClick={() => track(EV.PIXEL_PAGAR, { monto: listo.price })}
@@ -289,7 +353,7 @@ export function AutoPixeles() {
               <div className="flex items-baseline justify-between gap-3">
                 <h4 className="font-display text-lg font-bold tracking-tight">
                   {compra.kind === "pixel"
-                    ? `${compra.qty} ${compra.qty === 1 ? "píxel" : "píxeles"}`
+                    ? `${compra.qty} ${compra.qty === 1 ? "firma" : "firmas"}`
                     : compra.slot.label}
                 </h4>
                 <span className="font-display text-2xl font-extrabold text-gold">${precio}</span>
@@ -333,7 +397,7 @@ export function AutoPixeles() {
 
       {/* ── Aviso honesto (protege el proyecto y al comprador) ── */}
       <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground/80">
-        Tu píxel es un lugar simbólico y publicitario en el auto del reto. No es una inversión, no da propiedad
+        Tu lugar en el auto es simbólico y publicitario. No es una inversión, no da propiedad
         sobre el vehículo ni derecho a ganancias, y no es reembolsable. El lugar se enciende cuando el pago está
         confirmado.
       </p>
