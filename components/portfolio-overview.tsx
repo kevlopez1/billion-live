@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useApp, CHALLENGE_TARGET, SECRET_TARGET } from "@/context/app-context"
-import { Lock } from "lucide-react"
+import { Lock, ShieldCheck, ArrowDown } from "lucide-react"
 import { Countdown } from "@/components/countdown"
 import { MansoryMark } from "@/components/mansory-mark"
+import { EV, track } from "@/lib/track"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 
 export function PortfolioOverview() {
@@ -240,6 +241,27 @@ export function PortfolioOverview() {
 
       {/* Cuenta regresiva */}
       <Countdown className="mt-9 text-center" />
+
+      {/* La prueba. El reto se sostiene en que los números son verificables,
+          así que desde el hero se puede ir directo a los comprobantes. */}
+      <div className="mt-8 flex justify-center">
+        <button
+          onClick={() => {
+            track(EV.VER_COMPROBANTES)
+            document.getElementById("comprobantes")?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }}
+          className="lift group flex flex-col items-center gap-1 rounded-2xl border border-gold/45 bg-gold/[0.07] px-7 py-4 text-center hover:border-gold"
+        >
+          <span className="flex items-center gap-2.5 font-display text-[15px] font-semibold sm:text-base">
+            <ShieldCheck className="h-4 w-4 text-gold" />
+            Ver comprobantes de ingresos reales
+            <ArrowDown className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Todos son pagos de clientes de PRIME
+          </span>
+        </button>
+      </div>
     </section>
   )
 }

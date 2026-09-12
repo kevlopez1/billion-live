@@ -55,7 +55,7 @@ export function Comprobantes() {
 
       <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-muted-foreground/80">
         <ShieldCheck className="w-3.5 h-3.5 text-kev-primary" />
-        <span>Datos personales de clientes censurados por privacidad. Cada monto es un pago real por servicios de PRIME.</span>
+        <span><b className="text-foreground">Todos son clientes de PRIME.</b> Cada monto es un pago real por servicios de la empresa; los datos personales van censurados por privacidad.</span>
       </div>
 
       {/* Lightbox — portal a <body> para escapar el stacking context de Reveal */}
