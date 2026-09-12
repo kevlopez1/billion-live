@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { useApp, CHALLENGE_TARGET, SECRET_TARGET } from "@/context/app-context"
 import { Lock } from "lucide-react"
 import { Countdown } from "@/components/countdown"
+import { MansoryMark } from "@/components/mansory-mark"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 
 export function PortfolioOverview() {
@@ -143,8 +144,9 @@ export function PortfolioOverview() {
         <span className="block font-display font-extrabold uppercase tracking-tighter text-foreground text-7xl sm:text-8xl md:text-9xl -mt-1">
           Mercedes
         </span>
-        <span className="block font-display font-semibold uppercase tracking-[0.2em] text-muted-foreground text-xs sm:text-sm mt-2">
-          AMG GT 63 · by Mansory
+        <span className="mt-3 flex items-center justify-center gap-2 text-muted-foreground">
+          <span className="font-serif-display italic text-sm sm:text-base">by</span>
+          <MansoryMark className="text-[13px] sm:text-[15px]" />
         </span>
       </h1>
 
