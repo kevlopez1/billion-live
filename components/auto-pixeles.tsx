@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { PenLine, Loader2, Check, ArrowUpRight } from "lucide-react"
 import { BODY_PATH, CELL, SLOTS, SUELO, VIEW_H, VIEW_W, type Slot } from "@/lib/car-grid"
+import { EV, track } from "@/lib/track"
 
 // WhatsApp de Kev para pagar (el mismo de las firmas).
 const WA_KEV = "59174234380"
@@ -67,6 +68,7 @@ export function AutoPixeles() {
       })
       const data = await res.json()
       if (!res.ok) return toast.error(data.error ?? "No se pudo reservar.")
+      track(EV.PIXEL_RESERVA, { tipo: compra.kind, monto: data.price })
       setListo({ code: data.code, price: data.price })
       cargar()
     } catch {
@@ -226,6 +228,7 @@ export function AutoPixeles() {
                   `Hola Kev, reservé mi lugar en el Auto de Píxeles. Código: ${listo.code} — $${listo.price}. ¿Cómo pago?`,
                 )}`}
                 target="_blank" rel="noopener noreferrer"
+                onClick={() => track(EV.PIXEL_PAGAR, { monto: listo.price })}
                 className="lift mt-5 inline-flex items-center gap-2 rounded-2xl bg-foreground px-6 py-3.5 font-display font-semibold text-background">
                 Pagar por WhatsApp <ArrowUpRight className="h-4 w-4" />
               </a>

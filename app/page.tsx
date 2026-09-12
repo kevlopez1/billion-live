@@ -28,6 +28,7 @@ import { MuroFirmas } from "@/components/muro-firmas"
 import { FirmaCta } from "@/components/firma-cta"
 import { AutoPixeles } from "@/components/auto-pixeles"
 import { useRouter } from "next/navigation"
+import { EV, track } from "@/lib/track"
 
 export type ActiveView = "dashboard" | "pulse" | "manifesto"
 
@@ -94,7 +95,8 @@ export default function Dashboard() {
   // Reabrir el hub: es el ÚNICO lugar con los caminos a PRIME (clientes,
   // inversores, empleado AI). Antes se veía una vez por sesión y desaparecía,
   // así que un visitante recurrente no volvía a encontrar cómo contratar.
-  const openHub = () => {
+  const openHub = (origen: "header" | "menu") => {
+    track(EV.HUB_ABIERTO, { origen })
     setShowHub(true)
     setMenuOpen(false)
   }
@@ -199,6 +201,7 @@ export default function Dashboard() {
         <Reveal delay={60}>
           <a
             href={WHATSAPP_COMMUNITY}
+            onClick={() => track(EV.COMUNIDAD_WHATSAPP)}
             target="_blank"
             rel="noopener noreferrer"
             className="lift mb-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-card/40 px-5 py-5 md:px-7 hover:border-foreground/20 transition-colors"
@@ -324,7 +327,7 @@ export default function Dashboard() {
           </div>
           <nav className="flex flex-col gap-1.5">
             <button
-              onClick={openHub}
+              onClick={() => openHub("menu")}
               className="flex items-center gap-3 rounded-xl border border-gold/45 bg-gold/[0.08] px-4 py-3 text-left text-[15px] font-semibold text-foreground hover:border-gold"
             >
               <Handshake className="w-[18px] h-[18px] text-gold" />
@@ -416,7 +419,7 @@ export default function Dashboard() {
               </button>
             </nav>
             <button
-              onClick={openHub}
+              onClick={() => openHub("header")}
               aria-label="Trabajar conmigo"
               title="Trabajar conmigo"
               className="press-effect flex items-center gap-2 rounded-full border border-gold/45 bg-gold/[0.08] px-3 py-2 text-sm font-medium text-foreground hover:border-gold"
