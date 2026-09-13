@@ -85,17 +85,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let vivo = true
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!vivo) return
-      setSession(data.session)
-      traerPerfil(data.session).finally(() => vivo && setCargando(false))
-    })
+    // El .catch no es decorativo: si esto falla (sin internet, o el token no se
+    // puede renovar), sin él `cargando` se quedaba en true para siempre y
+    // /cuenta mostraba un spinner eterno en vez del formulario de entrada.
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!vivo) return
+        setSession(data.session)
+        return traerPerfil(data.session)
+      })
+      .catch((e) => console.error("[auth] no se pudo leer la sesión:", e))
+      .finally(() => {
+        if (vivo) setCargando(false)
+      })
 
     // Mantiene la sesión al día entre pestañas y cuando el token se renueva.
     const { data: sub } = supabase.auth.onAuthStateChange((_evento, s) => {
       if (!vivo) return
       setSession(s)
-      traerPerfil(s)
+      traerPerfil(s).catch((e) => console.error("[auth] no se pudo leer el perfil:", e))
     })
 
     return () => {
