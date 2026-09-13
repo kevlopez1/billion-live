@@ -20,12 +20,21 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { CHALLENGE_TARGET, RECAUDADO } from "@/context/app-context"
+import { MansoryMark } from "@/components/mansory-mark"
 import { PrimeMark, conPrime } from "@/components/prime-mark"
+
+// El lema se parte en dos porque se usa de dos formas: en pantalla con la firma
+// MANSORY entre medio, y como texto plano en navigator.share(), que no admite
+// HTML. Partido aquí, la frase se escribe una sola vez.
+// El "-AMG" se va: el nombre completo del auto vive solo en los metadatos de SEO.
+const LEMA_ANTES = "De $10 a un Mercedes"
+const LEMA_DESPUES = "— en público, desde Bolivia"
+const LEMA_PLANO = `${LEMA_ANTES} Mansory ${LEMA_DESPUES}`
 
 // Public profile data (would come from API in production)
 const profileData = {
   name: "Kev López",
-  tagline: "De $10 a un Mercedes-AMG Mansory — en público, desde Bolivia",
+  tagline: LEMA_PLANO,
   bio: "Benjamín Kevin López Mamani, 21, Santa Cruz. Fundador de PRIME (empleados de IA para empresas). El reto: de $10 a un Mercedes Mansory, con el contador alimentado por el revenue real de PRIME. El auto es la carnada; el imperio es la meta.",
   location: "Santa Cruz de la Sierra, Bolivia",
   avatar: "/images/kev.jpg",
@@ -134,7 +143,9 @@ export default function PublicProfile() {
                   LIVE
                 </span>
               </div>
-              <p className="text-xl text-white/70 mb-3">{profileData.tagline}</p>
+              <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xl text-white/70">
+                {LEMA_ANTES} <MansoryMark className="text-[0.92em]" /> {LEMA_DESPUES}
+              </p>
               <p className="text-white/50 max-w-2xl mb-4 leading-relaxed">{conPrime(profileData.bio)}</p>
               <div className="flex flex-wrap items-center gap-4">
                 <span className="flex items-center gap-1.5 text-sm text-white/60">

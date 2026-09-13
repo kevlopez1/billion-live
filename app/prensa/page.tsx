@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { ChevronRight, ShieldCheck, TrendingUp, Users, Target, Quote, Mail, Building2 } from "lucide-react"
 import { SocialLinks } from "@/components/social-links"
+import { MansoryMark } from "@/components/mansory-mark"
 import { PrimeMark, conPrime } from "@/components/prime-mark"
 
 export const metadata: Metadata = {
@@ -64,7 +65,13 @@ export default function PrensaPage() {
             El reto que se puede auditar.
           </h1>
           <p className="text-lg text-muted-foreground mt-6 font-light text-pretty leading-relaxed">
-            De $10 a un Mercedes Mansory, desde Bolivia, en público. A diferencia del flex tradicional, aquí el
+            {/* La coma va pegada a la firma: la marca es una caja atómica y, suelta,
+                la coma caía sola al principio del renglón siguiente. */}
+            De $10 a un Mercedes{" "}
+            <span className="whitespace-nowrap">
+              <MansoryMark className="text-[0.92em]" />,
+            </span>{" "}
+            desde Bolivia, en público. A diferencia del flex tradicional, aquí el
             contador no se inventa: se alimenta del <span className="text-foreground">revenue real de <PrimeMark /></span>{" "}
             (empleados de IA para empresas). El auto es la carnada; el imperio es la meta.
           </p>
