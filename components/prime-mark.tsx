@@ -1,4 +1,5 @@
 import Image from "next/image"
+import type { ReactNode } from "react"
 
 // ──────────────────────────────────────────────────────────────
 // EL LOGO DE PRIME, para usar dentro de una frase.
@@ -46,5 +47,22 @@ export function PrimeMark({ className = "", link = true }: { className?: string;
     >
       {logo}
     </a>
+  )
+}
+
+/**
+ * Pone el logo donde el texto diga PRIME, para los textos que viven como
+ * string dentro de un array de datos (la bitácora, los hitos, el perfil…) y
+ * no se pueden escribir directamente en JSX.
+ *
+ * Usa límite de palabra a propósito: sin él, "SÉ EL PRIMERO" se partiría en
+ * "PRIME" + "RO" y aparecería un logo en medio de la palabra.
+ *
+ * `link={false}` cuando el texto ya vive dentro de otro enlace o de un botón:
+ * un <a> dentro de otro <a> es HTML inválido.
+ */
+export function conPrime(texto: string, link = true): ReactNode[] {
+  return texto.split(/\b(PRIME)\b/g).map((parte, i) =>
+    parte === "PRIME" ? <PrimeMark key={i} link={link} /> : parte,
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Trophy, Send, Flame, Clapperboard } from "lucide-react"
+import { conPrime } from "@/components/prime-mark"
 
 // WhatsApp de Kev (Bolivia +591). Las postulaciones caen directo acá.
 const WHATSAPP_KEV = "59174234380"
@@ -124,7 +125,7 @@ function Field({
   return (
     <label className="block">
       <span className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-1.5">
-        {def.label}
+        {conPrime(def.label, false)}
       </span>
       {def.textarea ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={def.placeholder} rows={2} className={`${cls} resize-none`} />
@@ -231,7 +232,7 @@ export function SellerRanking() {
                   active ? "border-gold bg-gold/15 text-foreground" : "border-border bg-card/40 text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <R.Icon className="w-4 h-4" /> {R.label}
+                <R.Icon className="w-4 h-4" /> {conPrime(R.label, false)}
               </button>
             )
           })}

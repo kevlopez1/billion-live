@@ -2,6 +2,7 @@
 
 import { Reveal } from "@/components/reveal"
 import { useApp } from "@/context/app-context"
+import { conPrime } from "@/components/prime-mark"
 
 type Status = "done" | "now" | "next"
 
@@ -65,7 +66,7 @@ export function Roadmap() {
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className={m.status === "next" ? "opacity-70" : ""}>
                   <div className="font-display font-bold tracking-tight text-lg md:text-xl leading-tight">
-                    {m.title}
+                    {conPrime(m.title)}
                   </div>
                   <div className="text-sm text-muted-foreground mt-0.5">{m.sub}</div>
                 </div>

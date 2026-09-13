@@ -40,6 +40,31 @@ python3 scripts/sin-voseo.py     # tiene que dar TOTAL: 0
 - **El auto y sus precios:** `lib/car-grid.ts`, que usan el componente y la API.
   El precio lo recalcula siempre el servidor, nunca el navegador.
 
+## 🔵 PRIME SIEMPRE VA CON SU LOGO, NUNCA ESCRITO
+
+En **todo** texto que se ve en pantalla, "PRIME" va con el logo y con enlace a
+primebusiness.live. Nunca la palabra suelta.
+
+```tsx
+import { PrimeMark, conPrime } from "@/components/prime-mark"
+
+<PrimeMark />                      // dentro de JSX
+{conPrime(texto)}                  // textos que viven como string en un array
+<PrimeMark link={false} />         // si ya está dentro de otro <a> o de un <button>
+{conPrime(texto, false)}           //   (un <a> dentro de otro <a> es HTML inválido)
+```
+
+`conPrime` usa límite de palabra: sin él, "SÉ EL PRIMERO" se partiría y
+aparecería un logo en medio de la palabra.
+
+**Únicas excepciones** (no es una elección, es que ahí no entra una imagen):
+`title`, `description`, `keywords` y JSON-LD de los metadatos — son cadenas de
+texto del `<head>`, no admiten HTML, y además ahí el nombre escrito es lo que
+encuentra Google. Tampoco en el `alt` del propio logo.
+
+**Comprobar antes de dar por terminado:** cargar la web y buscar `\bPRIME\b` en
+el texto de pantalla. Tiene que dar 0.
+
 ## Reglas de contenido
 
 - **"Todo real, sin humo".** Ningún dato inventado, de ejemplo o de relleno.

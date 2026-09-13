@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { ChevronRight, ShieldCheck, TrendingUp, Users, Target, Quote, Mail, Building2 } from "lucide-react"
 import { SocialLinks } from "@/components/social-links"
-import { PrimeMark } from "@/components/prime-mark"
+import { PrimeMark, conPrime } from "@/components/prime-mark"
 
 export const metadata: Metadata = {
   title: "Prensa & Prueba",
@@ -78,7 +78,7 @@ export default function PrensaPage() {
               <div key={m.label} className="glass-card p-6">
                 <m.icon className="w-5 h-5 text-muted-foreground mb-6" strokeWidth={1.5} />
                 <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{m.label}</div>
-                <div className="text-2xl font-light number-display mt-1">{m.value}</div>
+                <div className="text-2xl font-light number-display mt-1">{conPrime(m.value)}</div>
                 <p className="text-xs text-muted-foreground mt-3 font-light leading-relaxed">{m.note}</p>
               </div>
             ))}
@@ -129,7 +129,7 @@ export default function PrensaPage() {
             {testimonials.map((t) => (
               <div key={t.author} className="glass-card p-6">
                 <Quote className="w-5 h-5 text-muted-foreground/50 mb-4" />
-                <p className="text-sm leading-relaxed text-pretty">{t.quote}</p>
+                <p className="text-sm leading-relaxed text-pretty">{conPrime(t.quote)}</p>
                 <p className="text-xs text-muted-foreground mt-4">— {t.author}</p>
               </div>
             ))}
@@ -140,19 +140,20 @@ export default function PrensaPage() {
         <section className="mb-20 glass-card p-8 md:p-10">
           <div className="flex items-center gap-2 text-muted-foreground mb-4">
             <Building2 className="w-4 h-4" strokeWidth={1.5} />
-            <span className="text-[11px] uppercase tracking-[0.18em]">Sobre Kev & PRIME</span>
+            <span className="text-[11px] uppercase tracking-[0.18em]">Sobre Kev &amp; <PrimeMark /></span>
           </div>
           <p className="text-muted-foreground font-light leading-relaxed max-w-3xl">
             Benjamín Kevin López Mamani (21), Santa Cruz de la Sierra. Fundador de <PrimeMark /> — empleados de IA para empresas.
-            Construye su ecosistema (PRIME · KEV Strategy · Insightful University) en público, con una ruta clara hacia
-            EE.UU. (O-1 → EB-1A) y PRIME como Delaware C-Corp. Cada hito del reto desbloquea una Beca PRIME: IA instalada
+            Construye su ecosistema (<PrimeMark /> · KEV Strategy · Insightful University) en público, con una ruta clara hacia
+            EE.UU. (O-1 → EB-1A) y <PrimeMark /> como Delaware C-Corp. Cada hito del reto desbloquea una Beca{" "}
+            <PrimeMark />: IA instalada
             gratis a un negocio boliviano, en cámara.
           </p>
         </section>
 
         {/* Footer */}
         <footer className="border-t border-border pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <span>KEV PROJECT GTA · PRIME · Hecho en Bolivia 🇧🇴</span>
+          <span>KEV PROJECT GTA · <PrimeMark /> · Hecho en Bolivia 🇧🇴</span>
           <SocialLinks />
         </footer>
       </div>
