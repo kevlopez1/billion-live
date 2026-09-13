@@ -17,7 +17,7 @@ import { Reveal } from "@/components/reveal"
 import { ShareButton } from "@/components/share-button"
 import { LiveViewers } from "@/components/live-viewers"
 import { Changelog } from "@/components/changelog"
-import { CuentaPanel } from "@/components/cuenta-panel"
+import { EntradaCuenta } from "@/components/entrada-cuenta"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { MemoriaScroll } from "@/components/memoria-scroll"
@@ -213,9 +213,6 @@ export default function Dashboard() {
             <ArrowUpRight className="w-5 h-5 text-muted-foreground shrink-0" />
           </a>
         </Reveal>
-        <Reveal delay={100}>
-          <CuentaPanel />
-        </Reveal>
       </section>
 
     </div>
@@ -338,6 +335,10 @@ export default function Dashboard() {
               <Trophy className="w-[18px] h-[18px]" />
               Ranking
             </button>
+            {/* La cuenta va al final y separada: las de arriba son secciones del
+                reto, esta es la sesión de quien mira. */}
+            <div className="my-2 h-px bg-border" />
+            <EntradaCuenta onNavegar={() => setMenuOpen(false)} />
           </nav>
         </aside>
       </div>
@@ -404,10 +405,14 @@ export default function Dashboard() {
               <span className="hidden md:inline">Menú principal</span>
             </button>
             <ShareButton />
+            {/* Se ve en TODOS los tamaños: dentro del menú vive la entrada a la
+                cuenta, y con `sm:hidden` quedaba inalcanzable desde la
+                computadora. En el celular es la navegación; en pantalla grande
+                es lo que la barra de arriba no muestra. */}
             <button
               onClick={() => setMenuOpen(true)}
               aria-label="Secciones del sitio"
-              className="sm:hidden w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground press-effect"
+              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground press-effect"
             >
               <Menu className="w-5 h-5" />
             </button>
