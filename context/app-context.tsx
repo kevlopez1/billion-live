@@ -150,8 +150,16 @@ export const CHALLENGE_DEADLINE = "2027-06-30" // límite: 12 meses
 export const CHALLENGE_RECORD_DEADLINE = "2026-12-30" // ritmo récord: 6 meses
 export const CHALLENGE_LAUNCH = "2026-06-30" // Día 1: martes del primer video
 
+/**
+ * Lo recaudado hasta hoy. Es LA fuente del número: lo usan el contador de la
+ * home y la página de perfil. Antes /profile tenía su propio 10 escrito a mano
+ * y mostraba $10 mientras la home mostraba $5.091 — dos cifras del mismo reto
+ * en el mismo sitio.
+ */
+export const RECAUDADO = 5091 // 5011 + 80 (Bs 1.000 QR ÷ 12,42 TCO — 11 sep) — editá acá o desde /control
+
 const initialMetrics: GlobalMetrics = {
-  netWorth: 5091, // 5011 + 80 (Bs 1.000 QR ÷ 12,42 TCO — 11 sep) — editá acá o desde /control
+  netWorth: RECAUDADO,
   monthlyGrowth: 0,
   roi: 0,
   targetRevenue: CHALLENGE_TARGET,

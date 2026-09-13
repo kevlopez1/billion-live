@@ -2,6 +2,7 @@
 
 import { PenLine, ArrowUpRight } from "lucide-react"
 import { EV, track } from "@/lib/track"
+import { MansoryMark } from "@/components/mansory-mark"
 
 // WhatsApp de Kev para comprar/firmar (mismo número que el muro).
 const WA_KEV = "59174234380"
@@ -23,7 +24,7 @@ export function FirmaCta() {
       </h3>
 
       <p className="mx-auto mt-3 max-w-md text-sm md:text-base text-muted-foreground">
-        Tu nombre grabado <span className="text-foreground font-medium">de verdad</span> en la carrocería del AMG GT 63 Mansory. Cuando el reto llegue a la meta, tu firma queda en la historia para siempre.
+        Tu nombre grabado <span className="text-foreground font-medium">de verdad</span> en la carrocería del Mercedes <MansoryMark className="text-[0.92em]" />. Cuando el reto llegue a la meta, tu firma queda en la historia para siempre.
       </p>
 
       <p className="mx-auto mt-2 max-w-md text-sm md:text-base font-serif-display italic text-azul">
