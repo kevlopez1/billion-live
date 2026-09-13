@@ -4,6 +4,7 @@ import type { CSSProperties } from "react"
 import Image from "next/image"
 import { X } from "lucide-react"
 import { EV, track } from "@/lib/track"
+import { MansoryMark } from "@/components/mansory-mark"
 
 // WhatsApp del empleado AI de PRIME (número real).
 const PRIME_WA = "59172258926"
@@ -73,8 +74,13 @@ export function Hub({ onEnter }: { onEnter: () => void }) {
         />
 
         <h1 className="font-display text-[26px] font-extrabold tracking-tight">Kev López</h1>
-        <p className="mt-0.5 font-serif-display text-[17px] italic text-muted-foreground">
-          De $10 a un Mercedes, desde Bolivia
+        {/* El auto se nombra completo: "un Mercedes … MANSORY", con la firma de
+            la marca. "desde Bolivia" salía sobrando aquí — la historia de dónde
+            viene ya la cuenta el sitio entero, y en una línea de 17px competía
+            con lo único que esta frase tiene que decir: a dónde va. */}
+        <p className="mt-0.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-serif-display text-[17px] italic text-muted-foreground">
+          De $10 a un Mercedes
+          <MansoryMark className="text-[0.72em] not-italic" />
         </p>
         <p className="mt-2 font-display text-sm font-bold tracking-wide text-foreground">kevproject.world</p>
 
