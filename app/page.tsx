@@ -266,7 +266,13 @@ export default function Dashboard() {
       {showHub && <Hub onEnter={enterSite} />}
 
       {/* Menú lateral (drawer) — reemplaza la barra inferior */}
-      <div className={`fixed inset-0 z-[80] ${menuOpen ? "" : "pointer-events-none"}`} aria-hidden={!menuOpen}>
+      {/* overflow-hidden: con el menú cerrado el panel queda parado FUERA de la
+            pantalla a la derecha, y en pantallas chicas eso hacía que la web se
+            pudiera deslizar de costado. */}
+        <div
+          className={`fixed inset-0 z-[80] overflow-hidden ${menuOpen ? "" : "pointer-events-none"}`}
+          aria-hidden={!menuOpen}
+        >
         <div
           onClick={() => setMenuOpen(false)}
           className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
@@ -347,17 +353,17 @@ export default function Dashboard() {
       {/* Navbar flotante (isla redondeada) */}
       <header className="sticky top-3 z-40 px-3 md:px-6">
         <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-background/70 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(0,0,0,0.18)] px-4 md:px-5 h-14 flex items-center justify-between">
-          <button onClick={() => setActiveView("dashboard")} className="flex items-center gap-2.5 press-effect">
+          <button onClick={() => setActiveView("dashboard")} className="flex min-w-0 items-center gap-2.5 press-effect">
             <Image
               src="/images/kev.jpg"
               alt="Kev López"
               width={32}
               height={32}
-              className="rounded-full object-cover object-[center_80%] w-8 h-8 ring-1 ring-foreground/15"
+              className="shrink-0 rounded-full object-cover object-[center_80%] w-8 h-8 ring-1 ring-foreground/15"
             />
-            <div className="text-left leading-none">
-              <span className="block text-sm font-display font-extrabold tracking-tight">KEV PROJECT GTA</span>
-              <span className="block text-[10px] text-muted-foreground tracking-wide mt-0.5">De $10 a un Mercedes</span>
+            <div className="min-w-0 text-left leading-none">
+              <span className="block truncate whitespace-nowrap text-sm font-display font-extrabold tracking-tight">KEV PROJECT GTA</span>
+              <span className="block truncate whitespace-nowrap text-[10px] text-muted-foreground tracking-wide mt-0.5">De $10 a un Mercedes</span>
             </div>
           </button>
 
@@ -383,13 +389,15 @@ export default function Dashboard() {
                 Ranking
               </button>
             </nav>
+            {/* Va con PALABRA y no con un icono: el apretón de manos solo no
+                dice nada, y en el celular era lo único que se veía. "Menú" no
+                sirve — eso ya es la hamburguesa de al lado. */}
             <button
               onClick={() => openHub("header")}
-              aria-label="Trabajar conmigo"
               title="Trabajar conmigo"
-              className="press-effect flex items-center gap-2 rounded-full border border-gold/45 bg-gold/[0.08] px-3 py-2 text-sm font-medium text-foreground hover:border-gold"
+              className="press-effect flex shrink-0 items-center whitespace-nowrap rounded-full border border-gold/45 bg-gold/[0.08] px-3 py-2 text-[13px] font-semibold text-foreground hover:border-gold sm:px-3.5 sm:text-sm"
             >
-              <Handshake className="h-4 w-4 text-gold" />
+              <span className="md:hidden">Trabajemos</span>
               <span className="hidden md:inline">Trabajar conmigo</span>
             </button>
             <ShareButton />

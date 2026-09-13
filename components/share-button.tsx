@@ -70,12 +70,13 @@ export function ShareButton({ className = "" }: { className?: string }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`btn-accent inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold ${className}`}
+        className={`btn-accent inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold sm:px-3.5 sm:text-sm ${className}`}
         aria-haspopup="menu"
         aria-expanded={open}
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-        Compartir
+        {/* A 360 px los dos botones del header no entran: acá queda solo el ícono */}
+        <span className="max-[380px]:hidden">Compartir</span>
       </button>
 
       {open && (
