@@ -24,7 +24,7 @@ const initialMessages = [
     id: "3",
     name: "Valeria C.",
     avatar: "VC",
-    message: "Las Becas PRIME me parecen lo mejor del reto. Ayudar mientras construís. Grande.",
+    message: "Las Becas PRIME me parecen lo mejor del reto. Ayudar mientras construyes. Grande.",
     time: "hace 6h",
   },
   {

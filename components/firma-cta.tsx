@@ -20,7 +20,7 @@ export function FirmaCta() {
       </span>
 
       <h3 className="mt-4 font-display font-extrabold tracking-tight text-[26px] leading-[1.05] md:text-4xl">
-        Firmá el Mercedes por $10
+        Firma el Mercedes por $10
       </h3>
 
       <p className="mx-auto mt-3 max-w-md text-sm md:text-base text-muted-foreground">

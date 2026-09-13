@@ -43,7 +43,7 @@ export function CuentaPanel() {
         </div>
         {faltaVerificar && (
           <p className="mt-3 rounded-2xl border border-gold/40 bg-gold/[0.07] px-4 py-3 text-xs text-muted-foreground">
-            Te falta confirmar el correo. Buscá el mensaje en tu bandeja (o en spam) para no perderte los avisos.
+            Te falta confirmar el correo. Busca el mensaje en tu bandeja (o en spam) para no perderte los avisos.
           </p>
         )}
         <Link href="/cuenta"
@@ -63,7 +63,7 @@ export function CuentaPanel() {
       return toast.error("La contraseña necesita al menos 8 caracteres.")
     }
     if (modo === "registro" && !nombre.trim()) {
-      return toast.error("Poné tu nombre.")
+      return toast.error("Pon tu nombre.")
     }
 
     setEnviando(true)
@@ -92,7 +92,7 @@ export function CuentaPanel() {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold/15">
           <Mail className="h-6 w-6 text-gold" />
         </div>
-        <h4 className="mt-3 font-display text-xl font-bold tracking-tight">Revisá tu correo</h4>
+        <h4 className="mt-3 font-display text-xl font-bold tracking-tight">Revisa tu correo</h4>
         <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{listo}</p>
         <button onClick={() => { setListo(null); setModo("entrar") }}
           className="mt-4 text-xs text-muted-foreground underline">
@@ -103,10 +103,10 @@ export function CuentaPanel() {
   }
 
   const titulo =
-    modo === "registro" ? "Creá tu cuenta" : modo === "entrar" ? "Entrá a tu cuenta" : "Recuperar la contraseña"
+    modo === "registro" ? "Crea tu cuenta" : modo === "entrar" ? "Entra a tu cuenta" : "Recuperar la contraseña"
   const bajada =
     modo === "registro"
-      ? "Te aviso cada vez que cierro algo o pasa algo grande en el reto. Sin vueltas y te podés borrar cuando quieras."
+      ? "Te aviso cada vez que cierro algo o pasa algo grande en el reto. Sin vueltas y te puedes borrar cuando quieras."
       : modo === "entrar"
         ? "Con tu correo y tu contraseña."
         : "Te mando un enlace para poner una contraseña nueva."
@@ -158,7 +158,7 @@ export function CuentaPanel() {
           ) : modo === "entrar" ? (
             <><LogIn className="h-4 w-4" /> Entrar</>
           ) : (
-            <><Mail className="h-4 w-4" /> Mandame el enlace</>
+            <><Mail className="h-4 w-4" /> Mándame el enlace</>
           )}
         </button>
       </form>

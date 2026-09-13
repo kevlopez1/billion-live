@@ -33,13 +33,13 @@ export async function POST(req: Request) {
 
   const company = clean(body.company, 80)
   if (!company) {
-    return NextResponse.json({ error: "Poné el nombre de la empresa/marca." }, { status: 400 })
+    return NextResponse.json({ error: "Pon el nombre de la empresa/marca." }, { status: 400 })
   }
   let email = clean(body.email, 120)
   if (email && !isEmail(email)) email = null
   const whatsapp = clean(body.whatsapp, 30)
   if (!email && !whatsapp) {
-    return NextResponse.json({ error: "Dejá un correo o WhatsApp para contactarte." }, { status: 400 })
+    return NextResponse.json({ error: "Deja un correo o WhatsApp para contactarte." }, { status: 400 })
   }
 
   const insert: Record<string, string> = { company }

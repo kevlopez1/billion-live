@@ -15,7 +15,7 @@ export default function ControlPage() {
   const submit = async () => {
     if (!secret) {
       setStatus("error")
-      setMessage("Ingresá tu secreto.")
+      setMessage("Ingresa tu secreto.")
       return
     }
     setStatus("loading")

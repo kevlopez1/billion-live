@@ -43,14 +43,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 function traducir(msg: string): string {
   const m = msg.toLowerCase()
   if (m.includes("invalid login credentials")) return "Correo o contraseña incorrectos."
-  if (m.includes("email not confirmed")) return "Te falta confirmar el correo. Revisá tu bandeja."
+  if (m.includes("email not confirmed")) return "Te falta confirmar el correo. Revisa tu bandeja."
   if (m.includes("user already registered") || m.includes("already been registered"))
-    return "Ese correo ya tiene cuenta. Probá entrar."
+    return "Ese correo ya tiene cuenta. Intenta entrar."
   if (m.includes("password should be at least")) return "La contraseña necesita al menos 8 caracteres."
   if (m.includes("unable to validate email") || m.includes("invalid email")) return "Ese correo no parece válido."
-  if (m.includes("rate limit") || m.includes("too many")) return "Demasiados intentos. Esperá un momento."
-  if (m.includes("failed to fetch") || m.includes("network")) return "No hay conexión. Probá de nuevo."
-  return "No se pudo completar. Probá de nuevo en un momento."
+  if (m.includes("rate limit") || m.includes("too many")) return "Demasiados intentos. Espera un momento."
+  if (m.includes("failed to fetch") || m.includes("network")) return "No hay conexión. Inténtalo de nuevo."
+  return "No se pudo completar. Inténtalo de nuevo en un momento."
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     if (error) return { ok: false, error: traducir(error.message) }
     if (data.user && !data.session) {
-      return { ok: true, aviso: "Te mandamos un correo para confirmar la cuenta. Revisá tu bandeja (y el spam)." }
+      return { ok: true, aviso: "Te mandamos un correo para confirmar la cuenta. Revisa tu bandeja (y el spam)." }
     }
     return { ok: true }
   }, [])
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const cambiarNovedades: AuthContextType["cambiarNovedades"] = useCallback(
     async (quiere) => {
-      if (!perfil) return { ok: false, error: "Entrá a tu cuenta primero." }
+      if (!perfil) return { ok: false, error: "Entra a tu cuenta primero." }
       const { error } = await supabase
         .from("perfiles")
         .update({ novedades: quiere, novedades_desde: quiere ? new Date().toISOString() : null })

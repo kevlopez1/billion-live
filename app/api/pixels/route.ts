@@ -114,7 +114,7 @@ export async function POST(req: Request) {
   }
 
   const name = clean(body.name, MAX_NAME)
-  if (!name) return NextResponse.json({ error: "Poné tu nombre o el de tu marca." }, { status: 400 })
+  if (!name) return NextResponse.json({ error: "Pon tu nombre o el de tu marca." }, { status: 400 })
 
   const message = clean(body.message, MAX_MESSAGE)
   const link = clean(body.link, MAX_LINK)
@@ -165,7 +165,7 @@ export async function POST(req: Request) {
 
   const filas = asignar.map((idx) => ({ ...comun, kind: "pixel", idx, price_usd: PIXEL_PRICE }))
   const { error: e2 } = await admin.from("car_pixels").insert(filas)
-  if (e2) return NextResponse.json({ error: "Alguien tomó esos píxeles justo ahora. Probá de nuevo." }, { status: 409 })
+  if (e2) return NextResponse.json({ error: "Alguien tomó esos píxeles justo ahora. Inténtalo de nuevo." }, { status: 409 })
 
   return NextResponse.json({
     ok: true,

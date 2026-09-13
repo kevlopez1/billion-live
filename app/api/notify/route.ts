@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   if (email && !isEmail(email)) email = null
   const whatsapp = clean(body.whatsapp, 30)
   if (!email && !whatsapp) {
-    return NextResponse.json({ error: "Dejá un correo o WhatsApp." }, { status: 400 })
+    return NextResponse.json({ error: "Deja un correo o WhatsApp." }, { status: 400 })
   }
 
   const insert: Record<string, string> = {}

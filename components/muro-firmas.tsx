@@ -63,7 +63,7 @@ export function MuroFirmas() {
           </div>
         ))}
 
-        {/* CTA: tu nombre acá */}
+        {/* CTA: tu nombre aquí */}
         <a
           href={WA_URL}
           target="_blank"
@@ -71,10 +71,10 @@ export function MuroFirmas() {
           className="lift group rounded-2xl border border-dashed border-foreground/25 bg-transparent px-4 py-6 text-center flex flex-col items-center justify-center hover:border-rojo/50 transition-colors"
         >
           <div className="font-serif-display italic text-xl md:text-2xl text-muted-foreground/70 leading-tight">
-            Tu nombre acá
+            Tu nombre aquí
           </div>
           <div className="mt-2.5 inline-flex items-center gap-1 text-[10px] font-display font-semibold uppercase tracking-[0.2em] text-rojo">
-            Firmá el Mercedes <ArrowUpRight className="w-3 h-3" />
+            Firma el Mercedes <ArrowUpRight className="w-3 h-3" />
           </div>
         </a>
       </div>

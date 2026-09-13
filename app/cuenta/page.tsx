@@ -42,14 +42,14 @@ export default function CuentaPage() {
       ) : (
         <div className="mt-6 space-y-4">
           <div className="rounded-3xl border border-border bg-card/40 px-5 py-5">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-gold">Quién sos</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-gold">Quién eres</div>
             <div className="mt-1.5 font-display text-xl font-bold tracking-tight">{perfil.nombre || "Sin nombre"}</div>
             <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
               <Mail className="h-3.5 w-3.5" /> {perfil.email}
             </div>
             {faltaVerificar && (
               <p className="mt-3 rounded-2xl border border-gold/40 bg-gold/[0.07] px-4 py-3 text-xs text-muted-foreground">
-                Te falta confirmar el correo. Hasta que lo hagas no te llegan las novedades — buscá el mensaje en
+                Te falta confirmar el correo. Hasta que lo hagas no te llegan las novedades — busca el mensaje en
                 tu bandeja o en spam.
               </p>
             )}

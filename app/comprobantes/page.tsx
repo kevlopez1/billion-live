@@ -56,8 +56,8 @@ export default function ComprobantesPage() {
           Los comprobantes
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-muted-foreground md:text-base">
-          Todo el mundo muestra el auto. Acá está la factura. Cada peso que mueve el contador entró por un pago
-          real de un <b className="text-foreground">cliente de</b> <PrimeMark />, y acá está el recibo de cada uno.
+          Todo el mundo muestra el auto. Aquí está la factura. Cada peso que mueve el contador entró por un pago
+          real de un <b className="text-foreground">cliente de</b> <PrimeMark />, y aquí está el recibo de cada uno.
         </p>
       </div>
 
@@ -93,7 +93,7 @@ export default function ComprobantesPage() {
         </ul>
       </div>
 
-      {/* La página vende: quien llegó hasta acá ya vio la prueba */}
+      {/* La página vende: quien llegó hasta aquí ya vio la prueba */}
       <div className="mt-4 rounded-3xl border border-kev-primary/40 bg-kev-primary/[0.06] px-5 py-6 text-center md:px-7">
         <h2 className="font-display text-lg font-bold tracking-tight md:text-xl">
           Esta plata sale de un negocio que existe
