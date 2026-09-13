@@ -16,6 +16,7 @@ import {
   VIEW_W,
   type Slot,
 } from "@/lib/car-grid"
+import { CANTIDAD, RECAUDADO_USD } from "@/lib/firmas"
 import { EV, track } from "@/lib/track"
 
 // WhatsApp de Kev para pagar (el mismo de las firmas).
@@ -130,7 +131,17 @@ export function AutoPixeles() {
     setWhatsapp("")
   }
 
-  const pct = est && est.total_pixels ? (est.sold_pixels / est.total_pixels) * 100 : 0
+  // El contador NO puede salir solo de Supabase. La tabla del auto todavía no
+  // está creada, así que devolvía 0 mientras el muro de abajo mostraba la firma
+  // #001 ya pagada: la web se contradecía a sí misma.
+  //
+  // Las firmas vendidas de verdad son las de lib/firmas.ts. Se toma el mayor de
+  // los dos: hoy manda la lista (Supabase da 0); el día que la gente compre
+  // desde la web, manda Supabase. En los dos casos el número que se muestra es
+  // el real, nunca uno más chico.
+  const vendidas = Math.max(est?.sold_pixels ?? 0, CANTIDAD)
+  const recaudado = Math.max(est?.sold_usd ?? 0, RECAUDADO_USD)
+  const pct = est && est.total_pixels ? (vendidas / est.total_pixels) * 100 : 0
 
   return (
     <div>
@@ -233,10 +244,10 @@ export function AutoPixeles() {
         {/* Progreso real */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[11px] md:text-xs text-muted-foreground">
           <span>
-            <b className="text-foreground">{est?.sold_pixels ?? 0}</b> de {est?.total_pixels ?? 0} firmas encendidas
+            <b className="text-foreground">{vendidas}</b> de {est?.total_pixels ?? 0} firmas encendidas
           </span>
           <span>
-            Recaudado aquí: <b className="text-foreground">${(est?.sold_usd ?? 0).toLocaleString("en-US")}</b> de $
+            Recaudado aquí: <b className="text-foreground">${recaudado.toLocaleString("en-US")}</b> de $
             {(est?.total_value ?? 0).toLocaleString("en-US")}
           </span>
         </div>
