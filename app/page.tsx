@@ -22,7 +22,6 @@ import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { MemoriaScroll } from "@/components/memoria-scroll"
 import { Eventos } from "@/components/eventos"
-import { FirmasComprobantes } from "@/components/firmas-comprobantes"
 import { MuroFirmas } from "@/components/muro-firmas"
 import { FirmaCta } from "@/components/firma-cta"
 import { AutoPixeles } from "@/components/auto-pixeles"
@@ -163,13 +162,12 @@ export default function Dashboard() {
         <Reveal delay={60}>
           <FirmaCta />
         </Reveal>
+        {/* El auto y quiénes ya firmaron van JUNTOS, en un mismo Reveal.
+            Separados se leían como dos secciones sin relación: arriba el
+            contador, abajo unos comprobantes sueltos. Es una sola historia —
+            este es el auto, estas son las firmas que ya tiene. */}
         <Reveal delay={80}>
           <AutoPixeles />
-        </Reveal>
-        <Reveal delay={100}>
-          <FirmasComprobantes />
-        </Reveal>
-        <Reveal delay={120}>
           <MuroFirmas />
         </Reveal>
       </section>
