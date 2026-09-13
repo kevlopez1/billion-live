@@ -390,20 +390,19 @@ export default function Dashboard() {
               </button>
             </nav>
             {/* Va con PALABRA y no con un icono: el apretón de manos solo no
-                dice nada, y en el celular era lo único que se veía. "Menú" no
-                sirve — eso ya es la hamburguesa de al lado. */}
+                decía nada, y en el celular era lo único que se veía. */}
             <button
               onClick={() => openHub("header")}
               title="Trabajar conmigo"
               className="press-effect flex shrink-0 items-center whitespace-nowrap rounded-full border border-gold/45 bg-gold/[0.08] px-3 py-2 text-[13px] font-semibold text-foreground hover:border-gold sm:px-3.5 sm:text-sm"
             >
-              <span className="md:hidden">Trabajemos</span>
+              <span className="md:hidden">Menú</span>
               <span className="hidden md:inline">Trabajar conmigo</span>
             </button>
             <ShareButton />
             <button
               onClick={() => setMenuOpen(true)}
-              aria-label="Menú"
+              aria-label="Secciones del sitio"
               className="sm:hidden w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground press-effect"
             >
               <Menu className="w-5 h-5" />
