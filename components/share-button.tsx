@@ -1,118 +1,50 @@
 "use client"
-import { SITE_URL } from "@/lib/site"
 
-import { useEffect, useRef, useState } from "react"
-import { Share2, Link2, ImageDown, Loader2 } from "lucide-react"
+import { Share2 } from "lucide-react"
 import { toast } from "sonner"
-import { useApp } from "@/context/app-context"
-import { downloadStoryCard } from "@/lib/story-card"
+import { SITE_URL } from "@/lib/site"
 import { EV, track } from "@/lib/track"
 
-const URL_SITE = SITE_URL
-const TEXT = "De $10 a un Mercedes-AMG Mansory, en público desde Bolivia 🏁 Mira el reto en vivo:"
+// ──────────────────────────────────────────────────────────────
+// COMPARTIR
+//
+// Un solo toque: comparte el link. Antes abría un menú con dos opciones, y la
+// segunda generaba una imagen aparte — una placa que no seguía la identidad
+// del sitio y que además repetía peor lo que el link ya hace solo: al pegarlo
+// en WhatsApp, Instagram o X sale la tarjeta de /opengraph-image, con el
+// contador EN VIVO y los colores de la marca.
+//
+// Menos pasos y mejor resultado: se quitó el menú y la generación de imagen.
+// ──────────────────────────────────────────────────────────────
+
+const TEXTO = "De $10 a un Mercedes Mansory, en público desde Bolivia 🏁 Mira el reto en vivo:"
 
 export function ShareButton({ className = "" }: { className?: string }) {
-  const { metrics } = useApp()
-  const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  // Cerrar al hacer clic afuera o con Escape.
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
-    document.addEventListener("mousedown", onDown)
-    document.addEventListener("keydown", onKey)
-    return () => {
-      document.removeEventListener("mousedown", onDown)
-      document.removeEventListener("keydown", onKey)
-    }
-  }, [open])
-
-  const shareLink = async () => {
-    setOpen(false)
+  const compartir = async () => {
     try {
+      // En el celular abre la hoja de compartir del sistema; en escritorio no
+      // existe, así que se copia el link.
       if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ title: "KEV PROJECT GTA", text: TEXT, url: URL_SITE })
+        await navigator.share({ title: "KEV PROJECT GTA", text: TEXTO, url: SITE_URL })
         track(EV.COMPARTIR, { metodo: "nativo" })
       } else {
-        await navigator.clipboard.writeText(`${TEXT} ${URL_SITE}`)
+        await navigator.clipboard.writeText(`${TEXTO} ${SITE_URL}`)
         track(EV.COMPARTIR, { metodo: "copiar" })
-        toast.success("¡Link copiado! Compartilo 🔥")
+        toast.success("¡Link copiado! Compártelo 🔥")
       }
     } catch {
-      /* el usuario canceló el share */
-    }
-  }
-
-  const shareCard = async () => {
-    if (busy) return
-    setBusy(true)
-    try {
-      const res = await downloadStoryCard(metrics.netWorth)
-      // En móvil se abre el compartir nativo (ya es su confirmación) → sin toast.
-      // En escritorio se descarga el archivo → avisamos brevemente.
-      if (res === "downloaded") {
-        toast.success("¡Imagen guardada! Ya puedes compartirla 🔥", { duration: 4000 })
-      }
-    } catch {
-      toast.error("No se pudo generar la imagen. Inténtalo de nuevo.", { duration: 4000 })
-    } finally {
-      setBusy(false)
-      setOpen(false)
+      // La persona canceló el compartir: no es un error.
     }
   }
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`btn-accent inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold sm:px-3.5 sm:text-sm ${className}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-        {/* A 360 px los dos botones del header no entran: aquí queda solo el ícono */}
-        <span className="max-[380px]:hidden">Compartir</span>
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 mt-2 w-64 rounded-2xl border border-border bg-popover backdrop-blur-xl shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)] p-1.5 z-50"
-        >
-          <button
-            role="menuitem"
-            onClick={shareLink}
-            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-foreground/5 transition-colors"
-          >
-            <Link2 className="w-4 h-4 text-kev-primary shrink-0" />
-            <span>
-              <span className="block text-sm font-semibold">Compartir el reto</span>
-              <span className="block text-[11px] text-muted-foreground">Manda el link de la web</span>
-            </span>
-          </button>
-          <button
-            role="menuitem"
-            onClick={shareCard}
-            disabled={busy}
-            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-foreground/5 transition-colors disabled:opacity-60"
-          >
-            {busy ? (
-              <Loader2 className="w-4 h-4 animate-spin text-kev-primary shrink-0" />
-            ) : (
-              <ImageDown className="w-4 h-4 text-kev-primary shrink-0" />
-            )}
-            <span>
-              <span className="block text-sm font-semibold">Imagen para compartir</span>
-              <span className="block text-[11px] text-muted-foreground">Story, WhatsApp, TikTok…</span>
-            </span>
-          </button>
-        </div>
-      )}
-    </div>
+    <button
+      onClick={compartir}
+      className={`btn-accent inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold sm:px-3.5 sm:text-sm ${className}`}
+    >
+      <Share2 className="w-4 h-4" />
+      {/* A 360 px los dos botones del header no entran: aquí queda solo el ícono */}
+      <span className="max-[380px]:hidden">Compartir</span>
+    </button>
   )
 }
