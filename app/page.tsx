@@ -155,7 +155,7 @@ export default function Dashboard() {
       </section>
 
       {/* El auto por partes: la monetización directa del reto. La prueba ya no
-          vive acá — el botón del hero lleva a /comprobantes, que es su página. */}
+          vive aquí — el botón del hero lleva a /comprobantes, que es su página. */}
       <section id="el-auto" className="scroll-mt-24">
         <Reveal>
           <SectionLabel index="03" eyebrow="El auto es de todos" title="El auto por partes" accent="azul" />
@@ -184,10 +184,10 @@ export default function Dashboard() {
         </Reveal>
       </section>
 
-      {/* Sumate: comunidad de WhatsApp + crear cuenta */}
+      {/* Súmate: comunidad de WhatsApp + crear cuenta */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="Sumate" title="No te lo pierdas" accent="rojo" />
+          <SectionLabel index="05" eyebrow="Súmate" title="No te lo pierdas" accent="rojo" />
         </Reveal>
         <Reveal delay={60}>
           <a
@@ -298,7 +298,7 @@ export default function Dashboard() {
           </div>
           <nav className="flex flex-col gap-1.5">
             {/* El hub es la pantalla de entrada del sitio (el perfil de Kev y
-                los caminos a PRIME): acá se llama "Menú principal" y no
+                los caminos a PRIME): aquí se llama "Menú principal" y no
                 "Trabajar conmigo". El apretón de manos tampoco iba — esto es
                 navegación, no una oferta. */}
             <button

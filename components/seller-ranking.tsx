@@ -28,13 +28,13 @@ const ROLES: Record<
     heading: "vender conmigo",
     msgTitle: "VENDEDOR — Vender con KEV PROJECT GTA",
     fields: [
-      { key: "nombre", label: "Tu nombre", placeholder: "¿Cómo te llamás?" },
+      { key: "nombre", label: "Tu nombre", placeholder: "¿Cómo te llamas?" },
       { key: "usuario", label: "Tu usuario (para el ranking)", placeholder: "@tu_usuario" },
-      { key: "lugar", label: "País y ciudad", placeholder: "¿Desde dónde vendés?" },
+      { key: "lugar", label: "País y ciudad", placeholder: "¿Desde dónde vendes?" },
       { key: "horas", label: "¿Cuántas horas por día?", placeholder: "Sé honesto…" },
-      { key: "experiencia", label: "¿Vendiste algo antes? ¿Qué?", placeholder: "Contame tu experiencia…", textarea: true },
-      { key: "porque", label: "¿Por qué querés trabajar conmigo?", placeholder: "Tu motivación real…", textarea: true },
-      { key: "meta", label: "¿Cuánto querés ganar por mes?", placeholder: "En dólares…" },
+      { key: "experiencia", label: "¿Vendiste algo antes? ¿Qué?", placeholder: "Cuéntame tu experiencia…", textarea: true },
+      { key: "porque", label: "¿Por qué quieres trabajar conmigo?", placeholder: "Tu motivación real…", textarea: true },
+      { key: "meta", label: "¿Cuánto quieres ganar por mes?", placeholder: "En dólares…" },
     ],
   },
   contenido: {
@@ -43,13 +43,13 @@ const ROLES: Record<
     heading: "crear contenido",
     msgTitle: "CONTENIDO — Fábrica de contenido KEV PROJECT GTA",
     fields: [
-      { key: "nombre", label: "Tu nombre", placeholder: "¿Cómo te llamás?" },
+      { key: "nombre", label: "Tu nombre", placeholder: "¿Cómo te llamas?" },
       { key: "usuario", label: "Tu usuario / link a tu contenido", placeholder: "@usuario o link" },
       { key: "lugar", label: "País y ciudad", placeholder: "¿Desde dónde creás?" },
       { key: "horas", label: "¿Cuántas horas por día?", placeholder: "Sé honesto…" },
-      { key: "tipo", label: "¿Qué tipo de contenido hacés?", placeholder: "Edición, guiones, viral, diseño, faceless…", textarea: true },
+      { key: "tipo", label: "¿Qué tipo de contenido haces?", placeholder: "Edición, guiones, viral, diseño, faceless…", textarea: true },
       { key: "ia", label: "¿Usás IA para crear? ¿Cuáles?", placeholder: "CapCut, ChatGPT, ElevenLabs…" },
-      { key: "porque", label: "¿Por qué querés entrar a la fábrica de contenido?", placeholder: "Tu motivación real…", textarea: true },
+      { key: "porque", label: "¿Por qué quieres entrar a la fábrica de contenido?", placeholder: "Tu motivación real…", textarea: true },
     ],
   },
 }
@@ -210,12 +210,12 @@ export function SellerRanking() {
       {/* POSTULACIÓN por rol */}
       <div className="rounded-2xl border border-gold/25 bg-gradient-to-b from-gold/10 to-transparent p-6 md:p-7">
         <div className="text-center mb-5">
-          <div className="section-eyebrow text-azul">Sumate al equipo</div>
+          <div className="section-eyebrow text-azul">Súmate al equipo</div>
           <h3 className="mt-2 leading-tight">
             <span className="font-display font-extrabold text-2xl md:text-3xl">Postulate para </span>
             <span className="font-serif-display italic text-2xl md:text-3xl text-azul">{cfg.heading}</span>
           </h3>
-          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">Elegí tu rol. Llega directo a mi WhatsApp. Yo decido quién entra.</p>
+          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">Elige tu rol. Llega directo a mi WhatsApp. Yo decido quién entra.</p>
         </div>
 
         {/* Selector de rol */}
@@ -253,7 +253,7 @@ export function SellerRanking() {
           <Send className="w-5 h-5" /> Enviar postulación por WhatsApp
         </button>
         <p className="text-center text-[11px] text-muted-foreground/70 mt-3">
-          Tus respuestas se arman en un mensaje y se envían a Kev directamente. {!canSend && "Completá al menos tu nombre y usuario."}
+          Tus respuestas se arman en un mensaje y se envían a Kev directamente. {!canSend && "Completa al menos tu nombre y usuario."}
         </p>
       </div>
     </div>

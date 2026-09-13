@@ -321,7 +321,7 @@ export default function PublicProfile() {
 
             {/* CTA */}
             <div className="bg-[#111] border border-white/10 rounded-2xl p-6 text-center">
-              <h3 className="font-semibold mb-2">Seguí el reto</h3>
+              <h3 className="font-semibold mb-2">Sigue el reto</h3>
               <p className="text-sm text-white/50 mb-4">Actualizaciones del camino de $10 al Mansory</p>
               <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white">
                 <Mail className="w-4 h-4 mr-2" />

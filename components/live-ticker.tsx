@@ -26,7 +26,7 @@ export function LiveTicker() {
     `⏱️ ${mounted ? daysLeft(CHALLENGE_RECORD_DEADLINE) : "—"} días al récord`,
     `💵 Recaudado · $${metrics.netWorth.toLocaleString("en-US")} / $450K`,
     `🎯 Meta · Mercedes-AMG GT 63 Mansory`,
-    huellas != null ? `🖐️ ${huellas} huellas en el muro` : "🖐️ Dejá tu huella en el muro",
+    huellas != null ? `🖐️ ${huellas} huellas en el muro` : "🖐️ Deja tu huella en el muro",
     "📍 En vivo desde Santa Cruz, Bolivia",
   ]
   const row = items.join("        •        ")

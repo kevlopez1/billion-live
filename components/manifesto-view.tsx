@@ -14,7 +14,7 @@ const iconMap: Record<string, typeof Scale> = {
 
 // Método STRATEGY — el método de Kev para llegar a los $1.000.000.000.
 const strategyMethod = [
-  { letter: "S", word: "Singularidad", desc: "Ser irrepetible: el único que hace esto, así, desde acá." },
+  { letter: "S", word: "Singularidad", desc: "Ser irrepetible: el único que hace esto, así, desde aquí." },
   { letter: "T", word: "Timing", desc: "Lo correcto en el momento correcto. La ola antes que la multitud." },
   { letter: "R", word: "Rapidez", desc: "Velocidad de ejecución como ventaja injusta." },
   { letter: "A", word: "Apalancamiento", desc: "Que cada esfuerzo rinda 10x, 100x, 1000x." },

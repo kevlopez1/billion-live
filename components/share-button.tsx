@@ -9,7 +9,7 @@ import { downloadStoryCard } from "@/lib/story-card"
 import { EV, track } from "@/lib/track"
 
 const URL_SITE = SITE_URL
-const TEXT = "De $10 a un Mercedes-AMG Mansory, en público desde Bolivia 🏁 Mirá el reto en vivo:"
+const TEXT = "De $10 a un Mercedes-AMG Mansory, en público desde Bolivia 🏁 Mira el reto en vivo:"
 
 export function ShareButton({ className = "" }: { className?: string }) {
   const { metrics } = useApp()
@@ -56,10 +56,10 @@ export function ShareButton({ className = "" }: { className?: string }) {
       // En móvil se abre el compartir nativo (ya es su confirmación) → sin toast.
       // En escritorio se descarga el archivo → avisamos brevemente.
       if (res === "downloaded") {
-        toast.success("¡Imagen guardada! Ya podés compartirla 🔥", { duration: 4000 })
+        toast.success("¡Imagen guardada! Ya puedes compartirla 🔥", { duration: 4000 })
       }
     } catch {
-      toast.error("No se pudo generar la imagen. Probá de nuevo.", { duration: 4000 })
+      toast.error("No se pudo generar la imagen. Inténtalo de nuevo.", { duration: 4000 })
     } finally {
       setBusy(false)
       setOpen(false)
@@ -75,7 +75,7 @@ export function ShareButton({ className = "" }: { className?: string }) {
         aria-expanded={open}
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-        {/* A 360 px los dos botones del header no entran: acá queda solo el ícono */}
+        {/* A 360 px los dos botones del header no entran: aquí queda solo el ícono */}
         <span className="max-[380px]:hidden">Compartir</span>
       </button>
 
@@ -92,7 +92,7 @@ export function ShareButton({ className = "" }: { className?: string }) {
             <Link2 className="w-4 h-4 text-kev-primary shrink-0" />
             <span>
               <span className="block text-sm font-semibold">Compartir el reto</span>
-              <span className="block text-[11px] text-muted-foreground">Mandá el link de la web</span>
+              <span className="block text-[11px] text-muted-foreground">Manda el link de la web</span>
             </span>
           </button>
           <button

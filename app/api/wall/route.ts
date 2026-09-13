@@ -72,7 +72,7 @@ export async function POST(req: Request) {
 
   const name = clean(body.name, MAX_NAME)
   if (!name) {
-    return NextResponse.json({ error: "Poné tu nombre para dejar tu huella." }, { status: 400 })
+    return NextResponse.json({ error: "Pon tu nombre para dejar tu huella." }, { status: 400 })
   }
 
   const message = clean(body.message, MAX_MESSAGE)

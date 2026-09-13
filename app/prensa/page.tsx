@@ -35,7 +35,7 @@ const verifiable = [
 const testimonials = [
   { quote: "Que el contador sea revenue REAL de PRIME le da otra credibilidad.", author: "Diego R." },
   { quote: "Bolivia necesitaba a alguien construyendo en público sin vender humo.", author: "Mauricio T." },
-  { quote: "Las Becas PRIME son lo mejor del reto: ayudar mientras construís.", author: "Valeria C." },
+  { quote: "Las Becas PRIME son lo mejor del reto: ayudar mientras construyes.", author: "Valeria C." },
 ]
 
 export default function PrensaPage() {
@@ -64,7 +64,7 @@ export default function PrensaPage() {
             El reto que se puede auditar.
           </h1>
           <p className="text-lg text-muted-foreground mt-6 font-light text-pretty leading-relaxed">
-            De $10 a un Mercedes Mansory, desde Bolivia, en público. A diferencia del flex tradicional, acá el
+            De $10 a un Mercedes Mansory, desde Bolivia, en público. A diferencia del flex tradicional, aquí el
             contador no se inventa: se alimenta del <span className="text-foreground">revenue real de <PrimeMark /></span>{" "}
             (empleados de IA para empresas). El auto es la carnada; el imperio es la meta.
           </p>
@@ -109,7 +109,7 @@ export default function PrensaPage() {
           <h2 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-6">Prensa</h2>
           <div className="glass-card p-8 md:p-10 text-center">
             <p className="text-muted-foreground font-light max-w-xl mx-auto">
-              ¿Sos prensa o inversor? Esta es una historia de construcción en público desde la crisis: IA, LatAm y una
+              ¿Eres prensa o inversor? Esta es una historia de construcción en público desde la crisis: IA, LatAm y una
               meta imposible. Escribinos para acceder al press kit, datos y entrevistas.
             </p>
             <a
