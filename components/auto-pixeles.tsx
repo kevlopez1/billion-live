@@ -394,13 +394,6 @@ export function AutoPixeles() {
           )}
         </div>
       )}
-
-      {/* ── Aviso honesto (protege el proyecto y al comprador) ── */}
-      <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground/80">
-        Tu lugar en el auto es simbólico y publicitario. No es una inversión, no da propiedad
-        sobre el vehículo ni derecho a ganancias, y no es reembolsable. El lugar se enciende cuando el pago está
-        confirmado.
-      </p>
     </div>
   )
 }
