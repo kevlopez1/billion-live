@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { CHALLENGE_TARGET, RECAUDADO } from "@/context/app-context"
+import { PrimeMark, conPrime } from "@/components/prime-mark"
 
 // Public profile data (would come from API in production)
 const profileData = {
@@ -134,7 +135,7 @@ export default function PublicProfile() {
                 </span>
               </div>
               <p className="text-xl text-white/70 mb-3">{profileData.tagline}</p>
-              <p className="text-white/50 max-w-2xl mb-4 leading-relaxed">{profileData.bio}</p>
+              <p className="text-white/50 max-w-2xl mb-4 leading-relaxed">{conPrime(profileData.bio)}</p>
               <div className="flex flex-wrap items-center gap-4">
                 <span className="flex items-center gap-1.5 text-sm text-white/60">
                   <MapPin className="w-4 h-4" />
@@ -186,7 +187,7 @@ export default function PublicProfile() {
         <div className="bg-[#111] border border-white/10 rounded-2xl p-6 md:p-8 mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
             <div>
-              <p className="text-white/50 text-sm mb-1">Contador · Revenue PRIME</p>
+              <p className="text-white/50 text-sm mb-1">Contador · Revenue <PrimeMark /></p>
               <div className="text-4xl md:text-5xl font-bold text-emerald-400">
                 ${profileData.stats.netWorth.toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </div>
@@ -256,9 +257,9 @@ export default function PublicProfile() {
                       <div className="flex-1 pb-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-white/50">{milestone.year}</span>
-                          <span className="text-sm font-semibold text-emerald-400">{milestone.amount}</span>
+                          <span className="text-sm font-semibold text-emerald-400">{conPrime(milestone.amount)}</span>
                         </div>
-                        <p className="font-medium mt-1">{milestone.title}</p>
+                        <p className="font-medium mt-1">{conPrime(milestone.title)}</p>
                       </div>
                     </div>
                   ))}
@@ -279,7 +280,7 @@ export default function PublicProfile() {
                     className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
                   >
                     <div>
-                      <h3 className="font-medium">{project.name}</h3>
+                      <h3 className="font-medium">{conPrime(project.name)}</h3>
                       <p className="text-sm text-white/50">{project.type}</p>
                     </div>
                     <div className="text-right">
@@ -304,7 +305,7 @@ export default function PublicProfile() {
                 {profileData.principles.map((principle, i) => (
                   <div key={i} className="p-4 bg-white/5 rounded-xl">
                     <h3 className="font-medium text-emerald-400 mb-1">{principle.title}</h3>
-                    <p className="text-sm text-white/60">{principle.desc}</p>
+                    <p className="text-sm text-white/60">{conPrime(principle.desc)}</p>
                   </div>
                 ))}
               </div>
@@ -335,7 +336,7 @@ export default function PublicProfile() {
       {/* Footer */}
       <footer className="border-t border-white/10 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-white/40">2026 KEV PROJECT GTA · PRIME. Hecho en Bolivia.</p>
+          <p className="text-sm text-white/40">2026 KEV PROJECT GTA · <PrimeMark />. Hecho en Bolivia.</p>
           <div className="flex items-center gap-4">
             <Link href="/" className="text-sm text-white/40 hover:text-white transition-colors">
               Dashboard

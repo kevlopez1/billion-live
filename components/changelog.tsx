@@ -3,6 +3,7 @@
 import { Reveal } from "@/components/reveal"
 import { CHALLENGE_LAUNCH } from "@/context/app-context"
 import { Radio } from "lucide-react"
+import { conPrime } from "@/components/prime-mark"
 
 type Entry = {
   date: string // AAAA-MM-DD
@@ -79,7 +80,7 @@ export function Changelog() {
                 <div className="font-display font-bold tracking-tight text-lg md:text-xl leading-tight mt-1.5">
                   {e.title}
                 </div>
-                <p className="text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">{e.body}</p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">{conPrime(e.body)}</p>
               </div>
             </Reveal>
           ))}
