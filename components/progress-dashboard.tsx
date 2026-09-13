@@ -5,7 +5,7 @@ import { useApp, CHALLENGE_TARGET, CHALLENGE_LAUNCH, CHALLENGE_RECORD_DEADLINE }
 import { PrimeMark } from "@/components/prime-mark"
 
 // ──────────────────────────────────────────────────────────────
-// EDITAR ACÁ: números manuales del reto (actualizá a medida que avanzás).
+// EDITAR AQUÍ: números manuales del reto (actualízalos a medida que avanzas).
 // El "recaudado", el % y los días se calculan solos.
 // ──────────────────────────────────────────────────────────────
 const MRR = 0 // ingreso recurrente mensual del reto (USD)
@@ -13,7 +13,7 @@ const CLIENTES_RETO = 0 // clientes cerrados DESDE el relanzamiento
 const PROPUESTAS = 1 // propuestas enviadas
 const EN_NEGOCIACION = 1 // tratos en pipeline
 
-// Reinversión del reto (USD). Editá a medida que gastás.
+// Reinversión del reto (USD). Edita a medida que gastas.
 const GASTO_CLAUDE = 500 // plan de Claude
 const GASTO_CREDITOS = 100 // créditos de IA (generación de contenido)
 const GASTO_GITHUB = 21 // GitHub empresarial
@@ -43,15 +43,10 @@ const daysLeft = (iso: string) =>
 
 export function ProgressDashboard() {
   const { metrics } = useApp()
-  const [huellas, setHuellas] = useState<number | null>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    fetch("/api/wall", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => typeof d.total === "number" && setHuellas(d.total))
-      .catch(() => {})
   }, [])
 
   const recaudado = metrics.netWorth
@@ -106,18 +101,6 @@ export function ProgressDashboard() {
           <Stat value={`$${GASTO_SERVIDOR}`} label="Servidor" sub="en la nube" />
           <Stat value={`$${GASTO_CAINCO}`} label="CAINCO" sub="evento networking" />
           <Stat value={`$${GASTO_BLOCKCHAIN}`} label="Blockchain 2040" sub="VIP · evento" />
-        </div>
-      </div>
-
-      {/* ALCANCE */}
-      <div>
-        <GroupLabel>Alcance · la atención</GroupLabel>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Stat
-            value={mounted && huellas !== null ? huellas.toLocaleString("es-BO") : "—"}
-            label="Huellas"
-            sub="en el muro del Día 1"
-          />
         </div>
       </div>
     </div>
