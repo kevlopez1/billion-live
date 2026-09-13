@@ -7,7 +7,7 @@ import { useApp } from "@/context/app-context"
 import { PortfolioOverview } from "@/components/portfolio-overview"
 import { ProgressDashboard } from "@/components/progress-dashboard"
 import { SocialLinks, WHATSAPP_COMMUNITY } from "@/components/social-links"
-import { MessageCircle, ArrowUpRight, Menu, X, LayoutDashboard, BarChart3, BookOpen, Trophy, Handshake } from "lucide-react"
+import { MessageCircle, ArrowUpRight, Menu, X, LayoutDashboard, BarChart3, BookOpen, Trophy, Home } from "lucide-react"
 import { ManifestoView } from "@/components/manifesto-view"
 import { PrimePipeline } from "@/components/prime-pipeline"
 import { Roadmap } from "@/components/roadmap"
@@ -297,12 +297,16 @@ export default function Dashboard() {
             </button>
           </div>
           <nav className="flex flex-col gap-1.5">
+            {/* El hub es la pantalla de entrada del sitio (el perfil de Kev y
+                los caminos a PRIME): acá se llama "Menú principal" y no
+                "Trabajar conmigo". El apretón de manos tampoco iba — esto es
+                navegación, no una oferta. */}
             <button
               onClick={() => openHub("menu")}
               className="flex items-center gap-3 rounded-xl border border-gold/45 bg-gold/[0.08] px-4 py-3 text-left text-[15px] font-semibold text-foreground hover:border-gold"
             >
-              <Handshake className="w-[18px] h-[18px] text-gold" />
-              Trabajar conmigo
+              <Home className="w-[18px] h-[18px] text-gold" />
+              Menú principal
             </button>
             <div className="my-2 h-px bg-border" />
             {navItems.map((item) => {
@@ -393,11 +397,11 @@ export default function Dashboard() {
                 decía nada, y en el celular era lo único que se veía. */}
             <button
               onClick={() => openHub("header")}
-              title="Trabajar conmigo"
+              title="Menú principal"
               className="press-effect flex shrink-0 items-center whitespace-nowrap rounded-full border border-gold/45 bg-gold/[0.08] px-3 py-2 text-[13px] font-semibold text-foreground hover:border-gold sm:px-3.5 sm:text-sm"
             >
               <span className="md:hidden">Menú</span>
-              <span className="hidden md:inline">Trabajar conmigo</span>
+              <span className="hidden md:inline">Menú principal</span>
             </button>
             <ShareButton />
             <button
