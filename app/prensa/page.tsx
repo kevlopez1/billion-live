@@ -22,7 +22,7 @@ const verifiable = [
     icon: Target,
     label: "Meta pública",
     value: "$450.000",
-    note: "Mercedes-AMG GT 63 Mansory. Capa secreta de largo plazo: el imperio.",
+    note: "Un Mercedes Mansory. Capa secreta de largo plazo: el imperio.",
   },
   {
     icon: Users,
@@ -64,7 +64,7 @@ export default function PrensaPage() {
             El reto que se puede auditar.
           </h1>
           <p className="text-lg text-muted-foreground mt-6 font-light text-pretty leading-relaxed">
-            De $10 a un Mercedes-AMG GT 63 Mansory, desde Bolivia, en público. A diferencia del flex tradicional, acá el
+            De $10 a un Mercedes Mansory, desde Bolivia, en público. A diferencia del flex tradicional, acá el
             contador no se inventa: se alimenta del <span className="text-foreground">revenue real de <PrimeMark /></span>{" "}
             (empleados de IA para empresas). El auto es la carnada; el imperio es la meta.
           </p>

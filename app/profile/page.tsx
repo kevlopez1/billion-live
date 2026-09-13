@@ -19,12 +19,13 @@ import {
   Quote,
 } from "lucide-react"
 import { toast } from "sonner"
+import { CHALLENGE_TARGET, RECAUDADO } from "@/context/app-context"
 
 // Public profile data (would come from API in production)
 const profileData = {
   name: "Kev López",
   tagline: "De $10 a un Mercedes-AMG Mansory — en público, desde Bolivia",
-  bio: "Benjamín Kevin López Mamani, 21, Santa Cruz. Fundador de PRIME (empleados de IA para empresas). El reto: de $10 a un Mercedes-AMG GT 63 Mansory, con el contador alimentado por el revenue real de PRIME. El auto es la carnada; el imperio es la meta.",
+  bio: "Benjamín Kevin López Mamani, 21, Santa Cruz. Fundador de PRIME (empleados de IA para empresas). El reto: de $10 a un Mercedes Mansory, con el contador alimentado por el revenue real de PRIME. El auto es la carnada; el imperio es la meta.",
   location: "Santa Cruz de la Sierra, Bolivia",
   avatar: "/images/kev.jpg",
   coverGradient: "from-[#3D5A4C] via-[#2A7D4F] to-[#1E5A3A]",
@@ -35,17 +36,19 @@ const profileData = {
     website: "https://primebusiness.live",
   },
   stats: {
-    netWorth: 10,
-    target: 450_000,
+    // Del mismo lugar que el contador de la home, no a mano: acá decía 10 y
+    // la home 5.091 — el mismo reto con dos cifras distintas.
+    netWorth: RECAUDADO,
+    target: CHALLENGE_TARGET,
     monthlyGrowth: 0,
-    projectsCount: 4,
+    projectsCount: 3, // PRIME · KEV Strategy · Insightful University (decía 4)
     yearsActive: 1,
   },
   milestones: [
     { year: "2024", title: "Nace PRIME", amount: "PRIME v1" },
     { year: "2025", title: "El comentario de los 1.300 likes", amount: "Pausa" },
     { year: "2026", title: "El Relanzamiento · Día 1", amount: "$10" },
-    { year: "Meta", title: "Mercedes-AMG GT 63 Mansory", amount: "$450K" },
+    { year: "Meta", title: "Un Mercedes por Mansory", amount: "$450K" },
   ],
   featuredProjects: [
     { name: "PRIME", type: "Empleados de IA · El motor de dinero", value: "MRR", change: "Moat: datos + nicho" },
