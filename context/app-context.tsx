@@ -172,7 +172,7 @@ const initialLiveStatus: LiveStatus = {
   country: "Bolivia",
   localTime: "9:41 PM",
   currentActivity:
-    "Instalando empleados de IA de PRIME para negocios bolivianos. Construyendo el imperio en público, desde la crisis, en cámara.",
+    "Instalando empleados de IA de PRIME para negocios bolivianos. Construyendo el imperio en público, desde la crisis.",
   availability: "available",
 }
 
@@ -180,7 +180,7 @@ const initialPulseEntries: PulseEntry[] = [
   {
     id: "1",
     content:
-      "Día 1 del relanzamiento. El comentario con 1.300 likes decía 'me lo compró mi papá'. Yo empiezo desde $10, desde Bolivia, desde la crisis. Cada peso del contador es revenue real de PRIME. Esto no es flex — es la prueba de que se puede construir un imperio en público.",
+      "Día 1 del relanzamiento. El comentario con 1.300 likes decía 'me lo compró mi papá'. Empiezo desde $10, desde Bolivia, desde la crisis. Cada peso del contador es revenue real de PRIME. Esto no es flex — es la prueba de que se puede construir un imperio en público.",
     category: "business",
     timestamp: "2026-06-20 21:41",
     timeAgo: "Ahora mismo",
@@ -188,7 +188,7 @@ const initialPulseEntries: PulseEntry[] = [
   {
     id: "2",
     content:
-      "Nueva 'Beca PRIME': instalé empleados de IA gratis a un negocio boliviano, en cámara. Por cada hito del reto, repito. La atención no se queda en mi bolsillo — se reinvierte en la economía que me formó.",
+      "Nueva 'Beca PRIME': instalé empleados de IA gratis a un negocio boliviano, en cámara. Por cada hito, repito. La atención no se queda en mi bolsillo — se reinvierte en la economía que me formó.",
     category: "networking",
     timestamp: "2026-06-20 16:15",
     timeAgo: "hace 5 horas",
@@ -217,7 +217,7 @@ const initialProjects: Project[] = [
     status: "Active",
     allocation: 60,
     description:
-      "Empleados de IA para empresas (primebusiness.live). El MOTOR DE DINERO del reto: el contador se alimenta del revenue real de PRIME. Moat = datos propios + nicho. Métricas que importan: MRR, clientes, retención.",
+      "Empleados de IA para empresas (primebusiness.live). El MOTOR DE DINERO del reto: el contador se alimenta del revenue real de PRIME. Moat = datos propios + nicho. Métricas: MRR, clientes, retención.",
     lastUpdate: "Ahora mismo",
     position: { x: 120, y: 100 },
   },
@@ -231,7 +231,7 @@ const initialProjects: Project[] = [
     trend: "neutral",
     status: "Growth",
     allocation: 22,
-    description: "Inmobiliaria. La función REPUTACIÓN: activos reales y credibilidad de largo plazo.",
+    description: "La función REPUTACIÓN: activos reales y credibilidad de largo plazo.",
     lastUpdate: "Hoy",
     position: { x: 420, y: 90 },
   },
@@ -245,7 +245,7 @@ const initialProjects: Project[] = [
     trend: "up",
     status: "Growth",
     allocation: 18,
-    description: "Educación. La función MASIFICACIÓN: convierte la atención del reto en alumnos y comunidad.",
+    description: "La función MASIFICACIÓN: convierte la atención del reto en alumnos y comunidad.",
     lastUpdate: "Hoy",
     position: { x: 260, y: 300 },
   },
@@ -253,26 +253,26 @@ const initialProjects: Project[] = [
 
 const initialManifesto: ManifestoContent = {
   mission:
-    "Probar, en público y desde Bolivia en crisis, que se puede ir de $10 a un Mercedes-AMG Mansory construyendo negocios reales — no por suerte ni por herencia, sino por sistema.",
+    "Probar, en público y desde Bolivia en crisis, que se puede ir de $10 a un Mercedes-AMG Mansory construyendo negocios reales — no por suerte ni herencia, sino por sistema.",
   vision:
-    "Un imperio construido a la vista de todos, donde la atención de un reto imposible se convierte en empresas que cambian la economía de LatAm.",
+    "Un imperio a la vista de todos, donde la atención de un reto imposible se convierte en empresas que cambian la economía de LatAm.",
   purpose:
-    "El auto es la carnada. La meta real es convertirme en el tipo de persona — y construir la máquina — capaz de levantar un imperio desde cero.",
+    "El auto es la carnada. La meta: convertirme en el tipo de persona — y construir la máquina — capaz de levantar un imperio desde cero.",
   principles: [
     {
       id: "1",
       title: "Apalancamiento de la Atención",
       shortDesc: "El auto cuesta $450K una vez; la atención se convierte en 10x/100x/1000x",
       fullDesc:
-        "Una máquina (el reto) genera HYPE → VIRALIDAD → BASE DE DATOS → PÚBLICO REAL. El Mercedes es la carnada que captura la atención; esa atención se reinvierte en PRIME (plataforma de IA para LatAm), en PRIME Payments (stablecoins para una economía sin dólares) y en la marca global. Cada vista no es vanidad: es capital que se compone.",
+        "Una máquina (el reto) genera HYPE → VIRALIDAD → BASE DE DATOS → PÚBLICO REAL. El Mercedes es la carnada; esa atención se reinvierte en PRIME (plataforma de IA para LatAm), en PRIME Payments (stablecoins para una economía sin dólares) y en la marca global. Cada vista no es vanidad: es capital que se compone.",
       iconName: "Rocket",
     },
     {
       id: "2",
       title: "Consistencia sobre Talento",
-      shortDesc: "Mi mayor riesgo es abandonar. Por eso todo está diseñado para no fallar en consistencia.",
+      shortDesc: "Mi mayor riesgo es abandonar. Todo está diseñado para no fallar en consistencia.",
       fullDesc:
-        "Lanzar proyectos y abandonarlos es el patrón que rompo en público. La racha (Día 1, 2, 3…) es la métrica más honesta del reto: no el dinero, sino el aparecer. Sistemas, no motivación. El que no falta, gana — aunque empiece desde $10.",
+        "Lanzar proyectos y abandonarlos es el patrón que rompo en público. La racha (Día 1, 2, 3…) es la métrica más honesta: no el dinero, sino el aparecer. Sistemas, no motivación. El que no falta, gana — aunque empiece desde $10.",
       iconName: "Scale",
     },
     {
@@ -280,7 +280,7 @@ const initialManifesto: ManifestoContent = {
       title: "Autenticidad desde la Crisis",
       shortDesc: "Misión real desde Bolivia, no flex frívolo",
       fullDesc:
-        "La Gen Z de 2026 valora la autenticidad por encima del éxito material. Por eso cada hito desbloquea una 'Beca PRIME': instalo empleados de IA gratis a un negocio boliviano, en cámara. El éxito no se presume — se comparte con la economía que me formó. Esa es la respuesta al comentario de los 1.300 likes.",
+        "La Gen Z de 2026 valora la autenticidad por encima del éxito material. Cada hito desbloquea una 'Beca PRIME': instalo empleados de IA gratis a un negocio boliviano, en cámara. El éxito no se presume — se comparte con la economía que me formó. La respuesta al comentario de los 1.300 likes.",
       iconName: "Crown",
     },
   ],
@@ -295,7 +295,7 @@ const initialMilestones: Milestone[] = [
     year: "2024",
     title: "Nace PRIME",
     description:
-      "Fundo PRIME: empleados de IA para empresas (primebusiness.live). La tesis: no ser un wrapper, sino un moat de datos propios + nicho. El motor que financiará todo.",
+      "Fundo PRIME: empleados de IA para empresas (primebusiness.live). La tesis: no un wrapper, sino un moat de datos propios + nicho. El motor que financiará todo.",
     netWorth: "PRIME v1",
     iconName: "Flag",
     highlight: false,
@@ -325,7 +325,7 @@ const initialMilestones: Milestone[] = [
     year: "Meta",
     title: "Mercedes-AMG GT 63 Mansory",
     description:
-      "La carnada pública: ~$450.000. El auto que responde al comentario. Cada hito en el camino desbloquea una Beca PRIME para un negocio boliviano.",
+      "La carnada pública: ~$450.000. El auto que responde al comentario. Cada hito desbloquea una Beca PRIME para un negocio boliviano.",
     netWorth: "$450K",
     iconName: "TrendingUp",
     highlight: true,

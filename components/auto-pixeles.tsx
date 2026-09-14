@@ -261,7 +261,7 @@ export function AutoPixeles() {
         <div className="mt-5 rounded-3xl border border-border bg-card/40 px-5 py-6 text-center">
           <div className="font-display text-lg font-bold tracking-tight">Muy pronto</div>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Las partes del auto se abren en unos días. Mientras tanto, mira cómo se va armando.
+            Las partes del auto se abren en unos días. Mira cómo se va armando.
           </p>
         </div>
       )}
@@ -273,7 +273,7 @@ export function AutoPixeles() {
           <div className="rounded-3xl border border-border bg-card/40 px-4 py-5 md:px-7 md:py-6">
             <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">Elige tu parte del auto</h4>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Cada parte vale según cuánto se ve. Hay una sola de cada una: cuando se toma, se toma.
+              Cada parte vale según cuánto se ve. Una sola de cada una: cuando se toma, se toma.
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
@@ -312,8 +312,7 @@ export function AutoPixeles() {
               O firma la carrocería por ${est?.pixel_price ?? 10}
             </h4>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Tu firma se enciende sola, de la trompa hacia atrás. No eliges el lugar: el auto se va armando en
-              orden con cada persona que entra.
+              No eliges el lugar: tu firma se enciende sola, de la trompa hacia atrás, con cada persona que entra.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2.5">
@@ -341,7 +340,7 @@ export function AutoPixeles() {
               </div>
               <h4 className="mt-3 font-display text-xl font-bold tracking-tight">Reservado</h4>
               <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-                Tu lugar queda guardado. Mándame el código por WhatsApp para pagar los{" "}
+                Mándame el código por WhatsApp para pagar los{" "}
                 <b className="text-foreground">${listo.price}</b> y lo enciendo en el auto.
               </p>
               <div className="mx-auto mt-4 w-fit rounded-2xl border border-border bg-background/70 px-6 py-3 font-mono text-xl font-bold tracking-widest">

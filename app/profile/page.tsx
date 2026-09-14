@@ -67,7 +67,7 @@ const profileData = {
   ],
   principles: [
     { title: "Apalancamiento de la Atención", desc: "El auto cuesta $450K una vez; la atención se convierte en 10x/100x/1000x" },
-    { title: "Consistencia sobre Talento", desc: "Mi mayor riesgo es abandonar. Todo está diseñado para no fallar en consistencia" },
+    { title: "Consistencia sobre Talento", desc: "Mi mayor riesgo es abandonar. Todo está diseñado para no fallar" },
     { title: "Autenticidad desde la Crisis", desc: "Misión real desde Bolivia, no flex. Cada hito = una Beca PRIME" },
   ],
   quote:
@@ -93,7 +93,7 @@ export default function PublicProfile() {
     } else {
       await navigator.clipboard.writeText(url)
       setCopied(true)
-      toast.success("¡Link del perfil copiado!")
+      toast.success("¡Link copiado!")
       setTimeout(() => setCopied(false), 2000)
     }
   }
@@ -109,7 +109,7 @@ export default function PublicProfile() {
         <nav className="relative z-10 flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
           <Link href="/" className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
             <ChevronRight className="w-4 h-4 rotate-180" />
-            <span className="text-sm">Volver al Centro de Mando</span>
+            <span className="text-sm">Centro de Mando</span>
           </Link>
           <div className="flex items-center gap-3">
             <Button
@@ -210,7 +210,7 @@ export default function PublicProfile() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-white/50">Progreso a la meta</span>
+              <span className="text-white/50">Progreso</span>
               <span className="text-emerald-400 font-medium">{progressPercent.toFixed(2)}%</span>
             </div>
             <div className="h-3 bg-white/10 rounded-full overflow-hidden">

@@ -28,6 +28,30 @@ Ojo: *"Prueba de nuevo"* es correcto pero suena forzado; en neutro se dice
 python3 scripts/sin-voseo.py     # tiene que dar TOTAL: 0
 ```
 
+## ✂️ MENOS PALABRAS
+
+> «Hay que ir reduciendo todo el copy innecesario de la web, todo lo que sea de
+>  más en palabras.» — Kev
+
+Una idea por bloque. Fuera los preámbulos (*lo que hacemos es…*), las muletillas
+(*simplemente*, *básicamente*, *realmente*) y los superlativos vacíos
+(*increíble*, *único*): si algo es bueno se prueba con un número.
+
+**Al recortar se CORTA, no se reescribe.** Lo que queda tiene que estar ya en el
+original: nunca se agrega una afirmación nueva, y no se pierde ni un dato. Si el
+texto quedó frío y corporativo, te pasaste — se corta el relleno, no el carácter.
+
+No se recorta: los números y de dónde salen, lo que la honestidad obliga a
+aclarar, los mensajes de error (mejor claros que cortos) y los metadatos de SEO
+(son descriptivos a propósito, para Google).
+
+```bash
+python3 scripts/sin-relleno.py          # resumen de candidatos
+python3 scripts/sin-relleno.py --todo   # cada uno con su línea
+```
+
+No falla el build: señala y ordena. La tijera la decide una persona.
+
 ---
 
 ## Cómo está armado
