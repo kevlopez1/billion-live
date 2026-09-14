@@ -38,19 +38,43 @@ export type Resultado = { ok: true; aviso?: string } | { ok: false; error: strin
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Supabase devuelve los errores en inglés y con jerga. La gente que entra acá
+// Supabase devuelve los errores en inglés y con jerga. La gente que entra aquí
 // merece leer qué pasó, no "Invalid login credentials".
+//
+// Regla de este traductor: NUNCA decir "inténtalo de nuevo" cuando reintentar
+// no puede funcionar. Un fallo de configuración del servidor no se arregla
+// tocando el botón otra vez, y mandar a la gente a reintentar en bucle es
+// exactamente el humo que este proyecto dice no tener.
+//
+// Y si el error no se reconoce, se muestra el texto original en chico en vez
+// de esconderlo: es feo, pero es la única forma de que alguien pueda arreglarlo.
 function traducir(msg: string): string {
   const m = msg.toLowerCase()
+
+  // ── Cosas que la persona puede resolver ──
   if (m.includes("invalid login credentials")) return "Correo o contraseña incorrectos."
   if (m.includes("email not confirmed")) return "Te falta confirmar el correo. Revisa tu bandeja."
   if (m.includes("user already registered") || m.includes("already been registered"))
     return "Ese correo ya tiene cuenta. Intenta entrar."
   if (m.includes("password should be at least")) return "La contraseña necesita al menos 8 caracteres."
-  if (m.includes("unable to validate email") || m.includes("invalid email")) return "Ese correo no parece válido."
-  if (m.includes("rate limit") || m.includes("too many")) return "Demasiados intentos. Espera un momento."
-  if (m.includes("failed to fetch") || m.includes("network")) return "No hay conexión. Inténtalo de nuevo."
-  return "No se pudo completar. Inténtalo de nuevo en un momento."
+  if (m.includes("unable to validate email") || m.includes("invalid email") || m.includes("is invalid"))
+    return "Ese correo no parece válido."
+  if (m.includes("rate limit") || m.includes("too many"))
+    return "Demasiados intentos desde aquí. Espera una hora y vuelve a probar."
+  if (m.includes("failed to fetch") || m.includes("network") || m.includes("fetch failed"))
+    return "No hay conexión. Revisa tu internet y vuelve a intentar."
+
+  // ── Cosas que solo se arreglan del lado del servidor ──
+  // Aquí NO va "inténtalo de nuevo": reintentar no cambia nada.
+  if (m.includes("database error") || m.includes("saving new user"))
+    return "Las cuentas todavía no están habilitadas en el servidor. No es culpa tuya y reintentar no ayuda — ya estamos en eso."
+  if (m.includes("sending confirmation") || m.includes("sending email") || m.includes("smtp"))
+    return "La cuenta se creó, pero el correo de confirmación no salió. El envío de correos todavía no está configurado."
+  if (m.includes("signups not allowed") || m.includes("signup is disabled"))
+    return "El registro está cerrado ahora mismo en el servidor."
+
+  // ── Lo que no reconocemos: se muestra tal cual ──
+  return `No se pudo crear la cuenta. El servidor respondió: "${msg}"`
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -123,7 +147,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/cuenta` : undefined,
       },
     })
-    if (error) return { ok: false, error: traducir(error.message) }
+    if (error) {
+      // El error crudo va a la consola: el traducido es para la persona, este
+      // es para quien tenga que arreglarlo.
+      console.error("[auth] registrar falló:", error.status, error.message)
+      return { ok: false, error: traducir(error.message) }
+    }
     if (data.user && !data.session) {
       return { ok: true, aviso: "Te mandamos un correo para confirmar la cuenta. Revisa tu bandeja (y el spam)." }
     }
@@ -132,7 +161,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const entrar: AuthContextType["entrar"] = useCallback(async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-    if (error) return { ok: false, error: traducir(error.message) }
+    if (error) {
+      console.error("[auth] entrar falló:", error.status, error.message)
+      return { ok: false, error: traducir(error.message) }
+    }
     return { ok: true }
   }, [])
 
