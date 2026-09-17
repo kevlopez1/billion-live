@@ -19,6 +19,8 @@ export type Comprobante = {
 }
 
 export const COMPROBANTES: Comprobante[] = [
+  { src: "/images/comprobantes/economico-qr-3700.jpg", bs: 3700, bank: "Banco Económico · QR", date: "16 sep 2026" },
+  { src: "/images/comprobantes/bcp-interbanc-2500.jpg", bs: 2500, bank: "Banco de Crédito · interbancaria", date: "15 sep 2026" },
   { src: "/images/comprobantes/economico-qr.jpg", bs: 1000, bank: "Banco Económico · QR", date: "11 sep 2026" },
   { src: "/images/comprobantes/bnb-empresa.jpg", bs: 14000, bank: "Empresa · Banco Solidario", date: "10 sep 2026" },
   { src: "/images/comprobantes/fie-cuizaguana.jpg", bs: 2290, bank: "Banco Fie · QR", date: "1 sep 2026" },
