@@ -19,6 +19,8 @@ export type Comprobante = {
 }
 
 export const COMPROBANTES: Comprobante[] = [
+  { src: "/images/comprobantes/ganadero-qr-8837.jpg", bs: 8837.55, bank: "Banco Ganadero · QR", date: "30 sep 2026" },
+  { src: "/images/comprobantes/economico-qr-6500.jpg", bs: 6500, bank: "Banco Económico · QR", date: "29 sep 2026" },
   { src: "/images/comprobantes/economico-qr-3700.jpg", bs: 3700, bank: "Banco Económico · QR", date: "16 sep 2026" },
   { src: "/images/comprobantes/bcp-interbanc-2500.jpg", bs: 2500, bank: "Banco de Crédito · interbancaria", date: "15 sep 2026" },
   { src: "/images/comprobantes/economico-qr.jpg", bs: 1000, bank: "Banco Económico · QR", date: "11 sep 2026" },
@@ -40,7 +42,9 @@ export const COMPROBANTES: Comprobante[] = [
 
 export const monto = (bs: number) => `Bs ${bs.toLocaleString("es-BO")}`
 
-export const TOTAL_BS = COMPROBANTES.reduce((a, c) => a + c.bs, 0)
+// Se redondea a dos decimales: hay montos con centavos (Bs 8.837,55) y la
+// suma en coma flotante puede dar 79.039,549999999996.
+export const TOTAL_BS = Math.round(COMPROBANTES.reduce((a, c) => a + c.bs, 0) * 100) / 100
 export const CANTIDAD = COMPROBANTES.length
 
 /** Entidades distintas por las que entró plata: habla de clientes reales y variados. */

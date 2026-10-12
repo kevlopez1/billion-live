@@ -156,7 +156,7 @@ export const CHALLENGE_LAUNCH = "2026-06-30" // Día 1: martes del primer video
  * y mostraba $10 mientras la home mostraba $5.091 — dos cifras del mismo reto
  * en el mismo sitio.
  */
-export const RECAUDADO = 5617 // 5091 + 212 + 314 (Bs 2.500 el 15 sep y Bs 3.700 el 16 sep, ambos ÷ 11,77) — edita aquí o desde /control
+export const RECAUDADO = 6915 // 5617 + 748 + 550 (Bs 8.837,55 el 30 sep y Bs 6.500 el 29 sep, ambos ÷ 11,82) — edita aquí o desde /control
 
 const initialMetrics: GlobalMetrics = {
   netWorth: RECAUDADO,
