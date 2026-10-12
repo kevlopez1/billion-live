@@ -19,6 +19,9 @@ export type Comprobante = {
 }
 
 export const COMPROBANTES: Comprobante[] = [
+  // El comprobante no nombra el banco de quien paga, solo el de destino
+  // (ACH Banco Nacional de Bolivia). Se etiqueta con lo que sí está escrito.
+  { src: "/images/comprobantes/ach-bnb-5100.jpg", bs: 5100, bank: "BNB · transferencia QR", date: "9 oct 2026" },
   { src: "/images/comprobantes/ganadero-qr-8837.jpg", bs: 8837.55, bank: "Banco Ganadero · QR", date: "30 sep 2026" },
   { src: "/images/comprobantes/economico-qr-6500.jpg", bs: 6500, bank: "Banco Económico · QR", date: "29 sep 2026" },
   { src: "/images/comprobantes/economico-qr-3700.jpg", bs: 3700, bank: "Banco Económico · QR", date: "16 sep 2026" },
