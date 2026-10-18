@@ -212,7 +212,10 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var h=new Date().getHours();if(h<7||h>=19)document.documentElement.classList.add('dark')}catch(e){}})()",
+              // La elección guardada manda sobre la hora. Sin esto, quien
+              // eligiera claro veía un parpadeo oscuro antes de que cargara el
+              // JavaScript, porque este script corre antes de pintar.
+              "(function(){try{var t=localStorage.getItem('kev-tema');var h=new Date().getHours();var o=t==='oscuro'||((!t||t==='auto')&&(h<7||h>=19));if(o)document.documentElement.classList.add('dark')}catch(e){}})()",
           }}
         />
         <script
