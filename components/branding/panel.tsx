@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   AlertTriangle, Check, Clapperboard, Cloud, CloudOff, Compass, Loader2, Lock,
-  Pencil, Radio, Shirt, Sparkles, Target, TrendingUp, User, X,
+  Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp, User, X,
 } from "lucide-react"
 import { Indice, type Entrada } from "@/components/branding/indice"
 import { Plegable } from "@/components/branding/plegable"
@@ -19,6 +19,7 @@ const SECCIONES: Entrada[] = [
   { id: "personaje", nombre: "El personaje" },
   { id: "norte", nombre: "El norte" },
   { id: "formatos", nombre: "Los formatos" },
+  { id: "edicion", nombre: "La edición" },
   { id: "distribucion", nombre: "Distribución" },
   { id: "produccion", nombre: "Producción" },
   { id: "cola", nombre: "En cola" },
@@ -423,6 +424,95 @@ export function Panel() {
                 texto="Agregar formato"
               />
             )}
+          </section>
+
+          {/* ── La edición ── */}
+          <section>
+            <Titulo id="edicion" icono={Scissors} numero={`${doc.edicion.bloques.length} bloques`}>La edición</Titulo>
+
+            <div className="mb-5 rounded-2xl border border-gold/40 bg-gold/[0.05] px-4 py-4 md:px-5">
+              <div className="mb-1.5 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-gold">
+                La regla madre
+              </div>
+              <Campo
+                valor={doc.edicion.regla}
+                onChange={(v) => editar((d) => ({ ...d, edicion: { ...d.edicion, regla: v } }))}
+                editando={editando}
+                multilinea
+                className="font-serif-display text-[15px] italic leading-relaxed text-foreground md:text-base"
+                placeholder="La regla que manda sobre todas las demás"
+              />
+            </div>
+
+            <div className="space-y-2.5">
+              {doc.edicion.bloques.map((b, i) => (
+                <Fila
+                  key={i}
+                  editando={editando}
+                  onBorrar={() =>
+                    editar((d) => ({ ...d, edicion: { ...d.edicion, bloques: d.edicion.bloques.filter((_, j) => j !== i) } }))
+                  }
+                >
+                  <Plegable
+                    titulo={b.titulo || "Bloque sin nombre"}
+                    subtitulo={b.nota}
+                    etiqueta={b.reglas.length === 0 && !editando ? "—" : String(b.reglas.length)}
+                    abiertoPorDefecto={editando || b.reglas.length > 0}
+                  >
+                    {editando && (
+                      <div className="mb-3 space-y-2">
+                        <Campo
+                          valor={b.titulo}
+                          onChange={(v) => editar((d) => { d.edicion.bloques[i].titulo = v; return d })}
+                          editando
+                          className="font-display text-[15px] font-semibold"
+                          placeholder="Nombre del bloque"
+                        />
+                        <Campo
+                          valor={b.nota}
+                          onChange={(v) => editar((d) => { d.edicion.bloques[i].nota = v; return d })}
+                          editando
+                          multilinea
+                          className="text-[13px] text-muted-foreground"
+                          placeholder="Por qué importa este bloque"
+                        />
+                      </div>
+                    )}
+                    <ListaTextos
+                      items={b.reglas}
+                      onChange={(v) => editar((d) => { d.edicion.bloques[i].reglas = v; return d })}
+                      editando={editando}
+                      placeholder="La regla, en una frase"
+                      textoAgregar="Agregar regla"
+                    />
+                  </Plegable>
+                </Fila>
+              ))}
+            </div>
+            {editando && (
+              <Agregar
+                onClick={() =>
+                  editar((d) => ({
+                    ...d,
+                    edicion: { ...d.edicion, bloques: [...d.edicion.bloques, { titulo: "", nota: "", reglas: [] }] },
+                  }))
+                }
+                texto="Agregar bloque"
+              />
+            )}
+
+            <div className="mt-4 rounded-2xl border border-rojo/35 bg-rojo/[0.04] px-4 py-4">
+              <div className="mb-2 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-rojo">
+                Lo que nunca
+              </div>
+              <ListaTextos
+                items={doc.edicion.nunca}
+                onChange={(v) => editar((d) => ({ ...d, edicion: { ...d.edicion, nunca: v } }))}
+                editando={editando}
+                placeholder="Lo que no se hace, nunca"
+                textoAgregar="Agregar prohibición"
+              />
+            </div>
           </section>
 
           {/* ── Distribución ── */}
