@@ -1,24 +1,24 @@
 -- ══════════════════════════════════════════════════════════════
--- TODO EN UNO — las cuatro tablas que necesita kevproject.world
+-- TODO EN UNO — las cinco tablas que necesita kevproject.world
 --
 -- CÓMO SE CORRE
 --   1. Abre https://supabase.com/dashboard/project/llhvnzlbnmoufilxgshv/sql/new
 --   2. Copia este archivo COMPLETO y pégalo ahí.
 --   3. Botón Run (o Ctrl+Enter).
---   4. Al final te devuelve una tabla de 5 filas. Todas tienen que decir
+--   4. Al final te devuelve una tabla de 7 filas. Todas tienen que decir
 --      "protegida". Si alguna dice "ABIERTA", algo falló: avísame.
 --
 -- Se puede correr las veces que quieras: no borra nada ni duplica nada.
 -- Las líneas amarillas que dicen "NOTICE: ... does not exist, skipping" son
 -- normales la primera vez. Las rojas que dicen ERROR no.
 --
--- Esto es la unión de los otros cuatro archivos de esta carpeta, en el orden
+-- Esto es la unión de los otros archivos de esta carpeta, en el orden
 -- correcto. Si cambias uno de ellos, cambia también este.
 -- ══════════════════════════════════════════════════════════════
 
 
 -- ──────────────────────────────────────────────────────────────
--- 1 de 4 · CUENTAS  (para que "Crear tu cuenta" funcione)
+-- 1 de 5 · CUENTAS  (para que "Crear tu cuenta" funcione)
 --
 -- La autenticación la maneja Supabase Auth (tabla auth.users): el hash de la
 -- contraseña, la verificación del correo y el reseteo los hace Supabase.
@@ -97,7 +97,7 @@ create or replace view public.lista_novedades as
 
 
 -- ──────────────────────────────────────────────────────────────
--- 2 de 4 · EL AUTO DE PÍXELES  (las firmas en el auto)
+-- 2 de 5 · EL AUTO DE PÍXELES  (las firmas en el auto)
 -- ──────────────────────────────────────────────────────────────
 
 create table if not exists public.car_pixels (
@@ -138,7 +138,7 @@ alter table public.car_pixels enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 3 de 4 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
+-- 3 de 5 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
 --
 -- Una sola fila con todo el contenido en jsonb. Es a propósito: el manual se
 -- edita entero de una vez desde el panel, no campo por campo, así que una
@@ -191,7 +191,7 @@ alter table public.branding_historial enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 4 de 4 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
+-- 4 de 5 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
 --
 -- Tabla aparte del manual a propósito. El manual es un documento que se
 -- guarda entero de una vez; esto son cientos de filas que crecen solas. Si
@@ -227,13 +227,69 @@ create index if not exists publicaciones_formato_idx on public.publicaciones (fo
 alter table public.publicaciones enable row level security;
 
 
+-- ──────────────────────────────────────────────────────────────
+-- 5 de 5 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
+--
+-- Una sola fila con el árbol entero en jsonb, igual que el manual de marca.
+-- Se guarda solo (autoguardado), así que el historial NO archiva cada
+-- guardado: deja una copia como máximo cada 10 minutos. Sin ese tope, escribir
+-- una frase llenaría la tabla de copias del documento completo.
+-- ──────────────────────────────────────────────────────────────
+
+create table if not exists public.proyectos_kev (
+  id text primary key,
+  contenido jsonb not null,
+  actualizado_en timestamptz not null default now()
+);
+
+comment on table public.proyectos_kev is 'Notas y mapa mental de /kevlopez_proyectos. Una fila por espacio.';
+
+create table if not exists public.proyectos_kev_historial (
+  id bigserial primary key,
+  proyecto_id text not null,
+  contenido jsonb not null,
+  guardado_en timestamptz not null default now()
+);
+
+create index if not exists proyectos_kev_historial_idx
+  on public.proyectos_kev_historial (proyecto_id, guardado_en desc);
+
+create or replace function public.guardar_historial_proyectos_kev()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1 from public.proyectos_kev_historial
+    where proyecto_id = old.id and guardado_en > now() - interval '10 minutes'
+  ) then
+    insert into public.proyectos_kev_historial (proyecto_id, contenido)
+    values (old.id, old.contenido);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists proyectos_kev_al_actualizar on public.proyectos_kev;
+create trigger proyectos_kev_al_actualizar
+  before update on public.proyectos_kev
+  for each row execute function public.guardar_historial_proyectos_kev();
+
+-- RLS activo y SIN políticas, como el resto: la llave pública del navegador
+-- no entra. La API escribe y LEE con la service-role, y exige ADMIN_SECRET.
+alter table public.proyectos_kev enable row level security;
+alter table public.proyectos_kev_historial enable row level security;
+
+
 -- ══════════════════════════════════════════════════════════════
--- COMPROBACIÓN · tienen que salir 5 filas, todas "protegida"
+-- COMPROBACIÓN · tienen que salir 7 filas, todas "protegida"
 -- ══════════════════════════════════════════════════════════════
 
 select relname as tabla,
        case when relrowsecurity then 'protegida' else 'ABIERTA — avísame' end as estado
 from pg_class
 where relnamespace = 'public'::regnamespace
-  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones')
+  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial')
 order by relname;
