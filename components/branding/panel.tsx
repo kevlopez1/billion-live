@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
-  AlertTriangle, Check, Clapperboard, Cloud, CloudOff, Compass, Loader2, Lock,
-  Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp, User, X,
+  AlertTriangle, Check, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2, Lock,
+  Network, Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp, User, X,
 } from "lucide-react"
+import { Mapa } from "@/components/branding/mapa"
+import { PanelRevision } from "@/components/branding/revision-panel"
+import { ANCLA, type Revision } from "@/lib/revision"
 import { Indice, type Entrada } from "@/components/branding/indice"
 import { Plegable } from "@/components/branding/plegable"
 import { Agregar, Campo, Fila, ListaTextos } from "@/components/branding/campos"
@@ -48,6 +51,21 @@ export function Panel() {
   const [estado, setEstado] = useState<Guardado>("limpio")
   const [mensaje, setMensaje] = useState("")
   const original = useRef<string>("")
+  // Siempre el documento de AHORA. Hace falta porque `guardar` se queda con
+  // el documento del momento en que arrancó, y entre que sale y vuelve la
+  // persona sigue escribiendo.
+  const docActual = useRef<Contenido>(CONTENIDO_BASE)
+
+  // Documento o mapa: los mismos datos, dos formas de mirarlos. El mapa no es
+  // decoración — una rama vacía se ve desde lejos, y eso es lo que hay que ver.
+  const [vista, setVista] = useState<"documento" | "mapa">("documento")
+
+  // La revisión de la IA.
+  const [verRevision, setVerRevision] = useState(false)
+  const [revision, setRevision] = useState<Revision | null>(null)
+  const [revisando, setRevisando] = useState(false)
+  const [errorRevision, setErrorRevision] = useState("")
+  const [uso, setUso] = useState<{ entrada: number; salida: number; costoUsd: number } | null>(null)
 
   // ── Carga ──
   useEffect(() => {
@@ -58,6 +76,7 @@ export function Panel() {
         if (!vivo) return
         if (d?.contenido) {
           setDoc(d.contenido)
+          docActual.current = d.contenido
           original.current = JSON.stringify(d.contenido)
         }
         setConfigurado(Boolean(d?.configurado))
@@ -79,6 +98,7 @@ export function Panel() {
   const editar = useCallback((fn: (d: Contenido) => Contenido) => {
     setDoc((d) => {
       const nuevo = fn(structuredClone(d))
+      docActual.current = nuevo
       setEstado(JSON.stringify(nuevo) === original.current ? "limpio" : "sucio")
       return nuevo
     })
@@ -102,11 +122,15 @@ export function Panel() {
     }
     setEstado("guardando")
     setMensaje("")
+    // Se congela lo que se manda: el documento puede cambiar mientras viaja.
+    const enviado = { doc, json: JSON.stringify(doc) }
     try {
       const r = await fetch("/api/branding", {
         method: "PUT",
         headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
-        body: JSON.stringify({ contenido: doc }),
+        // `visto` es la versión que este navegador tenía al cargar. Si otro
+        // guardó en el medio, el servidor rebota en vez de pisarlo.
+        body: JSON.stringify({ contenido: enviado.doc, visto: actualizado }),
       })
       const j = await r.json()
       if (!r.ok) {
@@ -115,11 +139,15 @@ export function Panel() {
         if (r.status === 401) setPidiendoClave(true)
         return
       }
-      original.current = JSON.stringify(doc)
+      original.current = enviado.json
       setActualizado(j.actualizado ?? new Date().toISOString())
       setConfigurado(true)
-      setEstado("ok")
       setMensaje("")
+      // Lo que se escribió MIENTRAS el guardado iba en camino no se guardó.
+      // Marcarlo como guardado apagaba el aviso de "sin guardar" y el de
+      // cerrar la pestaña: el cambio se perdía sin que nadie lo viera.
+      const sigueSucio = JSON.stringify(docActual.current) !== enviado.json
+      setEstado(sigueSucio ? "sucio" : "ok")
       setTimeout(() => setEstado((e) => (e === "ok" ? "limpio" : e)), 2500)
     } catch {
       setEstado("error")
@@ -127,9 +155,52 @@ export function Panel() {
     }
   }
 
+  // ── Guardado solo ──
+  // Editar y tener que acordarse de guardar son dos trabajos. Se guarda a los
+  // dos segundos de dejar de escribir, pero SOLO si ya hay clave: sin ella
+  // esto abriría el cuadro de la contraseña mientras la persona escribe.
+  useEffect(() => {
+    if (estado !== "sucio" || !clave || !editando) return
+    const t = setTimeout(() => { void guardar() }, 2000)
+    return () => clearTimeout(t)
+    // `guardar` se redefine en cada render; lo que importa es el documento.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, estado, clave, editando])
+
+  // ── La revisión de la IA ──
+  const revisar = async () => {
+    if (!clave) { setPidiendoClave(true); return }
+    setVerRevision(true)
+    setRevisando(true)
+    setErrorRevision("")
+    try {
+      const r = await fetch("/api/branding/revision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
+        // Se manda lo que hay EN PANTALLA, no lo guardado: así se puede
+        // revisar un cambio antes de dejarlo escrito.
+        body: JSON.stringify({ contenido: doc }),
+      })
+      const j = await r.json()
+      if (!r.ok) {
+        setErrorRevision(j.error || "No se pudo revisar.")
+        if (r.status === 401 && !j.error?.includes("ANTHROPIC")) setPidiendoClave(true)
+        return
+      }
+      setRevision(j.revision)
+      setUso(j.uso ?? null)
+    } catch {
+      setErrorRevision("Error de red. No se revisó nada.")
+    } finally {
+      setRevisando(false)
+    }
+  }
+
   const descartar = () => {
     if (estado === "sucio" && !confirm("Se pierden los cambios sin guardar. ¿Seguro?")) return
-    setDoc(JSON.parse(original.current || JSON.stringify(CONTENIDO_BASE)))
+    const vuelta = JSON.parse(original.current || JSON.stringify(CONTENIDO_BASE))
+    setDoc(vuelta)
+    docActual.current = vuelta
     setEstado("limpio")
     setEditando(false)
     setMensaje("")
@@ -153,8 +224,12 @@ export function Panel() {
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             {cargando ? (
               <><Loader2 className="h-3 w-3 animate-spin" /> Cargando…</>
-            ) : configurado ? (
+            ) : configurado && actualizado ? (
               <><Cloud className="h-3 w-3 text-gold" /> En la base</>
+            ) : configurado ? (
+              // La tabla existe pero todavía está vacía. Decir "En la base" aquí
+              // y abajo "no se ha guardado ninguna edición" es contradecirse.
+              <><Cloud className="h-3 w-3 text-gold" /> Lista para guardar</>
             ) : (
               <><CloudOff className="h-3 w-3" /> Solo lectura</>
             )}
@@ -168,6 +243,36 @@ export function Panel() {
           )}
 
           <div className="ml-auto flex items-center gap-2">
+            {/* Documento o mapa. Los mismos datos, dos formas de mirarlos. */}
+            <div className="flex rounded-xl border border-border p-0.5">
+              {([
+                ["documento", "Documento", FileText],
+                ["mapa", "Mapa", Network],
+              ] as const).map(([v, etiqueta, Icono]) => (
+                <button
+                  key={v}
+                  onClick={() => setVista(v)}
+                  aria-pressed={vista === v}
+                  className={`inline-flex items-center gap-1.5 rounded-[10px] px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+                    vista === v ? "bg-foreground/[0.09] text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icono className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{etiqueta}</span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={revisar}
+              disabled={revisando}
+              title="La IA lee el manual entero y dice qué se contradice, qué falta y qué se puede mejorar"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-gold/45 px-3 py-1.5 text-[12.5px] font-semibold text-gold transition-colors hover:bg-gold/[0.08] disabled:opacity-40"
+            >
+              {revisando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">Revisar</span>
+            </button>
+
             <Tema />
             {!editando ? (
               <button
@@ -236,6 +341,29 @@ export function Panel() {
         </div>
       )}
 
+      {verRevision && (
+        <PanelRevision
+          revision={revision}
+          cargando={revisando}
+          error={errorRevision}
+          uso={uso}
+          onCerrar={() => setVerRevision(false)}
+          onRevisar={revisar}
+        />
+      )}
+
+      {vista === "mapa" ? (
+        <Mapa
+          contenido={doc}
+          onIr={(seccion) => {
+            // Tocar una hoja lleva al documento, a esa sección. El mapa sirve
+            // para encontrar; editar se edita en el documento.
+            setVista("documento")
+            setTimeout(() => document.getElementById(ANCLA[seccion])?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
+          }}
+          vacias={new Set(revision?.hallazgos.filter((h) => h.gravedad === "alta").map((h) => h.seccion) ?? [])}
+        />
+      ) : (
       <div className="lg:flex lg:gap-10">
         <Indice entradas={SECCIONES} />
 
@@ -716,6 +844,7 @@ export function Panel() {
           </p>
         </div>
       </div>
+      )}
     </>
   )
 }

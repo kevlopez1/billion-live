@@ -45,6 +45,16 @@ function limpiarNumero(v: unknown, max = 1e12): number {
   return Math.min(Math.round(n), max)
 }
 
+// Los seguidores son los GANADOS con ese video, y se pueden perder. Es la
+// única de las cinco métricas que el esquema deja negativa a propósito
+// (las otras llevan `check (>= 0)`). Aplastar un -40 a 0 borra justo el dato
+// que más importa: qué video espantó gente.
+function limpiarEntero(v: unknown, max = 1e12): number {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return 0
+  return Math.max(-max, Math.min(Math.round(n), max))
+}
+
 export async function POST(req: Request) {
   const secret = process.env.ADMIN_SECRET
   if (!secret) return NextResponse.json({ error: "Falta ADMIN_SECRET." }, { status: 500 })
@@ -63,6 +73,17 @@ export async function POST(req: Request) {
   const fecha = String(b.fecha ?? "").trim()
   if (!titulo || !formatoId || !red || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
     return NextResponse.json({ error: "Faltan el título, el formato, la red o la fecha." }, { status: 400 })
+  }
+
+  // Las vistas son obligatorias. Dejarlas vacías guardaba un 0 de verdad, y
+  // ese 0 entraba en el promedio del formato como si el video no hubiera
+  // tenido ninguna vista. Un dato que falta no es un cero.
+  const vistasCrudas = Number(b.vistas)
+  if (b.vistas === null || b.vistas === undefined || b.vistas === "" || !Number.isFinite(vistasCrudas) || vistasCrudas < 0) {
+    return NextResponse.json(
+      { error: "Pon las vistas. Un video sin vistas registradas tuerce el promedio de todo su formato." },
+      { status: 400 },
+    )
   }
 
   // La retención es un porcentaje: fuera de 0-100 es un dato mal copiado, y
@@ -86,7 +107,7 @@ export async function POST(req: Request) {
       likes: limpiarNumero(b.likes),
       comentarios: limpiarNumero(b.comentarios),
       compartidos: limpiarNumero(b.compartidos),
-      seguidores: limpiarNumero(b.seguidores),
+      seguidores: limpiarEntero(b.seguidores),
     })
     .select("*")
     .maybeSingle()

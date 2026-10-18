@@ -61,3 +61,21 @@ export const ORDEN_GRAVEDAD: Record<Gravedad, number> = { alta: 0, media: 1, baj
 export function ordenar(hallazgos: Hallazgo[]): Hallazgo[] {
   return [...hallazgos].sort((a, b) => ORDEN_GRAVEDAD[a.gravedad] - ORDEN_GRAVEDAD[b.gravedad])
 }
+
+// A qué sección del documento salta un hallazgo. Las claves del manual y los
+// anclajes de la página no se llaman igual (`redes` se muestra como
+// "Distribución", y `pendientes` vive dentro de "En cola"), así que la
+// traducción va escrita en un solo lugar en vez de adivinarse en cada clic.
+export const ANCLA: Record<Seccion, string> = {
+  meta: "personaje",
+  personaje: "personaje",
+  norte: "norte",
+  formatos: "formatos",
+  edicion: "edicion",
+  redes: "distribucion",
+  produccion: "produccion",
+  enCola: "cola",
+  pendientes: "cola",
+  hoy: "hoy",
+  futuro: "futuro",
+}
