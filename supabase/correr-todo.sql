@@ -85,15 +85,79 @@ create policy "editar lo propio" on public.perfiles
 -- Nadie inserta ni borra a mano: de eso se encarga el trigger y el borrado
 -- en cascada de auth.users.
 
+-- ── El navegador solo puede tocar UNA columna ──
+-- La política de RLS dice "edita tu fila", pero no dice QUÉ columnas, y
+-- Supabase le da UPDATE sobre todas al rol de las personas con sesión. Así,
+-- cualquiera con cuenta podía reescribir su `email` (el que se usa para
+-- mandar las novedades) y su `novedades_desde` (la prueba con fecha de que
+-- aceptó). Una prueba de consentimiento que el interesado puede reescribir
+-- no prueba nada.
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    execute 'revoke update on public.perfiles from authenticated';
+    execute 'grant update (novedades) on public.perfiles to authenticated';
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    execute 'revoke update on public.perfiles from anon';
+  end if;
+end $$;
+
+-- ── La fecha del consentimiento la pone la base ──
+-- Si el navegador ya no puede escribirla, alguien tiene que hacerlo. Y es el
+-- lugar correcto: la fecha de consentimiento es CUÁNDO cambió el permiso, no
+-- un dato que se manda aparte y puede venir equivocado.
+create or replace function public.sellar_consentimiento()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.novedades is distinct from old.novedades then
+    new.novedades_desde := case when new.novedades then now() else null end;
+  else
+    new.novedades_desde := old.novedades_desde;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists perfiles_al_actualizar on public.perfiles;
+create trigger perfiles_al_actualizar
+  before update on public.perfiles
+  for each row execute function public.sellar_consentimiento();
+
 -- Para mandar las novedades, consulta SIEMPRE por esta vista, nunca por la
 -- tabla entera: así es imposible mandarle un correo a alguien que no lo pidió
 -- o que nunca lo verificó.
-create or replace view public.lista_novedades as
+--
+-- OJO con las dos líneas de seguridad de abajo, no son adorno:
+-- en Postgres una vista corre con los permisos de QUIEN LA CREÓ, no de quien
+-- la consulta. Sin `security_invoker`, esta vista es un túnel por debajo del
+-- RLS de `perfiles`: la tabla queda protegida y la vista entrega igual todos
+-- los correos a cualquiera que tenga la llave anónima, que viaja en el
+-- navegador de cualquiera que abra la web.
+create or replace view public.lista_novedades
+  with (security_invoker = true) as
   select p.email, p.nombre, p.novedades_desde
   from public.perfiles p
   join auth.users u on u.id = p.id
   where p.novedades = true
     and u.email_confirmed_at is not null;
+
+-- Y además, que la llave del navegador no la pueda ni mirar. Esta lista solo
+-- la necesita el servidor. (Los roles se comprueban porque fuera de Supabase
+-- no existen y el script tiene que correr igual.)
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    execute 'revoke all on public.lista_novedades from anon';
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    execute 'revoke all on public.lista_novedades from authenticated';
+  end if;
+end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
@@ -113,7 +177,10 @@ create table if not exists public.car_pixels (
   whatsapp    text,
   status      text not null default 'pendiente'
               check (status in ('pendiente', 'confirmado', 'anulado')),
-  claim_code  text not null unique,
+  -- El código es el comprobante de UN PEDIDO, no de una fila: quien compra 10
+  -- firmas se lleva un código, y las 10 filas lo comparten. Por eso NO es
+  -- unique — con unique puesto, comprar más de una firma falla siempre.
+  claim_code  text not null,
   created_at  timestamptz not null default now(),
   confirmed_at timestamptz
 );
@@ -128,6 +195,10 @@ create unique index if not exists car_pixels_slot_uq
 
 create index if not exists car_pixels_status_idx on public.car_pixels(status);
 create index if not exists car_pixels_code_idx   on public.car_pixels(claim_code);
+
+-- Para las bases que se crearon con la versión anterior, donde claim_code sí
+-- era unique. Sin esto, ahí comprar más de una firma sigue fallando.
+alter table public.car_pixels drop constraint if exists car_pixels_claim_code_key;
 
 -- En Supabase, una tabla del esquema public con RLS apagado se puede leer Y
 -- ESCRIBIR con la llave anónima, que viaja en el navegador de cualquiera que

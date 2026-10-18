@@ -30,12 +30,24 @@ def vivos():
                 if f.endswith((".tsx", ".ts")): out.append(os.path.join(raiz, f))
     return sorted(out)
 
+# Única forma de que una línea quede fuera del detector. Es explícita, hay que
+# escribirla a mano, y sale impresa en cada corrida.
+MARCA = "sin-voseo:ejemplos"
+saltadas = []
+
 def escanear():
     cuenta = collections.Counter(); porarch = collections.defaultdict(list)
     for ruta in vivos():
         for i, linea in enumerate(open(ruta, encoding="utf-8"), 1):
             s = linea.strip()
             if s.startswith("//") or s.startswith("*") or s.startswith("/*"): continue
+            # Una línea que ENSEÑA las formas prohibidas (la instrucción que lee
+            # la IA, una tabla de ejemplos) las contiene a propósito. Se salta,
+            # pero se CUENTA y se imprime: una excepción silenciosa se termina
+            # usando para tapar voseo de verdad.
+            if MARCA in linea:
+                saltadas.append((ruta, i))
+                continue
             for m in PAT.finditer(linea):
                 cuenta[m.group()] += 1
                 porarch[ruta].append((i, m.group(), s[:100]))
@@ -48,6 +60,10 @@ if __name__ == "__main__":
     print("\nPOR ARCHIVO:")
     for a, it in sorted(pa.items(), key=lambda kv: -len(kv[1])):
         print(f"  {len(it):>3}  {a}")
+    if saltadas:
+        print(f"\nLÍNEAS SALTADAS A PROPÓSITO ({MARCA}): {len(saltadas)}")
+        for a, i in saltadas:
+            print(f"    {a}:{i}")
     print("\nFORMAS:", dict(c.most_common(40)))
     for a, it in sorted(pa.items()):
         for i, f, linea in it:
