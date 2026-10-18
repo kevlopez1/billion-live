@@ -134,7 +134,10 @@ create table if not exists public.car_pixels (
   whatsapp    text,
   status      text not null default 'pendiente'
               check (status in ('pendiente', 'confirmado', 'anulado')),
-  claim_code  text not null unique,
+  -- El código es el comprobante de UN PEDIDO, no de una fila: quien compra 10
+  -- firmas se lleva un código, y las 10 filas lo comparten. Por eso NO es
+  -- unique — con unique puesto, comprar más de una firma falla siempre.
+  claim_code  text not null,
   created_at  timestamptz not null default now(),
   confirmed_at timestamptz
 );
@@ -149,6 +152,10 @@ create unique index if not exists car_pixels_slot_uq
 
 create index if not exists car_pixels_status_idx on public.car_pixels(status);
 create index if not exists car_pixels_code_idx   on public.car_pixels(claim_code);
+
+-- Para las bases que se crearon con la versión anterior, donde claim_code sí
+-- era unique. Sin esto, ahí comprar más de una firma sigue fallando.
+alter table public.car_pixels drop constraint if exists car_pixels_claim_code_key;
 
 -- En Supabase, una tabla del esquema public con RLS apagado se puede leer Y
 -- ESCRIBIR con la llave anónima, que viaja en el navegador de cualquiera que
