@@ -123,7 +123,9 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
         {[
           ["Vistas", formatearNumero(tot.vistas)],
           ["Seguidores", formatearNumero(tot.seguidores)],
-          ["Interacción", `${tot.interaccion}%`],
+          // Sin vistas no hay porcentaje que calcular. Una raya dice "no sé";
+          // un 0% dice "medí y dio cero", que sería mentira.
+          ["Interacción", tot.interaccion === null ? "—" : `${tot.interaccion}%`],
           ["Formatos probados", `${tot.formatosProbados} de ${formatos.length}`],
         ].map(([r, v]) => (
           <div key={r} className="rounded-2xl border border-border bg-card/40 px-3.5 py-3">
@@ -177,8 +179,12 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
                   <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">
                     {r.retencionMedia === null ? "—" : `${r.retencionMedia}%`}
                   </td>
-                  <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">{r.interaccion}%</td>
-                  <td className="px-3.5 py-2.5 text-right tabular-nums text-muted-foreground">{r.seguidoresPorMil}</td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">
+                    {r.interaccion === null ? "—" : `${r.interaccion}%`}
+                  </td>
+                  <td className="px-3.5 py-2.5 text-right tabular-nums text-muted-foreground">
+                    {r.seguidoresPorMil ?? "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

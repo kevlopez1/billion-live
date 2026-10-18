@@ -9,7 +9,7 @@ import { Volver } from "@/components/volver"
 import { EV, track } from "@/lib/track"
 
 export default function CuentaPage() {
-  const { perfil, cargando, faltaVerificar, salir, cambiarNovedades } = useAuth()
+  const { perfil, cargando, faltaVerificar, perfilIncierto, salir, cambiarNovedades } = useAuth()
   const [guardando, setGuardando] = useState(false)
 
   const alternar = async () => {
@@ -47,6 +47,16 @@ export default function CuentaPage() {
             <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
               <Mail className="h-3.5 w-3.5" /> {perfil.email}
             </div>
+            {perfilIncierto && (
+              // No se pudo leer el perfil de la base: lo que está abajo salió
+              // de los datos del registro. Decirlo es más barato que mostrar
+              // un interruptor que quizá no refleja lo que está guardado.
+              <p className="mb-4 rounded-xl border border-gold/40 bg-gold/[0.06] px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground">
+                No pudimos leer tu perfil del servidor, así que esto puede estar
+                desactualizado. Recarga la página; si sigue igual, avísanos.
+              </p>
+            )}
+
             {faltaVerificar && (
               <p className="mt-3 rounded-2xl border border-gold/40 bg-gold/[0.07] px-4 py-3 text-xs text-muted-foreground">
                 Te falta confirmar el correo. Hasta que lo hagas no te llegan las novedades — busca el mensaje en

@@ -32,8 +32,11 @@ export type ResumenFormato = {
   vistas: number
   vistasMedia: number
   retencionMedia: number | null
-  interaccion: number        // (likes + comentarios + compartidos) / vistas, en %
-  seguidoresPorMil: number   // seguidores ganados por cada 1.000 vistas
+  // (likes + comentarios + compartidos) / vistas, en %. `null` cuando no hay
+  // vistas: dividir entre cero no da 0%, da NADA. Un 0% dicho sin datos es
+  // un número inventado, y aquí no va ninguno.
+  interaccion: number | null
+  seguidoresPorMil: number | null   // seguidores ganados por cada 1.000 vistas
   suficiente: boolean        // ¿hay datos para sacar conclusiones?
 }
 
@@ -62,8 +65,8 @@ export function resumirPorFormato(
         vistas,
         vistasMedia: propias.length ? Math.round(vistas / propias.length) : 0,
         retencionMedia: conRetencion.length ? Math.round(media(conRetencion) * 10) / 10 : null,
-        interaccion: vistas ? Math.round((interacciones / vistas) * 1000) / 10 : 0,
-        seguidoresPorMil: vistas ? Math.round((seguidores / vistas) * 1000 * 10) / 10 : 0,
+        interaccion: vistas ? Math.round((interacciones / vistas) * 1000) / 10 : null,
+        seguidoresPorMil: vistas ? Math.round((seguidores / vistas) * 1000 * 10) / 10 : null,
         suficiente: propias.length >= MINIMO_PARA_CONCLUIR,
       }
     })
@@ -74,7 +77,7 @@ export type Totales = {
   videos: number
   vistas: number
   seguidores: number
-  interaccion: number
+  interaccion: number | null
   formatosProbados: number
   formatosConDatos: number
 }
@@ -86,7 +89,7 @@ export function totales(pubs: Publicacion[], resumen: ResumenFormato[]): Totales
     videos: pubs.length,
     vistas,
     seguidores: pubs.reduce((a, p) => a + p.seguidores, 0),
-    interaccion: vistas ? Math.round((inter / vistas) * 1000) / 10 : 0,
+    interaccion: vistas ? Math.round((inter / vistas) * 1000) / 10 : null,
     formatosProbados: resumen.filter((r) => r.videos > 0).length,
     formatosConDatos: resumen.filter((r) => r.suficiente).length,
   }

@@ -27,6 +27,9 @@ type AuthContextType = {
   cargando: boolean
   /** true mientras el correo no esté verificado. */
   faltaVerificar: boolean
+  /** true cuando el perfil mostrado no se pudo leer de la base y se armó con
+   *  los datos del registro. Lo que se vea puede no ser lo que está guardado. */
+  perfilIncierto: boolean
   registrar: (d: { email: string; password: string; nombre: string; novedades: boolean }) => Promise<Resultado>
   entrar: (email: string, password: string) => Promise<Resultado>
   salir: () => Promise<void>
@@ -83,6 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [cargando, setCargando] = useState(true)
+  // true cuando el perfil que se muestra NO salió de la base. Lo usa /cuenta
+  // para no afirmar algo que no pudo comprobar.
+  const [incierto, setIncierto] = useState(false)
 
   // Trae el perfil propio. RLS garantiza que solo devuelve el de uno mismo.
   const traerPerfil = useCallback(async (s: Session | null) => {
@@ -90,11 +96,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPerfil(null)
       return
     }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("perfiles")
       .select("id, email, nombre, novedades")
       .eq("id", s.user.id)
       .maybeSingle()
+
+    // El error NO se descarta. Con RLS activo hay dos desenlaces que llegan
+    // iguales si no se mira: "todavía no hay fila" (data null, sin error) y
+    // "no se pudo leer" (token vencido, red, permiso). El segundo terminaba
+    // mostrando el perfil armado con los datos del registro como si viniera
+    // de la base — incluido si acepta novedades, que es justo lo que no se
+    // puede adivinar.
+    setIncierto(Boolean(error))
+    if (error) console.error("[auth] no se pudo leer el perfil:", error.message)
 
     // Si el perfil todavía no existe (el trigger corre un instante después del
     // alta), no dejamos la sesión sin datos: mostramos lo que ya sabemos.
@@ -234,6 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         perfil,
         cargando,
         faltaVerificar: Boolean(session?.user && !session.user.email_confirmed_at),
+        perfilIncierto: incierto,
         registrar,
         entrar,
         salir,
