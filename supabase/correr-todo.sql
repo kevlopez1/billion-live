@@ -88,12 +88,33 @@ create policy "editar lo propio" on public.perfiles
 -- Para mandar las novedades, consulta SIEMPRE por esta vista, nunca por la
 -- tabla entera: así es imposible mandarle un correo a alguien que no lo pidió
 -- o que nunca lo verificó.
-create or replace view public.lista_novedades as
+--
+-- OJO con las dos líneas de seguridad de abajo, no son adorno:
+-- en Postgres una vista corre con los permisos de QUIEN LA CREÓ, no de quien
+-- la consulta. Sin `security_invoker`, esta vista es un túnel por debajo del
+-- RLS de `perfiles`: la tabla queda protegida y la vista entrega igual todos
+-- los correos a cualquiera que tenga la llave anónima, que viaja en el
+-- navegador de cualquiera que abra la web.
+create or replace view public.lista_novedades
+  with (security_invoker = true) as
   select p.email, p.nombre, p.novedades_desde
   from public.perfiles p
   join auth.users u on u.id = p.id
   where p.novedades = true
     and u.email_confirmed_at is not null;
+
+-- Y además, que la llave del navegador no la pueda ni mirar. Esta lista solo
+-- la necesita el servidor. (Los roles se comprueban porque fuera de Supabase
+-- no existen y el script tiene que correr igual.)
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    execute 'revoke all on public.lista_novedades from anon';
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    execute 'revoke all on public.lista_novedades from authenticated';
+  end if;
+end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
