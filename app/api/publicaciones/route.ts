@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     const falta = /relation .* does not exist|schema cache/i.test(error.message)
     console.error("[api/publicaciones] escritura fallida:", error.message)
     return NextResponse.json(
-      { error: falta ? "La tabla no existe todavía. Corre supabase/metricas.sql en Supabase." : error.message },
+      { error: falta ? "La tabla no existe todavía. Corre supabase/correr-todo.sql en Supabase." : error.message },
       { status: falta ? 503 : 500 },
     )
   }

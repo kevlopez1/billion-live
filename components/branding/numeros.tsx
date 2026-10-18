@@ -113,7 +113,7 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
       {!configurado && !cargando && (
         <div className="mb-5 rounded-2xl border border-gold/40 bg-gold/[0.06] px-4 py-3.5 text-[13px] leading-relaxed text-muted-foreground">
           <b className="text-foreground">Falta la tabla.</b> Corre{" "}
-          <code className="rounded bg-foreground/10 px-1 py-0.5 text-[12px]">supabase/metricas.sql</code> en Supabase
+          <code className="rounded bg-foreground/10 px-1 py-0.5 text-[12px]">supabase/correr-todo.sql</code> en Supabase
           para poder registrar videos.
         </div>
       )}
