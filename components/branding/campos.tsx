@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode, type KeyboardEvent } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { Ordenable } from "@/components/branding/ordenable"
+import { conPrime } from "@/components/prime-mark"
 
 // ──────────────────────────────────────────────────────────────
 // Las piezas de edición del panel.
@@ -54,7 +55,10 @@ export function Campo({
   if (!editando) {
     return (
       <Etiqueta className={className}>
-        {valor || <span className="text-muted-foreground/40">{placeholder}</span>}
+        {/* Todo el texto del manual pasa por aquí, así que PRIME queda con su
+            logo en títulos, cuerpos y listas de una sola vez. En edición no:
+            ahí el textarea necesita la cadena tal cual. */}
+        {valor ? conPrime(valor) : <span className="text-muted-foreground/40">{placeholder}</span>}
       </Etiqueta>
     )
   }

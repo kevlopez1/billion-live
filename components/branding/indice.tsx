@@ -12,7 +12,7 @@ import { useEffect, useState } from "react"
 
 export type Entrada = { id: string; nombre: string }
 
-export function Indice({ entradas }: { entradas: Entrada[] }) {
+export function Indice({ entradas, soloMovil = false }: { entradas: Entrada[]; soloMovil?: boolean }) {
   const [activa, setActiva] = useState(entradas[0]?.id ?? "")
   const [abierto, setAbierto] = useState(false)
 
@@ -71,8 +71,9 @@ export function Indice({ entradas }: { entradas: Entrada[] }) {
         )}
       </div>
 
-      {/* Escritorio: columna fija */}
-      <nav className="sticky top-10 hidden h-fit w-56 shrink-0 flex-col gap-0.5 lg:flex">
+      {/* Escritorio: columna fija. En /branding la reemplaza el árbol plegable,
+          que es el mismo de /kevlopez_proyectos. */}
+      <nav className={`sticky top-10 h-fit w-56 shrink-0 flex-col gap-0.5 ${soloMovil ? "hidden" : "hidden lg:flex"}`}>
         <span className="mb-2 px-3 text-[11px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Índice
         </span>
