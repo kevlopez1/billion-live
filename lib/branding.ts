@@ -19,12 +19,14 @@ export type Principio = { titulo: string; cuerpo: string; detalle: string[] }
 export type Red = { nombre: string; estado: Estado; nota?: string }
 export type Video = { titulo: string; formato: string }
 export type Lectura = { titulo: string; cuerpo: string }
+export type BloqueEdicion = { titulo: string; nota: string; reglas: string[] }
 
 export type Contenido = {
   meta: { titulo: string; proyecto: string; bajada: string }
   personaje: { nombre: string; fortalezas: string[]; debilidades: string[]; oportunidades: string[] }
   norte: Principio[]
   formatos: Formato[]
+  edicion: { regla: string; bloques: BloqueEdicion[]; nunca: string[] }
   redes: Red[]
   produccion: { personaje: string[]; equipo: string[] }
   enCola: Video[]
@@ -193,6 +195,63 @@ export const CONTENIDO_BASE: Contenido = {
       beats: [{ paso: "El formato del momento, con la narrativa de siempre" }],
     },
   ],
+
+  // ── La edición ──
+  // Las reglas sembradas aquí NO son inventadas: salen de los principios que
+  // Kev ya escribió (la edición dopamínica, el skin in the game, la varianza
+  // emocional, la verificabilidad). Donde él todavía no decidió algo, el
+  // bloque queda vacío a propósito — el panel es editable y se llena ahí,
+  // en vez de que alguien se invente su estética.
+  edicion: {
+    regla:
+      "Edición dopamínica pero estética, que posicione a Kev como un referente único, original y con estilo. La estética no es decoración: es la mitad del branding.",
+    bloques: [
+      {
+        titulo: "Los tres primeros segundos",
+        nota: "Deciden todo lo demás. Si el gancho no entra aquí, el resto del video no existe.",
+        reglas: [
+          "Se abre con la ambición grande, no con el saludo ni con el nombre",
+          "El objetivo del reto va después del gancho, nunca antes",
+          "Nada de intro, logo ni presentación: el primer fotograma ya es contenido",
+        ],
+      },
+      {
+        titulo: "Las pruebas en pantalla",
+        nota: "Es lo que separa este contenido del de un gurú. La audiencia premia la evidencia visual inmediata.",
+        reglas: [
+          "Si se menciona un número, se muestra: el saldo, el comprobante, la pantalla",
+          "Se graba el proceso, no el resultado: el código, el correo, la negociación",
+          "El rechazo y el error también se muestran — sin filtros es lo que genera respeto",
+        ],
+      },
+      {
+        titulo: "Ritmo y cortes",
+        nota: "Sin definir. Esto lo decide Kev y se escribe aquí.",
+        reglas: [],
+      },
+      {
+        titulo: "Imagen y color",
+        nota: "Sin definir. Aquí van el look, el contraste y cómo se trata la luz.",
+        reglas: [],
+      },
+      {
+        titulo: "Texto en pantalla",
+        nota: "Sin definir. Aquí van tipografía, posición y cuánto dura cada rótulo.",
+        reglas: [],
+      },
+      {
+        titulo: "Sonido",
+        nota: "Sin definir. Aquí van la música, los efectos y dónde va el silencio.",
+        reglas: [],
+      },
+    ],
+    nunca: [
+      "Que parezca un anuncio. Cada video es un activo comercial, pero no se ve como publicidad",
+      "Éxito constante y plano: sin momentos incómodos, el video aburre y la gente se va",
+      "Material ultraproducido que parezca generado: la imperfección humana visible es lo que da credibilidad",
+      "Prometer un resultado sin mostrar la prueba en la misma pieza",
+    ],
+  },
 
   redes: [
     { nombre: "YouTube Shorts", estado: "usamos" },
