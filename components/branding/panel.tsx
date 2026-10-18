@@ -8,6 +8,7 @@ import {
 import { Indice, type Entrada } from "@/components/branding/indice"
 import { Plegable } from "@/components/branding/plegable"
 import { Agregar, Campo, Fila, ListaTextos } from "@/components/branding/campos"
+import { Numeros } from "@/components/branding/numeros"
 import { Tema } from "@/components/branding/tema"
 import { PrimeMark } from "@/components/prime-mark"
 import {
@@ -20,6 +21,7 @@ const SECCIONES: Entrada[] = [
   { id: "norte", nombre: "El norte" },
   { id: "formatos", nombre: "Los formatos" },
   { id: "edicion", nombre: "La edición" },
+  { id: "numeros", nombre: "Los números" },
   { id: "distribucion", nombre: "Distribución" },
   { id: "produccion", nombre: "Producción" },
   { id: "cola", nombre: "En cola" },
@@ -514,6 +516,9 @@ export function Panel() {
               />
             </div>
           </section>
+
+          {/* ── Los números ── */}
+          <Numeros formatos={doc.formatos} clave={clave} />
 
           {/* ── Distribución ── */}
           <section>
