@@ -28,6 +28,12 @@ Ojo: *"Prueba de nuevo"* es correcto pero suena forzado; en neutro se dice
 python3 scripts/sin-voseo.py     # tiene que dar TOTAL: 0
 ```
 
+Si una línea tiene que **contener** las formas prohibidas porque las está
+enseñando (la instrucción que lee la IA de `/branding`, una tabla de ejemplos),
+se marca con `// sin-voseo:ejemplos` y el detector la salta. Las saltadas salen
+impresas en cada corrida: una excepción silenciosa se termina usando para tapar
+voseo de verdad.
+
 ## ✂️ MENOS PALABRAS
 
 > «Hay que ir reduciendo todo el copy innecesario de la web, todo lo que sea de

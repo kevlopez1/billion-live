@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto"
 import { NextResponse } from "next/server"
 import { getAdminClient } from "@/lib/supabase-admin"
 import {
@@ -29,10 +30,17 @@ function isEmail(s: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)
 }
 
+// El código es el comprobante de UN PEDIDO: quien compra 10 firmas se lleva
+// un código, no diez. Por eso todas las filas del paquete llevan el mismo.
+//
+// Con crypto y no con Math.random, que es predecible: este código es lo único
+// que identifica una compra, y adivinarlo es reclamar la compra de otro.
+// 8 caracteres sobre 32 = 1,1 billones de combinaciones.
 function code() {
   const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sin caracteres ambiguos
+  const bytes = randomBytes(8)
   let s = ""
-  for (let i = 0; i < 6; i++) s += abc[Math.floor(Math.random() * abc.length)]
+  for (let i = 0; i < 8; i++) s += abc[bytes[i] % abc.length]
   return `KPG-${s}`
 }
 
@@ -165,7 +173,19 @@ export async function POST(req: Request) {
 
   const filas = asignar.map((idx) => ({ ...comun, kind: "pixel", idx, price_usd: PIXEL_PRICE }))
   const { error: e2 } = await admin.from("car_pixels").insert(filas)
-  if (e2) return NextResponse.json({ error: "Alguien tomó esos píxeles justo ahora. Inténtalo de nuevo." }, { status: 409 })
+  if (e2) {
+    // Las celdas se eligen leyendo y después insertando, sin transacción: dos
+    // compras a la vez pueden pedir la misma. El índice único de `idx` lo
+    // atrapa, y SOLO ese caso es "alguien se te adelantó".
+    const carrera = e2.code === "23505" && /car_pixels_idx_uq/.test(e2.message)
+    if (carrera) {
+      return NextResponse.json({ error: "Alguien tomó esos píxeles justo ahora. Inténtalo de nuevo." }, { status: 409 })
+    }
+    // Cualquier otro fallo se dice tal cual. Un error disfrazado de carrera
+    // manda a la gente a reintentar para siempre algo que nunca va a andar.
+    console.error("[api/pixels] insert falló:", e2.code, e2.message)
+    return NextResponse.json({ error: `No se pudo registrar la compra: ${e2.message}` }, { status: 500 })
+  }
 
   return NextResponse.json({
     ok: true,
