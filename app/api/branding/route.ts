@@ -94,7 +94,7 @@ export async function PUT(req: Request) {
     return NextResponse.json(
       {
         error: falta
-          ? "La tabla no existe todavía. Corre supabase/branding.sql en el SQL Editor de Supabase."
+          ? "La tabla no existe todavía. Corre supabase/correr-todo.sql en el SQL Editor de Supabase."
           : error.message,
       },
       { status: falta ? 503 : 500 },

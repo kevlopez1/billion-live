@@ -230,7 +230,7 @@ export function Panel() {
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             <b className="text-foreground">La base todavía no está lista.</b> Se está leyendo el contenido semilla del
             código. Para que el panel guarde de verdad, hay que correr{" "}
-            <code className="rounded bg-foreground/10 px-1 py-0.5 text-[12px]">supabase/branding.sql</code> en el SQL
+            <code className="rounded bg-foreground/10 px-1 py-0.5 text-[12px]">supabase/correr-todo.sql</code> en el SQL
             Editor de Supabase. Mientras tanto se puede leer todo, pero no guardar.
           </p>
         </div>
