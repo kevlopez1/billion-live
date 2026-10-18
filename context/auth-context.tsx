@@ -66,8 +66,10 @@ function traducir(msg: string): string {
 
   // ── Cosas que solo se arreglan del lado del servidor ──
   // Aquí NO va "inténtalo de nuevo": reintentar no cambia nada.
+  // Las cuentas YA están habilitadas. Si la base falla ahora es otra cosa, y
+  // decir "ya estamos en eso" mandaría a esperar algo que no va a pasar solo.
   if (m.includes("database error") || m.includes("saving new user"))
-    return "Las cuentas todavía no están habilitadas en el servidor. No es culpa tuya y reintentar no ayuda — ya estamos en eso."
+    return "El servidor no pudo guardar la cuenta. No es culpa tuya: avísanos y lo revisamos."
   if (m.includes("sending confirmation") || m.includes("sending email") || m.includes("smtp"))
     return "La cuenta se creó, pero el correo de confirmación no salió. El envío de correos todavía no está configurado."
   if (m.includes("signups not allowed") || m.includes("signup is disabled"))
@@ -153,6 +155,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("[auth] registrar falló:", error.status, error.message)
       return { ok: false, error: traducir(error.message) }
     }
+    // Con la confirmación de correo activada, registrarse con un correo que YA
+    // tiene cuenta no da error: devuelve 200, un usuario sin `identities` y sin
+    // sesión, y no manda ningún correo. Sin distinguirlo, la pantalla mandaba a
+    // revisar una bandeja a la que no iba a llegar nada nunca.
+    //
+    // El aviso cubre los dos casos a propósito: decir "ese correo ya tiene
+    // cuenta" permitiría averiguar quién está registrado probando correos uno
+    // por uno. Mismo criterio que el de recuperar contraseña.
+    const yaExistia = data.user?.identities?.length === 0
+    if (yaExistia) {
+      return {
+        ok: true,
+        aviso:
+          "Si ese correo ya tiene cuenta, entra con tu contraseña o pide una nueva. Si no tenía, revisa tu bandeja (y el spam).",
+      }
+    }
     if (data.user && !data.session) {
       return { ok: true, aviso: "Te mandamos un correo para confirmar la cuenta. Revisa tu bandeja (y el spam)." }
     }
@@ -186,12 +204,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const cambiarNovedades: AuthContextType["cambiarNovedades"] = useCallback(
     async (quiere) => {
       if (!perfil) return { ok: false, error: "Entra a tu cuenta primero." }
-      const { error } = await supabase
+
+      // Solo `novedades`. La fecha del consentimiento la sella la base: es la
+      // prueba de que la persona dijo que sí, y una prueba que el interesado
+      // escribe no prueba nada.
+      //
+      // El .select() no es un adorno: un UPDATE que no toca ninguna fila
+      // responde 204 SIN error. Sin esto, la pantalla decía "Listo" y no se
+      // había guardado nada — la peor de las dos mentiras posibles aquí.
+      const { data, error } = await supabase
         .from("perfiles")
-        .update({ novedades: quiere, novedades_desde: quiere ? new Date().toISOString() : null })
+        .update({ novedades: quiere })
         .eq("id", perfil.id)
+        .select("novedades, novedades_desde")
+
       if (error) return { ok: false, error: traducir(error.message) }
-      setPerfil({ ...perfil, novedades: quiere })
+      if (!data || data.length === 0) {
+        return { ok: false, error: "No encontramos tu perfil para guardarlo. Sal y vuelve a entrar a tu cuenta." }
+      }
+      setPerfil({ ...perfil, novedades: data[0].novedades })
       return { ok: true }
     },
     [perfil],

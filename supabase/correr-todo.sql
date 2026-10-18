@@ -85,6 +85,49 @@ create policy "editar lo propio" on public.perfiles
 -- Nadie inserta ni borra a mano: de eso se encarga el trigger y el borrado
 -- en cascada de auth.users.
 
+-- ── El navegador solo puede tocar UNA columna ──
+-- La política de RLS dice "edita tu fila", pero no dice QUÉ columnas, y
+-- Supabase le da UPDATE sobre todas al rol de las personas con sesión. Así,
+-- cualquiera con cuenta podía reescribir su `email` (el que se usa para
+-- mandar las novedades) y su `novedades_desde` (la prueba con fecha de que
+-- aceptó). Una prueba de consentimiento que el interesado puede reescribir
+-- no prueba nada.
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    execute 'revoke update on public.perfiles from authenticated';
+    execute 'grant update (novedades) on public.perfiles to authenticated';
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    execute 'revoke update on public.perfiles from anon';
+  end if;
+end $$;
+
+-- ── La fecha del consentimiento la pone la base ──
+-- Si el navegador ya no puede escribirla, alguien tiene que hacerlo. Y es el
+-- lugar correcto: la fecha de consentimiento es CUÁNDO cambió el permiso, no
+-- un dato que se manda aparte y puede venir equivocado.
+create or replace function public.sellar_consentimiento()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.novedades is distinct from old.novedades then
+    new.novedades_desde := case when new.novedades then now() else null end;
+  else
+    new.novedades_desde := old.novedades_desde;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists perfiles_al_actualizar on public.perfiles;
+create trigger perfiles_al_actualizar
+  before update on public.perfiles
+  for each row execute function public.sellar_consentimiento();
+
 -- Para mandar las novedades, consulta SIEMPRE por esta vista, nunca por la
 -- tabla entera: así es imposible mandarle un correo a alguien que no lo pidió
 -- o que nunca lo verificó.

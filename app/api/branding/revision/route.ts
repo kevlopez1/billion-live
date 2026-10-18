@@ -33,6 +33,12 @@ const Esquema = z.object({
   ),
 })
 
+// Las formas prohibidas van escritas: decirle al modelo "no uses voseo" sin
+// mostrárselas funciona mucho peor. Vive aparte para que el marcador del
+// detector sea un comentario de código y no contamine la instrucción.
+const REGLA_IDIOMA =
+  'Español neutro de Latinoamérica. NUNCA voseo: va "pon, deja, mira, tienes, puedes, eres, aquí, tú" — nunca "poné, dejá, mirá, tenés, podés, sos, acá, vos".' // sin-voseo:ejemplos
+
 const INSTRUCCIONES = `Eres el editor del manual de marca y contenido de KEV PROJECT GTA.
 
 EL PROYECTO
@@ -71,8 +77,7 @@ LAS REGLAS DE LA CASA (si el documento las rompe, es un hallazgo)
   para que Google lo encuentre.
 
 CÓMO ESCRIBIR
-- Español neutro de Latinoamérica. NUNCA voseo: va "pon, deja, mira, tienes, puedes,
-  eres, aquí, tú" — nunca "poné, dejá, mirá, tenés, podés, sos, acá, vos".
+- ${REGLA_IDIOMA}
 - Directo y concreto. Sin preámbulos. Nada de "te recomiendo considerar": di qué hacer.
 - "accion" es el siguiente paso concreto, algo que se pueda hacer hoy. No "mejorar la
   sección": di qué escribir o qué quitar.
