@@ -1,24 +1,23 @@
 -- ══════════════════════════════════════════════════════════════
--- TODO EN UNO — las cinco tablas que necesita kevproject.world
+-- TODO EN UNO — las seis tablas que necesita kevproject.world
 --
 -- CÓMO SE CORRE
 --   1. Abre https://supabase.com/dashboard/project/llhvnzlbnmoufilxgshv/sql/new
 --   2. Copia este archivo COMPLETO y pégalo ahí.
 --   3. Botón Run (o Ctrl+Enter).
---   4. Al final te devuelve una tabla de 7 filas. Todas tienen que decir
+--   4. Al final te devuelve una tabla de 8 filas. Todas tienen que decir
 --      "protegida". Si alguna dice "ABIERTA", algo falló: avísame.
 --
 -- Se puede correr las veces que quieras: no borra nada ni duplica nada.
 -- Las líneas amarillas que dicen "NOTICE: ... does not exist, skipping" son
 -- normales la primera vez. Las rojas que dicen ERROR no.
 --
--- Esto es la unión de los otros archivos de esta carpeta, en el orden
--- correcto. Si cambias uno de ellos, cambia también este.
+-- Si se agrega una tabla, va aquí: este es el único archivo de base.
 -- ══════════════════════════════════════════════════════════════
 
 
 -- ──────────────────────────────────────────────────────────────
--- 1 de 5 · CUENTAS  (para que "Crear tu cuenta" funcione)
+-- 1 de 6 · CUENTAS  (para que "Crear tu cuenta" funcione)
 --
 -- La autenticación la maneja Supabase Auth (tabla auth.users): el hash de la
 -- contraseña, la verificación del correo y el reseteo los hace Supabase.
@@ -161,7 +160,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 2 de 5 · EL AUTO DE PÍXELES  (las firmas en el auto)
+-- 2 de 6 · EL AUTO DE PÍXELES  (las firmas en el auto)
 -- ──────────────────────────────────────────────────────────────
 
 create table if not exists public.car_pixels (
@@ -209,7 +208,7 @@ alter table public.car_pixels enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 3 de 5 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
+-- 3 de 6 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
 --
 -- Una sola fila con todo el contenido en jsonb. Es a propósito: el manual se
 -- edita entero de una vez desde el panel, no campo por campo, así que una
@@ -262,7 +261,7 @@ alter table public.branding_historial enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 4 de 5 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
+-- 4 de 6 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
 --
 -- Tabla aparte del manual a propósito. El manual es un documento que se
 -- guarda entero de una vez; esto son cientos de filas que crecen solas. Si
@@ -321,7 +320,7 @@ alter table public.publicaciones enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 5 de 5 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
+-- 5 de 6 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
 --
 -- Una sola fila con el árbol entero en jsonb, igual que el manual de marca.
 -- Se guarda solo (autoguardado), así que el historial NO archiva cada
@@ -376,13 +375,34 @@ alter table public.proyectos_kev enable row level security;
 alter table public.proyectos_kev_historial enable row level security;
 
 
+-- ──────────────────────────────────────────────────────────────
+-- 6 de 6 · PREGUNTAS ABIERTAS  (/preguntas: una pregunta, 20 respuestas)
+--
+-- Una sola fila con el tablero entero en jsonb, igual que el manual de marca
+-- y los proyectos. Sin historial: aquí no se reescribe un documento largo,
+-- se agregan renglones, y lo que se borra se borra a propósito.
+-- ──────────────────────────────────────────────────────────────
+
+create table if not exists public.preguntas (
+  id text primary key,
+  contenido jsonb not null,
+  actualizado_en timestamptz not null default now()
+);
+
+comment on table public.preguntas is 'Tablero de /preguntas. Una fila por persona.';
+
+-- RLS activo y SIN políticas, como el resto: la llave pública del navegador
+-- no entra. La API escribe y LEE con la service-role, y exige ADMIN_SECRET.
+alter table public.preguntas enable row level security;
+
+
 -- ══════════════════════════════════════════════════════════════
--- COMPROBACIÓN · tienen que salir 7 filas, todas "protegida"
+-- COMPROBACIÓN · tienen que salir 8 filas, todas "protegida"
 -- ══════════════════════════════════════════════════════════════
 
 select relname as tabla,
        case when relrowsecurity then 'protegida' else 'ABIERTA — avísame' end as estado
 from pg_class
 where relnamespace = 'public'::regnamespace
-  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial')
+  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial', 'preguntas')
 order by relname;
