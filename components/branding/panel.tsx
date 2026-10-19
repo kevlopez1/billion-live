@@ -275,11 +275,15 @@ export function Panel() {
     setMensaje("")
   }
 
-  const Titulo = ({ id, icono: Icono, children, numero }: { id: string; icono: React.ElementType; children: React.ReactNode; numero?: string }) => (
-    <div id={id} className="mb-5 flex scroll-mt-28 items-center gap-2.5 border-b border-border pb-3 pt-2">
-      <Icono className="h-4 w-4 shrink-0 text-gold" strokeWidth={1.75} />
-      <h2 className="font-display text-lg font-bold tracking-tight md:text-xl">{children}</h2>
-      {numero && <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">{numero}</span>}
+  // El título no lleva regla debajo ni icono de color: el tamaño y el aire ya
+  // separan una sección de la siguiente. Una línea bajo cada encabezado
+  // convierte un documento en un informe. El emoji es el mismo que usan el
+  // mapa y el índice, así que las tres vistas se reconocen entre ellas.
+  const Titulo = ({ id, emoji, children, numero }: { id: string; emoji: string; children: React.ReactNode; numero?: string }) => (
+    <div id={id} className="mb-4 flex scroll-mt-28 items-baseline gap-2.5 pt-2">
+      <span className="shrink-0 text-[19px] leading-none" aria-hidden>{emoji}</span>
+      <h2 className="font-display text-[21px] font-bold tracking-tight md:text-[25px]">{children}</h2>
+      {numero && <span className="ml-auto shrink-0 text-[11.5px] tabular-nums text-muted-foreground">{numero}</span>}
     </div>
   )
 
@@ -446,10 +450,10 @@ export function Panel() {
           />
         </aside>
 
-        <div className="min-w-0 flex-1 space-y-12 md:space-y-14">
+        <div className="min-w-0 flex-1 space-y-16 md:space-y-20">
           {/* ── El personaje ── */}
           <section>
-            <Titulo id="personaje" icono={User}>El personaje</Titulo>
+            <Titulo id="personaje" emoji="👤">El personaje</Titulo>
             <Campo
               valor={doc.personaje.nombre}
               onChange={(v) => editar((d) => ({ ...d, personaje: { ...d.personaje, nombre: v } }))}
@@ -457,14 +461,16 @@ export function Panel() {
               className="mb-4 font-display text-xl font-bold tracking-tight"
               placeholder="Nombre"
             />
-            <div className="grid gap-3 sm:grid-cols-3">
+            {/* items-start: si no, las tres columnas se estiran a la altura de
+                la más larga y queda un hueco muerto bajo las cortas. */}
+            <div className="grid items-start gap-x-8 gap-y-6 sm:grid-cols-3">
               {([
                 ["Fortalezas", "fortalezas"],
                 ["Debilidades", "debilidades"],
                 ["Oportunidades", "oportunidades"],
               ] as const).map(([rotulo, llave]) => (
-                <div key={llave} className="rounded-2xl border border-border bg-card/40 px-4 py-4">
-                  <div className="mb-2.5 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-gold">{rotulo}</div>
+                <div key={llave}>
+                  <div className="mb-2 text-[10.5px] font-display font-bold uppercase tracking-[0.16em] text-muted-foreground">{rotulo}</div>
                   <ListaTextos
                     items={doc.personaje[llave]}
                     onChange={(v) => editar((d) => ({ ...d, personaje: { ...d.personaje, [llave]: v } }))}
@@ -479,13 +485,16 @@ export function Panel() {
 
           {/* ── El norte ── */}
           <section>
-            <Titulo id="norte" icono={Compass} numero={`${doc.norte.length} principios`}>El norte</Titulo>
-            <p className="mb-5 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">
+            <Titulo id="norte" emoji="🧭" numero={`${doc.norte.length} principios`}>El norte</Titulo>
+            <p className="mb-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
               Lo que se toma en cuenta siempre. Si un video no responde a esto, no se publica.
             </p>
-            <div className="space-y-3">
+            {/* Sin tarjeta: el número y el título en negrita ya hacen la
+                jerarquía. Encajonar cada párrafo convierte un documento en un
+                informe, y en un informe no da ganas de escribir. */}
+            <div className="space-y-6">
               {doc.norte.map((p, i) => (
-                <div key={i} className="rounded-2xl border border-border bg-card/40 px-4 py-4 md:px-5">
+                <div key={i}>
                   <Fila
                     editando={editando}
                     onBorrar={() => editar((d) => ({ ...d, norte: d.norte.filter((_, j) => j !== i) }))}
@@ -507,7 +516,7 @@ export function Panel() {
                           onChange={(v) => editar((d) => { d.norte[i].cuerpo = v; return d })}
                           editando={editando}
                           multilinea
-                          className="text-[13.5px] leading-relaxed text-muted-foreground"
+                          className="text-[14.5px] leading-relaxed text-muted-foreground"
                           placeholder="Qué significa"
                         />
                         {(editando || p.detalle.length > 0) && (
@@ -547,8 +556,8 @@ export function Panel() {
 
           {/* ── Los formatos ── */}
           <section>
-            <Titulo id="formatos" icono={Clapperboard} numero={`${doc.formatos.length} formatos`}>Los formatos</Titulo>
-            <p className="mb-5 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">
+            <Titulo id="formatos" emoji="🎬" numero={`${doc.formatos.length} formatos`}>Los formatos</Titulo>
+            <p className="mb-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
               La estructura puede variar, pero el objetivo no: posicionar las ambiciones reales y construir el apego a
               la novela del personaje. Toca uno para ver sus pasos.
             </p>
@@ -637,7 +646,7 @@ export function Panel() {
 
           {/* ── La edición ── */}
           <section>
-            <Titulo id="edicion" icono={Scissors} numero={`${doc.edicion.bloques.length} bloques`}>La edición</Titulo>
+            <Titulo id="edicion" emoji="✂️" numero={`${doc.edicion.bloques.length} bloques`}>La edición</Titulo>
 
             <div className="mb-5 rounded-2xl border border-gold/40 bg-gold/[0.05] px-4 py-4 md:px-5">
               <div className="mb-1.5 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-gold">
@@ -797,9 +806,9 @@ export function Panel() {
 
           {/* ── Distribución ── */}
           <section>
-            <Titulo id="distribucion" icono={Radio} numero={`${enUso} de ${doc.redes.length} en uso`}>Distribución</Titulo>
+            <Titulo id="distribucion" emoji="📡" numero={`${enUso} de ${doc.redes.length} en uso`}>Distribución</Titulo>
 
-            <p className="mb-4 max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">
+            <p className="mb-4 max-w-2xl text-[14.5px] leading-relaxed text-muted-foreground">
               <b className="text-foreground">Un rodaje, {enUso} salidas.</b>{" "}
               {salidasDefinidas === enUso
                 ? "Cada red en uso tiene escrito qué pieza le toca."
@@ -901,11 +910,11 @@ export function Panel() {
 
           {/* ── Producción ── */}
           <section>
-            <Titulo id="produccion" icono={Shirt}>Producción</Titulo>
+            <Titulo id="produccion" emoji="👕">Producción</Titulo>
             <div className="grid gap-3 sm:grid-cols-2">
               {([["Personaje", "personaje"], ["Equipo", "equipo"]] as const).map(([rotulo, llave]) => (
-                <div key={llave} className="rounded-2xl border border-border bg-card/40 px-4 py-4">
-                  <div className="mb-2.5 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-gold">{rotulo}</div>
+                <div key={llave}>
+                  <div className="mb-2 text-[10.5px] font-display font-bold uppercase tracking-[0.16em] text-muted-foreground">{rotulo}</div>
                   <ListaTextos
                     items={doc.produccion[llave]}
                     onChange={(v) => editar((d) => ({ ...d, produccion: { ...d.produccion, [llave]: v } }))}
@@ -920,7 +929,7 @@ export function Panel() {
 
           {/* ── En cola ── */}
           <section>
-            <Titulo id="cola" icono={Target} numero={`${doc.enCola.length} videos`}>En cola</Titulo>
+            <Titulo id="cola" emoji="🎯" numero={`${doc.enCola.length} videos`}>En cola</Titulo>
 
             {/* ── La línea de producción ──
                 Una fábrica tiene estaciones. Ver cuántos hay en cada una es lo
@@ -1111,13 +1120,13 @@ export function Panel() {
 
           {/* ── Hoy y futuro ── */}
           {([
-            ["hoy", "Qué funciona hoy", "2026", Sparkles, "hoy"],
-            ["futuro", "Hacia dónde va", "2028", TrendingUp, "futuro"],
+            ["hoy", "Qué funciona hoy", "2026", "✨", "hoy"],
+            ["futuro", "Hacia dónde va", "2028", "📈", "futuro"],
           ] as const).map(([id, titulo, anio, Icono, llave]) => (
             <section key={id}>
-              <Titulo id={id} icono={Icono} numero={anio}>{titulo}</Titulo>
+              <Titulo id={id} emoji={Icono} numero={anio}>{titulo}</Titulo>
               {id === "futuro" && (
-                <p className="mb-5 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">
+                <p className="mb-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
                   Qué buscará el consumidor, y por lo tanto hacia dónde tiene que mirar{" "}
                   <PrimeMark className="text-[0.9em]" />.
                 </p>
@@ -1145,7 +1154,7 @@ export function Panel() {
                           onChange={(v) => editar((d) => { d[llave][i].cuerpo = v; return d })}
                           editando={editando}
                           multilinea
-                          className="text-[13.5px] leading-relaxed text-muted-foreground"
+                          className="text-[14.5px] leading-relaxed text-muted-foreground"
                           placeholder="Qué significa"
                         />
                       </div>

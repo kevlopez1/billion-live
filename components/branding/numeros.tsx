@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { BarChart3, Loader2, Plus, Quote, Trash2, TrendingUp } from "lucide-react"
+import { Loader2, Plus, Quote, Trash2, TrendingUp } from "lucide-react"
 import {
   MINIMO_PARA_CONCLUIR, formatearDuracion, formatearNumero, ganchos, lectura,
   resumirPorFormato, totales, type Publicacion,
@@ -108,9 +108,9 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
 
   return (
     <section>
-      <div id="numeros" className="mb-5 flex scroll-mt-28 items-center gap-2.5 border-b border-border pb-3 pt-2">
-        <BarChart3 className="h-4 w-4 shrink-0 text-gold" strokeWidth={1.75} />
-        <h2 className="font-display text-lg font-bold tracking-tight md:text-xl">Los números</h2>
+      <div id="numeros" className="mb-4 flex scroll-mt-28 items-baseline gap-2.5 pt-2">
+        <span className="shrink-0 text-[19px] leading-none" aria-hidden>📊</span>
+        <h2 className="font-display text-[21px] font-bold tracking-tight md:text-[25px]">Los números</h2>
         <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">
           {tot.videos} {tot.videos === 1 ? "video" : "videos"}
         </span>

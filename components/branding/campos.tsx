@@ -8,9 +8,14 @@ import { conPrime } from "@/components/prime-mark"
 // ──────────────────────────────────────────────────────────────
 // Las piezas de edición del panel.
 //
-// Regla de diseño: en modo lectura no se nota que esto es editable. Nada de
-// cajas, bordes ni fondos de formulario — el manual tiene que leerse como un
-// documento. Los controles aparecen solo cuando se entra a editar.
+// Regla de diseño: ESTO NO ES UN FORMULARIO, es un documento.
+//
+// En lectura no se nota que es editable. Y al editar tampoco debería notarse
+// demasiado: el campo no lleva recuadro, solo se ilumina al pasar por encima y
+// se marca al escribir dentro. Un borde permanente por campo convierte una
+// página de notas en una planilla, y en una planilla no da ganas de escribir.
+//
+// Los botones de borrar aparecen al acercarse a su fila, no antes.
 // ──────────────────────────────────────────────────────────────
 
 /** Texto editable que crece con su contenido. En lectura es texto a secas. */
@@ -72,7 +77,7 @@ export function Campo({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         rows={1}
-        className={`block w-full resize-none rounded-lg border border-gold/35 bg-gold/[0.04] px-2.5 py-1.5 outline-none transition-colors focus:border-gold ${className}`}
+        className={`block w-full resize-none rounded-md border border-transparent bg-transparent px-1.5 py-1 -mx-1.5 outline-none transition-colors hover:bg-foreground/[0.04] focus:border-gold/45 focus:bg-gold/[0.05] ${className}`}
       />
     )
   }
@@ -83,7 +88,7 @@ export function Campo({
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
-      className={`block w-full rounded-lg border border-gold/35 bg-gold/[0.04] px-2.5 py-1.5 outline-none transition-colors focus:border-gold ${className}`}
+      className={`block w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 -mx-1.5 outline-none transition-colors hover:bg-foreground/[0.04] focus:border-gold/45 focus:bg-gold/[0.05] ${className}`}
     />
   )
 }
@@ -106,7 +111,7 @@ export function Fila({
         <button
           onClick={onBorrar}
           aria-label="Borrar"
-          className="mt-1 shrink-0 rounded-lg p-1.5 text-muted-foreground/50 transition-colors hover:bg-rojo/10 hover:text-rojo"
+          className="mt-1 shrink-0 rounded-lg p-1.5 text-muted-foreground/50 opacity-0 transition-all hover:bg-rojo/10 hover:text-rojo focus-visible:opacity-100 group-hover/fila:opacity-100 max-md:opacity-60"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -208,7 +213,7 @@ export function ListaTextos({
           placeholder={placeholder}
           onKeyDown={teclas(i)}
           campoRef={(el) => { refs.current[i] = el }}
-          className="text-[13.5px] leading-snug text-muted-foreground"
+          className="text-[14.5px] leading-relaxed text-muted-foreground"
         />
       </div>
     </Fila>

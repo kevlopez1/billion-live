@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
-import { ETIQUETA_SECCION, type Seccion } from "@/lib/revision"
+import { ETIQUETA_SECCION, ICONO_SECCION, type Seccion } from "@/lib/revision"
 import { ETIQUETA_ESTADO, type Contenido, type Estado } from "@/lib/branding"
 
 // ──────────────────────────────────────────────────────────────
@@ -28,11 +28,6 @@ import { ETIQUETA_ESTADO, type Contenido, type Estado } from "@/lib/branding"
 // Columnas CSS y no una grilla: las tarjetas miden distinto (6 formatos contra
 // 14 redes) y una grilla dejaría huecos del alto de la más larga.
 // ──────────────────────────────────────────────────────────────
-
-const ICONO: Record<Seccion, string> = {
-  meta: "🏁", personaje: "👤", norte: "🧭", formatos: "🎬", edicion: "✂️",
-  redes: "📡", produccion: "👕", enCola: "🎯", pendientes: "📌", hoy: "✨", futuro: "📈",
-}
 
 const PUNTO_RED: Record<Estado, string> = {
   usamos: "bg-kev-success",
@@ -96,7 +91,7 @@ export function Secciones({
               onClick={() => onIr(id)}
               className="flex w-full items-center gap-2.5 border-b border-border px-4 py-3 text-left transition-colors hover:bg-foreground/[0.03]"
             >
-              <span className="text-[15px] leading-none" aria-hidden>{ICONO[id]}</span>
+              <span className="text-[15px] leading-none" aria-hidden>{ICONO_SECCION[id]}</span>
               <span className="min-w-0 flex-1 truncate font-display text-[14.5px] font-bold tracking-tight">
                 {ETIQUETA_SECCION[id]}
               </span>
@@ -129,7 +124,7 @@ export function Secciones({
                         }`}
                         aria-label={it.estado ? ETIQUETA_ESTADO[it.estado] : undefined}
                       />
-                      <span className="min-w-0 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
+                      <span className="min-w-0 flex-1 text-[14.5px] leading-relaxed text-muted-foreground">
                         {conPrime(it.texto, false)}
                         {it.vacio && (
                           <span className="ml-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-rojo/70">

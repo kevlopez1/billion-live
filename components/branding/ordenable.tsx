@@ -108,7 +108,7 @@ export function Ordenable<T>({ items, clave, mover, children, nombre = "elemento
           }}
           className={i === arrastrando ? "opacity-90 shadow-lg" : ""}
         >
-          <div className="flex items-start gap-1.5">
+          <div className="group/arrastre flex items-start gap-1.5">
             <button
               type="button"
               onPointerDown={alBajar(i)}
@@ -117,7 +117,7 @@ export function Ordenable<T>({ items, clave, mover, children, nombre = "elemento
               onPointerCancel={alSoltar}
               onKeyDown={alTeclado(i)}
               aria-label={`Mover ${nombre} ${i + 1} de ${items.length}. Alt y flechas para moverlo con el teclado.`}
-              className="mt-1.5 shrink-0 cursor-grab touch-none rounded-md p-1 text-muted-foreground/40 transition-colors hover:bg-foreground/[0.06] hover:text-muted-foreground active:cursor-grabbing"
+              className="mt-1.5 shrink-0 cursor-grab touch-none rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-foreground/[0.06] hover:text-muted-foreground focus-visible:opacity-100 group-hover/arrastre:opacity-100 active:cursor-grabbing max-md:opacity-50"
             >
               <GripVertical className="h-4 w-4" />
             </button>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Check, Copy, FileCheck2, Search } from "lucide-react"
+import { Check, Copy, Search } from "lucide-react"
 import { COMPROBANTES, monto, TOTAL_BS } from "@/lib/comprobantes"
 
 // ──────────────────────────────────────────────────────────────
@@ -50,9 +50,9 @@ export function Pruebas() {
 
   return (
     <section>
-      <div id="pruebas" className="mb-5 flex scroll-mt-28 items-center gap-2.5 border-b border-border pb-3 pt-2">
-        <FileCheck2 className="h-4 w-4 shrink-0 text-gold" strokeWidth={1.75} />
-        <h2 className="font-display text-lg font-bold tracking-tight md:text-xl">La bóveda de pruebas</h2>
+      <div id="pruebas" className="mb-4 flex scroll-mt-28 items-baseline gap-2.5 pt-2">
+        <span className="shrink-0 text-[19px] leading-none" aria-hidden>🧾</span>
+        <h2 className="font-display text-[21px] font-bold tracking-tight md:text-[25px]">La bóveda de pruebas</h2>
         <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">
           {COMPROBANTES.length} · {monto(TOTAL_BS)}
         </span>
