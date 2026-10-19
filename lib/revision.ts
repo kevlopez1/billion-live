@@ -55,6 +55,14 @@ export const ETIQUETA_SECCION: Record<Seccion, string> = {
   futuro: "Lo que viene",
 }
 
+// El emoji de cada sección. Vivía copiado en dos archivos (el mapa y el árbol),
+// que es como empiezan a divergir: se agrega una sección y aparece con icono en
+// un lado y sin él en el otro.
+export const ICONO_SECCION: Record<Seccion, string> = {
+  meta: "🏁", personaje: "👤", norte: "🧭", formatos: "🎬", edicion: "✂️",
+  redes: "📡", produccion: "👕", enCola: "🎯", pendientes: "📌", hoy: "✨", futuro: "📈",
+}
+
 // Alta primero: si solo lee tres, que sean las tres que importan.
 export const ORDEN_GRAVEDAD: Record<Gravedad, number> = { alta: 0, media: 1, baja: 2 }
 

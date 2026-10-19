@@ -18,7 +18,7 @@
 
 import type { Contenido } from "@/lib/branding"
 import { RAIZ, type Doc, type Estado, type Nodo } from "@/lib/proyectos"
-import { ETIQUETA_SECCION, type Seccion } from "@/lib/revision"
+import { ETIQUETA_SECCION, ICONO_SECCION, type Seccion } from "@/lib/revision"
 
 type Rama = {
   id: Seccion
@@ -29,41 +29,27 @@ type Rama = {
   estados?: Estado[]
 }
 
-const ICONO: Record<Seccion, string> = {
-  meta: "🏁",
-  personaje: "👤",
-  norte: "🧭",
-  formatos: "🎬",
-  edicion: "✂️",
-  redes: "📡",
-  produccion: "👕",
-  enCola: "🎯",
-  pendientes: "📌",
-  hoy: "✨",
-  futuro: "📈",
-}
-
 /** El estado de una red, en los cuatro que entiende el mapa. */
 const DE_RED: Record<string, Estado> = { usamos: "listo", pendiente: "idea", no: "pausa" }
 
 function ramas(c: Contenido): Rama[] {
   const limpio = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean)
   return [
-    { id: "personaje", icono: ICONO.personaje, hojas: limpio([...c.personaje.fortalezas, ...c.personaje.debilidades, ...c.personaje.oportunidades]) },
-    { id: "norte", icono: ICONO.norte, hojas: limpio(c.norte.map((p) => p.titulo)) },
-    { id: "formatos", icono: ICONO.formatos, hojas: limpio(c.formatos.map((f) => f.nombre)) },
-    { id: "edicion", icono: ICONO.edicion, hojas: limpio(c.edicion.bloques.map((b) => b.titulo)) },
+    { id: "personaje", icono: ICONO_SECCION.personaje, hojas: limpio([...c.personaje.fortalezas, ...c.personaje.debilidades, ...c.personaje.oportunidades]) },
+    { id: "norte", icono: ICONO_SECCION.norte, hojas: limpio(c.norte.map((p) => p.titulo)) },
+    { id: "formatos", icono: ICONO_SECCION.formatos, hojas: limpio(c.formatos.map((f) => f.nombre)) },
+    { id: "edicion", icono: ICONO_SECCION.edicion, hojas: limpio(c.edicion.bloques.map((b) => b.titulo)) },
     {
       id: "redes",
-      icono: ICONO.redes,
+      icono: ICONO_SECCION.redes,
       hojas: limpio(c.redes.map((r) => r.nombre)),
       estados: c.redes.filter((r) => r.nombre.trim()).map((r) => DE_RED[r.estado] ?? "idea"),
     },
-    { id: "produccion", icono: ICONO.produccion, hojas: limpio([...c.produccion.personaje, ...c.produccion.equipo]) },
-    { id: "enCola", icono: ICONO.enCola, hojas: limpio(c.enCola.map((v) => v.titulo)) },
-    { id: "pendientes", icono: ICONO.pendientes, hojas: limpio(c.pendientes) },
-    { id: "hoy", icono: ICONO.hoy, hojas: limpio(c.hoy.map((l) => l.titulo)) },
-    { id: "futuro", icono: ICONO.futuro, hojas: limpio(c.futuro.map((l) => l.titulo)) },
+    { id: "produccion", icono: ICONO_SECCION.produccion, hojas: limpio([...c.produccion.personaje, ...c.produccion.equipo]) },
+    { id: "enCola", icono: ICONO_SECCION.enCola, hojas: limpio(c.enCola.map((v) => v.titulo)) },
+    { id: "pendientes", icono: ICONO_SECCION.pendientes, hojas: limpio(c.pendientes) },
+    { id: "hoy", icono: ICONO_SECCION.hoy, hojas: limpio(c.hoy.map((l) => l.titulo)) },
+    { id: "futuro", icono: ICONO_SECCION.futuro, hojas: limpio(c.futuro.map((l) => l.titulo)) },
   ]
 }
 
