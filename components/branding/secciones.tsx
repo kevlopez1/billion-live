@@ -2,30 +2,32 @@
 
 import { AlertTriangle } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
-import { color } from "@/lib/proyectos"
 import { ETIQUETA_SECCION, type Seccion } from "@/lib/revision"
 import { ETIQUETA_ESTADO, type Contenido, type Estado } from "@/lib/branding"
 
 // ──────────────────────────────────────────────────────────────
 // EL MAPA, POR SECCIONES
 //
-// Una tarjeta por sección, en el orden del documento. El abanico anterior
-// repartía las ramas al lado donde cupieran, así que el orden se perdía: "Las
-// redes" con sus 14 hojas se iba a una esquina y el resto quedaba apretado
-// donde sobró. Se veía como un enredo, no como un manual.
+// Una tarjeta por sección, en el orden del documento. El alto de la tarjeta ES
+// cuánto tiene esa sección, así que de un vistazo se ve cuál está gorda y cuál
+// vacía.
 //
-// Aquí cada sección está encerrada y nombrada, y el alto de la tarjeta ES la
-// cantidad de cosas que tiene. Una sección vacía se ve desde lejos: es lo
-// único que el mapa tiene que gritar.
+// SIN un color por sección. La versión anterior le daba su propio tono a cada
+// una: diez colores compitiendo, cada tarjeta gritando igual de fuerte, y leer
+// eso cansa. El color aquí solo significa algo:
+//
+//   rojo    → falta (un bloque sin reglas, un formato sin beats)
+//   verde   → esa red está en uso
+//   ámbar   → esa red se decidió no usarla
+//   gris    → todo lo demás
+//
+// Diez secciones no necesitan diez colores: necesitan diez nombres. Se
+// distinguen por el título, el icono y el aire entre ellas, como en un
+// documento de verdad.
 //
 // Columnas CSS y no una grilla: las tarjetas miden distinto (6 formatos contra
 // 14 redes) y una grilla dejaría huecos del alto de la más larga.
 // ──────────────────────────────────────────────────────────────
-
-const TONO: Record<Seccion, number> = {
-  meta: 235, personaje: 235, norte: 28, formatos: 150, edicion: 75,
-  redes: 300, produccion: 195, enCola: 345, pendientes: 110, hoy: 180, futuro: 265,
-}
 
 const ICONO: Record<Seccion, string> = {
   meta: "🏁", personaje: "👤", norte: "🧭", formatos: "🎬", edicion: "✂️",
@@ -34,7 +36,7 @@ const ICONO: Record<Seccion, string> = {
 
 const PUNTO_RED: Record<Estado, string> = {
   usamos: "bg-kev-success",
-  pendiente: "bg-muted-foreground/40",
+  pendiente: "bg-muted-foreground/35",
   no: "bg-kev-warning",
 }
 
@@ -77,59 +79,60 @@ export function Secciones({
   marcadas?: Set<string>
 }) {
   return (
-    <div className="columns-1 gap-4 md:columns-2 xl:columns-3">
+    <div className="columns-1 gap-5 md:columns-2 xl:columns-3">
       {bloques(contenido).map(({ id, items }) => {
-        const h = TONO[id]
         const vacia = items.length === 0
         const faltan = items.filter((i) => i.vacio).length
         const marcada = marcadas?.has(id)
         return (
           <section
             key={id}
-            className="mb-4 break-inside-avoid overflow-hidden rounded-2xl border bg-card/40"
-            style={{ borderColor: color(h, 0.62, 0.13, marcada ? 0.9 : 0.35) }}
+            className={`mb-5 break-inside-avoid overflow-hidden rounded-2xl border bg-card/40 ${
+              marcada ? "border-rojo/45" : "border-border"
+            }`}
           >
             <button
               type="button"
               onClick={() => onIr(id)}
-              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]"
-              style={{ backgroundColor: color(h, 0.62, 0.13, 0.08) }}
+              className="flex w-full items-center gap-2.5 border-b border-border px-4 py-3 text-left transition-colors hover:bg-foreground/[0.03]"
             >
               <span className="text-[15px] leading-none" aria-hidden>{ICONO[id]}</span>
-              <span className="min-w-0 flex-1 truncate font-display text-[14px] font-bold tracking-tight">
+              <span className="min-w-0 flex-1 truncate font-display text-[14.5px] font-bold tracking-tight">
                 {ETIQUETA_SECCION[id]}
               </span>
               {marcada && <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rojo" aria-label="Con un hallazgo grave" />}
-              <span
-                className="shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums"
-                style={{ backgroundColor: color(h, 0.62, 0.13, 0.16), color: color(h, 0.45, 0.14) }}
-              >
+              <span className={`shrink-0 text-[11.5px] tabular-nums ${faltan ? "font-semibold text-rojo/80" : "text-muted-foreground"}`}>
                 {vacia ? "vacía" : faltan ? `${items.length - faltan}/${items.length}` : items.length}
               </span>
             </button>
 
             {vacia ? (
-              <p className="px-3.5 py-3 text-[12.5px] leading-snug text-muted-foreground/70">
+              <p className="px-4 py-3.5 text-[13px] leading-relaxed text-muted-foreground/70">
                 Sin definir todavía.
               </p>
             ) : (
-              <ul className="px-1.5 py-1.5">
+              <ul className="px-2 py-2">
                 {items.map((it, i) => (
                   <li key={i}>
                     <button
                       type="button"
                       onClick={() => onIr(id)}
-                      className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-foreground/[0.05]"
+                      className="flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-foreground/[0.05]"
                     >
                       <span
-                        className={`mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full ${it.estado ? PUNTO_RED[it.estado] : ""} ${it.vacio ? "ring-1 ring-rojo/40" : ""}`}
-                        style={it.estado ? undefined : { backgroundColor: it.vacio ? "transparent" : color(h, 0.62, 0.13, 0.55) }}
+                        className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${
+                          it.vacio
+                            ? "ring-1 ring-rojo/50"
+                            : it.estado
+                              ? PUNTO_RED[it.estado]
+                              : "bg-muted-foreground/35"
+                        }`}
                         aria-label={it.estado ? ETIQUETA_ESTADO[it.estado] : undefined}
                       />
-                      <span className="min-w-0 flex-1 text-[13px] leading-snug text-muted-foreground">
+                      <span className="min-w-0 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
                         {conPrime(it.texto, false)}
                         {it.vacio && (
-                          <span className="ml-1.5 whitespace-nowrap rounded px-1 py-px text-[10.5px] font-semibold uppercase tracking-wider text-rojo/80 ring-1 ring-rojo/30">
+                          <span className="ml-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-rojo/70">
                             sin definir
                           </span>
                         )}
