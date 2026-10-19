@@ -8,7 +8,7 @@ import {
 // El mapa y el árbol son los MISMOS de /kevlopez_proyectos. Un segundo mapa
 // parecido acaba divergiendo del primero; esto se alimenta traduciendo el
 // manual a la forma que ese mapa entiende (lib/branding-arbol.ts).
-import { Secciones } from "@/components/branding/secciones"
+import { Diagrama } from "@/components/branding/diagrama"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
@@ -430,7 +430,7 @@ export function Panel() {
       )}
 
       {vista === "mapa" ? (
-        <Secciones
+        <Diagrama
           contenido={doc}
           onIr={(s) => irANodo(idRama(s))}
           marcadas={new Set(revision?.hallazgos.filter((h) => h.gravedad === "alta").map((h) => h.seccion) ?? [])}
