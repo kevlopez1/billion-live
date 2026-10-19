@@ -8,7 +8,7 @@ import {
 // El mapa y el árbol son los MISMOS de /kevlopez_proyectos. Un segundo mapa
 // parecido acaba divergiendo del primero; esto se alimenta traduciendo el
 // manual a la forma que ese mapa entiende (lib/branding-arbol.ts).
-import { Mapa } from "@/components/proyectos/mapa"
+import { Secciones } from "@/components/branding/secciones"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
@@ -38,6 +38,8 @@ const SECCIONES: Entrada[] = [
 ]
 
 // Las diez ramas arrancan recogidas: el índice tiene que caber en una pantalla.
+const SIN_PLEGAR = new Set<string>()
+
 const SECCIONES_ARBOL = [
   "personaje", "norte", "formatos", "edicion", "redes",
   "produccion", "enCola", "pendientes", "hoy", "futuro",
@@ -70,7 +72,6 @@ export function Panel() {
   // Documento o mapa: los mismos datos, dos formas de mirarlos. El mapa no es
   // decoración — una rama vacía se ve desde lejos, y eso es lo que hay que ver.
   const [vista, setVista] = useState<"documento" | "mapa">("documento")
-  const [plegados, setPlegados] = useState<Set<string>>(new Set())
   const [nodoSel, setNodoSel] = useState<string>(idRama("personaje"))
 
   // La revisión de la IA.
@@ -218,13 +219,6 @@ export function Panel() {
     setTimeout(() => document.getElementById(ANCLA[sec])?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
   }
 
-  const plegar = (id: string) =>
-    setPlegados((s) => {
-      const n = new Set(s)
-      n.has(id) ? n.delete(id) : n.add(id)
-      return n
-    })
-
   const descartar = () => {
     if (estado === "sucio" && !confirm("Se pierden los cambios sin guardar. ¿Seguro?")) return
     const vuelta = JSON.parse(original.current || JSON.stringify(CONTENIDO_BASE))
@@ -244,7 +238,9 @@ export function Panel() {
   )
 
   const enUso = doc.redes.filter((r) => r.estado === "usamos").length
-  const arbol = useMemo(() => aDoc(doc, plegados), [doc, plegados])
+  // El índice lateral lleva su propio plegado por dentro, así que aquí no va
+  // ninguno: este árbol es solo la forma del manual.
+  const arbol = useMemo(() => aDoc(doc, SIN_PLEGAR), [doc])
 
   return (
     <>
@@ -383,9 +379,11 @@ export function Panel() {
       )}
 
       {vista === "mapa" ? (
-        <div className="h-[560px] overflow-hidden rounded-2xl border border-border md:h-[720px]">
-          <Mapa doc={arbol} seleccionado={nodoSel} onSeleccionar={irANodo} onPlegar={plegar} />
-        </div>
+        <Secciones
+          contenido={doc}
+          onIr={(s) => irANodo(idRama(s))}
+          marcadas={new Set(revision?.hallazgos.filter((h) => h.gravedad === "alta").map((h) => h.seccion) ?? [])}
+        />
       ) : (
       <div className="lg:flex lg:gap-10">
         <Indice entradas={SECCIONES} soloMovil />
