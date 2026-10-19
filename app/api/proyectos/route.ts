@@ -1,5 +1,5 @@
-import { createHash, timingSafeEqual } from "node:crypto"
 import { NextResponse } from "next/server"
+import { autorizado, rechazo } from "@/lib/auth-admin"
 import { getAdminClient } from "@/lib/supabase-admin"
 import { MAX_BYTES, valido, type Doc } from "@/lib/proyectos"
 import { semilla } from "@/lib/proyectos-semilla"
@@ -12,21 +12,9 @@ const ID = "kev-lopez"
 // ──────────────────────────────────────────────────────────────
 // A diferencia de /api/branding, aquí se exige la clave TAMBIÉN para LEER:
 // estas notas son metas y estrategia personal, no material público.
+// La comprobación de la clave vive en lib/auth-admin.ts, compartida con
+// /api/preguntas.
 // ──────────────────────────────────────────────────────────────
-function autorizado(req: Request): boolean | "sin-clave" {
-  const secret = process.env.ADMIN_SECRET
-  if (!secret) return "sin-clave"
-  const dado = req.headers.get("authorization") ?? ""
-  const h = (s: string) => createHash("sha256").update(s).digest()
-  return timingSafeEqual(h(dado), h(`Bearer ${secret}`))
-}
-
-function rechazo(a: boolean | "sin-clave") {
-  if (a === "sin-clave") {
-    return NextResponse.json({ error: "Falta ADMIN_SECRET en las variables de entorno." }, { status: 500 })
-  }
-  return NextResponse.json({ error: "Clave incorrecta." }, { status: 401 })
-}
 
 export async function GET(req: Request) {
   const a = autorizado(req)

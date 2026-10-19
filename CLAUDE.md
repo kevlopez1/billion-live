@@ -70,9 +70,9 @@ No falla el build: señala y ordena. La tijera la decide una persona.
 - **El auto y sus precios:** `lib/car-grid.ts`, que usan el componente y la API.
   El precio lo recalcula siempre el servidor, nunca el navegador.
 - **La base de datos sale de un solo archivo:** `supabase/correr-todo.sql`. Son las
-  cinco tablas (cuentas, firmas, manual de marca, números de cada video, proyectos de Kev) en
-  orden, y se puede correr de nuevo sin romper nada. Si se agrega una tabla, va
-  ahí — no en un archivo nuevo.
+  seis tablas (cuentas, firmas, manual de marca, números de cada video, proyectos
+  de Kev, preguntas abiertas) en orden, y se puede correr de nuevo sin romper
+  nada. Si se agrega una tabla, va ahí — no en un archivo nuevo.
 
 ## 🔵 PRIME SIEMPRE VA CON SU LOGO, NUNCA ESCRITO
 
