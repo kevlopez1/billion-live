@@ -9,7 +9,7 @@
 // "Definir …" para que Kev lo llene.
 // ──────────────────────────────────────────────────────────────
 
-import { RAIZ, type Bloque, type Doc, type Estado, type TipoBloque } from "@/lib/proyectos"
+import { RAIZ, type Bloque, type Doc, type Estado, type Tablero, type TipoBloque } from "@/lib/proyectos"
 
 let n = 0
 const b = (t: TipoBloque, x: string, ok = false): Bloque => ({ id: `b${++n}`, t, x, ...(t === "todo" ? { ok } : {}) })
@@ -107,7 +107,7 @@ const RAMAS: Semilla[] = [
   { id: "pal-4", padre: "palancas", titulo: "Punto 4 (pendiente)", icono: "✍️", bloques: [p("El mensaje original quedó cortado en el punto 4."), todo("Escribir aquí el punto 4")] },
 ]
 
-export function semilla(): Doc {
+export function semillaDoc(): Doc {
   n = 0
   return {
     v: 1,
@@ -133,4 +133,9 @@ export function semilla(): Doc {
       })),
     ],
   }
+}
+
+/** La semilla ya en forma de tablero: un espacio, el de siempre. */
+export function semilla(): Tablero {
+  return { v: 2, espacios: [{ id: "principal", doc: semillaDoc(), trazos: [] }] }
 }
