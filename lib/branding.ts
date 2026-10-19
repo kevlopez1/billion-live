@@ -12,6 +12,19 @@
 // ──────────────────────────────────────────────────────────────
 
 import type { Pregunta } from "@/lib/preguntas"
+import type { Trazo } from "@/lib/proyectos"
+
+/** Lo que Kev hace SOBRE el diagrama, que no es parte del manual pero sí de
+ *  cómo lo mira: dónde puso cada sección, cuáles resaltó, cuáles marcó para
+ *  saltar y qué dibujó encima. Va por sección y no por renglón: la clave de
+ *  una sección es estable, la de un renglón es su posición en la lista y se
+ *  movería sola al reordenar. */
+export type Lienzo = {
+  pos?: Record<string, { x: number; y: number }>
+  tinta?: Record<string, number>
+  fav?: string[]
+  trazos?: Trazo[]
+}
 
 export type Estado = "usamos" | "pendiente" | "no"
 
@@ -77,6 +90,8 @@ export type Contenido = {
    *  del reto; las que llevan nombres de personas viven en /preguntas, que
    *  pide clave hasta para leer. Opcional, para no romper lo ya guardado. */
   preguntas?: Pregunta[]
+  /** El estado del diagrama. Opcional: el manual se lee igual sin él. */
+  lienzo?: Lienzo
 }
 
 export const ETIQUETA_ESTADO: Record<Estado, string> = {
