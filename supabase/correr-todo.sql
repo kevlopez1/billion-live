@@ -289,6 +289,28 @@ create table if not exists public.publicaciones (
 comment on table public.publicaciones is
   'Un registro por video publicado, con su formato y sus números. Es lo que permite saber qué formato funciona.';
 
+-- ── Lo que de verdad decide la distribución ──
+-- YouTube dice en su documentación que para recomendar un Short mira tres
+-- cosas: qué proporción de gente ELIGIÓ verlo, la duración media y el
+-- porcentaje medio visto. El memo interno de MrBeast obliga a su equipo a
+-- mirar exactamente esas tres. Instagram (Mosseri) nombró otras: tiempo de
+-- visionado, likes por alcance y envíos por alcance.
+--
+-- Nada de eso se puede calcular sin el ALCANCE, y la tabla no lo guardaba. Sin
+-- él solo quedan números crudos, y un número crudo no se compara: 400 likes
+-- sobre 2.000 vistas y 400 sobre 200.000 son cosas opuestas.
+--
+-- Todas nulas a propósito: no todas las redes dan todos estos datos, y un dato
+-- que falta no es un cero.
+alter table public.publicaciones add column if not exists alcance bigint check (alcance >= 0);
+alter table public.publicaciones add column if not exists ctr numeric(5,2) check (ctr >= 0 and ctr <= 100);
+alter table public.publicaciones add column if not exists duracion_media numeric(7,2) check (duracion_media >= 0);
+
+-- Los tres primeros segundos, transcritos. El manual dice que ahí se decide
+-- todo; guardarlos junto a la retención que sacaron convierte esa creencia en
+-- algo medible.
+alter table public.publicaciones add column if not exists gancho text;
+
 create index if not exists publicaciones_fecha_idx   on public.publicaciones (fecha desc);
 create index if not exists publicaciones_formato_idx on public.publicaciones (formato_id);
 

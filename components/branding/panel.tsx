@@ -17,11 +17,13 @@ import { Indice, type Entrada } from "@/components/branding/indice"
 import { Plegable } from "@/components/branding/plegable"
 import { Agregar, Campo, Fila, ListaTextos } from "@/components/branding/campos"
 import { Numeros } from "@/components/branding/numeros"
+import { Pruebas } from "@/components/branding/pruebas"
+import type { Idea } from "@/app/api/branding/ideas/route"
 import { Tema } from "@/components/branding/tema"
 import { PrimeMark } from "@/components/prime-mark"
 import {
-  CONTENIDO_BASE, ESTADOS, ETIQUETA_ESTADO,
-  type Contenido, type Estado,
+  CONTENIDO_BASE, ESTADOS, ETAPAS, ETIQUETA_ESTADO, ETIQUETA_ETAPA,
+  type Contenido, type Estado, type Etapa,
 } from "@/lib/branding"
 
 const SECCIONES: Entrada[] = [
@@ -30,6 +32,7 @@ const SECCIONES: Entrada[] = [
   { id: "formatos", nombre: "Los formatos" },
   { id: "edicion", nombre: "La edición" },
   { id: "numeros", nombre: "Los números" },
+  { id: "pruebas", nombre: "La bóveda de pruebas" },
   { id: "distribucion", nombre: "Distribución" },
   { id: "produccion", nombre: "Producción" },
   { id: "cola", nombre: "En cola" },
@@ -80,6 +83,12 @@ export function Panel() {
   const [revisando, setRevisando] = useState(false)
   const [errorRevision, setErrorRevision] = useState("")
   const [uso, setUso] = useState<{ entrada: number; salida: number; costoUsd: number } | null>(null)
+
+  // Las ideas que propone la IA. No se guardan: o se mandan a la cola, o se
+  // tiran. Guardar una propuesta que nadie aceptó solo ensucia el manual.
+  const [ideas, setIdeas] = useState<Idea[] | null>(null)
+  const [proponiendo, setProponiendo] = useState(false)
+  const [errorIdeas, setErrorIdeas] = useState("")
 
   // ── Carga ──
   useEffect(() => {
@@ -219,6 +228,43 @@ export function Panel() {
     setTimeout(() => document.getElementById(ANCLA[sec])?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
   }
 
+  const proponer = async () => {
+    if (!clave) { setPidiendoClave(true); return }
+    setProponiendo(true)
+    setErrorIdeas("")
+    try {
+      const r = await fetch("/api/branding/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
+        body: JSON.stringify({ contenido: doc }),
+      })
+      const j = await r.json()
+      if (!r.ok) { setErrorIdeas(j.error || "No se pudo proponer."); return }
+      setIdeas(j.ideas ?? [])
+    } catch {
+      setErrorIdeas("Error de red. No se propuso nada.")
+    } finally {
+      setProponiendo(false)
+    }
+  }
+
+  const aLaCola = (idea: Idea) => {
+    editar((d) => ({
+      ...d,
+      enCola: [
+        ...d.enCola,
+        {
+          titulo: idea.titulo,
+          formato: d.formatos.find((f) => f.id === idea.formatoId)?.nombre ?? idea.formatoId,
+          etapa: "idea" as const,
+          gancho: idea.gancho,
+          prueba: idea.prueba,
+        },
+      ],
+    }))
+    setIdeas((xs) => (xs ? xs.filter((x) => x !== idea) : xs))
+  }
+
   const descartar = () => {
     if (estado === "sucio" && !confirm("Se pierden los cambios sin guardar. ¿Seguro?")) return
     const vuelta = JSON.parse(original.current || JSON.stringify(CONTENIDO_BASE))
@@ -238,6 +284,7 @@ export function Panel() {
   )
 
   const enUso = doc.redes.filter((r) => r.estado === "usamos").length
+  const salidasDefinidas = doc.redes.filter((r) => r.estado === "usamos" && (r.salida?.pieza ?? "").trim()).length
   // El índice lateral lleva su propio plegado por dentro, así que aquí no va
   // ninguno: este árbol es solo la forma del manual.
   const arbol = useMemo(() => aDoc(doc, SIN_PLEGAR), [doc])
@@ -680,9 +727,19 @@ export function Panel() {
           {/* ── Los números ── */}
           <Numeros formatos={doc.formatos} clave={clave} />
 
+          <Pruebas />
+
           {/* ── Distribución ── */}
           <section>
             <Titulo id="distribucion" icono={Radio} numero={`${enUso} de ${doc.redes.length} en uso`}>Distribución</Titulo>
+
+            <p className="mb-4 max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">
+              <b className="text-foreground">Un rodaje, {enUso} salidas.</b>{" "}
+              {salidasDefinidas === enUso
+                ? "Cada red en uso tiene escrito qué pieza le toca."
+                : `${enUso - salidasDefinidas} de las ${enUso} redes en uso no tienen escrito qué pieza les toca de cada rodaje.`}
+            </p>
+
             <div className="grid gap-2.5 sm:grid-cols-2">
               {doc.redes.map((r, i) => (
                 <Fila
@@ -725,6 +782,45 @@ export function Panel() {
                         placeholder="Nota (opcional)"
                       />
                     )}
+
+                    {/* Qué sale para esta red de un mismo rodaje. Sin esto,
+                        "estar en diez redes" es una intención; con esto es una
+                        lista de entregables. Solo se pide donde ya se publica. */}
+                    {r.estado === "usamos" && (editando || r.salida?.pieza) && (
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-current/15 pt-2 text-[11.5px]">
+                        {editando ? (
+                          <>
+                            {(["pieza", "duracion", "relacion"] as const).map((k) => (
+                              <input
+                                key={k}
+                                value={r.salida?.[k] ?? ""}
+                                onChange={(e) =>
+                                  editar((d) => {
+                                    const s = d.redes[i].salida ?? { pieza: "", duracion: "", relacion: "" }
+                                    s[k] = e.target.value
+                                    d.redes[i].salida = s
+                                    return d
+                                  })
+                                }
+                                placeholder={{ pieza: "Qué pieza", duracion: "Duración", relacion: "Formato" }[k]}
+                                className="min-w-0 flex-1 rounded-md border border-gold/35 bg-background px-1.5 py-0.5 text-[11.5px] outline-none focus:border-gold"
+                              />
+                            ))}
+                          </>
+                        ) : (
+                          [r.salida?.pieza, r.salida?.duracion, r.salida?.relacion]
+                            .filter(Boolean)
+                            .map((x, j) => (
+                              <span key={j} className="rounded-md bg-current/10 px-1.5 py-0.5 opacity-80">{x}</span>
+                            ))
+                        )}
+                      </div>
+                    )}
+                    {r.estado === "usamos" && !editando && !r.salida?.pieza && (
+                      <p className="mt-2 border-t border-current/15 pt-2 text-[11px] text-rojo/75">
+                        Sin definir qué sale para aquí de cada rodaje.
+                      </p>
+                    )}
                   </div>
                 </Fila>
               ))}
@@ -759,47 +855,179 @@ export function Panel() {
           {/* ── En cola ── */}
           <section>
             <Titulo id="cola" icono={Target} numero={`${doc.enCola.length} videos`}>En cola</Titulo>
+
+            {/* ── La línea de producción ──
+                Una fábrica tiene estaciones. Ver cuántos hay en cada una es lo
+                que deja ver dónde se atasca: diez ideas y cero grabados no es
+                un problema de ideas. */}
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {ETAPAS.map((e) => {
+                const n = doc.enCola.filter((v) => (v.etapa ?? "idea") === e).length
+                return (
+                  <span
+                    key={e}
+                    className={`rounded-full border px-2.5 py-1 text-[11.5px] tabular-nums ${
+                      n ? "border-gold/45 bg-gold/[0.07] text-foreground" : "border-border text-muted-foreground/60"
+                    }`}
+                  >
+                    {ETIQUETA_ETAPA[e]} <b className="font-display font-bold">{n}</b>
+                  </span>
+                )
+              })}
+            </div>
+
             <div className="space-y-2.5">
-              {doc.enCola.map((v, i) => (
+              {doc.enCola.map((v, i) => {
+                const etapa = v.etapa ?? "idea"
+                return (
                 <Fila
                   key={i}
                   editando={editando}
                   onBorrar={() => editar((d) => ({ ...d, enCola: d.enCola.filter((_, j) => j !== i) }))}
                 >
-                  <div className="flex items-start gap-3 rounded-2xl border border-border bg-card/40 px-4 py-3.5">
-                    <span className="mt-0.5 shrink-0 font-display text-sm font-bold tabular-nums text-gold">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <Campo
-                        valor={v.titulo}
-                        onChange={(x) => editar((d) => { d.enCola[i].titulo = x; return d })}
-                        editando={editando}
-                        className="font-display text-[15px] font-semibold tracking-tight"
-                        placeholder="Título del video"
-                      />
-                      {editando ? (
+                  <div className="rounded-2xl border border-border bg-card/40 px-4 py-3.5">
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 shrink-0 font-display text-sm font-bold tabular-nums text-gold">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0 flex-1 space-y-1">
                         <Campo
-                          valor={v.formato}
-                          onChange={(x) => editar((d) => { d.enCola[i].formato = x; return d })}
-                          editando
-                          className="text-[12px] text-muted-foreground"
-                          placeholder="Formato"
+                          valor={v.titulo}
+                          onChange={(x) => editar((d) => { d.enCola[i].titulo = x; return d })}
+                          editando={editando}
+                          className="font-display text-[15px] font-semibold tracking-tight"
+                          placeholder="Título del video"
                         />
+                        {editando ? (
+                          <Campo
+                            valor={v.formato}
+                            onChange={(x) => editar((d) => { d.enCola[i].formato = x; return d })}
+                            editando
+                            className="text-[12px] text-muted-foreground"
+                            placeholder="Formato"
+                          />
+                        ) : (
+                          <div className="text-[12px] text-muted-foreground">Formato · {v.formato}</div>
+                        )}
+                      </div>
+                      {editando ? (
+                        <select
+                          value={etapa}
+                          onChange={(e) => editar((d) => { d.enCola[i].etapa = e.target.value as Etapa; return d })}
+                          className="shrink-0 rounded-lg border border-border bg-background px-2 py-1 text-[12px] outline-none focus:border-gold"
+                        >
+                          {ETAPAS.map((e) => <option key={e} value={e}>{ETIQUETA_ETAPA[e]}</option>)}
+                        </select>
                       ) : (
-                        <div className="text-[12px] text-muted-foreground">Formato · {v.formato}</div>
+                        <span className="shrink-0 rounded-full border border-gold/40 bg-gold/[0.07] px-2.5 py-0.5 text-[11px] font-semibold">
+                          {ETIQUETA_ETAPA[etapa]}
+                        </span>
                       )}
                     </div>
+
+                    {/* El gancho y la prueba se escriben ANTES de grabar. El
+                        manual exige las dos cosas; pedirlas aquí es lo que
+                        evita llegar a la edición sin ninguna. */}
+                    {(editando || v.gancho || v.prueba) && (
+                      <div className="mt-3 space-y-1.5 border-t border-border pt-3">
+                        <div className="flex gap-2">
+                          <span className="shrink-0 pt-px text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Gancho</span>
+                          <Campo
+                            valor={v.gancho ?? ""}
+                            onChange={(x) => editar((d) => { d.enCola[i].gancho = x; return d })}
+                            editando={editando}
+                            multilinea
+                            className="text-[13px] leading-snug text-muted-foreground"
+                            placeholder="Los tres primeros segundos, tal cual se van a decir"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="shrink-0 pt-px text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Prueba</span>
+                          <Campo
+                            valor={v.prueba ?? ""}
+                            onChange={(x) => editar((d) => { d.enCola[i].prueba = x; return d })}
+                            editando={editando}
+                            multilinea
+                            className="text-[13px] leading-snug text-muted-foreground"
+                            placeholder="Qué se muestra en pantalla que lo compruebe"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Fila>
-              ))}
+                )
+              })}
             </div>
             {editando && (
               <Agregar
-                onClick={() => editar((d) => ({ ...d, enCola: [...d.enCola, { titulo: "", formato: "" }] }))}
+                onClick={() => editar((d) => ({ ...d, enCola: [...d.enCola, { titulo: "", formato: "", etapa: "idea" }] }))}
                 texto="Agregar video"
               />
             )}
+
+            {/* ── Que la IA proponga, no solo revise ── */}
+            <div className="mt-5 border-t border-border pt-4">
+              <button
+                onClick={proponer}
+                disabled={proponiendo}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gold/45 px-3.5 py-2 text-[13px] font-semibold text-gold transition-colors hover:bg-gold/[0.08] disabled:opacity-40"
+              >
+                {proponiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                Proponer las próximas ideas
+              </button>
+              <p className="mt-1.5 text-[11.5px] leading-snug text-muted-foreground/80">
+                Lee el manual y los números de lo que ya publicaste. Cada idea viene con su
+                gancho escrito y con qué prueba lleva en pantalla.
+              </p>
+
+              {errorIdeas && (
+                <p className="mt-2.5 flex items-start gap-1.5 text-[12.5px] leading-snug text-rojo">
+                  <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" /> {errorIdeas}
+                </p>
+              )}
+
+              {ideas && ideas.length === 0 && !proponiendo && (
+                <p className="mt-2.5 text-[13px] text-muted-foreground">
+                  No propuso nada. Con el manual así de vacío, cualquier idea sería inventada.
+                </p>
+              )}
+
+              {ideas && ideas.length > 0 && (
+                <ul className="mt-3 space-y-2">
+                  {ideas.map((idea, i) => (
+                    <li key={i} className="rounded-2xl border border-gold/35 bg-gold/[0.04] px-4 py-3.5">
+                      <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display text-[15px] font-semibold tracking-tight">{idea.titulo}</p>
+                          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                            {doc.formatos.find((f) => f.id === idea.formatoId)?.nombre ?? idea.formatoId}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => aLaCola(idea)}
+                          className="shrink-0 rounded-xl bg-foreground px-3 py-1.5 text-[12px] font-semibold text-background transition-opacity hover:opacity-85"
+                        >
+                          A la cola
+                        </button>
+                      </div>
+                      <dl className="mt-2.5 space-y-1 border-t border-gold/25 pt-2.5 text-[13px] leading-snug">
+                        {([
+                          ["Gancho", `«${idea.gancho}»`],
+                          ["Prueba", idea.prueba],
+                          ["Por qué", idea.porque],
+                        ] as const).map(([k, v]) => (
+                          <div key={k} className="flex gap-2">
+                            <dt className="shrink-0 pt-px text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{k}</dt>
+                            <dd className="min-w-0 flex-1 text-muted-foreground">{v}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             <div className="mt-4 rounded-2xl border border-dashed border-border px-4 py-4">
               <div className="mb-2 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-muted-foreground">
