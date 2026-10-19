@@ -1,9 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import {
-  AlertTriangle, Check, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2, Lock,
-  Network, Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp, User, X,
+  AlertTriangle, Check, CircleHelp, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2,
+  Lock, Network, NotebookPen, Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp,
+  User, X,
 } from "lucide-react"
 // El mapa y el árbol son los MISMOS de /kevlopez_proyectos. Un segundo mapa
 // parecido acaba divergiendo del primero; esto se alimenta traduciendo el
@@ -311,6 +313,15 @@ export function Panel() {
               <><CloudOff className="h-3 w-3" /> Solo lectura</>
             )}
           </span>
+
+          {/* Las otras dos páginas privadas. Sin esto no se llega a ellas más
+              que escribiendo la dirección a mano, y entonces no existen. */}
+          <Link href="/preguntas" className="flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground">
+            <CircleHelp className="h-3 w-3" /> Preguntas
+          </Link>
+          <Link href="/kevlopez_proyectos" className="hidden items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground sm:flex">
+            <NotebookPen className="h-3 w-3" /> Proyectos
+          </Link>
 
           {estado === "sucio" && (
             <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold">Sin guardar</span>
