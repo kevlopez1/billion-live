@@ -653,6 +653,72 @@ export function Panel() {
               />
             </div>
 
+            {/* ── La estructura ──
+                Va antes que los bloques porque es el esqueleto: los bloques
+                dicen CÓMO se hace cada cosa, esto dice EN QUÉ ORDEN. Se
+                numera porque el orden es parte de la regla. */}
+            {(editando || (doc.edicion.estructura?.length ?? 0) > 0) && (
+              <div className="mb-5">
+                <div className="mb-2.5 flex items-baseline gap-2">
+                  <h3 className="font-display text-[15px] font-bold tracking-tight">La estructura</h3>
+                  <span className="text-[11.5px] text-muted-foreground">
+                    pensada para formato largo, aplicable al corto — en corto se comprime, no se saltan pasos
+                  </span>
+                </div>
+                <ol className="space-y-1.5">
+                  {(doc.edicion.estructura ?? []).map((b, i) => (
+                    <li key={i}>
+                      <Fila
+                        editando={editando}
+                        onBorrar={() =>
+                          editar((d) => ({
+                            ...d,
+                            edicion: { ...d.edicion, estructura: (d.edicion.estructura ?? []).filter((_, j) => j !== i) },
+                          }))
+                        }
+                      >
+                        <div className="flex items-start gap-3 rounded-xl border border-border bg-card/40 px-3.5 py-2.5">
+                          <span className="mt-px shrink-0 font-display text-[13px] font-bold tabular-nums text-gold">
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <Campo
+                              valor={b.paso}
+                              onChange={(v) => editar((d) => { (d.edicion.estructura ?? [])[i].paso = v; return d })}
+                              editando={editando}
+                              className="text-[14px] font-semibold leading-snug"
+                              placeholder="El paso"
+                            />
+                            {(editando || b.ejemplo) && (
+                              <Campo
+                                valor={b.ejemplo ?? ""}
+                                onChange={(v) => editar((d) => { (d.edicion.estructura ?? [])[i].ejemplo = v; return d })}
+                                editando={editando}
+                                multilinea
+                                className="mt-0.5 text-[12.5px] leading-snug text-muted-foreground"
+                                placeholder="Qué entra en este paso (opcional)"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </Fila>
+                    </li>
+                  ))}
+                </ol>
+                {editando && (
+                  <Agregar
+                    onClick={() =>
+                      editar((d) => ({
+                        ...d,
+                        edicion: { ...d.edicion, estructura: [...(d.edicion.estructura ?? []), { paso: "" }] },
+                      }))
+                    }
+                    texto="Agregar paso"
+                  />
+                )}
+              </div>
+            )}
+
             <div className="space-y-2.5">
               {doc.edicion.bloques.map((b, i) => (
                 <Fila
