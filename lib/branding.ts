@@ -16,8 +16,37 @@ export type Estado = "usamos" | "pendiente" | "no"
 export type Beat = { paso: string; ejemplo?: string }
 export type Formato = { id: string; nombre: string; para: string; beats: Beat[] }
 export type Principio = { titulo: string; cuerpo: string; detalle: string[] }
-export type Red = { nombre: string; estado: Estado; nota?: string }
-export type Video = { titulo: string; formato: string }
+// ── Un rodaje, N salidas ──
+// Qué pieza sale de un mismo rodaje para cada red. Sin esto, "estar en 10
+// redes" es una intención; con esto es una lista de entregables.
+export type Salida = { pieza: string; duracion: string; relacion: string }
+export type Red = { nombre: string; estado: Estado; nota?: string; salida?: Salida }
+
+// ── La línea de producción ──
+// Una fábrica tiene estaciones. Un video no está "en cola" o "publicado": pasa
+// por cinco estados, y saber en cuál está es lo que permite ver dónde se
+// atasca el trabajo.
+export const ETAPAS = ["idea", "guion", "grabado", "editado", "publicado"] as const
+export type Etapa = (typeof ETAPAS)[number]
+
+export const ETIQUETA_ETAPA: Record<Etapa, string> = {
+  idea: "Idea",
+  guion: "Guion",
+  grabado: "Grabado",
+  editado: "Editado",
+  publicado: "Publicado",
+}
+
+export type Video = {
+  titulo: string
+  formato: string
+  etapa?: Etapa
+  /** Los tres primeros segundos, escritos antes de grabar. */
+  gancho?: string
+  /** Qué prueba en pantalla lleva. El manual lo exige: si se menciona un
+   *  número, se muestra. */
+  prueba?: string
+}
 export type Lectura = { titulo: string; cuerpo: string }
 export type BloqueEdicion = { titulo: string; nota: string; reglas: string[] }
 

@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { BarChart3, Loader2, Plus, Trash2, TrendingUp } from "lucide-react"
+import { BarChart3, Loader2, Plus, Quote, Trash2, TrendingUp } from "lucide-react"
 import {
-  MINIMO_PARA_CONCLUIR, formatearNumero, lectura, resumirPorFormato, totales,
-  type Publicacion,
+  MINIMO_PARA_CONCLUIR, formatearDuracion, formatearNumero, ganchos, lectura,
+  resumirPorFormato, totales, type Publicacion,
 } from "@/lib/metricas"
 import type { Formato } from "@/lib/branding"
 
@@ -12,15 +12,24 @@ import type { Formato } from "@/lib/branding"
 // LOS NÚMEROS
 //
 // Cierra el círculo del manual: los formatos dicen qué contar, esto dice
-// cuál funcionó. Se carga a mano — cinco números por video, veinte segundos
-// — y eso ya basta para dejar de decidir por intuición. Cuando TikTok y
-// YouTube estén conectados, los mismos campos se llenan solos.
+// cuál funcionó. Cuando TikTok y YouTube estén conectados, los mismos campos
+// se llenan solos.
+//
+// Se miden TASAS, no totales. YouTube dice que para recomendar mira tres
+// cosas (quién eligió verlo, duración media, porcentaje visto) y el memo
+// interno de MrBeast obliga a su equipo a mirar esas mismas tres. Instagram
+// nombró el tiempo de visionado y los envíos por alcance. Un total no se
+// compara: 400 likes sobre 2.000 vistas y 400 sobre 200.000 son cosas
+// opuestas, y en una tabla de totales se ven igual.
 // ──────────────────────────────────────────────────────────────
 
 const VACIO = {
-  fecha: "", titulo: "", formatoId: "", red: "TikTok", url: "",
-  vistas: "", retencion: "", likes: "", comentarios: "", compartidos: "", seguidores: "",
+  fecha: "", titulo: "", formatoId: "", red: "TikTok", url: "", gancho: "",
+  alcance: "", ctr: "", duracionMedia: "", retencion: "",
+  vistas: "", likes: "", comentarios: "", compartidos: "", seguidores: "",
 }
+
+const pct = (n: number | null, dec = 1) => (n === null ? "—" : `${n.toFixed(dec)}%`)
 
 export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: string }) {
   const [pubs, setPubs] = useState<Publicacion[]>([])
@@ -48,6 +57,8 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
   )
   const tot = useMemo(() => totales(pubs, resumen), [pubs, resumen])
   const frase = useMemo(() => lectura(resumen), [resumen])
+  const banco = useMemo(() => ganchos(pubs), [pubs])
+  const nombreFormato = (id: string) => formatos.find((f) => f.id === id)?.nombre ?? id
   const conVideos = resumen.filter((r) => r.videos > 0)
 
   const enviar = async () => {
@@ -118,22 +129,38 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
         </div>
       )}
 
-      {/* ── Totales ── */}
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      {/* ── Lo que decide si te reparten ── */}
+      <div className="mb-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {[
-          ["Vistas", formatearNumero(tot.vistas)],
-          ["Seguidores", formatearNumero(tot.seguidores)],
-          // Sin vistas no hay porcentaje que calcular. Una raya dice "no sé";
-          // un 0% dice "medí y dio cero", que sería mentira.
-          ["Interacción", tot.interaccion === null ? "—" : `${tot.interaccion}%`],
-          ["Formatos probados", `${tot.formatosProbados} de ${formatos.length}`],
-        ].map(([r, v]) => (
+          ["Eligieron verlo", pct(tot.ctrMedio), "de los que lo vieron pasar"],
+          ["Duración media", formatearDuracion(tot.duracionMedia), "segundos vistos"],
+          ["% visto", pct(tot.retencionMedia), "del video, en promedio"],
+          ["Envíos por alcance", pct(tot.enviosPorAlcance, 2), "lo que más te lleva a quien no te sigue"],
+        ].map(([r, v, nota]) => (
           <div key={r} className="rounded-2xl border border-border bg-card/40 px-3.5 py-3">
             <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{r}</div>
             <div className="mt-1 font-display text-xl font-extrabold tabular-nums tracking-tight">{v}</div>
+            <div className="mt-0.5 text-[10.5px] leading-snug text-muted-foreground/70">{nota}</div>
           </div>
         ))}
       </div>
+
+      {/* El tamaño va aparte: dice cuánto, no si funcionó. */}
+      <p className="mb-4 flex flex-wrap gap-x-3 gap-y-1 text-[12px] tabular-nums text-muted-foreground">
+        <span>{tot.videos} {tot.videos === 1 ? "video" : "videos"}</span>
+        <span aria-hidden>·</span>
+        <span>{formatearNumero(tot.vistas)} vistas</span>
+        <span aria-hidden>·</span>
+        <span>{formatearNumero(tot.seguidores)} seguidores</span>
+        <span aria-hidden>·</span>
+        <span>{tot.formatosProbados} de {formatos.length} formatos probados</span>
+        {tot.enviosPorAlcance === null && (
+          <>
+            <span aria-hidden>·</span>
+            <span className="text-rojo/80">falta cargar el alcance para las tasas</span>
+          </>
+        )}
+      </p>
 
       {/* ── La lectura ── */}
       {frase ? (
@@ -159,10 +186,11 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
               <tr>
                 <th className="px-3.5 py-2.5 font-medium">Formato</th>
                 <th className="px-2 py-2.5 text-right font-medium">Videos</th>
-                <th className="px-2 py-2.5 text-right font-medium">Vistas/video</th>
-                <th className="px-2 py-2.5 text-right font-medium">Retención</th>
-                <th className="px-2 py-2.5 text-right font-medium">Interac.</th>
-                <th className="px-3.5 py-2.5 text-right font-medium">Seg./1k</th>
+                <th className="px-2 py-2.5 text-right font-medium" title="% promedio visto">% visto</th>
+                <th className="px-2 py-2.5 text-right font-medium" title="Segundos vistos en promedio">Duración</th>
+                <th className="px-2 py-2.5 text-right font-medium" title="% que eligió verlo de los que lo vieron pasar">Eligieron</th>
+                <th className="px-2 py-2.5 text-right font-medium" title="Compartidos sobre el alcance">Envíos</th>
+                <th className="px-3.5 py-2.5 text-right font-medium">Vistas/video</th>
               </tr>
             </thead>
             <tbody>
@@ -175,21 +203,60 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
                     )}
                   </td>
                   <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">{r.videos}</td>
-                  <td className="px-2 py-2.5 text-right font-semibold tabular-nums">{formatearNumero(r.vistasMedia)}</td>
-                  <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">
-                    {r.retencionMedia === null ? "—" : `${r.retencionMedia}%`}
-                  </td>
-                  <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">
-                    {r.interaccion === null ? "—" : `${r.interaccion}%`}
-                  </td>
+                  {/* El % visto va primero y en negrita: es por lo que se ordena
+                      la tabla, porque es lo que las redes dicen que miran. */}
+                  <td className="px-2 py-2.5 text-right font-semibold tabular-nums">{pct(r.retencionMedia)}</td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">{formatearDuracion(r.duracionMedia)}</td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">{pct(r.ctrMedio)}</td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">{pct(r.enviosPorAlcance, 2)}</td>
                   <td className="px-3.5 py-2.5 text-right tabular-nums text-muted-foreground">
-                    {r.seguidoresPorMil ?? "—"}
+                    {formatearNumero(r.vistasMedia)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* ── El banco de ganchos ── */}
+      {banco.length > 0 && (
+        <section className="mb-5">
+          <div className="mb-2.5 flex items-center gap-2">
+            <Quote className="h-3.5 w-3.5 shrink-0 text-gold" />
+            <h3 className="font-display text-[15px] font-bold tracking-tight">El banco de ganchos</h3>
+            <span className="text-[11px] text-muted-foreground">
+              {banco.length} · ordenados por lo que retuvieron
+            </span>
+          </div>
+          <p className="mb-3 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+            Los tres primeros segundos de cada video, con el porcentaje que la gente
+            terminó viendo. El manual dice que ahí se decide todo: esto lo vuelve
+            comprobable en vez de una creencia.
+          </p>
+          <ul className="space-y-1.5">
+            {banco.map((g, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-3 rounded-xl border border-border bg-card/40 px-3.5 py-2.5"
+              >
+                <span
+                  className={`mt-px shrink-0 font-display text-[13px] font-extrabold tabular-nums ${
+                    g.retencion === null ? "text-muted-foreground/50" : "text-gold"
+                  }`}
+                >
+                  {g.retencion === null ? "—" : `${g.retencion}%`}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13.5px] leading-snug text-foreground">«{g.texto}»</span>
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                    {nombreFormato(g.formatoId)} · {g.red} · {g.titulo}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {/* ── Registrar ── */}
@@ -219,12 +286,46 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
             {campo("fecha", "Fecha", "date")}
             {campo("url", "Enlace (opcional)")}
             {campo("vistas", "Vistas", "number")}
-            {campo("retencion", "Retención %", "number")}
+          </div>
+
+          {/* Los tres primeros segundos. El manual dice que ahí se decide
+              todo; guardarlos junto a la retención lo vuelve comprobable. */}
+          <label className="mt-2.5 block">
+            <span className="mb-1 block text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              El gancho · los tres primeros segundos, tal cual
+            </span>
+            <textarea
+              value={form.gancho}
+              onChange={(e) => setForm({ ...form, gancho: e.target.value })}
+              rows={2}
+              placeholder="«Tengo 21 años y acabo de perder…»"
+              className="w-full resize-none rounded-lg border border-border bg-background px-2.5 py-1.5 text-[13px] outline-none focus:border-gold"
+            />
+          </label>
+
+          <p className="mt-3.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gold">
+            Lo que decide si te reparten
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {campo("alcance", "Alcance · cuánta gente lo vio pasar", "number")}
+            {campo("ctr", "Eligieron verlo %", "number")}
+            {campo("duracionMedia", "Duración media (segundos)", "number")}
+            {campo("retencion", "% visto en promedio", "number")}
+          </div>
+
+          <p className="mt-3.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            El resto
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
             {campo("likes", "Likes", "number")}
             {campo("comentarios", "Comentarios", "number")}
             {campo("compartidos", "Compartidos", "number")}
             {campo("seguidores", "Seguidores ganados", "number")}
           </div>
+          <p className="mt-2 text-[11.5px] leading-snug text-muted-foreground/80">
+            Lo que la red no te dé, déjalo vacío. Un dato que falta no es un cero: un
+            cero falso hunde el promedio del formato entero.
+          </p>
           {error && <p className="mt-2.5 text-[12px] text-rojo">{error}</p>}
           <div className="mt-3 flex gap-2">
             <button
