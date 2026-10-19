@@ -55,7 +55,15 @@ export type Contenido = {
   personaje: { nombre: string; fortalezas: string[]; debilidades: string[]; oportunidades: string[] }
   norte: Principio[]
   formatos: Formato[]
-  edicion: { regla: string; bloques: BloqueEdicion[]; nunca: string[] }
+  edicion: {
+    regla: string
+    /** El esqueleto del video, en orden. Es una secuencia y no una lista de
+     *  reglas sueltas: que el paso 1 vaya antes que el 2 es parte de la regla.
+     *  Opcional para no romper documentos guardados antes de que existiera. */
+    estructura?: Beat[]
+    bloques: BloqueEdicion[]
+    nunca: string[]
+  }
   redes: Red[]
   produccion: { personaje: string[]; equipo: string[] }
   enCola: Video[]
@@ -234,6 +242,21 @@ export const CONTENIDO_BASE: Contenido = {
   edicion: {
     regla:
       "Edición dopamínica pero estética, que posicione a Kev como un referente único, original y con estilo. La estética no es decoración: es la mitad del branding.",
+    // Pensada para formato largo y aplicable al corto: en corto se comprime,
+    // no se saltan pasos.
+    estructura: [
+      { paso: "Gancho inicial visual" },
+      { paso: "Complementos subyacentes", ejemplo: "Marcas, información, datos" },
+      {
+        paso: "Representación anime cinematográfico",
+        ejemplo: "El personaje representado con ejemplos claros: información, imágenes, datos",
+      },
+      {
+        paso: "Desarrollo con el personaje con autoridad",
+        ejemplo: "MacBook, lentes, reloj y buen fondo · cambios de toma constantes",
+      },
+      { paso: "Tutorial", ejemplo: "El personaje a un lado y la pantalla compartida al otro" },
+    ],
     bloques: [
       {
         titulo: "Los tres primeros segundos",
@@ -255,13 +278,28 @@ export const CONTENIDO_BASE: Contenido = {
       },
       {
         titulo: "Ritmo y cortes",
-        nota: "Sin definir. Esto lo decide Kev y se escribe aquí.",
-        reglas: [],
+        nota: "El movimiento sostiene la atención, pero en cuanto se nota, la rompe.",
+        reglas: [
+          "Zoom in y zoom out constantemente, pero estratégicos y nunca bruscos",
+          "Cambios de toma del personaje constantemente",
+        ],
       },
       {
         titulo: "Imagen y color",
-        nota: "Sin definir. Aquí van el look, el contraste y cómo se trata la luz.",
-        reglas: [],
+        nota: "Lo que hace que un video se reconozca como suyo antes de oír nada.",
+        reglas: [
+          "El personaje se representa constantemente a sí mismo como anime cinematográfico",
+          "El personaje aparece con autoridad: MacBook, lentes, reloj y buen fondo",
+        ],
+      },
+      {
+        titulo: "El personaje en cámara",
+        nota: "No es edición: es lo que tiene que pasar mientras se graba. Ninguna edición lo arregla después.",
+        reglas: [
+          "Lenguaje corporal notable",
+          "Seguridad notable",
+          "Conocimiento notable sobre el tema que está tocando",
+        ],
       },
       {
         titulo: "Texto en pantalla",
@@ -300,7 +338,12 @@ export const CONTENIDO_BASE: Contenido = {
   ],
 
   produccion: {
-    personaje: ["2 trajes: uno negro y uno azul", "2 pares de zapatos: negro y azul"],
+    personaje: [
+      "2 trajes: uno negro y uno azul",
+      "2 pares de zapatos: negro y azul",
+      "MacBook, lentes y reloj: el kit con el que aparece en cámara",
+      "Un buen fondo",
+    ],
     equipo: [],
   },
 
