@@ -1,14 +1,17 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import Link from "next/link"
-import { Check, CircleHelp, CloudOff, Loader2, Network, NotebookPen } from "lucide-react"
+import { Check, CircleHelp, CloudOff, Loader2, Network, NotebookPen, Plus, X } from "lucide-react"
 import { Arbol } from "@/components/proyectos/arbol"
 import { Mapa } from "@/components/proyectos/mapa"
 import { Pagina } from "@/components/proyectos/pagina"
 import { PantallaClave } from "@/components/pantalla-clave"
 import { useEspacio } from "@/lib/use-espacio"
-import { RAIZ, nodoNuevo, valido, type Doc } from "@/lib/proyectos"
+import {
+  MAX_ESPACIOS, RAIZ, espacioNuevo, iconoDe, migrar, nodoNuevo, nombreDe, subarbol,
+  type Doc, type Tablero, type Trazo,
+} from "@/lib/proyectos"
 
 // ──────────────────────────────────────────────────────────────
 // /kevlopez_proyectos — el espacio de trabajo (notas + mapa mental)
@@ -19,13 +22,39 @@ import { RAIZ, nodoNuevo, valido, type Doc } from "@/lib/proyectos"
 
 type Vista = "mapa" | "notas"
 
+// Acepta lo de hoy y lo de antes: una copia vieja en el navegador no se tira,
+// se traduce.
+const aceptable = (x: unknown): x is Tablero => migrar(x) !== null
+
 export function Espacio() {
-  const { clave, entrada, setEntrada, error, cargando, doc, cambiar, estado, estadoTexto, entrar, nube, guardar } =
-    useEspacio<Doc>({ ruta: "/api/proyectos", llave: "kev-proyectos", valido })
+  const { clave, entrada, setEntrada, error, cargando, doc: crudo, cambiar: cambiarCrudo, estado, estadoTexto, entrar, nube, guardar } =
+    useEspacio<Tablero>({ ruta: "/api/proyectos", llave: "kev-proyectos", valido: aceptable })
 
   const [sel, setSel] = useState(RAIZ)
   const [vista, setVista] = useState<Vista>("mapa")
   const [cajon, setCajon] = useState(false)
+  const [espacioId, setEspacioId] = useState<string | null>(null)
+
+  const tablero = useMemo(() => (crudo ? migrar(crudo) : null), [crudo])
+  const esp = tablero?.espacios.find((e) => e.id === espacioId) ?? tablero?.espacios[0] ?? null
+  const doc = esp?.doc ?? null
+
+  const cambiarTablero = useCallback((f: (t: Tablero) => Tablero) => {
+    cambiarCrudo((d) => f(migrar(d) as Tablero))
+  }, [cambiarCrudo])
+
+  // Cambiar algo DENTRO del espacio abierto. El resto del tablero no se toca.
+  const enEspacio = useCallback((id: string, f: (e: { doc: Doc; trazos: Trazo[] }) => { doc: Doc; trazos: Trazo[] }) => {
+    cambiarTablero((t) => ({
+      ...t,
+      espacios: t.espacios.map((e) => (e.id === id ? { ...e, ...f({ doc: e.doc, trazos: e.trazos }) } : e)),
+    }))
+  }, [cambiarTablero])
+
+  const idEsp = esp?.id ?? ""
+  const cambiar = useCallback((f: (d: Doc) => Doc) => {
+    enEspacio(idEsp, (e) => ({ ...e, doc: f(e.doc) }))
+  }, [enEspacio, idEsp])
 
   // ── Acciones sobre el árbol ──
   const agregar = useCallback((padre: string) => {
@@ -42,13 +71,90 @@ export function Espacio() {
     cambiar((d) => ({ ...d, nodos: d.nodos.map((n) => (n.id === id ? { ...n, plegado: !n.plegado } : n)) }))
   }, [cambiar])
 
+  // ── El mapa, a mano ──
+  // Mover un nodo mueve su rama entera: si se quedaran los hijos, las líneas
+  // cruzarían todo el lienzo y el mapa dejaría de leerse.
+  const mover = useCallback((id: string, dx: number, dy: number) => {
+    cambiar((d) => {
+      const rama = subarbol(d, id)
+      return {
+        ...d,
+        nodos: d.nodos.map((n) =>
+          rama.has(n.id) ? { ...n, pos: { x: (n.pos?.x ?? 0) + dx, y: (n.pos?.y ?? 0) + dy } } : n,
+        ),
+      }
+    })
+  }, [cambiar])
+
+  const pintar = useCallback((id: string, tinta: number | null) => {
+    cambiar((d) => ({
+      ...d,
+      nodos: d.nodos.map((n) => {
+        if (n.id !== id) return n
+        const sig = { ...n }
+        if (tinta === null) delete sig.tinta
+        else sig.tinta = tinta
+        return sig
+      }),
+    }))
+  }, [cambiar])
+
+  const marcar = useCallback((id: string) => {
+    cambiar((d) => ({
+      ...d,
+      nodos: d.nodos.map((n) => {
+        if (n.id !== id) return n
+        const sig = { ...n }
+        if (sig.fav) delete sig.fav
+        else sig.fav = true
+        return sig
+      }),
+    }))
+  }, [cambiar])
+
+  const acomodar = useCallback(() => {
+    cambiar((d) => ({ ...d, nodos: d.nodos.map(({ pos, ...n }) => n) }))
+  }, [cambiar])
+
+  const ponerTrazos = useCallback((t: Trazo[]) => {
+    enEspacio(idEsp, (e) => ({ ...e, trazos: t }))
+  }, [enEspacio, idEsp])
+
+  // ── Espacios ──
+  const nuevoEspacio = useCallback(() => {
+    const e = espacioNuevo()
+    cambiarTablero((t) => (t.espacios.length >= MAX_ESPACIOS ? t : { ...t, espacios: [...t.espacios, e] }))
+    setEspacioId(e.id)
+    setSel(RAIZ)
+    setCajon(false)
+  }, [cambiarTablero])
+
+  const borrarEspacio = useCallback((id: string) => {
+    cambiarTablero((t) => (t.espacios.length <= 1 ? t : { ...t, espacios: t.espacios.filter((e) => e.id !== id) }))
+    setEspacioId(null)
+    setSel(RAIZ)
+  }, [cambiarTablero])
+
+  // Renombrar el espacio ES renombrar su raíz: el nombre vive en un solo
+  // lugar, así que la pestaña y el nodo del centro no pueden discrepar.
+  const renombrarEspacio = useCallback((id: string, nombre: string) => {
+    cambiarTablero((t) => ({
+      ...t,
+      espacios: t.espacios.map((e) =>
+        e.id === id
+          ? { ...e, doc: { ...e.doc, nodos: e.doc.nodos.map((n) => (n.padre === null ? { ...n, titulo: nombre } : n)) } }
+          : e,
+      ),
+    }))
+  }, [cambiarTablero])
+
   const seleccionar = (id: string) => {
     setSel(id)
     setCajon(true)
   }
 
   // ── Pantalla de clave ──
-  if (!doc || !clave) {
+  if (!doc || !esp || !clave) {
     return (
       <PantallaClave
         titulo={<>Proyectos de <span className="font-serif-display italic font-normal">Kev López</span></>}
@@ -109,9 +215,79 @@ export function Espacio() {
         </button>
       </header>
 
+      {/* ── Los espacios ── Varios tableros, no uno solo. Cada uno con su
+          propio árbol y sus propios trazos. */}
+      {tablero && (
+        <div className="flex items-center gap-1.5 overflow-x-auto px-4 pb-2 sm:px-6">
+          {tablero.espacios.map((e) => {
+            const activo = e.id === esp.id
+            return (
+              <div
+                key={e.id}
+                className={`group flex shrink-0 items-center gap-1 rounded-full border px-1 py-0.5 transition-colors ${
+                  activo ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent hover:bg-foreground/[0.04]"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => { setEspacioId(e.id); setSel(RAIZ); setCajon(false) }}
+                  aria-pressed={activo}
+                  className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium"
+                >
+                  <span aria-hidden>{iconoDe(e)}</span>
+                  {activo ? (
+                    <input
+                      value={nombreDe(e)}
+                      onChange={(ev) => renombrarEspacio(e.id, ev.target.value)}
+                      aria-label="Nombre del espacio"
+                      size={Math.max(6, nombreDe(e).length)}
+                      className="min-w-0 rounded border border-transparent bg-transparent px-1 py-0 outline-none transition-colors hover:border-border focus:border-foreground/30"
+                    />
+                  ) : (
+                    <span className="max-w-[140px] truncate text-muted-foreground">{nombreDe(e) || "Sin nombre"}</span>
+                  )}
+                </button>
+                {activo && tablero.espacios.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => borrarEspacio(e.id)}
+                    aria-label={`Borrar el espacio ${nombreDe(e)}`}
+                    className="mr-1 rounded-full p-0.5 text-muted-foreground/60 transition-colors hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+          {tablero.espacios.length < MAX_ESPACIOS && (
+            <button
+              type="button"
+              onClick={nuevoEspacio}
+              aria-label="Espacio nuevo"
+              className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" /> Espacio
+            </button>
+          )}
+        </div>
+      )}
+
       {vista === "mapa" ? (
         <main className="relative mx-3 mb-3 flex-1 overflow-hidden rounded-[2rem] border bg-card/40 sm:mx-6 sm:mb-6">
-          <Mapa doc={doc} seleccionado={nodo.id} onSeleccionar={seleccionar} onPlegar={plegar} onAgregar={agregar} />
+          <Mapa
+            doc={doc}
+            seleccionado={nodo.id}
+            onSeleccionar={seleccionar}
+            onPlegar={plegar}
+            onAgregar={agregar}
+            onMover={mover}
+            onTinta={pintar}
+            onFav={marcar}
+            onAcomodar={acomodar}
+            trazos={esp.trazos}
+            onTrazos={ponerTrazos}
+          />
           {cajon && (
             <aside className="absolute inset-y-3 right-3 z-10 w-[min(480px,calc(100%-1.5rem))] overflow-y-auto rounded-[1.5rem] border bg-background shadow-2xl">
               <Pagina doc={doc} nodo={nodo} cambiar={cambiar} onSeleccionar={setSel} onAgregar={agregar} onCerrar={() => setCajon(false)} />
