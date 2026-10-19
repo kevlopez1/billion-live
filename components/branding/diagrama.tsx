@@ -247,35 +247,57 @@ export function Diagrama({
     return () => ro.disconnect()
   }, [])
 
-  const W_SEC = angosto ? 128 : 210
-  const X_TRONCO_REL = W_SEC + (angosto ? 20 : 42)
-  const X_ITEM_REL = X_TRONCO_REL + (angosto ? 20 : 42)
+  // Cada sección es un ÁREA que contiene lo suyo. Antes la caja de la sección
+  // vivía lejos de sus renglones, unida por una línea que cruzaba un hueco:
+  // cuatro carriles verticales de cajas sueltas que se leían como islas.
   const COLS = angosto ? 1 : 2
-  const SEPARACION_COL = 48
+  const SEPARACION_COL = 26
+  const SEPARACION_FILA = 26
+  const PAD = 12
 
   const disponible = Math.max(ancho || 900, 320) - 24 - SEPARACION_COL * (COLS - 1)
-  const W_ITEM = Math.max(170, Math.floor(disponible / COLS) - X_ITEM_REL)
-  const ANCHO_COL = X_ITEM_REL + W_ITEM
-  const ANCHO = COLS * ANCHO_COL + (COLS - 1) * SEPARACION_COL + 24
+  const W_AREA = Math.max(252, Math.floor(disponible / COLS))
+  const W_ITEM = W_AREA - PAD * 2
+  const ANCHO = COLS * W_AREA + (COLS - 1) * SEPARACION_COL + 24
 
   const { puestos, alto, relaciones } = useMemo(() => {
-    const yCol = Array.from({ length: COLS }, () => ARRIBA)
-    const puestos = bloques(contenido).map((b) => {
-      const col = yCol.indexOf(Math.min(...yCol))
-      const x = 12 + col * (ANCHO_COL + SEPARACION_COL)
-      const n = Math.max(b.items.length, 1)
-      const yInicio = yCol[col]
-      const items = b.items.map((item, i) => ({ item, y: yInicio + i * (FILA + AIRE) }))
-      const altoSec = n * (FILA + AIRE) - AIRE
-      yCol[col] = yInicio + altoSec + AIRE_SECCION
-      // Lo que Kev movió a mano manda sobre el cálculo, y la sección se lleva
+    const bs = bloques(contenido)
+
+    // Alto de un área: su encabezado, sus renglones y, en edición, la fila de
+    // "Agregar". Una sección vacía reserva un renglón para no quedar como una
+    // raya.
+    const altoDe = (n: number) =>
+      PAD + FILA + AIRE + Math.max(n, 1) * (FILA + AIRE) - AIRE + (editando ? AIRE + 28 : 0) + PAD
+
+    // Las áreas van EN EL ORDEN DEL MANUAL, de izquierda a derecha y de
+    // arriba a abajo, y todas las de una misma fila arrancan a la misma
+    // altura. El acomodo anterior metía cada sección en la columna que fuera
+    // más corta: quedaba ordenado por altura y desordenado para leer.
+    const filas = Math.ceil(bs.length / COLS)
+    const altoFila: number[] = []
+    const yFila: number[] = []
+    for (let f = 0; f < filas; f++) {
+      const dela = bs.slice(f * COLS, f * COLS + COLS)
+      altoFila[f] = Math.max(...dela.map((b) => altoDe(b.items.length)))
+      yFila[f] = f === 0 ? ARRIBA : yFila[f - 1] + altoFila[f - 1] + SEPARACION_FILA
+    }
+
+    const puestos = bs.map((b, i) => {
+      const col = i % COLS
+      const fila = Math.floor(i / COLS)
+      // Lo que Kev movió a mano manda sobre el cálculo, y el área se lleva
       // sus renglones: moverla y dejar las filas atrás no movería nada.
       const off = lienzo.pos?.[b.id] ?? { x: 0, y: 0 }
+      const x = 12 + col * (W_AREA + SEPARACION_COL) + off.x
+      const y = yFila[fila] + off.y
+      const yPrimero = y + PAD + FILA + AIRE
       return {
         ...b,
-        x: x + off.x,
-        y: yInicio + off.y,
-        items: items.map((it) => ({ ...it, y: it.y + off.y })),
+        x,
+        y,
+        h: altoDe(b.items.length),
+        items: b.items.map((item, k) => ({ item, y: yPrimero + k * (FILA + AIRE) })),
+        yPrimero,
       }
     })
 
@@ -292,19 +314,19 @@ export function Diagrama({
         )
         if (!destino) continue
         relaciones.push({
-          x1: cola.x + X_ITEM_REL,
+          x1: cola.x + PAD,
           y1: y + FILA / 2,
-          x2: formatos.x + X_ITEM_REL + W_ITEM,
+          x2: formatos.x + PAD + W_ITEM,
           y2: destino.y + FILA / 2,
         })
       }
     }
 
-    // El alto sale de dónde quedó todo, no de la columna más larga: con
-    // secciones movidas a mano, lo segundo deja cosas fuera del lienzo.
-    const abajo = puestos.map((p) => (p.items.length ? p.items[p.items.length - 1].y : p.y) + FILA)
+    // El alto sale de dónde quedó todo, no de la última fila: con áreas
+    // movidas a mano, lo segundo deja cosas fuera del lienzo.
+    const abajo = puestos.map((p) => p.y + p.h)
     return { puestos, alto: Math.max(ARRIBA, ...abajo) + ARRIBA, relaciones }
-  }, [contenido, angosto, COLS, ANCHO_COL, X_ITEM_REL, W_ITEM, SEPARACION_COL, lienzo])
+  }, [contenido, editando, COLS, W_AREA, W_ITEM, SEPARACION_COL, lienzo])
 
   // Coordenadas del dibujo (las mismas en las que están las cajas).
   const aLienzo = (e: { clientX: number; clientY: number }) => {
@@ -433,7 +455,7 @@ export function Diagrama({
       </div>
 
       {!editando && (
-        <p className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-lg bg-background/85 px-2 py-1 text-[11px] text-muted-foreground/80 backdrop-blur-sm">
+        <p className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-lg border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground">
           Arrastra para mover · entra a Editar para escribir aquí
         </p>
       )}
@@ -478,39 +500,12 @@ export function Diagrama({
             )
           })}
 
-          {/* Capa 2 · la estructura, en ángulo recto */}
-          {puestos.map(({ id, x, y, items }) => {
-            const xTronco = x + X_TRONCO_REL
-            const xItem = x + X_ITEM_REL
-            const yMedio = y + FILA / 2
-            const ultimo = items.length ? items[items.length - 1].y + FILA / 2 : yMedio
-            return (
-              <g key={`c-${id}`}>
-                <path d={`M ${x + W_SEC} ${yMedio} H ${xTronco}`} className="stroke-gold/55" strokeWidth={1.5} fill="none" />
-                {items.length > 1 && (
-                  <path d={`M ${xTronco} ${yMedio} V ${ultimo}`} className="stroke-gold/35" strokeWidth={1.5} fill="none" />
-                )}
-                {items.map(({ item, y: yi }, i) => (
-                  <path
-                    key={i}
-                    d={`M ${xTronco} ${yi + FILA / 2} H ${xItem}`}
-                    className={item.vacio ? "stroke-rojo/70" : "stroke-gold/35"}
-                    strokeWidth={1.5}
-                    strokeDasharray={item.vacio ? "3 3" : undefined}
-                    fill="none"
-                  />
-                ))}
-              </g>
-            )
-          })}
-
-          {/* Capa 3 · las cajas */}
-          {puestos.map(({ id, x, y, items, agregar }) => {
-            const xItem = x + X_ITEM_REL
-            const xTronco = x + X_TRONCO_REL
+          {/* Capa 2 · las áreas, cada sección con lo suyo dentro */}
+          {puestos.map(({ id, x, y, h, items, agregar, yPrimero }) => {
+            const xItem = x + PAD
             const marcada = marcadas?.has(id)
             const faltan = items.filter((i) => i.item.vacio).length
-            const ultimo = items.length ? items[items.length - 1].y : y
+            const ultimo = items.length ? items[items.length - 1].y : yPrimero - (FILA + AIRE)
             const corrida = movimiento?.id === id
             const pintada = lienzo.tinta?.[id]
             const favorita = favs.includes(id)
@@ -524,19 +519,28 @@ export function Diagrama({
                   onPointerCancel={() => { moviendo.current = null; setMovimiento(null) }}
                   className={editando ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
                 >
+                  {/* El área: lo que agrupa. Sin este recuadro, una sección
+                      y sus renglones se leen como cajas sueltas. */}
                   <rect
-                    x={x} y={y} width={W_SEC} height={FILA} rx={8}
-                    className={pintada == null ? `fill-gold/[0.14] ${marcada ? "stroke-rojo/70" : "stroke-gold/55"}` : marcada ? "stroke-rojo/70" : ""}
-                    fill={pintada != null ? color(TINTAS[pintada].h, 0.62, 0.17, 0.22) : undefined}
-                    stroke={pintada != null && !marcada ? color(TINTAS[pintada].h, 0.6, 0.16, 0.85) : undefined}
-                    strokeWidth={elegida === id ? 2.5 : 1.5}
+                    x={x} y={y} width={W_AREA} height={h} rx={14}
+                    className={pintada == null ? `fill-foreground/[0.02] ${marcada ? "stroke-rojo/60" : elegida === id ? "stroke-gold/70" : "stroke-border"}` : ""}
+                    fill={pintada != null ? color(TINTAS[pintada].h, 0.62, 0.17, 0.09) : undefined}
+                    stroke={pintada != null ? color(TINTAS[pintada].h, 0.6, 0.16, 0.6) : undefined}
+                    strokeWidth={elegida === id ? 2 : 1}
+                  />
+                  <rect
+                    x={xItem} y={y + PAD} width={W_ITEM} height={FILA} rx={8}
+                    className={pintada == null ? "fill-gold/[0.14] stroke-gold/45" : ""}
+                    fill={pintada != null ? color(TINTAS[pintada].h, 0.62, 0.17, 0.26) : undefined}
+                    stroke={pintada != null ? color(TINTAS[pintada].h, 0.6, 0.16, 0.8) : undefined}
+                    strokeWidth={1.5}
                   />
                   {favorita && (
-                    <foreignObject x={x - 7} y={y - 7} width={16} height={16}>
+                    <foreignObject x={x - 6} y={y - 6} width={16} height={16}>
                       <Star className="h-3.5 w-3.5 fill-kev-warning text-kev-warning" aria-label="Marcada" />
                     </foreignObject>
                   )}
-                  <foreignObject x={x + 8} y={y + 4} width={W_SEC - 16} height={FILA - 8}>
+                  <foreignObject x={xItem + 9} y={y + PAD + 4} width={W_ITEM - 18} height={FILA - 8}>
                     <div className="flex h-full items-center gap-1.5">
                       <span className="shrink-0 text-[12px] leading-none" aria-hidden>{ICONO_SECCION[id]}</span>
                       <span className="min-w-0 flex-1 truncate font-display text-[12.5px] font-bold text-foreground">
@@ -596,28 +600,22 @@ export function Diagrama({
                 ))}
 
                 {items.length === 0 && !editando && (
-                  <foreignObject x={xItem} y={y + 4} width={W_ITEM} height={FILA - 8}>
+                  <foreignObject x={xItem} y={yPrimero + 4} width={W_ITEM} height={FILA - 8}>
                     <div className="flex h-full items-center text-[11.5px] text-muted-foreground/60">Sin definir todavía</div>
                   </foreignObject>
                 )}
 
-                {/* Agregar: cuelga del mismo tronco, al final. */}
+                {/* Agregar: el último renglón del área. */}
                 {editando && (
-                  <>
-                    <path
-                      d={`M ${xTronco} ${ultimo + FILA / 2} V ${ultimo + FILA + AIRE + FILA / 2 - 6} H ${xItem}`}
-                      className="stroke-gold/25" strokeWidth={1.5} strokeDasharray="3 3" fill="none"
-                    />
-                    <foreignObject x={xItem} y={ultimo + FILA + AIRE - 6} width={W_ITEM} height={FILA}>
-                      <button
-                        type="button"
-                        onClick={() => editar((d) => { agregar(d); return d })}
-                        className="flex h-[28px] items-center gap-1.5 rounded-lg border border-dashed border-gold/40 px-2.5 text-[11.5px] text-gold transition-colors hover:border-gold hover:bg-gold/[0.07]"
-                      >
-                        <Plus className="h-3 w-3" /> Agregar
-                      </button>
-                    </foreignObject>
-                  </>
+                  <foreignObject x={xItem} y={ultimo + FILA + AIRE} width={W_ITEM} height={30}>
+                    <button
+                      type="button"
+                      onClick={() => editar((d) => { agregar(d); return d })}
+                      className="flex h-[28px] w-full items-center gap-1.5 rounded-lg border border-dashed border-gold/40 px-2.5 text-[11.5px] text-gold transition-colors hover:border-gold hover:bg-gold/[0.07]"
+                    >
+                      <Plus className="h-3 w-3" /> Agregar
+                    </button>
+                  </foreignObject>
                 )}
               </g>
             )
