@@ -78,6 +78,25 @@ function valido(c: unknown): c is Contenido {
   if (!ed || typeof ed !== "object") return false
   if (!texto(ed.regla) || !lista(ed.bloques) || !listaDeTextos(ed.nunca)) return false
 
+  // `preguntas` es opcional: los documentos guardados antes de que existiera
+  // la sección siguen siendo válidos. Pero si viene, se revisa entera.
+  if (x.preguntas !== undefined) {
+    if (!Array.isArray(x.preguntas)) return false
+    for (const p of x.preguntas as unknown[]) {
+      if (!p || typeof p !== "object") return false
+      const q = p as Record<string, unknown>
+      if (!["id", "pregunta", "plazo", "creada"].every((k) => texto(q[k]))) return false
+      if (typeof q.meta !== "number" || !Number.isFinite(q.meta) || q.meta < 1) return false
+      if (!Array.isArray(q.respuestas)) return false
+      for (const r of q.respuestas as unknown[]) {
+        if (!r || typeof r !== "object") return false
+        const o = r as Record<string, unknown>
+        if (!texto(o.texto)) return false
+        if (o.hecha !== undefined && typeof o.hecha !== "boolean") return false
+      }
+    }
+  }
+
   const pro = x.produccion as Record<string, unknown> | undefined
   if (!pro || typeof pro !== "object") return false
   if (!["personaje", "equipo"].every((k) => listaDeTextos(pro[k]))) return false

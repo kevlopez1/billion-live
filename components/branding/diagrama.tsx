@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Maximize2, Minus, Plus, X } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
+import { llenas, nuevaPregunta } from "@/lib/preguntas"
 import { ETIQUETA_SECCION, ICONO_SECCION, type Seccion } from "@/lib/revision"
 import { ETIQUETA_ESTADO, type Contenido, type Estado } from "@/lib/branding"
 
@@ -157,6 +158,19 @@ function bloques(c: Contenido): Bloque[] {
         borrar: (d) => quitar(d.futuro, i),
       })),
       agregar: (d) => { d.futuro.push({ titulo: "", cuerpo: "" }) },
+    },
+    {
+      id: "preguntas",
+      items: (c.preguntas ?? []).map((p, i) => ({
+        texto: p.pregunta,
+        // Una pregunta con tres respuestas está sin contestar, y en el
+        // diagrama eso tiene que verse sin abrirla: va en rojo punteado,
+        // igual que cualquier otra cosa por definir.
+        vacio: llenas(p) < p.meta,
+        set: (d, v) => { (d.preguntas ?? [])[i].pregunta = v },
+        borrar: (d) => { d.preguntas = (d.preguntas ?? []).filter((_, j) => j !== i) },
+      })),
+      agregar: (d) => { d.preguntas = [...(d.preguntas ?? []), nuevaPregunta()] },
     },
   ]
 }

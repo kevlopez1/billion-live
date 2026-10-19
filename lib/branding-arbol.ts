@@ -50,6 +50,7 @@ function ramas(c: Contenido): Rama[] {
     { id: "pendientes", icono: ICONO_SECCION.pendientes, hojas: limpio(c.pendientes) },
     { id: "hoy", icono: ICONO_SECCION.hoy, hojas: limpio(c.hoy.map((l) => l.titulo)) },
     { id: "futuro", icono: ICONO_SECCION.futuro, hojas: limpio(c.futuro.map((l) => l.titulo)) },
+    { id: "preguntas", icono: ICONO_SECCION.preguntas, hojas: limpio((c.preguntas ?? []).map((p) => p.pregunta)) },
   ]
 }
 
