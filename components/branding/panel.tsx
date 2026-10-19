@@ -330,6 +330,9 @@ export function Panel() {
                   key={v}
                   onClick={() => setVista(v)}
                   aria-pressed={vista === v}
+                  /* En celular solo se ve el icono: sin esto el botón se queda
+                     sin nombre para un lector de pantalla. */
+                  aria-label={etiqueta}
                   className={`inline-flex items-center gap-1.5 rounded-[10px] px-2.5 py-1 text-[12px] font-semibold transition-colors ${
                     vista === v ? "bg-foreground/[0.09] text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -434,6 +437,8 @@ export function Panel() {
           contenido={doc}
           onIr={(s) => irANodo(idRama(s))}
           marcadas={new Set(revision?.hallazgos.filter((h) => h.gravedad === "alta").map((h) => h.seccion) ?? [])}
+          editando={editando}
+          editar={editar}
         />
       ) : (
       <div className="lg:flex lg:gap-10">
