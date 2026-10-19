@@ -1,11 +1,16 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertTriangle, Check, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2, Lock,
   Network, Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp, User, X,
 } from "lucide-react"
-import { Mapa } from "@/components/branding/mapa"
+// El mapa y el árbol son los MISMOS de /kevlopez_proyectos. Un segundo mapa
+// parecido acaba divergiendo del primero; esto se alimenta traduciendo el
+// manual a la forma que ese mapa entiende (lib/branding-arbol.ts).
+import { Mapa } from "@/components/proyectos/mapa"
+import { Arbol } from "@/components/proyectos/arbol"
+import { aDoc, idRama, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
 import { ANCLA, type Revision } from "@/lib/revision"
 import { Indice, type Entrada } from "@/components/branding/indice"
@@ -31,6 +36,12 @@ const SECCIONES: Entrada[] = [
   { id: "hoy", nombre: "Qué funciona hoy" },
   { id: "futuro", nombre: "Hacia 2028" },
 ]
+
+// Las diez ramas arrancan recogidas: el índice tiene que caber en una pantalla.
+const SECCIONES_ARBOL = [
+  "personaje", "norte", "formatos", "edicion", "redes",
+  "produccion", "enCola", "pendientes", "hoy", "futuro",
+].map((s) => `sec:${s}`)
 
 const COLOR_ESTADO: Record<Estado, string> = {
   usamos: "border-gold/45 bg-gold/[0.08] text-foreground",
@@ -59,6 +70,8 @@ export function Panel() {
   // Documento o mapa: los mismos datos, dos formas de mirarlos. El mapa no es
   // decoración — una rama vacía se ve desde lejos, y eso es lo que hay que ver.
   const [vista, setVista] = useState<"documento" | "mapa">("documento")
+  const [plegados, setPlegados] = useState<Set<string>>(new Set())
+  const [nodoSel, setNodoSel] = useState<string>(idRama("personaje"))
 
   // La revisión de la IA.
   const [verRevision, setVerRevision] = useState(false)
@@ -196,6 +209,22 @@ export function Panel() {
     }
   }
 
+  // El mapa y el árbol hablan de nodos; el documento, de secciones.
+  const irANodo = (idNodo: string) => {
+    setNodoSel(idNodo)
+    const sec = seccionDe(idNodo)
+    if (!sec) return
+    setVista("documento")
+    setTimeout(() => document.getElementById(ANCLA[sec])?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
+  }
+
+  const plegar = (id: string) =>
+    setPlegados((s) => {
+      const n = new Set(s)
+      n.has(id) ? n.delete(id) : n.add(id)
+      return n
+    })
+
   const descartar = () => {
     if (estado === "sucio" && !confirm("Se pierden los cambios sin guardar. ¿Seguro?")) return
     const vuelta = JSON.parse(original.current || JSON.stringify(CONTENIDO_BASE))
@@ -215,6 +244,7 @@ export function Panel() {
   )
 
   const enUso = doc.redes.filter((r) => r.estado === "usamos").length
+  const arbol = useMemo(() => aDoc(doc, plegados), [doc, plegados])
 
   return (
     <>
@@ -353,19 +383,23 @@ export function Panel() {
       )}
 
       {vista === "mapa" ? (
-        <Mapa
-          contenido={doc}
-          onIr={(seccion) => {
-            // Tocar una hoja lleva al documento, a esa sección. El mapa sirve
-            // para encontrar; editar se edita en el documento.
-            setVista("documento")
-            setTimeout(() => document.getElementById(ANCLA[seccion])?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
-          }}
-          vacias={new Set(revision?.hallazgos.filter((h) => h.gravedad === "alta").map((h) => h.seccion) ?? [])}
-        />
+        <div className="h-[560px] overflow-hidden rounded-2xl border border-border md:h-[720px]">
+          <Mapa doc={arbol} seleccionado={nodoSel} onSeleccionar={irANodo} onPlegar={plegar} />
+        </div>
       ) : (
       <div className="lg:flex lg:gap-10">
-        <Indice entradas={SECCIONES} />
+        <Indice entradas={SECCIONES} soloMovil />
+        <aside className="sticky top-10 hidden h-fit w-60 shrink-0 lg:block">
+          <span className="mb-2 block px-2 text-[11px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Índice
+          </span>
+          <Arbol
+            doc={arbol}
+            seleccionado={nodoSel}
+            onSeleccionar={irANodo}
+            cerradosIniciales={SECCIONES_ARBOL}
+          />
+        </aside>
 
         <div className="min-w-0 flex-1 space-y-12 md:space-y-14">
           {/* ── El personaje ── */}

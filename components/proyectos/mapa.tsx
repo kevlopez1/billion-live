@@ -150,7 +150,9 @@ export function Mapa({
   seleccionado: string
   onSeleccionar: (id: string) => void
   onPlegar: (id: string) => void
-  onAgregar: (padre: string) => void
+  /** Opcional: donde el árbol no se edita (el manual de /branding sale de un
+   *  documento de forma fija), un "+" que no hace nada es peor que no estar. */
+  onAgregar?: (padre: string) => void
 }) {
   const { cajas, ancho, alto } = useMemo(() => calcular(doc), [doc])
   const porId = useMemo(() => new Map(cajas.map((c) => [c.nodo.id, c])), [cajas])
@@ -363,7 +365,7 @@ export function Mapa({
                 </button>
               )}
 
-              {sel && (
+              {sel && onAgregar && (
                 <button
                   type="button"
                   data-control

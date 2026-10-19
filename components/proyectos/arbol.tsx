@@ -11,14 +11,19 @@ export function Arbol({
   seleccionado,
   onSeleccionar,
   onAgregar,
+  cerradosIniciales,
 }: {
   doc: Doc
   seleccionado: string
   onSeleccionar: (id: string) => void
-  onAgregar: (padre: string) => void
+  /** Opcional, por lo mismo que en el mapa. */
+  onAgregar?: (padre: string) => void
+  /** Ramas recogidas al abrir. El manual tiene ~70 hojas: desplegadas todas,
+   *  el índice mide tres pantallas y deja de servir como índice. */
+  cerradosIniciales?: string[]
 }) {
   // Abierto por defecto: la raíz y sus ramas. Lo que el usuario cierra, queda cerrado.
-  const [cerrados, setCerrados] = useState<Set<string>>(new Set())
+  const [cerrados, setCerrados] = useState<Set<string>>(() => new Set(cerradosIniciales ?? []))
   const alternar = (id: string) =>
     setCerrados((s) => {
       const n = new Set(s)
@@ -51,14 +56,14 @@ export function Arbol({
               {conPrime(n.titulo || "Sin título", false)}
             </span>
           </button>
-          <button
+          {onAgregar && <button
             type="button"
             onClick={() => onAgregar(n.id)}
             aria-label={`Agregar dentro de ${n.titulo}`}
             className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus:opacity-100 group-hover:opacity-100 max-lg:opacity-60"
           >
             <Plus className="h-3.5 w-3.5" />
-          </button>
+          </button>}
         </div>
         {hs.length > 0 && abierto && <ul>{hs.map((h) => fila(h, prof + 1))}</ul>}
       </li>
