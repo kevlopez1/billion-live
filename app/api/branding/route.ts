@@ -97,6 +97,31 @@ function valido(c: unknown): c is Contenido {
     }
   }
 
+  // El lienzo (cómo se ve el diagrama) es opcional y no es el manual, pero
+  // si viene se revisa: entra por el mismo sitio que todo lo demás.
+  if (x.lienzo !== undefined) {
+    if (!x.lienzo || typeof x.lienzo !== "object") return false
+    const l = x.lienzo as Record<string, unknown>
+    const mapa = (v: unknown, ok: (x: unknown) => boolean) =>
+      v === undefined || (!!v && typeof v === "object" && Object.values(v as object).every(ok))
+    const punto = (v: unknown) =>
+      !!v && typeof v === "object" &&
+      Number.isFinite((v as { x: unknown }).x) && Number.isFinite((v as { y: unknown }).y)
+    if (!mapa(l.pos, punto)) return false
+    if (!mapa(l.tinta, (v) => typeof v === "number" && v >= 0 && v < 16)) return false
+    if (l.fav !== undefined && !listaDeTextos(l.fav)) return false
+    if (l.trazos !== undefined) {
+      if (!Array.isArray(l.trazos) || l.trazos.length > 600) return false
+      for (const t of l.trazos as unknown[]) {
+        if (!t || typeof t !== "object") return false
+        const o = t as Record<string, unknown>
+        if (!texto(o.id) || typeof o.tinta !== "number" || typeof o.ancho !== "number") return false
+        if (!Array.isArray(o.pts) || o.pts.length % 2 !== 0) return false
+        if (!o.pts.every((n) => typeof n === "number" && Number.isFinite(n))) return false
+      }
+    }
+  }
+
   const pro = x.produccion as Record<string, unknown> | undefined
   if (!pro || typeof pro !== "object") return false
   if (!["personaje", "equipo"].every((k) => listaDeTextos(pro[k]))) return false

@@ -1,11 +1,12 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Maximize2, Minus, Plus, X } from "lucide-react"
+import { Eraser, Highlighter, LayoutGrid, Maximize2, MousePointer2, Minus, Plus, Star, X } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
 import { llenas, nuevaPregunta } from "@/lib/preguntas"
 import { ETIQUETA_SECCION, ICONO_SECCION, type Seccion } from "@/lib/revision"
-import { ETIQUETA_ESTADO, type Contenido, type Estado } from "@/lib/branding"
+import { ETIQUETA_ESTADO, type Contenido, type Estado, type Lienzo } from "@/lib/branding"
+import { TINTAS, color, nuevoId, type Trazo } from "@/lib/proyectos"
 
 // ──────────────────────────────────────────────────────────────
 // EL DIAGRAMA
@@ -201,6 +202,43 @@ export function Diagrama({
   const caja = useRef<HTMLDivElement>(null)
   const arrastre = useRef<{ x: number; y: number; px: number; py: number } | null>(null)
 
+  const lienzo = contenido.lienzo ?? {}
+  const trazos = lienzo.trazos ?? []
+  const favs = lienzo.fav ?? []
+  const [herramienta, setHerramienta] = useState<"mano" | "marcador" | "borrador">("mano")
+  const [tinta, setTinta] = useState(0)
+  const [elegida, setElegida] = useState<Seccion | null>(null)
+  const [trazando, setTrazando] = useState<Trazo | null>(null)
+  const trazoRef = useRef<Trazo | null>(null)
+  const [movimiento, setMovimiento] = useState<{ id: Seccion; dx: number; dy: number } | null>(null)
+  const moviendo = useRef<{ id: Seccion; x: number; y: number; movido: boolean } | null>(null)
+  const recienMovido = useRef(false)
+
+  // Escribir en el lienzo es escribir en el documento: se guarda con todo lo
+  // demás y vuelve igual en el otro aparato.
+  const enLienzo = (f: (l: Lienzo) => Lienzo) =>
+    editar((d) => ({ ...d, lienzo: f(d.lienzo ?? {}) }))
+
+  const mueveSeccion = (id: Seccion, dx: number, dy: number) =>
+    enLienzo((l) => {
+      const antes = l.pos?.[id] ?? { x: 0, y: 0 }
+      return { ...l, pos: { ...l.pos, [id]: { x: antes.x + dx, y: antes.y + dy } } }
+    })
+
+  const pintaSeccion = (id: Seccion, t: number | null) =>
+    enLienzo((l) => {
+      const pos = { ...l.tinta }
+      if (t === null) delete pos[id]
+      else pos[id] = t
+      return { ...l, tinta: pos }
+    })
+
+  const marcaSeccion = (id: Seccion) =>
+    enLienzo((l) => {
+      const actuales = l.fav ?? []
+      return { ...l, fav: actuales.includes(id) ? actuales.filter((x: string) => x !== id) : [...actuales, id] }
+    })
+
   useEffect(() => {
     const el = caja.current
     if (!el) return
@@ -230,7 +268,15 @@ export function Diagrama({
       const items = b.items.map((item, i) => ({ item, y: yInicio + i * (FILA + AIRE) }))
       const altoSec = n * (FILA + AIRE) - AIRE
       yCol[col] = yInicio + altoSec + AIRE_SECCION
-      return { ...b, x, y: yInicio, items }
+      // Lo que Kev movió a mano manda sobre el cálculo, y la sección se lleva
+      // sus renglones: moverla y dejar las filas atrás no movería nada.
+      const off = lienzo.pos?.[b.id] ?? { x: 0, y: 0 }
+      return {
+        ...b,
+        x: x + off.x,
+        y: yInicio + off.y,
+        items: items.map((it) => ({ ...it, y: it.y + off.y })),
+      }
     })
 
     // La relación cruzada: de cada video en cola a la caja del formato que usa.
@@ -254,11 +300,68 @@ export function Diagrama({
       }
     }
 
-    return { puestos, alto: Math.max(...yCol) + ARRIBA, relaciones }
-  }, [contenido, angosto, COLS, ANCHO_COL, X_ITEM_REL, W_ITEM, SEPARACION_COL])
+    // El alto sale de dónde quedó todo, no de la columna más larga: con
+    // secciones movidas a mano, lo segundo deja cosas fuera del lienzo.
+    const abajo = puestos.map((p) => (p.items.length ? p.items[p.items.length - 1].y : p.y) + FILA)
+    return { puestos, alto: Math.max(ARRIBA, ...abajo) + ARRIBA, relaciones }
+  }, [contenido, angosto, COLS, ANCHO_COL, X_ITEM_REL, W_ITEM, SEPARACION_COL, lienzo])
+
+  // Coordenadas del dibujo (las mismas en las que están las cajas).
+  const aLienzo = (e: { clientX: number; clientY: number }) => {
+    const r = caja.current!.getBoundingClientRect()
+    return { x: (e.clientX - r.left - pan.x) / zoom, y: (e.clientY - r.top - pan.y) / zoom }
+  }
+
+  const tocaTrazo = (t: Trazo, x: number, y: number, radio: number) => {
+    for (let i = 0; i < t.pts.length; i += 2) {
+      if (Math.hypot(t.pts[i] - x, t.pts[i + 1] - y) <= radio) return true
+    }
+    return false
+  }
+
+  // ── Mover una sección ──
+  const secAbajo = (id: Seccion) => (e: React.PointerEvent) => {
+    if (!editando || herramienta !== "mano" || e.button !== 0) return
+    moviendo.current = { id, x: e.clientX, y: e.clientY, movido: false }
+    ;(e.currentTarget as SVGElement).setPointerCapture(e.pointerId)
+    e.stopPropagation()
+  }
+  const secMueve = (e: React.PointerEvent) => {
+    const m = moviendo.current
+    if (!m) return
+    if (Math.abs(e.clientX - m.x) + Math.abs(e.clientY - m.y) > 3) m.movido = true
+    if (m.movido) setMovimiento({ id: m.id, dx: (e.clientX - m.x) / zoom, dy: (e.clientY - m.y) / zoom })
+  }
+  const secArriba = (id: Seccion) => (e: React.PointerEvent) => {
+    const m = moviendo.current
+    moviendo.current = null
+    setMovimiento(null)
+    if (!m) return
+    if (m.movido) {
+      recienMovido.current = true
+      setTimeout(() => { recienMovido.current = false }, 0)
+      mueveSeccion(id, (e.clientX - m.x) / zoom, (e.clientY - m.y) / zoom)
+    } else {
+      setElegida(id)
+    }
+  }
 
   const bajar = (e: React.PointerEvent) => {
     if (e.button !== 0) return
+    // Los botones nunca dibujan ni arrastran.
+    if ((e.target as HTMLElement).closest("[data-control]")) return
+    if (editando && herramienta !== "mano") {
+      const { x, y } = aLienzo(e)
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      if (herramienta === "borrador") {
+        enLienzo((l) => ({ ...l, trazos: (l.trazos ?? []).filter((t) => !tocaTrazo(t, x, y, 14)) }))
+        return
+      }
+      const t: Trazo = { id: nuevoId(), pts: [x, y], tinta, ancho: 3 }
+      trazoRef.current = t
+      setTrazando(t)
+      return
+    }
     // En edición se sigue pudiendo arrastrar el lienzo, pero NO desde una caja
     // de texto o un botón: ahí el arrastre pelearía con seleccionar o escribir.
     // Sin esto, en edición no había forma de llegar a lo que queda más abajo:
@@ -268,11 +371,32 @@ export function Diagrama({
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
   const mover = (e: React.PointerEvent) => {
+    if (editando && herramienta !== "mano") {
+      const { x, y } = aLienzo(e)
+      if (herramienta === "borrador") {
+        if (e.buttons) enLienzo((l) => ({ ...l, trazos: (l.trazos ?? []).filter((t) => !tocaTrazo(t, x, y, 14)) }))
+        return
+      }
+      const t = trazoRef.current
+      if (!t) return
+      const n = t.pts.length
+      if (Math.hypot(t.pts[n - 2] - x, t.pts[n - 1] - y) < 2.5) return
+      t.pts.push(x, y)
+      setTrazando({ ...t, pts: [...t.pts] })
+      return
+    }
     const a = arrastre.current
     if (!a) return
     setPan({ x: a.px + (e.clientX - a.x), y: a.py + (e.clientY - a.y) })
   }
-  const soltar = () => { arrastre.current = null }
+  const soltar = () => {
+    const t = trazoRef.current
+    trazoRef.current = null
+    setTrazando(null)
+    // Un toque suelto no es un trazo: sin esto el lienzo se llena de puntos.
+    if (t && t.pts.length >= 4) enLienzo((l) => ({ ...l, trazos: [...(l.trazos ?? []), t] }))
+    arrastre.current = null
+  }
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card/20">
@@ -387,14 +511,31 @@ export function Diagrama({
             const marcada = marcadas?.has(id)
             const faltan = items.filter((i) => i.item.vacio).length
             const ultimo = items.length ? items[items.length - 1].y : y
+            const corrida = movimiento?.id === id
+            const pintada = lienzo.tinta?.[id]
+            const favorita = favs.includes(id)
             return (
-              <g key={id}>
-                <g onClick={() => !editando && onIr(id)} className={editando ? "" : "cursor-pointer"}>
+              <g key={id} transform={corrida ? `translate(${movimiento!.dx} ${movimiento!.dy})` : undefined}>
+                <g
+                  onClick={() => { if (!editando && !recienMovido.current) onIr(id) }}
+                  onPointerDown={secAbajo(id)}
+                  onPointerMove={secMueve}
+                  onPointerUp={secArriba(id)}
+                  onPointerCancel={() => { moviendo.current = null; setMovimiento(null) }}
+                  className={editando ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
+                >
                   <rect
                     x={x} y={y} width={W_SEC} height={FILA} rx={8}
-                    className={`fill-gold/[0.14] ${marcada ? "stroke-rojo/70" : "stroke-gold/55"}`}
-                    strokeWidth={1.5}
+                    className={pintada == null ? `fill-gold/[0.14] ${marcada ? "stroke-rojo/70" : "stroke-gold/55"}` : marcada ? "stroke-rojo/70" : ""}
+                    fill={pintada != null ? color(TINTAS[pintada].h, 0.62, 0.17, 0.22) : undefined}
+                    stroke={pintada != null && !marcada ? color(TINTAS[pintada].h, 0.6, 0.16, 0.85) : undefined}
+                    strokeWidth={elegida === id ? 2.5 : 1.5}
                   />
+                  {favorita && (
+                    <foreignObject x={x - 7} y={y - 7} width={16} height={16}>
+                      <Star className="h-3.5 w-3.5 fill-kev-warning text-kev-warning" aria-label="Marcada" />
+                    </foreignObject>
+                  )}
                   <foreignObject x={x + 8} y={y + 4} width={W_SEC - 16} height={FILA - 8}>
                     <div className="flex h-full items-center gap-1.5">
                       <span className="shrink-0 text-[12px] leading-none" aria-hidden>{ICONO_SECCION[id]}</span>
@@ -481,8 +622,130 @@ export function Diagrama({
               </g>
             )
           })}
+
+          {/* Capa 4 · el marcador que dibuja, encima de todo */}
+          {[...trazos, ...(trazando ? [trazando] : [])].map((t) => (
+            <polyline
+              key={t.id}
+              data-trazo
+              points={t.pts.join(" ")}
+              fill="none"
+              stroke={color(TINTAS[t.tinta]?.h ?? TINTAS[0].h, 0.62, 0.17, 0.75)}
+              strokeWidth={t.ancho}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="pointer-events-none"
+            />
+          ))}
         </svg>
       </div>
+
+      {/* ── Las marcadas ── Una barra para saltar, no para mirar. */}
+      {favs.length > 0 && (
+        <div data-control className="absolute left-2 top-12 z-10 flex max-w-[70%] flex-wrap gap-1.5">
+          {favs.map((f) => (
+            <button
+              key={f}
+              onClick={() => onIr(f as Seccion)}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background/90 px-2 py-1 text-[11px] font-medium backdrop-blur transition-colors hover:bg-foreground/[0.05]"
+            >
+              <Star className="h-3 w-3 fill-kev-warning text-kev-warning" />
+              {ETIQUETA_SECCION[f as Seccion]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── El marcador ── Solo en edición: lo que se pinta aquí se guarda con
+          el manual, y en lectura la página no guarda nada. */}
+      {editando && (
+        <div data-control className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-xl border border-border bg-background/90 p-1 backdrop-blur">
+          {([
+            ["mano", "Mover y elegir", MousePointer2],
+            ["marcador", "Marcador: dibujar encima", Highlighter],
+            ["borrador", "Borrador: quitar trazos", Eraser],
+          ] as const).map(([h, etiqueta, Icono]) => (
+            <button
+              key={h}
+              onClick={() => setHerramienta(h)}
+              aria-pressed={herramienta === h}
+              aria-label={etiqueta}
+              title={etiqueta}
+              className={`rounded-lg p-2 transition-colors ${
+                herramienta === h ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icono className="h-3.5 w-3.5" />
+            </button>
+          ))}
+
+          {(herramienta === "marcador" || elegida) && (
+            <>
+              <span className="mx-0.5 h-4 w-px bg-border" />
+              {TINTAS.map((t, i) => {
+                const activo = herramienta === "marcador" ? tinta === i : lienzo.tinta?.[elegida!] === i
+                return (
+                  <button
+                    key={t.nombre}
+                    onClick={() => {
+                      if (herramienta === "marcador") setTinta(i)
+                      else if (elegida) pintaSeccion(elegida, lienzo.tinta?.[elegida] === i ? null : i)
+                    }}
+                    aria-pressed={!!activo}
+                    aria-label={herramienta === "marcador" ? `Tinta ${t.nombre.toLowerCase()}` : `Resaltar en ${t.nombre.toLowerCase()}`}
+                    title={t.nombre}
+                    className={`h-4 w-4 rounded-full transition-transform hover:scale-110 ${activo ? "scale-110 ring-2 ring-offset-2 ring-offset-background" : ""}`}
+                    style={{ background: color(t.h, 0.62, 0.17), ["--tw-ring-color" as string]: color(t.h, 0.5, 0.15) }}
+                  />
+                )
+              })}
+            </>
+          )}
+
+          {elegida && (
+            <>
+              <span className="mx-0.5 h-4 w-px bg-border" />
+              <button
+                onClick={() => marcaSeccion(elegida)}
+                aria-pressed={favs.includes(elegida)}
+                aria-label={favs.includes(elegida) ? "Quitar de marcadas" : "Marcar para saltar aquí"}
+                title={favs.includes(elegida) ? "Quitar de marcadas" : "Marcar para saltar aquí"}
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:text-kev-warning"
+              >
+                <Star className={`h-3.5 w-3.5 ${favs.includes(elegida) ? "fill-kev-warning text-kev-warning" : ""}`} />
+              </button>
+            </>
+          )}
+
+          {(lienzo.pos && Object.keys(lienzo.pos).length > 0) && (
+            <>
+              <span className="mx-0.5 h-4 w-px bg-border" />
+              <button
+                onClick={() => enLienzo((l) => ({ ...l, pos: {} }))}
+                aria-label="Acomodar solo"
+                title="Acomodar solo: deshace todo lo movido a mano"
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+
+          {trazos.length > 0 && (
+            <>
+              <span className="mx-0.5 h-4 w-px bg-border" />
+              <button
+                onClick={() => enLienzo((l) => ({ ...l, trazos: [] }))}
+                aria-label="Borrar todos los trazos"
+                title="Borrar todos los trazos"
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:text-rojo"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
