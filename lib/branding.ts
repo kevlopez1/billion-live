@@ -11,6 +11,8 @@
 // campo nuevo allá, sin migración.
 // ──────────────────────────────────────────────────────────────
 
+import type { Pregunta } from "@/lib/preguntas"
+
 export type Estado = "usamos" | "pendiente" | "no"
 
 export type Beat = { paso: string; ejemplo?: string }
@@ -70,6 +72,11 @@ export type Contenido = {
   pendientes: string[]
   hoy: Lectura[]
   futuro: Lectura[]
+  /** Una pregunta, mínimo veinte respuestas. Las primeras cinco ya las sabías
+   *  antes de sentarte: el ejercicio es llegar al tercer tramo. Aquí van las
+   *  del reto; las que llevan nombres de personas viven en /preguntas, que
+   *  pide clave hasta para leer. Opcional, para no romper lo ya guardado. */
+  preguntas?: Pregunta[]
 }
 
 export const ETIQUETA_ESTADO: Record<Estado, string> = {
@@ -405,6 +412,24 @@ export const CONTENIDO_BASE: Contenido = {
       titulo: "El arquetipo del operator-creator",
       cuerpo:
         "El público abandona al influencer de consejos y al gurú de estilo de vida estático. La atención se concentra en quien opera negocios reales frente a la cámara: negociaciones, desarrollo técnico y logística global.",
+    },
+  ],
+  preguntas: [
+    {
+      id: "vistas-mes",
+      pregunta: "¿Cómo conseguimos 10 millones de vistas este mes?",
+      meta: 20,
+      plazo: "este mes",
+      creada: "2026-10-19",
+      respuestas: [{ texto: "" }],
+    },
+    {
+      id: "inversores-mes",
+      pregunta: "¿Cómo cerramos 10 inversores este mes?",
+      meta: 20,
+      plazo: "este mes",
+      creada: "2026-10-19",
+      respuestas: [{ texto: "" }],
     },
   ],
 }

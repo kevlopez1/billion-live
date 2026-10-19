@@ -41,7 +41,12 @@ export function tramoDe(i: number) {
 }
 
 export function hechas(p: Pregunta) {
-  return p.respuestas.filter((r) => r.hecha).length
+  return p.respuestas.filter((r) => r.hecha && r.texto.trim()).length
+}
+
+/** Respuestas que cuentan: las vacías no son respuestas. */
+export function llenas(p: Pregunta) {
+  return p.respuestas.filter((r) => r.texto.trim()).length
 }
 
 export function nuevaPregunta(pregunta = ""): Pregunta {
@@ -80,10 +85,9 @@ export function valido(x: unknown): x is Tablero {
 }
 
 // ── Semilla ──
-// Las dos primeras son de Kev, con sus propias respuestas y su propio estado
-// (lo que ya escribió está marcado como hecho). Las otras dos son las que él
-// mismo puso de ejemplo y están vacías a propósito: contestarlas es el
-// ejercicio, y rellenarlas yo sería inventar.
+// Las de dinero, con sus propias respuestas y su propio estado (lo que ya
+// escribió está marcado como hecho). Las del reto NO están aquí: viven en la
+// sección "Las preguntas" del manual, que es donde Kev las pidió.
 export function semilla(): Tablero {
   return {
     preguntas: [
@@ -117,22 +121,6 @@ export function semilla(): Tablero {
           { texto: "Hablar con Fernando. A la espera de reunión", hecha: true },
           { texto: "Pensar en juntar o unir cosas" },
         ],
-      },
-      {
-        id: "vistas-mes",
-        pregunta: "¿Cómo conseguimos 10 millones de vistas este mes?",
-        meta: META_POR_DEFECTO,
-        plazo: "este mes",
-        creada: "2026-10-19",
-        respuestas: [{ texto: "" }],
-      },
-      {
-        id: "inversores-mes",
-        pregunta: "¿Cómo cerramos 10 inversores este mes?",
-        meta: META_POR_DEFECTO,
-        plazo: "este mes",
-        creada: "2026-10-19",
-        respuestas: [{ texto: "" }],
       },
     ],
   }
