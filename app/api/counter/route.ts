@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getAdminClient } from "@/lib/supabase-admin"
+import { CHALLENGE_TARGET } from "@/lib/contador"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -31,14 +32,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 })
   }
 
-  const admin = getAdminClient()
-  if (!admin) {
-    return NextResponse.json(
-      { error: "Falta SUPABASE_SERVICE_ROLE_KEY en las variables de entorno (Vercel)." },
-      { status: 500 },
-    )
-  }
-
   let body: Record<string, unknown>
   try {
     body = await req.json()
@@ -47,7 +40,7 @@ export async function POST(req: Request) {
   }
 
   // Campos editables del contador (todos opcionales).
-  const patch: Record<string, number> = {}
+  const patch: Record<string, number | string> = {}
   if (typeof body.net_worth === "number") patch.net_worth = Math.round(body.net_worth)
   if (typeof body.monthly_growth === "number") patch.monthly_growth = body.monthly_growth
   if (typeof body.roi === "number") patch.roi = body.roi
@@ -57,7 +50,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Nada que actualizar." }, { status: 400 })
   }
 
+  // La web ignora cualquier monto fuera de $1 – la meta (ver lib/contador.ts).
+  // Mejor rechazarlo aquí, con el motivo, que guardarlo y que no aparezca.
+  const monto = patch.net_worth
+  if (typeof monto === "number" && (monto <= 0 || monto > CHALLENGE_TARGET)) {
+    return NextResponse.json(
+      { error: `El monto tiene que estar entre $1 y $${CHALLENGE_TARGET.toLocaleString("en-US")}. No se guardó nada.` },
+      { status: 400 },
+    )
+  }
+
+  // Se sella la fecha a mano: la tabla no la actualiza sola, y la web solo
+  // confía en filas guardadas después del día 1 del reto. Sin esto, cambiar
+  // el número desde /control dejaría la fecha vieja y el cambio no se vería.
+
   // Upsert: si existe fila la actualizamos; si no, insertamos.
+  patch.updated_at = new Date().toISOString()
+
+  // La configuración se mira DESPUÉS de revisar el cuerpo: un monto imposible
+  // es un 400 de quien lo manda, no un 500 de cómo está montado esto.
+  const admin = getAdminClient()
+  if (!admin) {
+    return NextResponse.json(
+      { error: "Falta SUPABASE_SERVICE_ROLE_KEY en las variables de entorno (Vercel)." },
+      { status: 500 },
+    )
+  }
+
   const { data: existing } = await admin.from("global_metrics").select("id").limit(1).maybeSingle()
 
   if (existing?.id) {

@@ -63,8 +63,13 @@ No falla el build: señala y ordena. La tijera la decide una persona.
 ## Cómo está armado
 
 - Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · Supabase · deploy en Vercel desde `master`.
-- **El contador sale de un solo lugar:** `RECAUDADO` en `context/app-context.tsx`.
-  Lo usan la home y `/profile`. No escribir el número a mano en ningún otro lado.
+- **El contador sale de un solo lugar:** `RECAUDADO` en `lib/contador.ts` (no en
+  `app-context`: ese archivo es de cliente y la vista previa al compartir corre en
+  el servidor). Lo usan la home, `/profile` y la vista previa. No escribir el
+  número a mano en ningún otro lado.
+- **La base solo manda si la fila es del reto:** `montoConfiable()` ignora lo
+  guardado antes del día 1 o fuera de $1 – la meta. La base traía una fila de la
+  plantilla vieja con $250.000.000 y la portada la mostró como real.
 - **Los comprobantes salen de un solo lugar:** `lib/comprobantes.ts`. Los totales
   (bolivianos, cantidad, entidades, fechas) se calculan solos.
 - **El auto y sus precios:** `lib/car-grid.ts`, que usan el componente y la API.
