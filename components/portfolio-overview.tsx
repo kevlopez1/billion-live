@@ -9,6 +9,7 @@ import { Countdown } from "@/components/countdown"
 import { MansoryMark } from "@/components/mansory-mark"
 import { EV, track } from "@/lib/track"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
+import { montoConfiable } from "@/lib/contador"
 import { PrimeMark } from "@/components/prime-mark"
 
 export function PortfolioOverview() {
@@ -44,7 +45,9 @@ export function PortfolioOverview() {
           return
         }
 
-        if (data && data.length > 0) {
+        // Solo si la fila es del reto. La base traía una de la plantilla vieja
+        // con $250.000.000 de ejemplo, y la portada la mostraba como real.
+        if (data && data.length > 0 && montoConfiable(data[0]) !== null) {
           setSupabaseMetrics(data[0])
         } else {
           // Fallback to local metrics if no data
@@ -79,8 +82,8 @@ export function PortfolioOverview() {
     fetchMetrics()
 
     // Subscribe to real-time changes
-    const unsubscribe = subscribeToGlobalMetrics((newMetrics) => {
-      setSupabaseMetrics(newMetrics)
+    const unsubscribe = subscribeToGlobalMetrics((newMetrics: GlobalMetrics) => {
+      if (montoConfiable(newMetrics) !== null) setSupabaseMetrics(newMetrics)
     })
 
     return () => {

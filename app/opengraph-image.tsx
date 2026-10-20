@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og"
 import { BODY_PATH, SLOTS, SUELO, VIEW_H, VIEW_W } from "@/lib/car-grid"
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase-config"
+import { CHALLENGE_TARGET, RECAUDADO, montoConfiable } from "@/lib/contador"
 
 export const runtime = "edge"
 export const alt = "KEV PROJECT GTA — De $10 a un Mercedes-AMG Mansory"
@@ -19,8 +20,10 @@ export const contentType = "image/png"
 // contador del sitio, así que cada vez que entra plata, el preview cambia solo.
 // ──────────────────────────────────────────────────────────────
 
-const META = 450000
-const RESPALDO = 5091 // si Supabase no contesta, el preview igual sale
+// La meta y el respaldo salen de la misma fuente que la home. Antes aquí había
+// un 5091 escrito a mano que nadie actualizaba.
+const META = CHALLENGE_TARGET
+const RESPALDO = RECAUDADO
 
 async function recaudado(): Promise<number> {
   try {
@@ -28,16 +31,15 @@ async function recaudado(): Promise<number> {
     // un link que no muestra nada porque la base tardó.
     const ctrl = new AbortController()
     const t = setTimeout(() => ctrl.abort(), 1500)
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/global_metrics?select=net_worth&limit=1`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/global_metrics?select=net_worth,updated_at&limit=1`, {
       headers: { apikey: SUPABASE_ANON_KEY, authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       signal: ctrl.signal,
       cache: "no-store",
     })
     clearTimeout(t)
     if (!r.ok) return RESPALDO
-    const j = (await r.json()) as { net_worth?: number }[]
-    const n = j?.[0]?.net_worth
-    return typeof n === "number" && n > 0 ? n : RESPALDO
+    const j = (await r.json()) as unknown[]
+    return montoConfiable(j?.[0]) ?? RESPALDO
   } catch {
     return RESPALDO
   }
