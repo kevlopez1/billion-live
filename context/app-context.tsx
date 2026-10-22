@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
-import { CHALLENGE_LAUNCH, CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
+import { CHALLENGE_DEADLINE, CHALLENGE_LAUNCH, CHALLENGE_RECORD_DEADLINE, CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
 import { type Locale, getTranslation, type TranslationKeys } from "@/lib/i18n"
 import {
   updateGlobalMetrics as updateSupabaseMetrics,
@@ -143,12 +143,9 @@ interface AppContextType extends AppState {
 // Capa pública (la carnada): de $10 a un Mercedes-AMG GT 63 MANSORY (~$450K).
 // Capa secreta (la meta real de largo plazo): el imperio de $1.000.000.000.
 // El contador (netWorth) = revenue REAL de PRIME, editable desde el panel Admin.
-export { CHALLENGE_LAUNCH, CHALLENGE_TARGET, RECAUDADO }
+export { CHALLENGE_DEADLINE, CHALLENGE_LAUNCH, CHALLENGE_RECORD_DEADLINE, CHALLENGE_TARGET, RECAUDADO }
 export const SECRET_TARGET = 1_000_000_000 // El imperio (capa secreta)
 export const CHALLENGE_START = 10 // Empezamos desde $10
-// Fecha límite del reto. Cambiar acá el plazo (formato AAAA-MM-DD).
-export const CHALLENGE_DEADLINE = "2027-06-30" // límite: 12 meses
-export const CHALLENGE_RECORD_DEADLINE = "2026-12-30" // ritmo récord: 6 meses
 
 // RECAUDADO, la meta y el día 1 viven en lib/contador.ts (ver ahí por qué).
 
