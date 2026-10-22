@@ -10,6 +10,8 @@
 
 export const CHALLENGE_TARGET = 450_000 // Mercedes-AMG GT 63 Mansory
 export const CHALLENGE_LAUNCH = "2026-06-30" // Día 1: martes del primer video
+export const CHALLENGE_RECORD_DEADLINE = "2026-12-30" // ritmo récord: 6 meses
+export const CHALLENGE_DEADLINE = "2027-06-30" // límite: 12 meses
 
 /**
  * Lo recaudado hasta hoy. Es LA fuente del número: lo usan el contador de la

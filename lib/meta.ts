@@ -128,3 +128,43 @@ export async function publicar(
   )
   return salida
 }
+
+// ──────────────────────────────────────────────────────────────
+// LOS NÚMEROS DE LAS CUENTAS (para /centro)
+// Lo que Meta dice hoy, sin guardar nada: seguidores y publicaciones.
+// ──────────────────────────────────────────────────────────────
+
+export type Redes = {
+  facebook: { nombre: string; seguidores: number | null } | { error: string }
+  instagram: { usuario: string; seguidores: number | null; publicaciones: number | null } | { error: string }
+}
+
+export async function resumenRedes(): Promise<Redes> {
+  let p: Pagina
+  try {
+    p = await pagina()
+  } catch (e) {
+    const error = e instanceof Error ? e.message : "No se pudo leer la página."
+    return { facebook: { error }, instagram: { error } }
+  }
+  const num = (v: unknown) => (typeof v === "number" ? v : null)
+  let facebook: Redes["facebook"]
+  try {
+    const j = await llamar(`${p.idPagina}?fields=name,followers_count,fan_count`, p.tokenPagina)
+    facebook = { nombre: String(j.name ?? ""), seguidores: num(j.followers_count) ?? num(j.fan_count) }
+  } catch (e) {
+    facebook = { error: e instanceof Error ? e.message : "Error de Facebook." }
+  }
+  let instagram: Redes["instagram"]
+  if (!p.idInstagram) {
+    instagram = { error: "La página no tiene un Instagram profesional conectado." }
+  } else {
+    try {
+      const j = await llamar(`${p.idInstagram}?fields=username,followers_count,media_count`, p.tokenPagina)
+      instagram = { usuario: String(j.username ?? ""), seguidores: num(j.followers_count), publicaciones: num(j.media_count) }
+    } catch (e) {
+      instagram = { error: e instanceof Error ? e.message : "Error de Instagram." }
+    }
+  }
+  return { facebook, instagram }
+}
