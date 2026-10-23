@@ -29,10 +29,25 @@ import { TINTAS, color, nuevoId, type Trazo } from "@/lib/proyectos"
 // hay copia intermedia que se pueda desincronizar.
 // ──────────────────────────────────────────────────────────────
 
-const FILA = 34
-const AIRE = 8
-const AIRE_SECCION = 34
+const FILA = 36
+const AIRE = 10
+const AIRE_SECCION = 26
 const ARRIBA = 26
+const ALTO_SEC = 44
+const ALTO_RAIZ = 56
+const SEPARACION_H = 76
+
+// El codo con esquinas redondeadas del mapa de Kev López.
+function codo(x1: number, y1: number, x2: number, y2: number): string {
+  const dy = y2 - y1
+  const mx = x2 > x1 + 24 ? x1 + Math.min(SEPARACION_H / 2, (x2 - x1) / 2) : (x1 + x2) / 2
+  if (Math.abs(dy) < 1) return `M ${x1} ${y1} H ${x2}`
+  const r = Math.min(10, Math.abs(dy) / 2, Math.abs(mx - x1), Math.abs(x2 - mx))
+  const sy = Math.sign(dy)
+  const sx1 = Math.sign(mx - x1) || 1
+  const sx2 = Math.sign(x2 - mx) || 1
+  return `M ${x1} ${y1} H ${mx - sx1 * r} Q ${mx} ${y1} ${mx} ${y1 + sy * r} V ${y2 - sy * r} Q ${mx} ${y2} ${mx + sx2 * r} ${y2} H ${x2}`
+}
 
 type Item = {
   texto: string
@@ -233,62 +248,46 @@ export function Diagrama({
     return () => ro.disconnect()
   }, [])
 
-  // Cada sección es un ÁREA que contiene lo suyo. Antes la caja de la sección
-  // vivía lejos de sus renglones, unida por una línea que cruzaba un hueco:
-  // cuatro carriles verticales de cajas sueltas que se leían como islas.
-  const COLS = angosto ? 1 : 2
-  const SEPARACION_COL = 26
-  const SEPARACION_FILA = 26
-  const PAD = 12
+  // De izquierda a derecha, igual que el mapa de Kev López: la raíz, las
+  // secciones como bloques de color y lo de cada una colgando a la derecha.
+  // Kev: "hazlo igual al de Kev López en estética".
+  const X_RAIZ = 24
+  const W_RAIZ = 176
+  const X_SEC = X_RAIZ + W_RAIZ + SEPARACION_H
+  const W_SEC = angosto ? 150 : 210
+  const X_ITEM = X_SEC + W_SEC + SEPARACION_H
+  const W_ITEM = Math.max(220, Math.min(420, (ancho || 900) - X_ITEM - 24))
+  const ANCHO = X_ITEM + W_ITEM + 24
 
-  const disponible = Math.max(ancho || 900, 320) - 24 - SEPARACION_COL * (COLS - 1)
-  const W_AREA = Math.max(252, Math.floor(disponible / COLS))
-  const W_ITEM = W_AREA - PAD * 2
-  const ANCHO = COLS * W_AREA + (COLS - 1) * SEPARACION_COL + 24
-
-  const { puestos, alto, relaciones } = useMemo(() => {
+  const { puestos, alto, relaciones, yRaiz } = useMemo(() => {
     const bs = bloques(contenido)
 
-    // Alto de un área: su encabezado, sus renglones y, en edición, la fila de
-    // "Agregar". Una sección vacía reserva un renglón para no quedar como una
-    // raya.
-    const altoDe = (n: number) =>
-      PAD + FILA + AIRE + Math.max(n, 1) * (FILA + AIRE) - AIRE + (editando ? AIRE + 28 : 0) + PAD
+    // Lo que ocupa una sección a la derecha: sus renglones y, en edición, la
+    // fila de "Agregar". Una vacía reserva un renglón.
+    const altoDe = (n: number) => Math.max(n, 1) * (FILA + AIRE) - AIRE + (editando ? AIRE + 28 : 0)
 
-    // Las áreas van EN EL ORDEN DEL MANUAL, de izquierda a derecha y de
-    // arriba a abajo, y todas las de una misma fila arrancan a la misma
-    // altura. El acomodo anterior metía cada sección en la columna que fuera
-    // más corta: quedaba ordenado por altura y desordenado para leer.
-    const filas = Math.ceil(bs.length / COLS)
-    const altoFila: number[] = []
-    const yFila: number[] = []
-    for (let f = 0; f < filas; f++) {
-      const dela = bs.slice(f * COLS, f * COLS + COLS)
-      altoFila[f] = Math.max(...dela.map((b) => altoDe(b.items.length)))
-      yFila[f] = f === 0 ? ARRIBA : yFila[f - 1] + altoFila[f - 1] + SEPARACION_FILA
-    }
-
+    let cursor = ARRIBA
     const puestos = bs.map((b, i) => {
-      const col = i % COLS
-      const fila = Math.floor(i / COLS)
-      // Lo que Kev movió a mano manda sobre el cálculo, y el área se lleva
-      // sus renglones: moverla y dejar las filas atrás no movería nada.
+      const h = altoDe(b.items.length)
+      // Lo que Kev movió a mano manda, y la sección se lleva sus renglones.
       const off = lienzo.pos?.[b.id] ?? { x: 0, y: 0 }
-      const x = 12 + col * (W_AREA + SEPARACION_COL) + off.x
-      const y = yFila[fila] + off.y
-      const yPrimero = y + PAD + FILA + AIRE
+      const yPrimero = cursor + off.y
+      const ySec = yPrimero + Math.max(0, Math.min(h, b.items.length * (FILA + AIRE) - AIRE) - ALTO_SEC) / 2
+      cursor += h + AIRE_SECCION
       return {
         ...b,
-        x,
-        y,
-        h: altoDe(b.items.length),
+        tono: TINTAS[i % TINTAS.length].h,
+        x: X_SEC + off.x,
+        xItem: X_ITEM + off.x,
+        y: ySec,
         items: b.items.map((item, k) => ({ item, y: yPrimero + k * (FILA + AIRE) })),
         yPrimero,
+        h,
       }
     })
 
-    // La relación cruzada: de cada video en cola a la caja del formato que usa.
-    // Se busca por nombre porque es lo que el manual guarda hoy.
+    // La relación cruzada: de cada video en cola al formato que usa. Las dos
+    // cajas quedan en la misma columna, así que la curva sale por la derecha.
     const formatos = puestos.find((p) => p.id === "formatos")
     const cola = puestos.find((p) => p.id === "enCola")
     const relaciones: { x1: number; y1: number; x2: number; y2: number }[] = []
@@ -299,20 +298,16 @@ export function Diagrama({
           (f) => f.item.texto.trim().toLowerCase() === item.usaFormato!.trim().toLowerCase(),
         )
         if (!destino) continue
-        relaciones.push({
-          x1: cola.x + PAD,
-          y1: y + FILA / 2,
-          x2: formatos.x + PAD + W_ITEM,
-          y2: destino.y + FILA / 2,
-        })
+        relaciones.push({ x1: cola.xItem + W_ITEM, y1: y + FILA / 2, x2: formatos.xItem + W_ITEM, y2: destino.y + FILA / 2 })
       }
     }
 
-    // El alto sale de dónde quedó todo, no de la última fila: con áreas
-    // movidas a mano, lo segundo deja cosas fuera del lienzo.
-    const abajo = puestos.map((p) => p.y + p.h)
-    return { puestos, alto: Math.max(ARRIBA, ...abajo) + ARRIBA, relaciones }
-  }, [contenido, editando, COLS, W_AREA, W_ITEM, SEPARACION_COL, lienzo])
+    const abajo = puestos.map((p) => Math.max(p.yPrimero + p.h, p.y + ALTO_SEC))
+    const fondo = Math.max(ARRIBA, ...abajo)
+    return { puestos, alto: fondo + ARRIBA, relaciones, // La raíz arriba, a la altura de la primera sección: centrada en un
+    // lienzo tan alto quedaba fuera de la vista al abrir.
+    yRaiz: (puestos[0]?.y ?? ARRIBA) + (ALTO_SEC - ALTO_RAIZ) / 2 }
+  }, [contenido, editando, X_SEC, X_ITEM, W_ITEM, lienzo])
 
   // Coordenadas del dibujo (las mismas en las que están las cajas).
   const aLienzo = (e: { clientX: number; clientY: number }) => {
@@ -412,7 +407,7 @@ export function Diagrama({
           cada línea, y entonces no se lee: se mira. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-border px-4 py-2.5 text-[11px] text-muted-foreground">
         {[
-          { trazo: <span className="h-px w-5 bg-gold/60" />, que: "pertenece a" },
+          { trazo: <span className="h-0.5 w-5 bg-foreground/50" />, que: "pertenece a" },
           { trazo: <span className="h-px w-5 border-t border-dashed border-rojo/70" />, que: "falta por definir" },
           { trazo: <span className="h-px w-5 border-t border-dashed border-[color:var(--kev-success,#4a9)]" />, que: "usa ese formato" },
         ].map(({ trazo, que }) => (
@@ -470,14 +465,13 @@ export function Diagrama({
           </defs>
           <rect width={ANCHO} height={alto} fill="url(#retic)" />
 
-          {/* Capa 1 · las relaciones, por DEBAJO de todo: son contexto, no
-              estructura, y no deben competir con ella. */}
+          {/* Capa 1 · las relaciones, por DEBAJO de todo: son contexto. */}
           {relaciones.map((r, i) => {
-            const mx = (r.x1 + r.x2) / 2
+            const bx = Math.max(r.x1, r.x2) + 46
             return (
               <path
                 key={`rel-${i}`}
-                d={`M ${r.x1} ${r.y1} C ${mx} ${r.y1}, ${mx} ${r.y2}, ${r.x2} ${r.y2}`}
+                d={`M ${r.x1} ${r.y1} C ${bx} ${r.y1}, ${bx} ${r.y2}, ${r.x2} ${r.y2}`}
                 className="stroke-kev-success/55"
                 strokeWidth={1.5}
                 strokeDasharray="5 4"
@@ -486,122 +480,140 @@ export function Diagrama({
             )
           })}
 
-          {/* Capa 2 · las áreas, cada sección con lo suyo dentro */}
-          {puestos.map(({ id, x, y, h, items, agregar, yPrimero }) => {
-            const xItem = x + PAD
+          {/* Capa 2 · la raíz */}
+          <rect x={X_RAIZ} y={yRaiz} width={W_RAIZ} height={ALTO_RAIZ} rx={10} className="fill-foreground" />
+          <foreignObject x={X_RAIZ} y={yRaiz} width={W_RAIZ} height={ALTO_RAIZ}>
+            <div className="flex h-full items-center justify-center px-3 font-display text-[13px] font-bold text-background">
+              Kev Project GTA
+            </div>
+          </foreignObject>
+
+          {/* Capa 3 · cada sección, un bloque de color con lo suyo a la derecha */}
+          {puestos.map(({ id, x, xItem, y, tono: tonoBase, items, agregar, yPrimero }) => {
             const marcada = marcadas?.has(id)
             const faltan = items.filter((i) => i.item.vacio).length
             const ultimo = items.length ? items[items.length - 1].y : yPrimero - (FILA + AIRE)
             const corrida = movimiento?.id === id
             const pintada = lienzo.tinta?.[id]
+            const tono = pintada != null ? TINTAS[pintada].h : tonoBase
             const favorita = favs.includes(id)
+            const dx = corrida ? movimiento!.dx : 0
+            const dy = corrida ? movimiento!.dy : 0
             return (
-              <g key={id} transform={corrida ? `translate(${movimiento!.dx} ${movimiento!.dy})` : undefined}>
-                <g
-                  onClick={() => { if (!editando && !recienMovido.current) onIr(id) }}
-                  onPointerDown={secAbajo(id)}
-                  onPointerMove={secMueve}
-                  onPointerUp={secArriba(id)}
-                  onPointerCancel={() => { moviendo.current = null; setMovimiento(null) }}
-                  className={editando ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
-                >
-                  {/* El área: lo que agrupa. Sin este recuadro, una sección
-                      y sus renglones se leen como cajas sueltas. */}
-                  <rect
-                    x={x} y={y} width={W_AREA} height={h} rx={14}
-                    className={pintada == null ? `fill-foreground/[0.02] ${marcada ? "stroke-rojo/60" : elegida === id ? "stroke-gold/70" : "stroke-border"}` : ""}
-                    fill={pintada != null ? color(TINTAS[pintada].h, 0.62, 0.17, 0.09) : undefined}
-                    stroke={pintada != null ? color(TINTAS[pintada].h, 0.6, 0.16, 0.6) : undefined}
-                    strokeWidth={elegida === id ? 2 : 1}
-                  />
-                  <rect
-                    x={xItem} y={y + PAD} width={W_ITEM} height={FILA} rx={8}
-                    className={pintada == null ? "fill-gold/[0.14] stroke-gold/45" : ""}
-                    fill={pintada != null ? color(TINTAS[pintada].h, 0.62, 0.17, 0.26) : undefined}
-                    stroke={pintada != null ? color(TINTAS[pintada].h, 0.6, 0.16, 0.8) : undefined}
-                    strokeWidth={1.5}
-                  />
-                  {favorita && (
-                    <foreignObject x={x - 6} y={y - 6} width={16} height={16}>
-                      <Star className="h-3.5 w-3.5 fill-kev-warning text-kev-warning" aria-label="Marcada" />
-                    </foreignObject>
-                  )}
-                  <foreignObject x={xItem + 9} y={y + PAD + 4} width={W_ITEM - 18} height={FILA - 8}>
-                    <div className="flex h-full items-center gap-1.5">
-                      <span className="min-w-0 flex-1 truncate font-display text-[12.5px] font-bold text-foreground">
-                        {ETIQUETA_SECCION[id]}
-                      </span>
-                      <span className={`shrink-0 text-[10.5px] tabular-nums ${faltan ? "font-semibold text-rojo/85" : "text-muted-foreground"}`}>
-                        {items.length === 0 ? "0" : faltan ? `${items.length - faltan}/${items.length}` : items.length}
-                      </span>
-                    </div>
-                  </foreignObject>
-                </g>
-
-                {items.map(({ item, y: yi }, i) => (
-                  <g key={i} className="group/nodo">
-                    <rect
-                      x={xItem} y={yi} width={W_ITEM} height={FILA} rx={7}
-                      className={`fill-background/70 ${item.vacio ? "stroke-rojo/45" : "stroke-border"}`}
-                      strokeWidth={1}
-                      strokeDasharray={item.vacio ? "3 3" : undefined}
+              <g key={id}>
+                <path
+                  d={codo(X_RAIZ + W_RAIZ, yRaiz + ALTO_RAIZ / 2, x + dx, y + dy + ALTO_SEC / 2)}
+                  stroke={color(tono, 0.62, 0.13, 0.85)}
+                  strokeWidth={2}
+                  fill="none"
+                />
+                <g transform={corrida ? `translate(${dx} ${dy})` : undefined}>
+                  {items.map(({ item, y: yi }, i) => (
+                    <path
+                      key={`l-${i}`}
+                      d={codo(x + W_SEC, y + ALTO_SEC / 2, xItem, yi + FILA / 2)}
+                      stroke={item.vacio ? "var(--rojo, #cb4433)" : color(tono, 0.62, 0.13, 0.6)}
+                      strokeOpacity={item.vacio ? 0.6 : 1}
+                      strokeWidth={1.5}
+                      strokeDasharray={item.vacio ? "5 5" : undefined}
+                      fill="none"
                     />
-                    <foreignObject x={xItem + 9} y={yi + 3} width={W_ITEM - 18} height={FILA - 6}>
+                  ))}
+                  <g
+                    onClick={() => { if (!editando && !recienMovido.current) onIr(id) }}
+                    onPointerDown={secAbajo(id)}
+                    onPointerMove={secMueve}
+                    onPointerUp={secArriba(id)}
+                    onPointerCancel={() => { moviendo.current = null; setMovimiento(null) }}
+                    className={editando ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
+                  >
+                    <rect
+                      x={x} y={y} width={W_SEC} height={ALTO_SEC} rx={10}
+                      fill={color(tono, 0.52, 0.14)}
+                      stroke={marcada ? "var(--rojo, #cb4433)" : elegida === id ? color(tono, 0.4, 0.14) : "none"}
+                      strokeWidth={2}
+                    />
+                    {favorita && (
+                      <foreignObject x={x - 6} y={y - 6} width={16} height={16}>
+                        <Star className="h-3.5 w-3.5 fill-kev-warning text-kev-warning" aria-label="Marcada" />
+                      </foreignObject>
+                    )}
+                    <foreignObject x={x + 12} y={y} width={W_SEC - 24} height={ALTO_SEC}>
                       <div className="flex h-full items-center gap-1.5">
-                        {item.estado && (
-                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${PUNTO[item.estado]}`} aria-label={ETIQUETA_ESTADO[item.estado]} />
-                        )}
-                        {editando ? (
-                          <input
-                            value={item.texto}
-                            onChange={(e) => editar((d) => { item.set(d, e.target.value); return d })}
-                            placeholder="Escribe aquí"
-                            className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-[12px] text-foreground outline-none transition-colors hover:bg-foreground/[0.05] focus:border-gold/45 focus:bg-gold/[0.06]"
-                          />
-                        ) : (
-                          <span
-                            onClick={() => onIr(id)}
-                            className="min-w-0 flex-1 cursor-pointer truncate text-[12px] text-muted-foreground"
-                          >
-                            {conPrime(item.texto, false)}
-                          </span>
-                        )}
-                        {item.vacio && !editando && (
-                          <span className="shrink-0 text-[9.5px] font-semibold uppercase tracking-wider text-rojo/75">falta</span>
-                        )}
-                        {editando && (
-                          <button
-                            type="button"
-                            onClick={() => editar((d) => { item.borrar(d); return d })}
-                            aria-label="Borrar"
-                            className="shrink-0 rounded p-0.5 text-muted-foreground/50 opacity-0 transition-opacity hover:text-rojo focus-visible:opacity-100 group-hover/nodo:opacity-100 max-md:opacity-60"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
+                        <span className="min-w-0 flex-1 truncate font-display text-[12.5px] font-bold text-white">
+                          {ETIQUETA_SECCION[id]}
+                        </span>
+                        <span className={`shrink-0 rounded-full bg-white/20 px-1.5 text-[10.5px] tabular-nums text-white ${faltan ? "font-semibold" : ""}`}>
+                          {items.length === 0 ? "0" : faltan ? `${items.length - faltan}/${items.length}` : items.length}
+                        </span>
                       </div>
                     </foreignObject>
                   </g>
-                ))}
 
-                {items.length === 0 && !editando && (
-                  <foreignObject x={xItem} y={yPrimero + 4} width={W_ITEM} height={FILA - 8}>
-                    <div className="flex h-full items-center text-[11.5px] text-muted-foreground/60">Sin definir todavía</div>
-                  </foreignObject>
-                )}
+                  {items.map(({ item, y: yi }, i) => (
+                    <g key={i} className="group/nodo">
+                      <rect
+                        x={xItem} y={yi} width={W_ITEM} height={FILA} rx={7}
+                        className="fill-background"
+                        stroke={item.vacio ? "var(--rojo, #cb4433)" : color(tono, 0.62, 0.13, 0.45)}
+                        strokeOpacity={item.vacio ? 0.5 : 1}
+                        strokeWidth={1}
+                        strokeDasharray={item.vacio ? "3 3" : undefined}
+                      />
+                      <foreignObject x={xItem + 9} y={yi + 3} width={W_ITEM - 18} height={FILA - 6}>
+                        <div className="flex h-full items-center gap-1.5">
+                          {item.estado && (
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${PUNTO[item.estado]}`} aria-label={ETIQUETA_ESTADO[item.estado]} />
+                          )}
+                          {editando ? (
+                            <input
+                              value={item.texto}
+                              onChange={(e) => editar((d) => { item.set(d, e.target.value); return d })}
+                              placeholder="Escribe aquí"
+                              className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-[12px] text-foreground outline-none transition-colors hover:bg-foreground/[0.05] focus:border-gold/45 focus:bg-gold/[0.06]"
+                            />
+                          ) : (
+                            <span onClick={() => onIr(id)} className="min-w-0 flex-1 cursor-pointer truncate text-[12px] text-foreground">
+                              {conPrime(item.texto, false)}
+                            </span>
+                          )}
+                          {item.vacio && !editando && (
+                            <span className="shrink-0 text-[9.5px] font-semibold uppercase tracking-wider text-rojo/75">falta</span>
+                          )}
+                          {editando && (
+                            <button
+                              type="button"
+                              onClick={() => editar((d) => { item.borrar(d); return d })}
+                              aria-label="Borrar"
+                              className="shrink-0 rounded p-0.5 text-muted-foreground/50 opacity-0 transition-opacity hover:text-rojo focus-visible:opacity-100 group-hover/nodo:opacity-100 max-md:opacity-60"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </foreignObject>
+                    </g>
+                  ))}
 
-                {/* Agregar: el último renglón del área. */}
-                {editando && (
-                  <foreignObject x={xItem} y={ultimo + FILA + AIRE} width={W_ITEM} height={30}>
-                    <button
-                      type="button"
-                      onClick={() => editar((d) => { agregar(d); return d })}
-                      className="flex h-[28px] w-full items-center gap-1.5 rounded-lg border border-dashed border-gold/40 px-2.5 text-[11.5px] text-gold transition-colors hover:border-gold hover:bg-gold/[0.07]"
-                    >
-                      <Plus className="h-3 w-3" /> Agregar
-                    </button>
-                  </foreignObject>
-                )}
+                  {items.length === 0 && !editando && (
+                    <foreignObject x={xItem} y={yPrimero + 4} width={W_ITEM} height={FILA - 8}>
+                      <div className="flex h-full items-center text-[11.5px] text-muted-foreground/60">Sin definir todavía</div>
+                    </foreignObject>
+                  )}
+
+                  {editando && (
+                    <foreignObject x={xItem} y={ultimo + FILA + AIRE} width={W_ITEM} height={30}>
+                      <button
+                        type="button"
+                        onClick={() => editar((d) => { agregar(d); return d })}
+                        className="flex h-[28px] w-full items-center gap-1.5 rounded-[7px] border border-dashed px-2.5 text-[11.5px] transition-colors hover:bg-foreground/[0.04]"
+                        style={{ borderColor: color(tono, 0.62, 0.13, 0.5), color: color(tono, 0.45, 0.13) }}
+                      >
+                        <Plus className="h-3 w-3" /> Agregar
+                      </button>
+                    </foreignObject>
+                  )}
+                </g>
               </g>
             )
           })}
