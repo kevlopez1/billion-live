@@ -7,6 +7,7 @@ import {
   Receipt, RefreshCw, Send, Sparkles,
 } from "lucide-react"
 import { PantallaClave } from "@/components/pantalla-clave"
+import { guardarClave, leerClave, olvidarClave } from "@/lib/clave"
 import type { Centro } from "@/lib/centro"
 
 // ──────────────────────────────────────────────────────────────
@@ -17,7 +18,6 @@ import type { Centro } from "@/lib/centro"
 // lee de las mismas fuentes que cada página.
 // ──────────────────────────────────────────────────────────────
 
-const K_CLAVE = "kev-centro-clave"
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`
 const num = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("es-BO"))
 
@@ -75,12 +75,14 @@ export default function CentroPage() {
       const r = await fetch("/api/centro", { headers: { authorization: `Bearer ${k}` }, cache: "no-store" })
       const j = await r.json().catch(() => ({}))
       if (!r.ok) {
-        try { sessionStorage.removeItem(K_CLAVE) } catch {}
-        if (!silencioso) setError(j?.error || "No se pudo entrar. Inténtalo de nuevo.")
+        if (!silencioso) {
+          olvidarClave()
+          setError(j?.error || "No se pudo entrar. Inténtalo de nuevo.")
+        }
         setClave(null)
         return
       }
-      try { sessionStorage.setItem(K_CLAVE, k) } catch {}
+      guardarClave(k)
       setDatos(j as Centro)
       setHora(new Date())
       setClave(k)
@@ -92,8 +94,7 @@ export default function CentroPage() {
   }, [])
 
   useEffect(() => {
-    let k: string | null = null
-    try { k = sessionStorage.getItem(K_CLAVE) } catch {}
+    const k = leerClave()
     if (k) cargar(k, true)
     else setCargando(false)
   }, [cargar])
