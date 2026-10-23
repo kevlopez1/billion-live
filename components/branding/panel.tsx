@@ -12,8 +12,6 @@ import {
 // manual a la forma que ese mapa entiende (lib/branding-arbol.ts).
 import { Diagrama } from "@/components/branding/diagrama"
 import { guardarClave, leerClave, olvidarClave } from "@/lib/clave"
-import { VistaPregunta } from "@/components/preguntas/pregunta"
-import { nuevaPregunta } from "@/lib/preguntas"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
@@ -143,9 +141,6 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   // Documento o mapa: los mismos datos, dos formas de mirarlos. El mapa no es
   // decoración — una rama vacía se ve desde lejos, y eso es lo que hay que ver.
   const [vista, setVista] = useState<"documento" | "mapa">("documento")
-  // Qué campo de qué pregunta se enfoca después de un Enter o de crear una.
-  // -1 como segundo valor es el título de la pregunta.
-  const [focoPregunta, setFocoPregunta] = useState<[number, number] | null>(null)
   const [nodoSel, setNodoSel] = useState<string>(idRama("personaje"))
 
   // La revisión de la IA.
@@ -351,9 +346,6 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   )
 
   const enUso = doc.redes.filter((r) => r.estado === "usamos").length
-  // Los documentos guardados antes de que existiera la sección no traen el
-  // campo: sin esto, abrir el manual viejo revienta al leer `.map`.
-  const preguntas = doc.preguntas ?? []
   const salidasDefinidas = doc.redes.filter((r) => r.estado === "usamos" && (r.salida?.pieza ?? "").trim()).length
   // El índice lateral lleva su propio plegado por dentro, así que aquí no va
   // ninguno: este árbol es solo la forma del manual.
@@ -1256,69 +1248,6 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
               )}
             </section>
           ))}
-
-          {/* ── Las preguntas ──
-              El método que Kev ya practica: una pregunta abierta y mínimo
-              veinte respuestas. Va dentro del manual y no en una página
-              aparte porque la respuesta número 17 a "cómo conseguimos 10
-              millones de vistas" ES contenido: termina siendo un formato o
-              un video en cola.
-
-              Las que llevan nombres de personas y montos NO van aquí:
-              /branding lo lee cualquiera que tenga la dirección. Esas viven
-              en /preguntas, que pide clave hasta para leer. */}
-          <section>
-            <Titulo
-              id="preguntas"
-              emoji="❓"
-              numero={`${preguntas.length} ${preguntas.length === 1 ? "pregunta" : "preguntas"}`}
-            >
-              Las preguntas
-            </Titulo>
-            <p className="mb-6 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-              Una pregunta, mínimo veinte respuestas. Las primeras cinco ya las sabías antes de sentarte;
-              el ejercicio es llegar al tercer tramo.
-            </p>
-
-            <div className="space-y-12">
-              {preguntas.map((p, i) => (
-                <VistaPregunta
-                  key={p.id}
-                  pregunta={p}
-                  editando={editando}
-                  foco={focoPregunta?.[0] === i ? focoPregunta[1] : null}
-                  setFoco={(f) => setFocoPregunta(f === null ? null : [i, f])}
-                  onChange={(sig) =>
-                    editar((d) => ({ ...d, preguntas: (d.preguntas ?? []).map((x, j) => (j === i ? sig : x)) }))
-                  }
-                  onBorrar={() =>
-                    editar((d) => ({ ...d, preguntas: (d.preguntas ?? []).filter((_, j) => j !== i) }))
-                  }
-                />
-              ))}
-              {preguntas.length === 0 && (
-                <p className="text-[13px] text-muted-foreground/60">
-                  Ninguna pregunta abierta todavía.
-                </p>
-              )}
-            </div>
-
-            {editando && (
-              <Agregar
-                onClick={() => {
-                  editar((d) => ({ ...d, preguntas: [...(d.preguntas ?? []), nuevaPregunta()] }))
-                  setFocoPregunta([preguntas.length, -1])
-                }}
-                texto="Agregar pregunta"
-              />
-            )}
-
-            <p className="mt-8 text-[12px] text-muted-foreground/70">
-              Las preguntas con nombres de personas o montos van en{" "}
-              <Link href="/preguntas" className="font-semibold text-gold hover:underline">/preguntas</Link>,
-              que pide clave hasta para leer. Esta página no.
-            </p>
-          </section>
 
           <p className="border-t border-border pt-6 text-[12px] leading-relaxed text-muted-foreground/70">
             {actualizado

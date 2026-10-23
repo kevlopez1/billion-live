@@ -54,7 +54,7 @@ function Cifra({ valor, etiqueta, nota }: { valor: string; etiqueta: string; not
 const HERRAMIENTAS = [
   { href: "/branding", nombre: "Manual de marca", icono: Sparkles, nota: "Formatos, edición, preguntas del reto" },
   { href: "/kevlopez_proyectos", nombre: "Proyectos", icono: MapIcon, nota: "Mapa, notas y tareas" },
-  { href: "/preguntas", nombre: "Preguntas privadas", icono: CircleHelp, nota: "Las de dinero y personas" },
+  { href: "/preguntas", nombre: "Preguntas", icono: CircleHelp, nota: "Una pregunta, mínimo veinte respuestas" },
   { href: "/publicar", nombre: "Publicar", icono: Send, nota: "Instagram y Facebook a la vez" },
   { href: "/control", nombre: "Contador", icono: Gauge, nota: "Actualizar lo recaudado" },
   { href: "/comprobantes", nombre: "Comprobantes", icono: Receipt, nota: "La prueba pública" },
@@ -212,7 +212,6 @@ export default function CentroPage() {
               <div key={i}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-1.5 text-[13px]">
-                    {p.privada && <Lock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="Privada" />}
                     <span className="truncate">{p.pregunta || "Sin escribir"}</span>
                   </span>
                   <span className="shrink-0 text-[12.5px] font-semibold tabular-nums">{p.van} / {p.meta}</span>

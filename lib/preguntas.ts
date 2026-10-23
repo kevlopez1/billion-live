@@ -85,9 +85,10 @@ export function valido(x: unknown): x is Tablero {
 }
 
 // ── Semilla ──
-// Las de dinero, con sus propias respuestas y su propio estado (lo que ya
-// escribió está marcado como hecho). Las del reto NO están aquí: viven en la
-// sección "Las preguntas" del manual, que es donde Kev las pidió.
+// Todas las preguntas viven aquí, aparte del manual. Kev: "eso de las
+// preguntas, ponlo como otra sección muy aparte". Las de dinero traen sus
+// propias respuestas y lo que ya hizo marcado; las del reto van vacías a
+// propósito: contestarlas es el ejercicio.
 export function semilla(): Tablero {
   return {
     preguntas: [
@@ -122,6 +123,33 @@ export function semilla(): Tablero {
           { texto: "Pensar en juntar o unir cosas" },
         ],
       },
+      {
+        id: "vistas-mes",
+        pregunta: "¿Cómo conseguimos 10 millones de vistas este mes?",
+        meta: META_POR_DEFECTO,
+        plazo: "este mes",
+        creada: "2026-10-19",
+        respuestas: [{ texto: "" }],
+      },
+      {
+        id: "inversores-mes",
+        pregunta: "¿Cómo cerramos 10 inversores este mes?",
+        meta: META_POR_DEFECTO,
+        plazo: "este mes",
+        creada: "2026-10-19",
+        respuestas: [{ texto: "" }],
+      },
     ],
   }
+}
+
+/** Las preguntas que alguna vez se escribieron dentro del manual (cuando
+ *  "Las preguntas" era una sección de /branding) se suman al tablero, una sola
+ *  vez cada una. Si el tablero ya tiene una con ese id, gana la del tablero:
+ *  es la que se siguió editando. Así no se pierde lo que se contestó allá. */
+export function sumarDelManual(t: Tablero, delManual: Pregunta[] | undefined): Tablero {
+  if (!delManual?.length) return t
+  const ya = new Set(t.preguntas.map((p) => p.id))
+  const nuevas = delManual.filter((p) => !ya.has(p.id))
+  return nuevas.length ? { ...t, preguntas: [...t.preguntas, ...nuevas] } : t
 }

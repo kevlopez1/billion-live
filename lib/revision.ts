@@ -9,7 +9,7 @@
 
 export const SECCIONES = [
   "meta", "personaje", "norte", "formatos", "edicion",
-  "redes", "produccion", "enCola", "pendientes", "hoy", "futuro", "preguntas",
+  "redes", "produccion", "enCola", "pendientes", "hoy", "futuro",
 ] as const
 
 export type Seccion = (typeof SECCIONES)[number]
@@ -53,7 +53,6 @@ export const ETIQUETA_SECCION: Record<Seccion, string> = {
   pendientes: "Pendientes",
   hoy: "Lo de hoy",
   futuro: "Lo que viene",
-  preguntas: "Las preguntas",
 }
 
 // El emoji de cada sección. Vivía copiado en dos archivos (el mapa y el árbol),
@@ -62,7 +61,6 @@ export const ETIQUETA_SECCION: Record<Seccion, string> = {
 export const ICONO_SECCION: Record<Seccion, string> = {
   meta: "🏁", personaje: "👤", norte: "🧭", formatos: "🎬", edicion: "✂️",
   redes: "📡", produccion: "👕", enCola: "🎯", pendientes: "📌", hoy: "✨", futuro: "📈",
-  preguntas: "❓",
 }
 
 // Alta primero: si solo lee tres, que sean las tres que importan.
@@ -88,5 +86,4 @@ export const ANCLA: Record<Seccion, string> = {
   pendientes: "cola",
   hoy: "hoy",
   futuro: "futuro",
-  preguntas: "preguntas",
 }

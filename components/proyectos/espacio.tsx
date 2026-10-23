@@ -1,13 +1,13 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import Link from "next/link"
 import { BookOpen, Check, CircleHelp, CloudOff, Loader2, Network, NotebookPen, Plus, X } from "lucide-react"
 import { Arbol } from "@/components/proyectos/arbol"
 import { Mapa } from "@/components/proyectos/mapa"
 import { Pagina } from "@/components/proyectos/pagina"
 import { PantallaClave } from "@/components/pantalla-clave"
 import { Panel } from "@/components/branding/panel"
+import { Tablero as TableroPreguntas } from "@/components/preguntas/tablero"
 import { useEspacio } from "@/lib/use-espacio"
 import {
   MAX_ESPACIOS, RAIZ, espacioNuevo, iconoDe, migrar, nodoNuevo, nombreDe, subarbol,
@@ -39,6 +39,9 @@ export function Espacio() {
   // otros (un documento con forma fija, en /api/branding). Kev: "lo de
   // proyectos y lo de branding hay que centralizarlo en lo mismo".
   const [enManual, setEnManual] = useState(false)
+  // Las preguntas, aparte del manual. Kev: "ponlo como otra sección muy aparte".
+  const [enPreguntas, setEnPreguntas] = useState(false)
+  const enOtro = enManual || enPreguntas
 
   const tablero = useMemo(() => (crudo ? migrar(crudo) : null), [crudo])
   const esp = tablero?.espacios.find((e) => e.id === espacioId) ?? tablero?.espacios[0] ?? null
@@ -184,14 +187,8 @@ export function Espacio() {
           </h1>
         </div>
 
-        <Link
-          href="/preguntas"
-          className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground sm:flex"
-        >
-          <CircleHelp className="h-3.5 w-3.5" /> Preguntas
-        </Link>
 
-        {!enManual && <div role="tablist" aria-label="Vista" className="flex rounded-full border bg-card/70 p-0.5 backdrop-blur-md">
+        {!enOtro && <div role="tablist" aria-label="Vista" className="flex rounded-full border bg-card/70 p-0.5 backdrop-blur-md">
           {([["mapa", "Mapa", Network], ["notas", "Notas", NotebookPen]] as const).map(([v, t, Icono]) => (
             <button
               key={v}
@@ -206,7 +203,7 @@ export function Espacio() {
           ))}
         </div>}
 
-        {!enManual && <button
+        {!enOtro && <button
           type="button"
           onClick={() => estado === "error" || estado === "sucio" ? guardar() : undefined}
           title={estado === "error" ? "Reintentar" : undefined}
@@ -226,7 +223,7 @@ export function Espacio() {
         <div className="flex items-center gap-1.5 overflow-x-auto px-4 pb-2 sm:px-6">
           <button
             type="button"
-            onClick={() => setEnManual(true)}
+            onClick={() => { setEnManual(true); setEnPreguntas(false) }}
             aria-pressed={enManual}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               enManual ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
@@ -234,9 +231,19 @@ export function Espacio() {
           >
             <BookOpen className="h-3.5 w-3.5" /> Manual de marca
           </button>
+          <button
+            type="button"
+            onClick={() => { setEnPreguntas(true); setEnManual(false) }}
+            aria-pressed={enPreguntas}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              enPreguntas ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
+            }`}
+          >
+            <CircleHelp className="h-3.5 w-3.5" /> Preguntas
+          </button>
           <span className="mx-1 h-4 w-px shrink-0 bg-border" aria-hidden />
           {tablero.espacios.map((e) => {
-            const activo = !enManual && e.id === esp.id
+            const activo = !enOtro && e.id === esp.id
             return (
               <div
                 key={e.id}
@@ -246,7 +253,7 @@ export function Espacio() {
               >
                 <button
                   type="button"
-                  onClick={() => { setEnManual(false); setEspacioId(e.id); setSel(RAIZ); setCajon(false) }}
+                  onClick={() => { setEnManual(false); setEnPreguntas(false); setEspacioId(e.id); setSel(RAIZ); setCajon(false) }}
                   aria-pressed={activo}
                   className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium"
                 >
@@ -292,6 +299,10 @@ export function Espacio() {
       {enManual ? (
         <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background px-5 sm:mx-6 sm:mb-6">
           <Panel incrustado />
+        </main>
+      ) : enPreguntas ? (
+        <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background sm:mx-6 sm:mb-6">
+          <TableroPreguntas incrustado />
         </main>
       ) : vista === "mapa" ? (
         <main className="relative mx-3 mb-3 flex-1 overflow-hidden rounded-[2rem] border bg-card/40 sm:mx-6 sm:mb-6">
