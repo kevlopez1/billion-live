@@ -16,7 +16,8 @@ import { llenas, nuevaPregunta, valido, type Pregunta, type Tablero as Doc } fro
 // hasta para leer y /branding no.
 // ──────────────────────────────────────────────────────────────
 
-export function Tablero() {
+/** `incrustado`: dentro del espacio de trabajo, que ya dice dónde se está. */
+export function Tablero({ incrustado = false }: { incrustado?: boolean } = {}) {
   const { clave, entrada, setEntrada, error, cargando, doc, cambiar, estado, estadoTexto, entrar, nube } =
     useEspacio<Doc>({ ruta: "/api/preguntas", llave: "kev-preguntas", valido })
 
@@ -55,9 +56,11 @@ export function Tablero() {
   return (
     <main className="mx-auto w-full max-w-5xl px-5 pb-20 pt-7">
       <header className="mb-7 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="font-display text-xl font-semibold tracking-tight">
-          Preguntas <span className="font-serif-display italic font-normal">abiertas</span>
-        </h1>
+        {!incrustado && (
+          <h1 className="font-display text-xl font-semibold tracking-tight">
+            Preguntas <span className="font-serif-display italic font-normal">abiertas</span>
+          </h1>
+        )}
         <span className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
           {estado === "ok" && nube !== false && <Check className="h-3 w-3" />}
           {nube === false && <CloudOff className="h-3 w-3" />}

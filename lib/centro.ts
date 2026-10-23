@@ -16,7 +16,7 @@ import {
   CHALLENGE_DEADLINE, CHALLENGE_LAUNCH, CHALLENGE_RECORD_DEADLINE, CHALLENGE_TARGET, RECAUDADO, montoConfiable,
 } from "@/lib/contador"
 import { CONTENIDO_BASE, type Contenido } from "@/lib/branding"
-import { llenas, semilla as semillaPreguntas, valido as preguntasValidas } from "@/lib/preguntas"
+import { llenas, semilla as semillaPreguntas, sumarDelManual, valido as preguntasValidas } from "@/lib/preguntas"
 import { avanceTotal, migrar } from "@/lib/proyectos"
 import { configurado as metaConfigurado, resumenRedes, type Redes } from "@/lib/meta"
 import { getAdminClient } from "@/lib/supabase-admin"
@@ -40,7 +40,7 @@ export type Centro = {
   dinero: { comprobantes: number; totalBs: number; entidades: number; desde: string; hasta: string }
   trabajo: {
     tareas: { hechas: number; total: number } | null
-    preguntas: { pregunta: string; van: number; meta: number; privada: boolean }[]
+    preguntas: { pregunta: string; van: number; meta: number }[]
     manualPorDefinir: string[]
   }
   contenido: { publicaciones: number; vistas: number; ultima: string | null } | null
@@ -86,12 +86,14 @@ export async function centro(ahora = Date.now()): Promise<Centro> {
   let tareas: Centro["trabajo"]["tareas"] = null
   const preguntas: Centro["trabajo"]["preguntas"] = []
 
+  let q: { data: { contenido: unknown } | null; error: unknown } | null = null
   if (admin) {
-    const [b, p, q] = await Promise.all([
+    const [b, p, qq] = await Promise.all([
       admin.from("branding").select("contenido").eq("id", "kev-project-gta").maybeSingle(),
       admin.from("proyectos_kev").select("contenido").eq("id", "kev-lopez").maybeSingle(),
       admin.from("preguntas").select("contenido").eq("id", "kev-lopez").maybeSingle(),
     ])
+    q = qq
     if (b.data?.contenido) manual = b.data.contenido as Contenido
     const tablero = migrar(p.data?.contenido)
     if (tablero) {
@@ -105,14 +107,13 @@ export async function centro(ahora = Date.now()): Promise<Centro> {
     } else if (p.error) {
       avisos.push("Los proyectos todavía no tienen tabla: corre supabase/correr-todo.sql.")
     }
-    const privadas = preguntasValidas(q.data?.contenido) ? q.data!.contenido : q.error ? null : semillaPreguntas()
-    if (q.error) avisos.push("Las preguntas privadas todavía no tienen tabla: corre supabase/correr-todo.sql.")
-    for (const x of privadas?.preguntas ?? []) {
-      preguntas.push({ pregunta: x.pregunta, van: llenas(x), meta: x.meta, privada: true })
-    }
+    if (q.error) avisos.push("Las preguntas todavía no tienen tabla: corre supabase/correr-todo.sql.")
   }
-  for (const x of manual.preguntas ?? []) {
-    preguntas.push({ pregunta: x.pregunta, van: llenas(x), meta: x.meta, privada: false })
+  // Las preguntas son un espacio aparte; se suman las que alguna vez se
+  // contestaron dentro del manual, igual que hace /api/preguntas.
+  const base = admin && preguntasValidas(q?.data?.contenido) ? q!.data!.contenido : semillaPreguntas()
+  for (const x of sumarDelManual(base, manual.preguntas).preguntas) {
+    preguntas.push({ pregunta: x.pregunta, van: llenas(x), meta: x.meta })
   }
 
   // Lo que el propio manual marca como sin definir.

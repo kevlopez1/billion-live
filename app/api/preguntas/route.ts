@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { autorizado, rechazo } from "@/lib/auth-admin"
 import { getAdminClient } from "@/lib/supabase-admin"
-import { semilla, valido, type Tablero } from "@/lib/preguntas"
+import { semilla, sumarDelManual, valido, type Pregunta, type Tablero } from "@/lib/preguntas"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -23,23 +23,24 @@ export async function GET(req: Request) {
     return NextResponse.json({ configurado: false, motivo: "sin-credenciales", contenido: semilla() })
   }
 
-  const { data, error } = await admin
-    .from("preguntas")
-    .select("contenido, actualizado_en")
-    .eq("id", ID)
-    .maybeSingle()
+  const [{ data, error }, manual] = await Promise.all([
+    admin.from("preguntas").select("contenido, actualizado_en").eq("id", ID).maybeSingle(),
+    // Lo que se haya contestado cuando las preguntas vivían en el manual.
+    admin.from("branding").select("contenido").eq("id", "kev-project-gta").maybeSingle(),
+  ])
+  const delManual = (manual.data?.contenido as { preguntas?: Pregunta[] } | null)?.preguntas
 
   if (error) {
     console.error("[api/preguntas] lectura fallida:", error.message)
-    return NextResponse.json({ configurado: false, motivo: "sin-tabla", contenido: semilla() })
+    return NextResponse.json({ configurado: false, motivo: "sin-tabla", contenido: sumarDelManual(semilla(), delManual) })
   }
   if (!data) {
-    return NextResponse.json({ configurado: true, guardado: false, contenido: semilla() })
+    return NextResponse.json({ configurado: true, guardado: false, contenido: sumarDelManual(semilla(), delManual) })
   }
   return NextResponse.json({
     configurado: true,
     guardado: true,
-    contenido: data.contenido as Tablero,
+    contenido: sumarDelManual(data.contenido as Tablero, delManual),
     actualizado: data.actualizado_en,
   })
 }
