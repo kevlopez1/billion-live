@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
-  AlertTriangle, Check, CircleHelp, Undo2, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2,
+  AlertTriangle, Check, CircleHelp, Trash2, Undo2, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2,
   Lock, Network, NotebookPen, Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp,
   User, X,
 } from "lucide-react"
@@ -12,6 +12,7 @@ import {
 // manual a la forma que ese mapa entiende (lib/branding-arbol.ts).
 import { Diagrama } from "@/components/branding/diagrama"
 import { guardarClave, leerClave, olvidarClave } from "@/lib/clave"
+import { devolver, dondeEstaba, type Borrado } from "@/lib/papelera"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
@@ -214,6 +215,33 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
     setEstado(JSON.stringify(anterior) === original.current ? "limpio" : "sucio")
     setHayPasado(pasado.current.length > 0)
   }, [])
+
+  // ── La papelera ──
+  // Lo que se borró antes de abrir la página: "Deshacer" no llega ahí, la base
+  // sí. Se trae renglón por renglón y cada uno vuelve solo, a su lugar.
+  const [verPapelera, setVerPapelera] = useState(false)
+  const [borrados, setBorrados] = useState<Borrado[] | null>(null)
+  const [errorPapelera, setErrorPapelera] = useState("")
+
+  const abrirPapelera = async () => {
+    setVerPapelera((v) => !v)
+    if (verPapelera) return
+    setBorrados(null)
+    setErrorPapelera("")
+    try {
+      const r = await fetch("/api/branding/papelera", { headers: { authorization: `Bearer ${clave}` }, cache: "no-store" })
+      const j = await r.json()
+      if (!r.ok) { setErrorPapelera(j.error || "No se pudo abrir la papelera."); return }
+      setBorrados(j.borrados ?? [])
+    } catch {
+      setErrorPapelera("Error de red.")
+    }
+  }
+
+  const devolverRenglon = (b: Borrado) => {
+    editar((d) => devolver(d, b))
+    setBorrados((xs) => (xs ? xs.filter((x) => x !== b) : xs))
+  }
 
   // ⌘Z / Ctrl+Z, salvo dentro de una caja de texto: ahí el navegador ya
   // deshace las letras, y quitarle eso sería peor.
@@ -472,6 +500,17 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
                   <Undo2 className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Deshacer</span>
                 </button>
+                <button
+                  onClick={abrirPapelera}
+                  aria-pressed={verPapelera}
+                  title="Lo que se borró del manual, para devolverlo"
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
+                    verPapelera ? "border-foreground/30 text-foreground" : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Papelera</span>
+                </button>
                 {(estado === "sucio" || estado === "error") && (
                   <button
                     onClick={guardar}
@@ -499,6 +538,41 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
             )}
           </div>
         </div>
+
+        {verPapelera && editando && (
+          <div className="mx-auto mt-3 max-w-6xl rounded-2xl border border-border bg-card/70 p-4">
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <span className="text-[13px] font-semibold">Lo que se borró</span>
+              <span className="text-[11.5px] text-muted-foreground">Cada renglón vuelve solo a su lugar; lo demás no se toca.</span>
+            </div>
+            {errorPapelera ? (
+              <p className="text-[12.5px] text-rojo">{errorPapelera}</p>
+            ) : borrados === null ? (
+              <p className="flex items-center gap-2 text-[12.5px] text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando en las versiones guardadas…</p>
+            ) : borrados.length === 0 ? (
+              <p className="text-[12.5px] text-muted-foreground">No hay nada borrado: todo lo que estuvo guardado sigue en el manual.</p>
+            ) : (
+              <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+                {borrados.map((b, i) => (
+                  <li key={i} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-foreground/[0.04]">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13.5px]">{b.texto}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {dondeEstaba(b)} · estaba el {new Date(b.visto).toLocaleString("es-BO", { dateStyle: "medium", timeStyle: "short" })}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => devolverRenglon(b)}
+                      className="shrink-0 rounded-lg bg-foreground px-3 py-1.5 text-[12px] font-semibold text-background"
+                    >
+                      Devolver
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {pidiendoClave && (
           <div className="mx-auto mt-2.5 flex max-w-6xl flex-wrap items-center gap-2">
