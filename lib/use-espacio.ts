@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { guardarClave, leerClave, olvidarClave } from "@/lib/clave"
 
 // ──────────────────────────────────────────────────────────────
 // EL ESPACIO PRIVADO DE TRABAJO, EN UN SOLO LUGAR
@@ -15,7 +16,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 //  1. Nada se pierde. Cada cambio se copia al navegador al instante y se
 //     manda a la base con retraso. Si la base no está lista o no hay red, el
 //     trabajo queda en el navegador y la barra lo dice.
-//  2. La clave vive solo en sessionStorage: se borra al cerrar la pestaña.
+//  2. La clave es la misma para todas las páginas privadas y se pide una sola
+//     vez por dispositivo (lib/clave.ts).
 // ──────────────────────────────────────────────────────────────
 
 export type EstadoEspacio = "limpio" | "sucio" | "guardando" | "ok" | "error"
@@ -30,7 +32,6 @@ type Opciones<T> = {
 }
 
 export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
-  const K_CLAVE = `${llave}-clave`
   const K_LOCAL = `${llave}-doc`
 
   const [clave, setClave] = useState<string | null>(null)
@@ -74,12 +75,16 @@ export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
       const r = await fetch(ruta, { headers: { authorization: `Bearer ${k}` }, cache: "no-store" })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) {
-        try { sessionStorage.removeItem(K_CLAVE) } catch {}
-        if (!silencioso) setError(d?.error || "No se pudo entrar. Inténtalo de nuevo.")
+        // Una clave que se escribió mal se olvida. La que ya estaba guardada
+        // NO: puede ser la del equipo, que sirve para el manual aunque aquí no.
+        if (!silencioso) {
+          olvidarClave()
+          setError(d?.error || "No se pudo entrar. Inténtalo de nuevo.")
+        }
         setClave(null)
         return
       }
-      try { sessionStorage.setItem(K_CLAVE, k) } catch {}
+      guardarClave(k)
       setNube(!!d.configurado)
       const local = leerLocal()
       // Lo que quedó sin mandar en este navegador manda sobre lo de la base.
@@ -97,14 +102,13 @@ export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
     } finally {
       setCargando(false)
     }
-  }, [ruta, K_CLAVE, leerLocal, escribirLocal, valido])
+  }, [ruta, leerLocal, escribirLocal, valido])
 
   useEffect(() => {
-    let guardada: string | null = null
-    try { guardada = sessionStorage.getItem(K_CLAVE) } catch {}
+    const guardada = leerClave()
     if (guardada) entrar(guardada, true)
     else setCargando(false)
-  }, [entrar, K_CLAVE])
+  }, [entrar])
 
   // ── Cambios y autoguardado ──
   const cambiar = useCallback((f: (d: T) => T) => {

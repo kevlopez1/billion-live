@@ -11,6 +11,7 @@ import {
 // parecido acaba divergiendo del primero; esto se alimenta traduciendo el
 // manual a la forma que ese mapa entiende (lib/branding-arbol.ts).
 import { Diagrama } from "@/components/branding/diagrama"
+import { guardarClave, leerClave, olvidarClave } from "@/lib/clave"
 import { VistaPregunta } from "@/components/preguntas/pregunta"
 import { nuevaPregunta } from "@/lib/preguntas"
 import { Arbol } from "@/components/proyectos/arbol"
@@ -60,9 +61,10 @@ const COLOR_ESTADO: Record<Estado, string> = {
 
 type Guardado = "limpio" | "sucio" | "guardando" | "ok" | "error"
 
-const K_CLAVE = "kev-admin-clave"
 
-export function Panel() {
+/** `incrustado`: dentro del espacio de trabajo de Kev. Ahí sobran los enlaces
+ *  a Proyectos y a Preguntas: el espacio de trabajo ya los tiene arriba. */
+export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   const [doc, setDoc] = useState<Contenido>(CONTENIDO_BASE)
   const [cargando, setCargando] = useState(true)
   const [configurado, setConfigurado] = useState<boolean | null>(null)
@@ -83,20 +85,20 @@ export function Panel() {
   // página es una hoja donde se escribe directo. "Bloquear" la olvida.
   useEffect(() => {
     try {
-      const k = localStorage.getItem(K_CLAVE)
+      const k = leerClave()
       if (k) { setClave(k); setEditando(true) }
     } catch {}
   }, [])
 
-  const olvidarClave = () => {
-    try { localStorage.removeItem(K_CLAVE) } catch {}
+  const bloquear = () => {
+    olvidarClave()
     setClave("")
     setEditando(false)
   }
 
   const entrarConClave = () => {
     if (!clave) return
-    try { localStorage.setItem(K_CLAVE, clave) } catch {}
+    guardarClave(clave)
     setPidiendoClave(false)
     setEditando(true)
   }
@@ -229,7 +231,7 @@ export function Panel() {
         setEstado("error")
         setMensaje(j.error || "No se pudo guardar.")
         if (r.status === 401) {
-          try { localStorage.removeItem(K_CLAVE) } catch {}
+          olvidarClave()
           setPidiendoClave(true)
         }
         return
@@ -378,12 +380,16 @@ export function Panel() {
 
           {/* Las otras dos páginas privadas. Sin esto no se llega a ellas más
               que escribiendo la dirección a mano, y entonces no existen. */}
-          <Link href="/preguntas" className="flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground">
+          {!incrustado && (
+            <Link href="/preguntas" className="flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground">
             <CircleHelp className="h-3 w-3" /> Preguntas
           </Link>
-          <Link href="/kevlopez_proyectos" className="hidden items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground sm:flex">
-            <NotebookPen className="h-3 w-3" /> Proyectos
-          </Link>
+          )}
+          {!incrustado && (
+            <Link href="/kevlopez_proyectos" className="hidden items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground sm:flex">
+              <NotebookPen className="h-3 w-3" /> Proyectos
+            </Link>
+          )}
 
           {estado === "sucio" && (
             <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold">Sin guardar</span>
@@ -438,7 +444,7 @@ export function Panel() {
                   </button>
                 )}
                 <button
-                  onClick={olvidarClave}
+                  onClick={bloquear}
                   title="Deja de escribir y olvida la clave en este dispositivo"
                   aria-label="Bloquear"
                   className="inline-flex items-center gap-1.5 rounded-xl border border-border px-2.5 py-1.5 text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"

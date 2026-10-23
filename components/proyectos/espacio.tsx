@@ -2,11 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react"
 import Link from "next/link"
-import { Check, CircleHelp, CloudOff, Loader2, Network, NotebookPen, Plus, X } from "lucide-react"
+import { BookOpen, Check, CircleHelp, CloudOff, Loader2, Network, NotebookPen, Plus, X } from "lucide-react"
 import { Arbol } from "@/components/proyectos/arbol"
 import { Mapa } from "@/components/proyectos/mapa"
 import { Pagina } from "@/components/proyectos/pagina"
 import { PantallaClave } from "@/components/pantalla-clave"
+import { Panel } from "@/components/branding/panel"
 import { useEspacio } from "@/lib/use-espacio"
 import {
   MAX_ESPACIOS, RAIZ, espacioNuevo, iconoDe, migrar, nodoNuevo, nombreDe, subarbol,
@@ -34,6 +35,10 @@ export function Espacio() {
   const [vista, setVista] = useState<Vista>("mapa")
   const [cajon, setCajon] = useState(false)
   const [espacioId, setEspacioId] = useState<string | null>(null)
+  // El Manual de marca vive aquí como el primer espacio, aunque sus datos son
+  // otros (un documento con forma fija, en /api/branding). Kev: "lo de
+  // proyectos y lo de branding hay que centralizarlo en lo mismo".
+  const [enManual, setEnManual] = useState(false)
 
   const tablero = useMemo(() => (crudo ? migrar(crudo) : null), [crudo])
   const esp = tablero?.espacios.find((e) => e.id === espacioId) ?? tablero?.espacios[0] ?? null
@@ -175,7 +180,7 @@ export function Espacio() {
       <header className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="min-w-0">
           <h1 className="font-display truncate text-base font-semibold tracking-tight sm:text-lg">
-            Proyectos de <span className="font-serif-display italic font-normal">Kev López</span>
+            Trabajo de <span className="font-serif-display italic font-normal">Kev López</span>
           </h1>
         </div>
 
@@ -186,7 +191,7 @@ export function Espacio() {
           <CircleHelp className="h-3.5 w-3.5" /> Preguntas
         </Link>
 
-        <div role="tablist" aria-label="Vista" className="flex rounded-full border bg-card/70 p-0.5 backdrop-blur-md">
+        {!enManual && <div role="tablist" aria-label="Vista" className="flex rounded-full border bg-card/70 p-0.5 backdrop-blur-md">
           {([["mapa", "Mapa", Network], ["notas", "Notas", NotebookPen]] as const).map(([v, t, Icono]) => (
             <button
               key={v}
@@ -199,9 +204,9 @@ export function Espacio() {
               <Icono className="h-3.5 w-3.5" /> {t}
             </button>
           ))}
-        </div>
+        </div>}
 
-        <button
+        {!enManual && <button
           type="button"
           onClick={() => estado === "error" || estado === "sucio" ? guardar() : undefined}
           title={estado === "error" ? "Reintentar" : undefined}
@@ -212,15 +217,26 @@ export function Espacio() {
             : estado === "sucio" ? <span className="h-2 w-2 rounded-full bg-kev-warning" />
             : <Check className="h-3.5 w-3.5" />}
           <span className="hidden max-w-[16rem] truncate sm:inline">{estadoTexto}</span>
-        </button>
+        </button>}
       </header>
 
       {/* ── Los espacios ── Varios tableros, no uno solo. Cada uno con su
           propio árbol y sus propios trazos. */}
       {tablero && (
         <div className="flex items-center gap-1.5 overflow-x-auto px-4 pb-2 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setEnManual(true)}
+            aria-pressed={enManual}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              enManual ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
+            }`}
+          >
+            <BookOpen className="h-3.5 w-3.5" /> Manual de marca
+          </button>
+          <span className="mx-1 h-4 w-px shrink-0 bg-border" aria-hidden />
           {tablero.espacios.map((e) => {
-            const activo = e.id === esp.id
+            const activo = !enManual && e.id === esp.id
             return (
               <div
                 key={e.id}
@@ -230,7 +246,7 @@ export function Espacio() {
               >
                 <button
                   type="button"
-                  onClick={() => { setEspacioId(e.id); setSel(RAIZ); setCajon(false) }}
+                  onClick={() => { setEnManual(false); setEspacioId(e.id); setSel(RAIZ); setCajon(false) }}
                   aria-pressed={activo}
                   className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium"
                 >
@@ -273,7 +289,11 @@ export function Espacio() {
         </div>
       )}
 
-      {vista === "mapa" ? (
+      {enManual ? (
+        <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background px-5 sm:mx-6 sm:mb-6">
+          <Panel incrustado />
+        </main>
+      ) : vista === "mapa" ? (
         <main className="relative mx-3 mb-3 flex-1 overflow-hidden rounded-[2rem] border bg-card/40 sm:mx-6 sm:mb-6">
           <Mapa
             doc={doc}
