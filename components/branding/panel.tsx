@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
-  AlertTriangle, Check, CircleHelp, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2,
+  AlertTriangle, Check, CircleHelp, Undo2, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2,
   Lock, Network, NotebookPen, Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp,
   User, X,
 } from "lucide-react"
@@ -184,14 +184,49 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   // Cambiar algo marca el documento como sucio. Se compara el JSON entero
   // en vez de llevar un flag por campo: son decenas de campos y un flag
   // olvidado es un cambio que se pierde sin avisar.
+  // ── Deshacer ──
+  // Kev borró una fortaleza sin querer y no había cómo volver. Cada cambio
+  // deja aquí la versión de antes (las últimas 60); "Deshacer" o ⌘Z vuelven
+  // un paso. Vive en la memoria de la pestaña: para ir más atrás está el
+  // historial de la base, que guarda una copia en cada guardado.
+  const pasado = useRef<Contenido[]>([])
+  const [hayPasado, setHayPasado] = useState(false)
+
   const editar = useCallback((fn: (d: Contenido) => Contenido) => {
     setDoc((d) => {
       const nuevo = fn(structuredClone(d))
+      if (pasado.current.at(-1) !== d) {
+        pasado.current.push(d)
+        if (pasado.current.length > 60) pasado.current.shift()
+      }
       docActual.current = nuevo
       setEstado(JSON.stringify(nuevo) === original.current ? "limpio" : "sucio")
       return nuevo
     })
+    setHayPasado(true)
   }, [])
+
+  const deshacer = useCallback(() => {
+    const anterior = pasado.current.pop()
+    if (!anterior) return
+    setDoc(anterior)
+    docActual.current = anterior
+    setEstado(JSON.stringify(anterior) === original.current ? "limpio" : "sucio")
+    setHayPasado(pasado.current.length > 0)
+  }, [])
+
+  // ⌘Z / Ctrl+Z, salvo dentro de una caja de texto: ahí el navegador ya
+  // deshace las letras, y quitarle eso sería peor.
+  useEffect(() => {
+    const h = (e: globalThis.KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.key.toLowerCase() !== "z") return
+      if ((document.activeElement as HTMLElement | null)?.closest("textarea, input, [contenteditable]")) return
+      e.preventDefault()
+      deshacer()
+    }
+    window.addEventListener("keydown", h)
+    return () => window.removeEventListener("keydown", h)
+  }, [deshacer])
 
   // Avisa antes de cerrar con cambios sin guardar.
   useEffect(() => {
@@ -427,6 +462,16 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
             <Tema />
             {editando ? (
               <>
+                <button
+                  onClick={deshacer}
+                  disabled={!hayPasado}
+                  title="Deshacer el último cambio (⌘Z)"
+                  aria-label="Deshacer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Deshacer</span>
+                </button>
                 {(estado === "sucio" || estado === "error") && (
                   <button
                     onClick={guardar}
