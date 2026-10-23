@@ -16,7 +16,7 @@ import {
   CHALLENGE_DEADLINE, CHALLENGE_LAUNCH, CHALLENGE_RECORD_DEADLINE, CHALLENGE_TARGET, RECAUDADO, montoConfiable,
 } from "@/lib/contador"
 import { CONTENIDO_BASE, type Contenido } from "@/lib/branding"
-import { llenas, semilla as semillaPreguntas, sumarDelManual, valido as preguntasValidas } from "@/lib/preguntas"
+import { IDS_RETO, ID_PUBLICAS, llenas, semilla as semillaPreguntas, sumarDelManual, valido as preguntasValidas } from "@/lib/preguntas"
 import { avanceTotal, migrar } from "@/lib/proyectos"
 import { configurado as metaConfigurado, resumenRedes, type Redes } from "@/lib/meta"
 import { getAdminClient } from "@/lib/supabase-admin"
@@ -87,13 +87,16 @@ export async function centro(ahora = Date.now()): Promise<Centro> {
   const preguntas: Centro["trabajo"]["preguntas"] = []
 
   let q: { data: { contenido: unknown } | null; error: unknown } | null = null
+  let pub: unknown = null
   if (admin) {
-    const [b, p, qq] = await Promise.all([
+    const [b, p, qq, qp] = await Promise.all([
       admin.from("branding").select("contenido").eq("id", "kev-project-gta").maybeSingle(),
       admin.from("proyectos_kev").select("contenido").eq("id", "kev-lopez").maybeSingle(),
       admin.from("preguntas").select("contenido").eq("id", "kev-lopez").maybeSingle(),
+      admin.from("preguntas").select("contenido").eq("id", ID_PUBLICAS).maybeSingle(),
     ])
     q = qq
+    pub = qp.data?.contenido ?? null
     if (b.data?.contenido) manual = b.data.contenido as Contenido
     const tablero = migrar(p.data?.contenido)
     if (tablero) {
@@ -112,7 +115,11 @@ export async function centro(ahora = Date.now()): Promise<Centro> {
   // Las preguntas son un espacio aparte; se suman las que alguna vez se
   // contestaron dentro del manual, igual que hace /api/preguntas.
   const base = admin && preguntasValidas(q?.data?.contenido) ? q!.data!.contenido : semillaPreguntas()
-  for (const x of sumarDelManual(base, manual.preguntas).preguntas) {
+  // Las del reto viven en el tablero público: si ya existe, manda ese.
+  const publicas = preguntasValidas(pub) ? pub.preguntas : []
+  const deFuera = new Map(publicas.map((x) => [x.id, x]))
+  for (let x of sumarDelManual(base, manual.preguntas).preguntas) {
+    if (IDS_RETO.has(x.id)) x = deFuera.get(x.id) ?? x
     preguntas.push({ pregunta: x.pregunta, van: llenas(x), meta: x.meta })
   }
 

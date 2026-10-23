@@ -29,9 +29,13 @@ type Opciones<T> = {
   llave: string
   /** Comprueba la forma de lo que viene de la base o del navegador. */
   valido: (x: unknown) => x is T
+  /** Sin clave para ver ni para escribir (las preguntas del reto). */
+  publico?: boolean
 }
 
-export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
+export function useEspacio<T>({ ruta, llave, valido, publico = false }: Opciones<T>) {
+  // Sin clave, el encabezado no se manda: la ruta pública no lo pide.
+  const auth = (k: string): Record<string, string> => (publico ? {} : { authorization: `Bearer ${k}` })
   const K_LOCAL = `${llave}-doc`
 
   const [clave, setClave] = useState<string | null>(null)
@@ -72,7 +76,7 @@ export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
     setCargando(true)
     setError("")
     try {
-      const r = await fetch(ruta, { headers: { authorization: `Bearer ${k}` }, cache: "no-store" })
+      const r = await fetch(ruta, { headers: auth(k), cache: "no-store" })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) {
         // Una clave que se escribió mal se olvida. La que ya estaba guardada
@@ -84,7 +88,7 @@ export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
         setClave(null)
         return
       }
-      guardarClave(k)
+      if (!publico) guardarClave(k)
       setNube(!!d.configurado)
       const local = leerLocal()
       // Lo que quedó sin mandar en este navegador manda sobre lo de la base.
@@ -96,19 +100,20 @@ export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
         setDoc(d.contenido)
         escribirLocal(d.contenido, true)
       }
-      setClave(k)
+      setClave(publico ? "publico" : k)
     } catch {
       if (!silencioso) setError("Error de red. Revisa tu conexión.")
     } finally {
       setCargando(false)
     }
-  }, [ruta, leerLocal, escribirLocal, valido])
+  }, [ruta, leerLocal, escribirLocal, valido, publico])
 
   useEffect(() => {
+    if (publico) { entrar("", true); return }
     const guardada = leerClave()
     if (guardada) entrar(guardada, true)
     else setCargando(false)
-  }, [entrar])
+  }, [entrar, publico])
 
   // ── Cambios y autoguardado ──
   const cambiar = useCallback((f: (d: T) => T) => {
@@ -132,7 +137,7 @@ export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
     try {
       const r = await fetch(ruta, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
+        headers: { "Content-Type": "application/json", ...auth(clave) },
         body: JSON.stringify({ contenido: d }),
       })
       const j = await r.json().catch(() => ({}))
@@ -172,7 +177,7 @@ export function useEspacio<T>({ ruta, llave, valido }: Opciones<T>) {
         fetch(ruta, {
           method: "PUT",
           keepalive: true,
-          headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
+          headers: { "Content-Type": "application/json", ...auth(clave) },
           body: JSON.stringify({ contenido: d }),
         })
       } catch {}

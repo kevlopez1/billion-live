@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { autorizado, rechazo } from "@/lib/auth-admin"
 import { getAdminClient } from "@/lib/supabase-admin"
-import { semilla, sumarDelManual, valido, type Pregunta, type Tablero } from "@/lib/preguntas"
+import { IDS_RETO, semilla, sumarDelManual, valido, type Pregunta, type Tablero } from "@/lib/preguntas"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -28,7 +28,9 @@ export async function GET(req: Request) {
     // Lo que se haya contestado cuando las preguntas vivían en el manual.
     admin.from("branding").select("contenido").eq("id", "kev-project-gta").maybeSingle(),
   ])
-  const delManual = (manual.data?.contenido as { preguntas?: Pregunta[] } | null)?.preguntas
+  // Las del reto ya no se muestran aquí: son de /api/preguntas/publicas.
+  const sinReto = (t: Tablero): Tablero => ({ ...t, preguntas: t.preguntas.filter((p) => !IDS_RETO.has(p.id)) })
+  const delManual = (manual.data?.contenido as { preguntas?: Pregunta[] } | null)?.preguntas?.filter((p) => !IDS_RETO.has(p.id))
 
   if (error) {
     console.error("[api/preguntas] lectura fallida:", error.message)
@@ -40,7 +42,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     configurado: true,
     guardado: true,
-    contenido: sumarDelManual(data.contenido as Tablero, delManual),
+    contenido: sinReto(sumarDelManual(data.contenido as Tablero, delManual)),
     actualizado: data.actualizado_en,
   })
 }
@@ -75,9 +77,18 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Falta SUPABASE_SERVICE_ROLE_KEY." }, { status: 500 })
   }
 
+  // Este tablero ya no muestra las preguntas del reto, pero si estaban
+  // guardadas aquí se conservan: /api/preguntas/publicas las lee de esta fila
+  // para no perder lo que se contestó antes de que existiera el área pública.
+  const { data: previo } = await admin.from("preguntas").select("contenido").eq("id", ID).maybeSingle()
+  const delReto = valido(previo?.contenido) ? previo!.contenido.preguntas.filter((p: Pregunta) => IDS_RETO.has(p.id)) : []
+  const aGuardar: Tablero = {
+    preguntas: [...contenido.preguntas.filter((p) => !IDS_RETO.has(p.id)), ...delReto],
+  }
+
   const { data, error } = await admin
     .from("preguntas")
-    .upsert({ id: ID, contenido, actualizado_en: new Date().toISOString() })
+    .upsert({ id: ID, contenido: aGuardar, actualizado_en: new Date().toISOString() })
     .select("actualizado_en")
     .maybeSingle()
 
