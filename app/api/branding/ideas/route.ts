@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { quien, soloKev } from "@/lib/auth-admin"
 import Anthropic from "@anthropic-ai/sdk"
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod"
 import * as z from "zod/v4"
@@ -77,11 +78,13 @@ Seis como máximo. Pocas y buenas. Si el manual está tan vacío que no se puede
 nada honesto, devuelve la lista vacía.`
 
 export async function POST(req: Request) {
-  const secret = process.env.ADMIN_SECRET
-  if (!secret) return NextResponse.json({ error: "Falta ADMIN_SECRET." }, { status: 500 })
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Clave incorrecta." }, { status: 401 })
-  }
+  // Solo Kev: cada uso cuesta dinero de su cuenta de Anthropic. Alguien del
+  // equipo con su clave recibe un 403 con el motivo, no un 401.
+  const q = quien(req)
+  if (q === "sin-clave") return NextResponse.json({ error: "Falta ADMIN_SECRET." }, { status: 500 })
+  if (!q) return NextResponse.json({ error: "Clave incorrecta." }, { status: 401 })
+  if (q.rol !== "admin") return soloKev("Esto lo usa solo Kev: cada uso cuesta dinero.")
+
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {

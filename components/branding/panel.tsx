@@ -101,11 +101,17 @@ export function Panel() {
     setEditando(true)
   }
 
-  // Doble clic en cualquier texto: si ya hay clave, se escribe; si no, se
-  // pide una sola vez. Después el cursor cae donde fue el doble clic.
+  // Un toque sobre cualquier texto: si ya hay clave, se escribe; si no, se
+  // pide una sola vez. Como en Notas: se toca y se escribe. (Era doble clic;
+  // Kev: "la opción de tener que hacer clic a algo para escribir no me gusta".)
+  // Solo cuenta un toque sobre texto del manual, no sobre un enlace ni un botón.
   const quiereEscribir = (e: React.MouseEvent) => {
     if (editando) return
-    dondeEscribir.current = (e.target as HTMLElement).closest("[data-campo]")?.getAttribute("data-campo") ?? null
+    const t = e.target as HTMLElement
+    if (t.closest("a, button")) return
+    const campo = t.closest("[data-campo]")
+    if (!campo) return
+    dondeEscribir.current = campo.getAttribute("data-campo")
     if (clave) setEditando(true)
     else setPidiendoClave(true)
   }
@@ -510,7 +516,7 @@ export function Panel() {
           editar={editar}
         />
       ) : (
-      <div className="lg:flex lg:gap-10" onDoubleClick={quiereEscribir}>
+      <div className="lg:flex lg:gap-10" onClick={quiereEscribir}>
         <Indice entradas={SECCIONES} soloMovil />
         <aside className="sticky top-10 hidden h-fit w-60 shrink-0 lg:block">
           <span className="mb-2 block px-2 text-[11px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground">
