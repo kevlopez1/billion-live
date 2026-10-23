@@ -54,7 +54,10 @@ export function Campo({
     const el = ref.current
     if (!el || !editando) return
     el.style.height = "auto"
-    el.style.height = `${el.scrollHeight}px`
+    // scrollHeight no cuenta el borde, y la caja es border-box: sin sumarlo,
+    // cada caja quedaba 2 px más baja que su texto, cortaba la última línea y
+    // por eso mostraba una barra de desplazamiento.
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
   }, [valor, editando])
 
   if (!editando) {
@@ -77,7 +80,10 @@ export function Campo({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         rows={1}
-        className={`block w-full resize-none rounded-md border border-transparent bg-transparent px-1.5 py-1 -mx-1.5 outline-none transition-colors hover:bg-foreground/[0.04] focus:border-gold/45 focus:bg-gold/[0.05] ${className}`}
+        // overflow-hidden: el alto ya se ajusta solo al texto, así que la barra
+        // de desplazamiento sobra — y en el tema oscuro se veía como una raya
+        // gris al lado de cada renglón.
+        className={`block w-full resize-none overflow-hidden rounded-md border border-transparent bg-transparent px-1.5 py-1 -mx-1.5 outline-none transition-colors hover:bg-foreground/[0.04] focus:border-gold/45 focus:bg-gold/[0.05] ${className}`}
       />
     )
   }

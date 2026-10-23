@@ -229,7 +229,7 @@ export function Espacio() {
               enManual ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
             }`}
           >
-            <BookOpen className="h-3.5 w-3.5" /> Manual de marca
+            <BookOpen className="h-3.5 w-3.5" /> Kev Project GTA Branding
           </button>
           <button
             type="button"
