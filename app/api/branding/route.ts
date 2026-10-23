@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { quien } from "@/lib/auth-admin"
 import { getAdminClient } from "@/lib/supabase-admin"
 import { CONTENIDO_BASE, type Contenido } from "@/lib/branding"
 
@@ -130,11 +131,13 @@ function valido(c: unknown): c is Contenido {
 }
 
 export async function PUT(req: Request) {
-  const secret = process.env.ADMIN_SECRET
-  if (!secret) {
+  // El manual lo escriben Kev y su equipo (editor, filmmaker). Es lo único
+  // que el equipo puede tocar: todo lo demás pide la clave de Kev.
+  const q = quien(req)
+  if (q === "sin-clave") {
     return NextResponse.json({ error: "Falta ADMIN_SECRET en las variables de entorno." }, { status: 500 })
   }
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!q) {
     return NextResponse.json({ error: "Clave incorrecta." }, { status: 401 })
   }
 
