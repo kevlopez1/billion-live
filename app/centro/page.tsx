@@ -52,7 +52,7 @@ function Cifra({ valor, etiqueta, nota }: { valor: string; etiqueta: string; not
 }
 
 const HERRAMIENTAS = [
-  { href: "/branding", nombre: "Manual de marca", icono: Sparkles, nota: "Formatos, edición, preguntas del reto" },
+  { href: "/branding", nombre: "Kev Project GTA Branding", icono: Sparkles, nota: "Formatos, edición, producción" },
   { href: "/kevlopez_proyectos", nombre: "Proyectos", icono: MapIcon, nota: "Mapa, notas y tareas" },
   { href: "/preguntas", nombre: "Preguntas", icono: CircleHelp, nota: "Una pregunta, mínimo veinte respuestas" },
   { href: "/publicar", nombre: "Publicar", icono: Send, nota: "Instagram y Facebook a la vez" },
