@@ -1,12 +1,13 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { BookOpen, Check, CircleHelp, CloudOff, Loader2, Lock, Network, NotebookPen, Plus, X } from "lucide-react"
+import { BookOpen, Check, Clapperboard, CircleHelp, CloudOff, Loader2, Lock, Network, NotebookPen, Plus, X } from "lucide-react"
 import { Arbol } from "@/components/proyectos/arbol"
 import { Mapa } from "@/components/proyectos/mapa"
 import { Pagina } from "@/components/proyectos/pagina"
 import { PantallaClave } from "@/components/pantalla-clave"
 import { Panel } from "@/components/branding/panel"
+import { Fabrica } from "@/components/videos/fabrica"
 import { Tablero as TableroPreguntas } from "@/components/preguntas/tablero"
 import { useEspacio } from "@/lib/use-espacio"
 import {
@@ -44,8 +45,10 @@ export function Espacio() {
   // Las del reto son públicas; las de plata, del área de Kev López.
   const [enPreguntas, setEnPreguntas] = useState(false)
   const [enPrivadas, setEnPrivadas] = useState(false)
-  const enOtro = enManual || enPreguntas || enPrivadas
-  const ir = (m: boolean, p: boolean, v: boolean) => { setEnManual(m); setEnPreguntas(p); setEnPrivadas(v) }
+  // Videos, edición, publicación y métricas: público, para el equipo.
+  const [enVideos, setEnVideos] = useState(false)
+  const enOtro = enManual || enPreguntas || enPrivadas || enVideos
+  const ir = (m: boolean, p: boolean, v: boolean) => { setEnManual(m); setEnPreguntas(p); setEnPrivadas(v); setEnVideos(false) }
 
   const tablero = useMemo(() => (crudo ? migrar(crudo) : null), [crudo])
   const esp = tablero?.espacios.find((e) => e.id === espacioId) ?? tablero?.espacios[0] ?? null
@@ -232,6 +235,16 @@ export function Espacio() {
           >
             <CircleHelp className="h-3.5 w-3.5" /> Preguntas
           </button>
+          <button
+            type="button"
+            onClick={() => { ir(false, false, false); setEnVideos(true) }}
+            aria-pressed={enVideos}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              enVideos ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
+            }`}
+          >
+            <Clapperboard className="h-3.5 w-3.5" /> Videos
+          </button>
           <span className="mx-1 h-4 w-px shrink-0 bg-border" aria-hidden />
           {bloqueado || !tablero || !esp ? (
             <button
@@ -314,6 +327,10 @@ export function Espacio() {
       {enManual ? (
         <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background px-5 sm:mx-6 sm:mb-6">
           <Panel incrustado />
+        </main>
+      ) : enVideos ? (
+        <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background sm:mx-6 sm:mb-6">
+          <Fabrica />
         </main>
       ) : enPreguntas ? (
         <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background sm:mx-6 sm:mb-6">
