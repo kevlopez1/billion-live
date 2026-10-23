@@ -109,7 +109,6 @@ export function Numeros({ formatos, clave }: { formatos: Formato[]; clave: strin
   return (
     <section>
       <div id="numeros" className="mb-4 flex scroll-mt-28 items-baseline gap-2.5 pt-2">
-        <span className="shrink-0 text-[19px] leading-none" aria-hidden>📊</span>
         <h2 className="font-display text-[21px] font-bold tracking-tight md:text-[25px]">Los números</h2>
         <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">
           {tot.videos} {tot.videos === 1 ? "video" : "videos"}

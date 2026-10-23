@@ -51,7 +51,9 @@ export function Arbol({
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
           <button type="button" onClick={() => onSeleccionar(n.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-            <span className="text-[15px] leading-none" aria-hidden>{n.icono}</span>
+            {/* El manual de /branding no lleva iconos (a Kev le quitaban las
+                ganas de escribir); los proyectos sí, porque ahí los elige él. */}
+            {n.icono && <span className="text-[15px] leading-none" aria-hidden>{n.icono}</span>}
             <span className={`truncate text-[13.5px] ${sel ? "font-semibold" : "font-medium text-foreground/85"}`}>
               {conPrime(n.titulo || "Sin título", false)}
             </span>
