@@ -60,6 +60,8 @@ const COLOR_ESTADO: Record<Estado, string> = {
 
 type Guardado = "limpio" | "sucio" | "guardando" | "ok" | "error"
 
+const K_CLAVE = "kev-admin-clave"
+
 export function Panel() {
   const [doc, setDoc] = useState<Contenido>(CONTENIDO_BASE)
   const [cargando, setCargando] = useState(true)
@@ -68,6 +70,60 @@ export function Panel() {
   const [editando, setEditando] = useState(false)
   const [clave, setClave] = useState("")
   const [pidiendoClave, setPidiendoClave] = useState(false)
+  // Qué texto tocó Kev con el doble clic, para poner el cursor ahí cuando el
+  // campo pase a caja editable. Se recuerda el TEXTO y no la posición: al
+  // aparecer el cuadro de la clave la página se corre, y la posición guardada
+  // terminaba apuntando a la fila de arriba.
+  const dondeEscribir = useRef<string | null>(null)
+
+  // ── Escribir sin pedir permiso ──
+  // Antes había que apretar "Editar" cada vez: separar mirar de escribir hace
+  // que anotar una idea cueste un paso, y ese paso alcanza para no anotarla.
+  // Ahora la clave se pide UNA vez y queda en este dispositivo: desde ahí la
+  // página es una hoja donde se escribe directo. "Bloquear" la olvida.
+  useEffect(() => {
+    try {
+      const k = localStorage.getItem(K_CLAVE)
+      if (k) { setClave(k); setEditando(true) }
+    } catch {}
+  }, [])
+
+  const olvidarClave = () => {
+    try { localStorage.removeItem(K_CLAVE) } catch {}
+    setClave("")
+    setEditando(false)
+  }
+
+  const entrarConClave = () => {
+    if (!clave) return
+    try { localStorage.setItem(K_CLAVE, clave) } catch {}
+    setPidiendoClave(false)
+    setEditando(true)
+  }
+
+  // Doble clic en cualquier texto: si ya hay clave, se escribe; si no, se
+  // pide una sola vez. Después el cursor cae donde fue el doble clic.
+  const quiereEscribir = (e: React.MouseEvent) => {
+    if (editando) return
+    dondeEscribir.current = (e.target as HTMLElement).closest("[data-campo]")?.getAttribute("data-campo") ?? null
+    if (clave) setEditando(true)
+    else setPidiendoClave(true)
+  }
+
+  useEffect(() => {
+    if (!editando || dondeEscribir.current === null) return
+    const texto = dondeEscribir.current
+    dondeEscribir.current = null
+    requestAnimationFrame(() => {
+      const el = [...document.querySelectorAll<HTMLTextAreaElement | HTMLInputElement>("main textarea, main input")]
+        .find((x) => x.value === texto)
+      if (el) {
+        el.focus()
+        const n = el.value.length
+        el.setSelectionRange?.(n, n)
+      }
+    })
+  }, [editando])
   const [estado, setEstado] = useState<Guardado>("limpio")
   const [mensaje, setMensaje] = useState("")
   const original = useRef<string>("")
@@ -166,7 +222,10 @@ export function Panel() {
       if (!r.ok) {
         setEstado("error")
         setMensaje(j.error || "No se pudo guardar.")
-        if (r.status === 401) setPidiendoClave(true)
+        if (r.status === 401) {
+          try { localStorage.removeItem(K_CLAVE) } catch {}
+          setPidiendoClave(true)
+        }
         return
       }
       original.current = enviado.json
@@ -190,12 +249,12 @@ export function Panel() {
   // dos segundos de dejar de escribir, pero SOLO si ya hay clave: sin ella
   // esto abriría el cuadro de la contraseña mientras la persona escribe.
   useEffect(() => {
-    if (estado !== "sucio" || !clave || !editando) return
+    if (estado !== "sucio" || !clave) return
     const t = setTimeout(() => { void guardar() }, 2000)
     return () => clearTimeout(t)
     // `guardar` se redefine en cada render; lo que importa es el documento.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, estado, clave, editando])
+  }, [doc, estado, clave])
 
   // ── La revisión de la IA ──
   const revisar = async () => {
@@ -272,23 +331,12 @@ export function Panel() {
     setIdeas((xs) => (xs ? xs.filter((x) => x !== idea) : xs))
   }
 
-  const descartar = () => {
-    if (estado === "sucio" && !confirm("Se pierden los cambios sin guardar. ¿Seguro?")) return
-    const vuelta = JSON.parse(original.current || JSON.stringify(CONTENIDO_BASE))
-    setDoc(vuelta)
-    docActual.current = vuelta
-    setEstado("limpio")
-    setEditando(false)
-    setMensaje("")
-  }
-
-  // El título no lleva regla debajo ni icono de color: el tamaño y el aire ya
-  // separan una sección de la siguiente. Una línea bajo cada encabezado
-  // convierte un documento en un informe. El emoji es el mismo que usan el
-  // mapa y el índice, así que las tres vistas se reconocen entre ellas.
-  const Titulo = ({ id, emoji, children, numero }: { id: string; emoji: string; children: React.ReactNode; numero?: string }) => (
+  // El título no lleva regla debajo, ni icono, ni emoji: el tamaño y el aire
+  // ya separan una sección de la siguiente. Kev: "no me da ganas de escribir
+  // ahí, quizá por los emojis". Doce dibujos de colores convertían una hoja de
+  // trabajo en una presentación terminada.
+  const Titulo = ({ id, children, numero }: { id: string; emoji?: string; children: React.ReactNode; numero?: string }) => (
     <div id={id} className="mb-4 flex scroll-mt-28 items-baseline gap-2.5 pt-2">
-      <span className="shrink-0 text-[19px] leading-none" aria-hidden>{emoji}</span>
       <h2 className="font-display text-[21px] font-bold tracking-tight md:text-[25px]">{children}</h2>
       {numero && <span className="ml-auto shrink-0 text-[11.5px] tabular-nums text-muted-foreground">{numero}</span>}
     </div>
@@ -373,30 +421,32 @@ export function Panel() {
             </button>
 
             <Tema />
-            {!editando ? (
-              <button
-                onClick={() => setEditando(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-[12.5px] font-semibold transition-colors hover:border-gold hover:text-gold"
-              >
-                <Pencil className="h-3.5 w-3.5" /> Editar
-              </button>
-            ) : (
+            {editando ? (
               <>
+                {(estado === "sucio" || estado === "error") && (
+                  <button
+                    onClick={guardar}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-foreground px-3 py-1.5 text-[12.5px] font-semibold text-background"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Guardar ahora
+                  </button>
+                )}
                 <button
-                  onClick={descartar}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+                  onClick={olvidarClave}
+                  title="Deja de escribir y olvida la clave en este dispositivo"
+                  aria-label="Bloquear"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-2.5 py-1.5 text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <X className="h-3.5 w-3.5" /> Salir
-                </button>
-                <button
-                  onClick={guardar}
-                  disabled={estado === "guardando" || estado === "limpio"}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-foreground px-3.5 py-1.5 text-[12.5px] font-semibold text-background transition-opacity disabled:opacity-40"
-                >
-                  {estado === "guardando" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                  Guardar
+                  <Lock className="h-3.5 w-3.5" />
                 </button>
               </>
+            ) : (
+              <button
+                onClick={() => (clave ? setEditando(true) : setPidiendoClave(true))}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-[12.5px] font-semibold transition-colors hover:border-gold hover:text-gold"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Escribir
+              </button>
             )}
           </div>
         </div>
@@ -408,13 +458,13 @@ export function Panel() {
               type="password"
               value={clave}
               onChange={(e) => setClave(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { setPidiendoClave(false); guardar() } }}
-              placeholder="Clave de administrador"
+              onKeyDown={(e) => { if (e.key === "Enter") entrarConClave() }}
+              placeholder="Tu clave — se pide una sola vez en este dispositivo"
               autoFocus
               className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-1.5 text-[13px] outline-none focus:border-gold"
             />
             <button
-              onClick={() => { setPidiendoClave(false); guardar() }}
+              onClick={entrarConClave}
               className="shrink-0 rounded-xl bg-foreground px-3.5 py-1.5 text-[12.5px] font-semibold text-background"
             >
               Entrar
@@ -460,7 +510,7 @@ export function Panel() {
           editar={editar}
         />
       ) : (
-      <div className="lg:flex lg:gap-10">
+      <div className="lg:flex lg:gap-10" onDoubleClick={quiereEscribir}>
         <Indice entradas={SECCIONES} soloMovil />
         <aside className="sticky top-10 hidden h-fit w-60 shrink-0 lg:block">
           <span className="mb-2 block px-2 text-[11px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -540,7 +590,7 @@ export function Panel() {
                           onChange={(v) => editar((d) => { d.norte[i].cuerpo = v; return d })}
                           editando={editando}
                           multilinea
-                          className="text-[14.5px] leading-relaxed text-muted-foreground"
+                          className="text-[14.5px] leading-relaxed text-foreground/90"
                           placeholder="Qué significa"
                         />
                         {(editando || p.detalle.length > 0) && (
@@ -633,7 +683,7 @@ export function Panel() {
                                       className={
                                         editando
                                           ? "font-serif-display text-[13.5px] italic text-muted-foreground"
-                                          : "font-serif-display text-[14px] italic leading-relaxed text-muted-foreground"
+                                          : "font-serif-display text-[14px] italic leading-relaxed text-foreground/75"
                                       }
                                       placeholder="Guion de ejemplo (opcional)"
                                     />
@@ -1178,7 +1228,7 @@ export function Panel() {
                           onChange={(v) => editar((d) => { d[llave][i].cuerpo = v; return d })}
                           editando={editando}
                           multilinea
-                          className="text-[14.5px] leading-relaxed text-muted-foreground"
+                          className="text-[14.5px] leading-relaxed text-foreground/90"
                           placeholder="Qué significa"
                         />
                       </div>

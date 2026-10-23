@@ -59,7 +59,7 @@ export function Campo({
 
   if (!editando) {
     return (
-      <Etiqueta className={className}>
+      <Etiqueta className={className} data-campo={valor}>
         {/* Todo el texto del manual pasa por aquí, así que PRIME queda con su
             logo en títulos, cuerpos y listas de una sola vez. En edición no:
             ahí el textarea necesita la cadena tal cual. */}
@@ -213,7 +213,9 @@ export function ListaTextos({
           placeholder={placeholder}
           onKeyDown={teclas(i)}
           campoRef={(el) => { refs.current[i] = el }}
-          className="text-[14.5px] leading-relaxed text-muted-foreground"
+          // En tinta, no en gris: el gris se lee como "deshabilitado" o como
+          // texto de ejemplo, y esto es lo que Kev escribió.
+          className="text-[14.5px] leading-relaxed text-foreground/90"
         />
       </div>
     </Fila>

@@ -51,7 +51,6 @@ export function Pruebas() {
   return (
     <section>
       <div id="pruebas" className="mb-4 flex scroll-mt-28 items-baseline gap-2.5 pt-2">
-        <span className="shrink-0 text-[19px] leading-none" aria-hidden>🧾</span>
         <h2 className="font-display text-[21px] font-bold tracking-tight md:text-[25px]">La bóveda de pruebas</h2>
         <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">
           {COMPROBANTES.length} · {monto(TOTAL_BS)}

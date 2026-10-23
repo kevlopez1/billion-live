@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Eraser, Highlighter, LayoutGrid, Maximize2, MousePointer2, Minus, Plus, Star, X } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
 import { llenas, nuevaPregunta } from "@/lib/preguntas"
-import { ETIQUETA_SECCION, ICONO_SECCION, type Seccion } from "@/lib/revision"
+import { ETIQUETA_SECCION, type Seccion } from "@/lib/revision"
 import { ETIQUETA_ESTADO, type Contenido, type Estado, type Lienzo } from "@/lib/branding"
 import { TINTAS, color, nuevoId, type Trazo } from "@/lib/proyectos"
 
@@ -542,7 +542,6 @@ export function Diagrama({
                   )}
                   <foreignObject x={xItem + 9} y={y + PAD + 4} width={W_ITEM - 18} height={FILA - 8}>
                     <div className="flex h-full items-center gap-1.5">
-                      <span className="shrink-0 text-[12px] leading-none" aria-hidden>{ICONO_SECCION[id]}</span>
                       <span className="min-w-0 flex-1 truncate font-display text-[12.5px] font-bold text-foreground">
                         {ETIQUETA_SECCION[id]}
                       </span>
