@@ -11,8 +11,13 @@ import {
 // ──────────────────────────────────────────────────────────────
 // EL MAPA MENTAL
 //
-// La raíz va al centro, las ramas se reparten a derecha e izquierda y cada
-// rama principal tiene su propio tono. Es SVG para las curvas y botones HTML
+// Se lee de IZQUIERDA A DERECHA, como el diagrama de Proton que Kev mandó de
+// referencia ("se ve mejor y mi mente lo entiende más"): a la izquierda lo
+// grande, a la derecha lo que depende de eso. Antes era radial (la raíz al
+// centro y ramas curvas a los dos lados): bonito, pero había que leerlo en
+// círculo. Las ramas principales son bloques sólidos de color; lo que cuelga
+// de ellas, cajas delineadas. Las líneas van en ángulo recto, del color de su
+// rama, y dicen algo: continua = en marcha o listo, punteada = idea o pausa. Es SVG para las curvas y botones HTML
 // para los nodos (así el texto se selecciona, se lee con lector de pantalla y
 // "PRIME" puede llevar su logo).
 //
@@ -22,9 +27,12 @@ import {
 // ──────────────────────────────────────────────────────────────
 
 const ALTO = 36
+const ALTO_RAMA = 44
 const ALTO_RAIZ = 56
-const SEPARACION_V = 24
-const SEPARACION_H = 64
+// El alto de cada renglón. Más aire que antes a propósito: con líneas en
+// ángulo recto, renglones apretados se leen como una tabla.
+const UNIDAD = 58
+const SEPARACION_H = 76
 const PUNTO = { idea: "bg-muted-foreground/50", marcha: "bg-[#31abc4]", listo: "bg-kev-success", pausa: "bg-kev-warning" } as const satisfies Record<Estado, string>
 
 type Caja = {
@@ -39,9 +47,10 @@ type Caja = {
   ocultos: number
 }
 
-function anchoDe(n: Nodo, raiz: boolean): number {
+function anchoDe(n: Nodo, grande: boolean): number {
   const t = n.titulo.length
-  return raiz ? Math.min(280, 84 + t * 9.6) : Math.min(340, 74 + t * 7.7)
+  // Las ramas son bloques: su nombre tiene que entrar entero, no "Manso…".
+  return grande ? Math.min(380, 84 + t * 9) : Math.min(340, 74 + t * 7.7)
 }
 
 function calcular(doc: Doc) {
@@ -60,8 +69,9 @@ function calcular(doc: Doc) {
   const izquierda: Nodo[] = []
   let acumulado = 0
   for (const r of ramas) {
-    if (acumulado < total / 2) derecha.push(r)
-    else izquierda.push(r)
+    // Todo hacia la derecha: el mapa se lee en una sola dirección.
+    derecha.push(r)
+    void izquierda
     acumulado += hojas(r)
   }
 
@@ -74,7 +84,7 @@ function calcular(doc: Doc) {
     // Ancho de cada columna de profundidad en este lado.
     const colW: number[] = []
     const medir = (n: Nodo, prof: number) => {
-      colW[prof] = Math.max(colW[prof] ?? 0, anchoDe(n, false))
+      colW[prof] = Math.max(colW[prof] ?? 0, anchoDe(n, prof === 1))
       visibles(n).forEach((c) => medir(c, prof + 1))
     }
     grupo.forEach((r) => medir(r, 1))
@@ -86,27 +96,28 @@ function calcular(doc: Doc) {
       acc += colW[d] + SEPARACION_H
     }
 
-    const alturaTotal = grupo.reduce((a, r) => a + hojas(r), 0) * (ALTO + SEPARACION_V)
+    const alturaTotal = grupo.reduce((a, r) => a + hojas(r), 0) * UNIDAD
     let cursor = -alturaTotal / 2
 
     const colocar = (n: Nodo, prof: number, y0: number, tono: number): number => {
-      const slot = hojas(n) * (ALTO + SEPARACION_V)
+      const slot = hojas(n) * UNIDAD
       const hs = visibles(n)
       let yc = y0 + slot / 2
       if (hs.length) {
         let y = y0
         const centros = hs.map((c) => {
           const cy = colocar(c, prof + 1, y, tono)
-          y += hojas(c) * (ALTO + SEPARACION_V)
+          y += hojas(c) * UNIDAD
           return cy
         })
         yc = (centros[0] + centros[centros.length - 1]) / 2
       }
-      const w = anchoDe(n, false)
+      const w = anchoDe(n, prof === 1)
+      const h = prof === 1 ? ALTO_RAMA : ALTO
       // Los nodos más angostos que su columna se pegan al lado de la raíz.
       const x = signo === 1 ? inicioX[prof] : -(inicioX[prof] + w)
       cajas.push({
-        nodo: n, x, y: yc - ALTO / 2, w, h: ALTO, lado: signo, prof, tono,
+        nodo: n, x, y: yc - h / 2, w, h, lado: signo, prof, tono,
         ocultos: n.plegado ? hijosDe(doc, n.id).length : 0,
       })
       return yc
@@ -114,7 +125,7 @@ function calcular(doc: Doc) {
 
     for (const r of grupo) {
       colocar(r, 1, cursor, tonos.get(r.id) ?? 250)
-      cursor += hojas(r) * (ALTO + SEPARACION_V)
+      cursor += hojas(r) * UNIDAD
     }
   }
 
@@ -152,13 +163,32 @@ function calcular(doc: Doc) {
   return { cajas, ancho: maxX - minX + margen * 2, alto: maxY - minY + margen * 2 }
 }
 
+// En ángulo recto y con la esquina redondeada, como en Proton. Todos los
+// hijos de un mismo padre doblan en la MISMA x, justo a la salida del padre:
+// así sus líneas se juntan en un solo tronco vertical en vez de ser un
+// abanico de curvas que se cruzan.
 function curva(p: Caja, c: Caja): string {
-  const x1 = c.lado === 1 ? p.x + p.w : p.x
+  const x1 = p.x + p.w
   const y1 = p.y + p.h / 2
-  const x2 = c.lado === 1 ? c.x : c.x + c.w
+  const x2 = c.x
   const y2 = c.y + c.h / 2
-  const mx = (x1 + x2) / 2
-  return `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
+  const dy = y2 - y1
+  // Si el hijo quedó a la izquierda del padre (lo movieron a mano), el tronco
+  // se pone a mitad de camino para que la línea no se doble sobre sí misma.
+  const mx = x2 > x1 + 24 ? x1 + Math.min(SEPARACION_H / 2, (x2 - x1) / 2) : (x1 + x2) / 2
+  if (Math.abs(dy) < 1) return `M ${x1} ${y1} H ${x2}`
+  const r = Math.min(10, Math.abs(dy) / 2, Math.abs(mx - x1), Math.abs(x2 - mx))
+  const sy = Math.sign(dy)
+  const sx1 = Math.sign(mx - x1) || 1
+  const sx2 = Math.sign(x2 - mx) || 1
+  return [
+    `M ${x1} ${y1}`,
+    `H ${mx - sx1 * r}`,
+    `Q ${mx} ${y1} ${mx} ${y1 + sy * r}`,
+    `V ${y2 - sy * r}`,
+    `Q ${mx} ${y2} ${mx + sx2 * r} ${y2}`,
+    `H ${x2}`,
+  ].join(" ")
 }
 
 export type Herramienta = "mano" | "marcador" | "borrador"
@@ -241,10 +271,11 @@ export function Mapa({
     const { width, height } = el.getBoundingClientRect()
     const raiz = cajas.find((c) => c.nodo.id === RAIZ)
     if (width < 640 && raiz) {
-      // En el teléfono, todo el mapa a la vez es ilegible: se centra la raíz
-      // con un zoom que se lee, y el resto se explora arrastrando.
+      // En el teléfono, todo el mapa a la vez es ilegible: la raíz va pegada a
+      // la izquierda (el mapa se lee hacia la derecha) con un zoom que se lee,
+      // y el resto se explora arrastrando.
       const k = 0.7
-      setVista({ k, x: width / 2 - (raiz.x + raiz.w / 2) * k, y: height / 2 - (raiz.y + raiz.h / 2) * k })
+      setVista({ k, x: 16 - raiz.x * k, y: height / 2 - (raiz.y + raiz.h / 2) * k })
       return
     }
     const k = Math.min(1, Math.max(0.3, Math.min(width / ancho, height / alto)))
@@ -463,8 +494,11 @@ export function Mapa({
                   key={c.nodo.id}
                   d={curva(padre, c)}
                   fill="none"
-                  stroke={color(c.tono, 0.62, 0.12, c.prof === 1 ? 0.75 : 0.5)}
-                  strokeWidth={c.prof === 1 ? 2.6 : 1.7}
+                  stroke={color(c.tono, 0.62, 0.13, c.prof === 1 ? 0.85 : 0.6)}
+                  strokeWidth={c.prof === 1 ? 2.2 : 1.6}
+                  // Continua: en marcha o listo. Punteada: idea o en pausa.
+                  // Se ve qué está vivo sin leer un solo estado.
+                  strokeDasharray={c.nodo.estado === "idea" || c.nodo.estado === "pausa" ? "5 5" : undefined}
                   strokeLinecap="round"
                 />
               )
@@ -473,6 +507,7 @@ export function Mapa({
 
         {cajas.map((c) => {
           const raiz = c.nodo.id === RAIZ
+          const rama = c.prof === 1
           const sel = c.nodo.id === seleccionado
           const tieneHijos = hijosDe(doc, c.nodo.id).length > 0
           const fuera = c.lado === 1 ? "left-full ml-1.5" : "right-full mr-1.5"
@@ -503,22 +538,34 @@ export function Mapa({
                 className={[
                   "group flex h-full w-full items-center gap-2 text-left transition-all duration-200",
                   raiz
-                    ? "justify-center rounded-full bg-foreground px-5 text-background shadow-[0_18px_40px_-18px_var(--glass-shadow)]"
-                    : "rounded-full border bg-card/90 px-3 backdrop-blur-md hover:-translate-y-px",
+                    ? "justify-center rounded-[10px] bg-foreground px-5 text-background shadow-[0_18px_40px_-18px_var(--glass-shadow)]"
+                    : rama
+                      ? "rounded-[10px] px-3.5 text-white shadow-sm hover:-translate-y-px"
+                      // Radios exactos y no rounded-lg/md: en esta web esas
+                      // clases valen 28 px (el radio de las tarjetas grandes)
+                      // y cualquier caja chica quedaba como píldora.
+                      : "rounded-[7px] border bg-card/90 px-3 backdrop-blur-md hover:-translate-y-px",
                   sel && !raiz ? "ring-2 ring-offset-2 ring-offset-background" : "",
                 ].join(" ")}
                 style={
                   raiz
                     ? undefined
-                    : {
-                        borderColor: pintado
-                          ? color(pintado.h, 0.6, 0.16, 0.85)
-                          : color(c.tono, 0.62, 0.13, sel ? 0.95 : 0.4),
-                        ["--tw-ring-color" as string]: color(c.tono, 0.62, 0.13, 0.7),
-                        background: pintado
-                          ? color(pintado.h, 0.62, 0.17, 0.2)
-                          : sel ? color(c.tono, 0.62, 0.13, 0.12) : undefined,
-                      }
+                    : rama
+                      ? {
+                          // La rama es un bloque sólido de su color, como los
+                          // de Palantir y Founders Fund en la referencia.
+                          background: pintado ? color(pintado.h, 0.56, 0.16) : color(c.tono, 0.52, 0.14),
+                          ["--tw-ring-color" as string]: color(c.tono, 0.62, 0.13, 0.7),
+                        }
+                      : {
+                          borderColor: pintado
+                            ? color(pintado.h, 0.6, 0.16, 0.85)
+                            : color(c.tono, 0.62, 0.13, sel ? 0.95 : 0.45),
+                          ["--tw-ring-color" as string]: color(c.tono, 0.62, 0.13, 0.7),
+                          background: pintado
+                            ? color(pintado.h, 0.62, 0.17, 0.2)
+                            : sel ? color(c.tono, 0.62, 0.13, 0.12) : undefined,
+                        }
                 }
               >
                 <span className={raiz ? "text-xl leading-none" : "text-[15px] leading-none"} aria-hidden>
@@ -527,14 +574,16 @@ export function Mapa({
                 <span
                   className={[
                     "min-w-0 flex-1 truncate",
-                    raiz ? "font-display text-[17px] font-semibold tracking-tight" : "text-[13px] font-medium",
+                    raiz ? "font-display text-[17px] font-semibold tracking-tight"
+                      : rama ? "font-display text-[14px] font-semibold tracking-tight"
+                      : "text-[13px] font-medium",
                   ].join(" ")}
                 >
                   {conPrime(c.nodo.titulo || "Sin título", false)}
                 </span>
                 {!raiz && (
                   <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${PUNTO[c.nodo.estado]}`}
+                    className={`h-2 w-2 shrink-0 rounded-full ${PUNTO[c.nodo.estado]} ${rama ? "ring-1 ring-white/80" : ""}`}
                     aria-label={c.nodo.estado}
                   />
                 )}
@@ -633,6 +682,13 @@ export function Mapa({
           ))}
         </div>
       )}
+
+      {/* ── La leyenda ── Un mapa con dos tipos de línea sin decir cuál es
+          cuál obliga a adivinar. */}
+      <div data-control className="pointer-events-none absolute right-4 top-14 hidden flex-col gap-1 rounded-xl border bg-card/90 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur-md sm:flex">
+        <span className="flex items-center gap-2"><svg width="22" height="2" aria-hidden><line x1="0" y1="1" x2="22" y2="1" stroke="currentColor" strokeWidth="2" /></svg>en marcha o listo</span>
+        <span className="flex items-center gap-2"><svg width="22" height="2" aria-hidden><line x1="0" y1="1" x2="22" y2="1" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" /></svg>idea o en pausa</span>
+      </div>
 
       {/* ── El contador ── Tareas hechas de las que hay, en todo el espacio. */}
       {totalTareas.total > 0 && (
