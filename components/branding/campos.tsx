@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode, type KeyboardEvent } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode, type KeyboardEvent } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { Ordenable } from "@/components/branding/ordenable"
 import { conPrime } from "@/components/prime-mark"
@@ -48,6 +48,53 @@ export function Campo({
     campoRef?.(el)
   }
 
+  // ── Escribir sin redibujar la página entera ──
+  // Antes cada tecla subía al documento y el panel volvía a dibujar sus ~130
+  // cajas y el índice: medido en un teléfono simulado (CPU x4), 105–134 ms
+  // por tecla. Ahora la letra se queda en ESTA caja y sube al documento
+  // cuando hay una pausa de 250 ms o cuando se sale de la caja. Mientras se
+  // escribe, solo se redibuja esta caja.
+  const [local, setLocal] = useState(valor)
+  const pendiente = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sucio = useRef(false)
+  // Siempre el onChange del ÚLTIMO render: el de hace 250 ms puede tener una
+  // lista vieja y pisar lo que cambió en el medio.
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
+  // Si el valor cambia desde afuera (otra caja, deshacer, otro aparato) y aquí
+  // no hay nada sin subir, se toma el de afuera.
+  useEffect(() => {
+    if (!sucio.current) setLocal(valor)
+  }, [valor])
+
+  const subir = useCallback(() => {
+    if (pendiente.current) { clearTimeout(pendiente.current); pendiente.current = null }
+    if (!sucio.current) return
+    sucio.current = false
+    onChangeRef.current(ref.current?.value ?? local)
+  }, [local])
+
+  // Lo que quedó sin subir no se pierde si la caja desaparece.
+  useEffect(() => () => {
+    if (pendiente.current) clearTimeout(pendiente.current)
+    if (sucio.current) onChangeRef.current(ref.current?.value ?? "")
+  }, [])
+
+  const escribir = (v: string) => {
+    setLocal(v)
+    sucio.current = true
+    if (pendiente.current) clearTimeout(pendiente.current)
+    pendiente.current = setTimeout(subir, 250)
+  }
+
+  // Antes de que una tecla especial haga algo con la lista (Enter crea la
+  // siguiente, Backspace borra la vacía), el texto tiene que estar arriba.
+  const teclas = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === "Backspace") subir()
+    onKeyDown?.(e)
+  }
+
   // El textarea se ajusta a su contenido en cada cambio: con alto fijo, un
   // párrafo de cinco líneas se edita por una rendija de dos.
   useEffect(() => {
@@ -58,7 +105,7 @@ export function Campo({
     // cada caja quedaba 2 px más baja que su texto, cortaba la última línea y
     // por eso mostraba una barra de desplazamiento.
     el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
-  }, [valor, editando])
+  }, [local, editando])
 
   if (!editando) {
     return (
@@ -75,9 +122,10 @@ export function Campo({
     return (
       <textarea
         ref={asignar}
-        value={valor}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={onKeyDown}
+        value={local}
+        onChange={(e) => escribir(e.target.value)}
+        onBlur={subir}
+        onKeyDown={teclas}
         placeholder={placeholder}
         rows={1}
         // overflow-hidden: el alto ya se ajusta solo al texto, así que la barra
@@ -90,9 +138,11 @@ export function Campo({
 
   return (
     <input
-      value={valor}
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={onKeyDown}
+      ref={asignar as unknown as React.Ref<HTMLInputElement>}
+      value={local}
+      onChange={(e) => escribir(e.target.value)}
+      onBlur={subir}
+      onKeyDown={teclas}
       placeholder={placeholder}
       className={`block w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 -mx-1.5 outline-none transition-colors hover:bg-foreground/[0.04] focus:border-gold/45 focus:bg-gold/[0.05] ${className}`}
     />
@@ -190,9 +240,13 @@ export function ListaTextos({
   const teclas = (i: number) => (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     // Enter crea el siguiente. Shift+Enter sigue siendo salto de línea: hay
     // ideas que ocupan dos renglones y no por eso son dos ideas.
+    // El texto se lee de la caja y no de `items`: la caja guarda lo que se
+    // escribe y lo sube con una pausa, así que `items` puede ir una letra atrás.
+    const actual = e.currentTarget.value
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       const copia = [...items]
+      copia[i] = actual
       copia.splice(i + 1, 0, "")
       onChange(copia)
       setFoco(i + 1)
@@ -200,7 +254,7 @@ export function ListaTextos({
     }
     // Backspace en una fila vacía la borra y sube. Solo si queda alguna:
     // dejar la lista sin ninguna fila deja la sección sin dónde escribir.
-    if (e.key === "Backspace" && items[i] === "" && items.length > 1) {
+    if (e.key === "Backspace" && actual === "" && items.length > 1) {
       e.preventDefault()
       quitar(i)
       setFoco(Math.max(0, i - 1))

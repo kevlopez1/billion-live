@@ -43,15 +43,19 @@ export function VistaPregunta({
   const teclas = (i: number) => (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     // Enter crea la siguiente. Shift+Enter sigue siendo salto de línea: hay
     // respuestas de dos renglones que no son dos respuestas.
+    // El texto se lee de la caja: la caja sube lo escrito con una pausa, así
+    // que `p.respuestas` puede ir una letra atrás.
+    const actual = e.currentTarget.value
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       const rs = [...p.respuestas]
+      rs[i] = { ...rs[i], texto: actual }
       rs.splice(i + 1, 0, { texto: "" })
       setRespuestas(rs)
       enfocar(i + 1)
       return
     }
-    if (e.key === "Backspace" && p.respuestas[i].texto === "" && p.respuestas.length > 1) {
+    if (e.key === "Backspace" && actual === "" && p.respuestas.length > 1) {
       e.preventDefault()
       setRespuestas(p.respuestas.filter((_, j) => j !== i))
       enfocar(Math.max(0, i - 1))
