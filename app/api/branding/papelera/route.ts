@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { quien } from "@/lib/auth-admin"
 import { getAdminClient } from "@/lib/supabase-admin"
 import { papelera } from "@/lib/papelera"
 
@@ -11,13 +10,9 @@ const ID = "kev-project-gta"
 // semanas sin traer la tabla entera.
 const VERSIONES = 400
 
-// Lo que estuvo en el manual y hoy no está. La pueden ver quienes pueden
-// escribir el manual (Kev y su equipo): devolver un renglón es escribir.
-export async function GET(req: Request) {
-  const q = quien(req)
-  if (q === "sin-clave") return NextResponse.json({ error: "Falta ADMIN_SECRET." }, { status: 500 })
-  if (!q) return NextResponse.json({ error: "Clave incorrecta." }, { status: 401 })
-
+// Lo que estuvo en el manual y hoy no está. Pública como el manual: si
+// cualquiera puede escribirlo, cualquiera tiene que poder devolver lo borrado.
+export async function GET() {
   const admin = getAdminClient()
   if (!admin) return NextResponse.json({ error: "Falta SUPABASE_SERVICE_ROLE_KEY." }, { status: 500 })
 

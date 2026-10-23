@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { quien } from "@/lib/auth-admin"
 import { getAdminClient } from "@/lib/supabase-admin"
 import { CONTENIDO_BASE, type Contenido } from "@/lib/branding"
 
@@ -131,15 +130,11 @@ function valido(c: unknown): c is Contenido {
 }
 
 export async function PUT(req: Request) {
-  // El manual lo escriben Kev y su equipo (editor, filmmaker). Es lo único
-  // que el equipo puede tocar: todo lo demás pide la clave de Kev.
-  const q = quien(req)
-  if (q === "sin-clave") {
-    return NextResponse.json({ error: "Falta ADMIN_SECRET en las variables de entorno." }, { status: 500 })
-  }
-  if (!q) {
-    return NextResponse.json({ error: "Clave incorrecta." }, { status: 401 })
-  }
+  // Sin clave: decisión de Kev ("para lo demás, que sea público"), con el
+  // riesgo dicho — cualquiera con el link puede escribir el manual. Lo que lo
+  // vuelve aceptable es que nada se pierde: el trigger guarda copia de cada
+  // versión en branding_historial, y la página trae Deshacer y la papelera.
+  // Lo que cuesta dinero (Revisar e Ideas, con IA) sigue pidiendo la clave.
 
   // El documento se revisa ANTES que la configuración del servidor. Un
   // documento mal formado es un problema de quien lo manda (400) y no de cómo

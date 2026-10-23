@@ -11,7 +11,7 @@ import {
 // parecido acaba divergiendo del primero; esto se alimenta traduciendo el
 // manual a la forma que ese mapa entiende (lib/branding-arbol.ts).
 import { Diagrama } from "@/components/branding/diagrama"
-import { guardarClave, leerClave, olvidarClave } from "@/lib/clave"
+import { guardarClave, leerClave } from "@/lib/clave"
 import { devolver, dondeEstaba, type Borrado } from "@/lib/papelera"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, seccionDe } from "@/lib/branding-arbol"
@@ -68,69 +68,27 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   const [cargando, setCargando] = useState(true)
   const [configurado, setConfigurado] = useState<boolean | null>(null)
   const [actualizado, setActualizado] = useState<string | null>(null)
-  const [editando, setEditando] = useState(false)
+  // Siempre se escribe: el manual es público para ver y escribir (decisión
+  // de Kev). La clave solo hace falta para lo que cuesta dinero: Revisar e
+  // Ideas, con IA.
+  const editando = true
   const [clave, setClave] = useState("")
   const [pidiendoClave, setPidiendoClave] = useState(false)
-  // Qué texto tocó Kev con el doble clic, para poner el cursor ahí cuando el
-  // campo pase a caja editable. Se recuerda el TEXTO y no la posición: al
-  // aparecer el cuadro de la clave la página se corre, y la posición guardada
-  // terminaba apuntando a la fila de arriba.
-  const dondeEscribir = useRef<string | null>(null)
 
-  // ── Escribir sin pedir permiso ──
-  // Antes había que apretar "Editar" cada vez: separar mirar de escribir hace
-  // que anotar una idea cueste un paso, y ese paso alcanza para no anotarla.
-  // Ahora la clave se pide UNA vez y queda en este dispositivo: desde ahí la
-  // página es una hoja donde se escribe directo. "Bloquear" la olvida.
+  // La clave, si ya se puso en este dispositivo: sirve para Revisar e Ideas.
   useEffect(() => {
     try {
       const k = leerClave()
-      if (k) { setClave(k); setEditando(true) }
+      if (k) setClave(k)
     } catch {}
   }, [])
-
-  const bloquear = () => {
-    olvidarClave()
-    setClave("")
-    setEditando(false)
-  }
 
   const entrarConClave = () => {
     if (!clave) return
     guardarClave(clave)
     setPidiendoClave(false)
-    setEditando(true)
   }
 
-  // Un toque sobre cualquier texto: si ya hay clave, se escribe; si no, se
-  // pide una sola vez. Como en Notas: se toca y se escribe. (Era doble clic;
-  // Kev: "la opción de tener que hacer clic a algo para escribir no me gusta".)
-  // Solo cuenta un toque sobre texto del manual, no sobre un enlace ni un botón.
-  const quiereEscribir = (e: React.MouseEvent) => {
-    if (editando) return
-    const t = e.target as HTMLElement
-    if (t.closest("a, button")) return
-    const campo = t.closest("[data-campo]")
-    if (!campo) return
-    dondeEscribir.current = campo.getAttribute("data-campo")
-    if (clave) setEditando(true)
-    else setPidiendoClave(true)
-  }
-
-  useEffect(() => {
-    if (!editando || dondeEscribir.current === null) return
-    const texto = dondeEscribir.current
-    dondeEscribir.current = null
-    requestAnimationFrame(() => {
-      const el = [...document.querySelectorAll<HTMLTextAreaElement | HTMLInputElement>("main textarea, main input")]
-        .find((x) => x.value === texto)
-      if (el) {
-        el.focus()
-        const n = el.value.length
-        el.setSelectionRange?.(n, n)
-      }
-    })
-  }, [editando])
   const [estado, setEstado] = useState<Guardado>("limpio")
   const [mensaje, setMensaje] = useState("")
   const original = useRef<string>("")
@@ -229,7 +187,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
     setBorrados(null)
     setErrorPapelera("")
     try {
-      const r = await fetch("/api/branding/papelera", { headers: { authorization: `Bearer ${clave}` }, cache: "no-store" })
+      const r = await fetch("/api/branding/papelera", { cache: "no-store" })
       const j = await r.json()
       if (!r.ok) { setErrorPapelera(j.error || "No se pudo abrir la papelera."); return }
       setBorrados(j.borrados ?? [])
@@ -268,10 +226,6 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   }, [estado])
 
   const guardar = async () => {
-    if (!clave) {
-      setPidiendoClave(true)
-      return
-    }
     setEstado("guardando")
     setMensaje("")
     // Se congela lo que se manda: el documento puede cambiar mientras viaja.
@@ -279,7 +233,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
     try {
       const r = await fetch("/api/branding", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
+        headers: { "Content-Type": "application/json" },
         // `visto` es la versión que este navegador tenía al cargar. Si otro
         // guardó en el medio, el servidor rebota en vez de pisarlo.
         body: JSON.stringify({ contenido: enviado.doc, visto: actualizado }),
@@ -288,10 +242,6 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
       if (!r.ok) {
         setEstado("error")
         setMensaje(j.error || "No se pudo guardar.")
-        if (r.status === 401) {
-          olvidarClave()
-          setPidiendoClave(true)
-        }
         return
       }
       original.current = enviado.json
@@ -315,12 +265,12 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   // dos segundos de dejar de escribir, pero SOLO si ya hay clave: sin ella
   // esto abriría el cuadro de la contraseña mientras la persona escribe.
   useEffect(() => {
-    if (estado !== "sucio" || !clave) return
+    if (estado !== "sucio") return
     const t = setTimeout(() => { void guardar() }, 2000)
     return () => clearTimeout(t)
     // `guardar` se redefine en cada render; lo que importa es el documento.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, estado, clave])
+  }, [doc, estado])
 
   // ── La revisión de la IA ──
   const revisar = async () => {
@@ -519,23 +469,10 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
                     <Check className="h-3.5 w-3.5" /> Guardar ahora
                   </button>
                 )}
-                <button
-                  onClick={bloquear}
-                  title="Deja de escribir y olvida la clave en este dispositivo"
-                  aria-label="Bloquear"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-2.5 py-1.5 text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <Lock className="h-3.5 w-3.5" />
-                </button>
+
               </>
-            ) : (
-              <button
-                onClick={() => (clave ? setEditando(true) : setPidiendoClave(true))}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-[12.5px] font-semibold transition-colors hover:border-gold hover:text-gold"
-              >
-                <Pencil className="h-3.5 w-3.5" /> Escribir
-              </button>
-            )}
+            ) : null
+}
           </div>
         </div>
 
@@ -633,7 +570,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           editar={editar}
         />
       ) : (
-      <div className="lg:flex lg:gap-10" onClick={quiereEscribir}>
+      <div className="lg:flex lg:gap-10">
         <Indice entradas={SECCIONES} soloMovil />
         <aside className="sticky top-10 hidden h-fit w-60 shrink-0 lg:block">
           <span className="mb-2 block px-2 text-[11px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground">

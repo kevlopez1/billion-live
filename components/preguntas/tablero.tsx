@@ -17,9 +17,16 @@ import { llenas, nuevaPregunta, valido, type Pregunta, type Tablero as Doc } fro
 // ──────────────────────────────────────────────────────────────
 
 /** `incrustado`: dentro del espacio de trabajo, que ya dice dónde se está. */
-export function Tablero({ incrustado = false }: { incrustado?: boolean } = {}) {
+/** `publico`: las del reto, sin clave para ver ni escribir. Sin él, las
+ *  privadas de Kev (las de dinero, con nombres de personas). */
+export function Tablero({ incrustado = false, publico = false }: { incrustado?: boolean; publico?: boolean } = {}) {
   const { clave, entrada, setEntrada, error, cargando, doc, cambiar, estado, estadoTexto, entrar, nube } =
-    useEspacio<Doc>({ ruta: "/api/preguntas", llave: "kev-preguntas", valido })
+    useEspacio<Doc>({
+      ruta: publico ? "/api/preguntas/publicas" : "/api/preguntas",
+      llave: publico ? "kev-preguntas-publicas" : "kev-preguntas",
+      valido,
+      publico,
+    })
 
   const [sel, setSel] = useState<string | null>(null)
   const [foco, setFoco] = useState<number | null>(null)

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { BookOpen, Check, CircleHelp, CloudOff, Loader2, Network, NotebookPen, Plus, X } from "lucide-react"
+import { BookOpen, Check, CircleHelp, CloudOff, Loader2, Lock, Network, NotebookPen, Plus, X } from "lucide-react"
 import { Arbol } from "@/components/proyectos/arbol"
 import { Mapa } from "@/components/proyectos/mapa"
 import { Pagina } from "@/components/proyectos/pagina"
@@ -38,10 +38,14 @@ export function Espacio() {
   // El Manual de marca vive aquí como el primer espacio, aunque sus datos son
   // otros (un documento con forma fija, en /api/branding). Kev: "lo de
   // proyectos y lo de branding hay que centralizarlo en lo mismo".
-  const [enManual, setEnManual] = useState(false)
+  // Abre en el manual: es público, no pide clave.
+  const [enManual, setEnManual] = useState(true)
   // Las preguntas, aparte del manual. Kev: "ponlo como otra sección muy aparte".
+  // Las del reto son públicas; las de plata, del área de Kev López.
   const [enPreguntas, setEnPreguntas] = useState(false)
-  const enOtro = enManual || enPreguntas
+  const [enPrivadas, setEnPrivadas] = useState(false)
+  const enOtro = enManual || enPreguntas || enPrivadas
+  const ir = (m: boolean, p: boolean, v: boolean) => { setEnManual(m); setEnPreguntas(p); setEnPrivadas(v) }
 
   const tablero = useMemo(() => (crudo ? migrar(crudo) : null), [crudo])
   const esp = tablero?.espacios.find((e) => e.id === espacioId) ?? tablero?.espacios[0] ?? null
@@ -161,22 +165,9 @@ export function Espacio() {
     setCajon(true)
   }
 
-  // ── Pantalla de clave ──
-  if (!doc || !esp || !clave) {
-    return (
-      <PantallaClave
-        titulo={<>Proyectos de <span className="font-serif-display italic font-normal">Kev López</span></>}
-        bajada="Notas y mapa mental. Entra con tu clave de administrador."
-        entrada={entrada}
-        setEntrada={setEntrada}
-        error={error}
-        cargando={cargando}
-        onEntrar={() => entrar(entrada)}
-      />
-    )
-  }
-
-  const nodo = doc.nodos.find((n) => n.id === sel) ?? doc.nodos.find((n) => n.id === RAIZ)!
+  // Kev: "el bloqueo del pin que solo sea para el área de Kev López".
+  const bloqueado = !doc || !esp || !clave
+  const nodo = doc ? doc.nodos.find((n) => n.id === sel) ?? doc.nodos.find((n) => n.id === RAIZ)! : null
 
   return (
     <div className="flex h-dvh flex-col">
@@ -188,7 +179,7 @@ export function Espacio() {
         </div>
 
 
-        {!enOtro && <div role="tablist" aria-label="Vista" className="flex rounded-full border bg-card/70 p-0.5 backdrop-blur-md">
+        {!enOtro && !bloqueado && <div role="tablist" aria-label="Vista" className="flex rounded-full border bg-card/70 p-0.5 backdrop-blur-md">
           {([["mapa", "Mapa", Network], ["notas", "Notas", NotebookPen]] as const).map(([v, t, Icono]) => (
             <button
               key={v}
@@ -203,7 +194,7 @@ export function Espacio() {
           ))}
         </div>}
 
-        {!enOtro && <button
+        {!enOtro && !bloqueado && <button
           type="button"
           onClick={() => estado === "error" || estado === "sucio" ? guardar() : undefined}
           title={estado === "error" ? "Reintentar" : undefined}
@@ -219,11 +210,11 @@ export function Espacio() {
 
       {/* ── Los espacios ── Varios tableros, no uno solo. Cada uno con su
           propio árbol y sus propios trazos. */}
-      {tablero && (
+      {(
         <div className="flex items-center gap-1.5 overflow-x-auto px-4 pb-2 sm:px-6">
           <button
             type="button"
-            onClick={() => { setEnManual(true); setEnPreguntas(false) }}
+            onClick={() => ir(true, false, false)}
             aria-pressed={enManual}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               enManual ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
@@ -233,7 +224,7 @@ export function Espacio() {
           </button>
           <button
             type="button"
-            onClick={() => { setEnPreguntas(true); setEnManual(false) }}
+            onClick={() => ir(false, true, false)}
             aria-pressed={enPreguntas}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               enPreguntas ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
@@ -242,6 +233,29 @@ export function Espacio() {
             <CircleHelp className="h-3.5 w-3.5" /> Preguntas
           </button>
           <span className="mx-1 h-4 w-px shrink-0 bg-border" aria-hidden />
+          {bloqueado || !tablero || !esp ? (
+            <button
+              type="button"
+              onClick={() => ir(false, false, false)}
+              aria-pressed={!enOtro}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                !enOtro ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
+              }`}
+            >
+              <Lock className="h-3.5 w-3.5" /> Kev López
+            </button>
+          ) : <>
+          <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label="Área de Kev López, con clave" />
+          <button
+            type="button"
+            onClick={() => ir(false, false, true)}
+            aria-pressed={enPrivadas}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              enPrivadas ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
+            }`}
+          >
+            <CircleHelp className="h-3.5 w-3.5" /> Mis preguntas
+          </button>
           {tablero.espacios.map((e) => {
             const activo = !enOtro && e.id === esp.id
             return (
@@ -253,7 +267,7 @@ export function Espacio() {
               >
                 <button
                   type="button"
-                  onClick={() => { setEnManual(false); setEnPreguntas(false); setEspacioId(e.id); setSel(RAIZ); setCajon(false) }}
+                  onClick={() => { ir(false, false, false); setEspacioId(e.id); setSel(RAIZ); setCajon(false) }}
                   aria-pressed={activo}
                   className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium"
                 >
@@ -293,6 +307,7 @@ export function Espacio() {
               <Plus className="h-3.5 w-3.5" /> Espacio
             </button>
           )}
+          </>}
         </div>
       )}
 
@@ -302,7 +317,23 @@ export function Espacio() {
         </main>
       ) : enPreguntas ? (
         <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background sm:mx-6 sm:mb-6">
+          <TableroPreguntas incrustado publico />
+        </main>
+      ) : enPrivadas && !bloqueado ? (
+        <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background sm:mx-6 sm:mb-6">
           <TableroPreguntas incrustado />
+        </main>
+      ) : bloqueado || !doc || !esp || !nodo ? (
+        <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background sm:mx-6 sm:mb-6">
+          <PantallaClave
+            titulo={<>Área de <span className="font-serif-display italic font-normal">Kev López</span></>}
+            bajada="Proyectos, mapa mental y preguntas de plata. Entra con tu clave."
+            entrada={entrada}
+            setEntrada={setEntrada}
+            error={error}
+            cargando={cargando}
+            onEntrar={() => entrar(entrada)}
+          />
         </main>
       ) : vista === "mapa" ? (
         <main className="relative mx-3 mb-3 flex-1 overflow-hidden rounded-[2rem] border bg-card/40 sm:mx-6 sm:mb-6">

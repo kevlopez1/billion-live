@@ -85,10 +85,8 @@ export function valido(x: unknown): x is Tablero {
 }
 
 // ── Semilla ──
-// Todas las preguntas viven aquí, aparte del manual. Kev: "eso de las
-// preguntas, ponlo como otra sección muy aparte". Las de dinero traen sus
-// propias respuestas y lo que ya hizo marcado; las del reto van vacías a
-// propósito: contestarlas es el ejercicio.
+// Las privadas: las de dinero, con sus propias respuestas y lo que ya hizo
+// marcado. Viven en el área de Kev López, con clave.
 export function semilla(): Tablero {
   return {
     preguntas: [
@@ -123,6 +121,21 @@ export function semilla(): Tablero {
           { texto: "Pensar en juntar o unir cosas" },
         ],
       },
+    ],
+  }
+}
+
+// ── Las públicas ──
+// Kev: "pásalas a Kev López, pero después crea el área de preguntas otra
+// pública para Kev Project GTA". Las de dinero llevan nombres de personas y
+// montos: quedan en su área privada. Las del reto se ven y se escriben sin
+// clave, como el manual.
+export const ID_PUBLICAS = "kev-project-gta"
+export const IDS_RETO = new Set(["vistas-mes", "inversores-mes"])
+
+export function semillaPublica(): Tablero {
+  return {
+    preguntas: [
       {
         id: "vistas-mes",
         pregunta: "¿Cómo conseguimos 10 millones de vistas este mes?",
