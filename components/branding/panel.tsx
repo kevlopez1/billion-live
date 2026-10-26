@@ -16,7 +16,7 @@ import { devolver, dondeEstaba, type Borrado } from "@/lib/papelera"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, ordenActual, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
-import { ANCLA, type Revision } from "@/lib/revision"
+import { ANCLA, ETIQUETA_SECCION, type Revision } from "@/lib/revision"
 import { Indice, type Entrada } from "@/components/branding/indice"
 import { Plegable } from "@/components/branding/plegable"
 import { Agregar, Campo, Fila, ListaTextos } from "@/components/branding/campos"
@@ -30,19 +30,10 @@ import {
   type Contenido, type Estado, type Etapa,
 } from "@/lib/branding"
 
-const SECCIONES: Entrada[] = [
-  { id: "personaje", nombre: "El personaje" },
-  { id: "norte", nombre: "El norte" },
-  { id: "formatos", nombre: "Los formatos" },
-  { id: "edicion", nombre: "La edición" },
-  { id: "numeros", nombre: "Los números" },
-  { id: "pruebas", nombre: "La bóveda de pruebas" },
-  { id: "distribucion", nombre: "Distribución" },
-  { id: "produccion", nombre: "Producción" },
-  { id: "cola", nombre: "Guiones e ideas" },
-  { id: "hoy", nombre: "Qué funciona hoy" },
-  { id: "futuro", nombre: "Hacia 2028" },
-]
+// El índice del celular sale del mismo orden y los mismos nombres que el de
+// escritorio: antes eran dos listas escritas a mano que no coincidían.
+const entradasDe = (c: Contenido): Entrada[] =>
+  ordenActual(c).map((s) => ({ id: ANCLA[s], nombre: ETIQUETA_SECCION[s] }))
 
 // Las diez ramas arrancan recogidas: el índice tiene que caber en una pantalla.
 const SIN_PLEGAR = new Set<string>()
@@ -308,7 +299,13 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
     if (!sec) return
     setVista("documento")
     // Una sección a la vez: al cambiar se vuelve arriba del documento.
-    setTimeout(() => document.getElementById("manual-arriba")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
+    // Se sube la caja que se desplaza, no la página: scrollIntoView también
+    // movía el contenedor de afuera y se perdían el título y las pestañas.
+    setTimeout(() => {
+      const caja = document.getElementById("manual-arriba")?.closest("main")
+      if (caja) caja.scrollTo({ top: 0, behavior: "smooth" })
+      else window.scrollTo({ top: 0, behavior: "smooth" })
+    }, 60)
   }
 
   // La sección que se ve: una sola, separada de las demás.
@@ -578,14 +575,12 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
       ) : (
       <div className="lg:flex lg:gap-10">
         <Indice
-          entradas={SECCIONES}
+          entradas={entradasDe(doc)}
           soloMovil
           activaFija={activa}
           onIr={(ancla) => {
-            // Del ancla de la entrada a la sección. Los números van con los
-            // formatos y la bóveda con los guiones, como en escritorio.
+            // Del ancla de la entrada a la sección.
             const sec = (Object.keys(ANCLA) as (keyof typeof ANCLA)[]).find((k) => ANCLA[k] === ancla && k !== "meta")
-              ?? (ancla === "numeros" ? "formatos" : ancla === "pruebas" ? "enCola" : null)
             if (sec) irANodo(idRama(sec))
           }}
         />
@@ -963,12 +958,10 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           {/* ── Los números ── van con los formatos: miden cómo rinde cada uno. */}
           <div className={ver("formatos")}><Numeros formatos={doc.formatos} clave={clave} /></div>
 
-          {/* La bóveda de pruebas va con los guiones: de ahí sale lo que se muestra en pantalla. */}
-          <div className={ver("cola")}><Pruebas /></div>
 
           {/* ── Distribución ── */}
           <section className={ver("distribucion")}>
-            <Titulo id="distribucion" emoji="📡" numero={`${enUso} de ${doc.redes.length} en uso`}>Distribución</Titulo>
+            <Titulo id="distribucion" emoji="📡" numero={`${enUso} de ${doc.redes.length} en uso`}>Las redes</Titulo>
 
             <p className="mb-4 max-w-2xl text-[14.5px] leading-relaxed text-muted-foreground">
               <b className="text-foreground">Un rodaje, {enUso} salidas.</b>{" "}
@@ -1072,7 +1065,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
 
           {/* ── Producción ── */}
           <section className={ver("produccion")}>
-            <Titulo id="produccion" emoji="👕">Producción</Titulo>
+            <Titulo id="produccion" emoji="👕">La producción</Titulo>
             <div className="grid gap-3 sm:grid-cols-2">
               {([["Personaje", "personaje"], ["Equipo", "equipo"]] as const).map(([rotulo, llave]) => (
                 <div key={llave}>
@@ -1277,24 +1270,27 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
               )}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-dashed border-border px-4 py-4">
-              <div className="mb-2 text-[10px] font-display font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Pendientes
-              </div>
-              <ListaTextos
-                items={doc.pendientes}
-                onChange={(v) => editar((d) => ({ ...d, pendientes: v }))}
-                editando={editando}
-                placeholder="Pendiente"
-                textoAgregar="Agregar pendiente"
-              />
-            </div>
+          </section>
+
+          {/* La bóveda de pruebas va con los guiones: de ahí sale lo que se muestra en pantalla. */}
+          <div className={ver("cola")}><Pruebas /></div>
+
+          {/* ── Pendientes: sección propia ── */}
+          <section className={ver("pendientes")}>
+            <Titulo id="pendientes" emoji="📌" numero={`${doc.pendientes.length}`}>Pendientes</Titulo>
+            <ListaTextos
+              items={doc.pendientes}
+              onChange={(v) => editar((d) => ({ ...d, pendientes: v }))}
+              editando={editando}
+              placeholder="Pendiente"
+              textoAgregar="Agregar pendiente"
+            />
           </section>
 
           {/* ── Hoy y futuro ── */}
           {([
-            ["hoy", "Qué funciona hoy", "2026", "✨", "hoy"],
-            ["futuro", "Hacia dónde va", "2028", "📈", "futuro"],
+            ["hoy", ETIQUETA_SECCION.hoy, "2026", "✨", "hoy"],
+            ["futuro", ETIQUETA_SECCION.futuro, "2028", "📈", "futuro"],
           ] as const).map(([id, titulo, anio, Icono, llave]) => (
             <section key={id} className={ver(id)}>
               <Titulo id={id} emoji={Icono} numero={anio}>{titulo}</Titulo>

@@ -51,8 +51,8 @@ export const ETIQUETA_SECCION: Record<Seccion, string> = {
   produccion: "La producción",
   enCola: "Guiones e ideas",
   pendientes: "Pendientes",
-  hoy: "Lo de hoy",
-  futuro: "Lo que viene",
+  hoy: "Qué funciona hoy",
+  futuro: "Hacia 2028",
 }
 
 // El emoji de cada sección. Vivía copiado en dos archivos (el mapa y el árbol),
@@ -71,8 +71,8 @@ export function ordenar(hallazgos: Hallazgo[]): Hallazgo[] {
 }
 
 // A qué sección del documento salta un hallazgo. Las claves del manual y los
-// anclajes de la página no se llaman igual (`redes` se muestra como
-// "Distribución", y `pendientes` vive dentro de "En cola"), así que la
+// anclajes de la página no se llaman igual (`redes` tiene el ancla
+// "distribucion" y `enCola` la ancla "cola"), así que la
 // traducción va escrita en un solo lugar en vez de adivinarse en cada clic.
 export const ANCLA: Record<Seccion, string> = {
   meta: "personaje",
@@ -83,7 +83,7 @@ export const ANCLA: Record<Seccion, string> = {
   redes: "distribucion",
   produccion: "produccion",
   enCola: "cola",
-  pendientes: "cola",
+  pendientes: "pendientes",
   hoy: "hoy",
   futuro: "futuro",
 }
