@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
 import {
-  AlertTriangle, ArrowUpRight, CircleHelp, Gauge, Instagram, Facebook, Lock, Map as MapIcon, NotebookPen,
+  AlertTriangle, ArrowUpRight, CircleHelp, Gauge, Instagram, Facebook, Lock, NotebookPen,
   Receipt, RefreshCw, Send, Sparkles,
 } from "lucide-react"
 import { PantallaClave } from "@/components/pantalla-clave"
@@ -53,7 +53,6 @@ function Cifra({ valor, etiqueta, nota }: { valor: string; etiqueta: string; not
 
 const HERRAMIENTAS = [
   { href: "/branding", nombre: "Kev Project GTA Branding", icono: Sparkles, nota: "Formatos, edición, producción" },
-  { href: "/kevlopez_proyectos", nombre: "Proyectos", icono: MapIcon, nota: "Mapa, notas y tareas" },
   { href: "/preguntas", nombre: "Preguntas", icono: CircleHelp, nota: "Una pregunta, mínimo veinte respuestas" },
   { href: "/publicar", nombre: "Publicar", icono: Send, nota: "Instagram y Facebook a la vez" },
   { href: "/control", nombre: "Contador", icono: Gauge, nota: "Actualizar lo recaudado" },
