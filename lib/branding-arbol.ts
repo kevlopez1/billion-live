@@ -27,8 +27,8 @@ type Rama = {
   hojas: string[]
   /** Estado por hoja, cuando la sección lo tiene (las redes). */
   estados?: Estado[]
-  /** De qué rama cuelga, si no es de la raíz. El norte cuelga del personaje:
-   *  son sus principios, y Kev los quiere ver al desplegarlo. */
+  /** De qué rama cuelga, si no es de la raíz. Hoy ninguna: Kev quiere cada
+   *  sección separada. */
   dentroDe?: Seccion
 }
 
@@ -39,7 +39,7 @@ function ramas(c: Contenido): Rama[] {
   const limpio = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean)
   return ordenar(c, [
     { id: "personaje", icono: "", hojas: limpio([...c.personaje.fortalezas, ...c.personaje.debilidades, ...c.personaje.oportunidades]) },
-    { id: "norte", icono: "", hojas: limpio(c.norte.map((p) => p.titulo)), dentroDe: "personaje" },
+    { id: "norte", icono: "", hojas: limpio(c.norte.map((p) => p.titulo)) },
     { id: "formatos", icono: "", hojas: limpio(c.formatos.map((f) => f.nombre)) },
     { id: "edicion", icono: "", hojas: limpio(c.edicion.bloques.map((b) => b.titulo)) },
     {
