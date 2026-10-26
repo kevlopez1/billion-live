@@ -52,6 +52,9 @@ export const ETIQUETA_ETAPA: Record<Etapa, string> = {
   publicado: "Publicado",
 }
 
+/** Una toma del guion: lo que Kev dice y lo que se ve mientras lo dice. */
+export type Toma = { dice: string; pantalla?: string }
+
 export type Video = {
   titulo: string
   formato: string

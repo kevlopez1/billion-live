@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2, Plus, Send, Trash2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2, Plus, Send, Trash2, X } from "lucide-react"
 import { Numeros } from "@/components/branding/numeros"
 import { leerClave } from "@/lib/clave"
 import { ETAPAS, ETIQUETA_ETAPA, type Contenido, type Etapa } from "@/lib/branding"
