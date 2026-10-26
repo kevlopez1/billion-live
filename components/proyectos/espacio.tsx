@@ -173,7 +173,9 @@ export function Espacio() {
   const nodo = doc ? doc.nodos.find((n) => n.id === sel) ?? doc.nodos.find((n) => n.id === RAIZ)! : null
 
   return (
-    <div className="flex h-dvh flex-col">
+    // overflow-hidden: la página no se desplaza, solo la caja de adentro. Sin
+    // esto había dos scrolls y el de afuera bajaba a un espacio vacío.
+    <div className="flex h-dvh flex-col overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="min-w-0">
           <h1 className="font-display truncate text-base font-semibold tracking-tight sm:text-lg">
