@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2, Plus, Send, Trash2, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2, Plus, Send, Trash2 } from "lucide-react"
 import { Numeros } from "@/components/branding/numeros"
 import { leerClave } from "@/lib/clave"
 import { ETAPAS, ETIQUETA_ETAPA, type Contenido, type Etapa } from "@/lib/branding"
@@ -174,7 +174,6 @@ export function Fabrica() {
         }
         const sel = Math.min(abierto, videos.length - 1)
         const v = doc.enCola[sel]
-        const tomas = v.guion ?? []
         const formato = doc.formatos.find((f) => f.nombre === v.formato)
         return (
           <div className="grid gap-4 md:grid-cols-[240px_1fr]">
@@ -190,7 +189,7 @@ export function Fabrica() {
                 >
                   <span className="block truncate text-[13px] font-medium">{x.titulo || "Sin título"}</span>
                   <span className="text-[11px] text-muted-foreground">
-                    {ETIQUETA_ETAPA[etapa]} · {(x.guion ?? []).length} tomas
+                    {ETIQUETA_ETAPA[etapa]}{x.gancho && x.estructura && x.cta ? " · guion listo" : ""}
                   </span>
                 </button>
               ))}
@@ -209,51 +208,31 @@ export function Fabrica() {
                 </ol>
               )}
 
-              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Gancho (3 primeros segundos)</label>
-              <input
+              {/* El guion, como lo define Kev: gancho + estructura + CTA,
+                  coherentes entre sí. No es un texto palabra por palabra. */}
+              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-wide text-gold">Gancho</label>
+              <textarea
                 value={v.gancho ?? ""}
                 onChange={(e) => cambiar((d) => { d.enCola[sel].gancho = e.target.value })}
-                className="mt-1 w-full rounded-[8px] border bg-background px-2.5 py-1.5 text-sm outline-none"
+                placeholder="Lo que engancha en los 3 primeros segundos"
+                rows={2}
+                className="mt-1 w-full resize-y rounded-[8px] border bg-background px-2.5 py-2 text-[14px] font-medium leading-relaxed outline-none"
               />
-
-              <div className="mt-4 space-y-2">
-                {tomas.map((t, k) => (
-                  <div key={k} className="group grid gap-2 rounded-[10px] border bg-background p-2.5 sm:grid-cols-[28px_1fr_1fr_24px]">
-                    <span className="pt-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{k + 1}</span>
-                    <textarea
-                      value={t.dice}
-                      onChange={(e) => cambiar((d) => { d.enCola[sel].guion![k].dice = e.target.value })}
-                      placeholder="Lo que dices"
-                      rows={3}
-                      className="w-full resize-y rounded-[6px] bg-foreground/[0.03] px-2 py-1.5 text-[13px] outline-none"
-                    />
-                    <textarea
-                      value={t.pantalla ?? ""}
-                      onChange={(e) => cambiar((d) => { d.enCola[sel].guion![k].pantalla = e.target.value })}
-                      placeholder="Lo que se ve: toma, prueba, texto en pantalla"
-                      rows={3}
-                      className="w-full resize-y rounded-[6px] bg-foreground/[0.03] px-2 py-1.5 text-[12px] text-muted-foreground outline-none"
-                    />
-                    <button type="button" aria-label="Borrar toma" onClick={() => cambiar((d) => { d.enCola[sel].guion!.splice(k, 1) })} className="self-start rounded p-1 text-muted-foreground/50 opacity-0 hover:text-rojo group-hover:opacity-100 max-md:opacity-60">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => cambiar((d) => { (d.enCola[sel].guion ??= []).push({ dice: "", pantalla: "" }) })}
-                  className="flex items-center gap-1.5 rounded-[10px] border border-dashed px-2.5 py-2 text-xs text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Toma
-                </button>
-              </div>
-
-              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Prueba en pantalla</label>
-              <input
-                value={v.prueba ?? ""}
-                onChange={(e) => cambiar((d) => { d.enCola[sel].prueba = e.target.value })}
-                placeholder="Si se menciona un número, se muestra: el saldo, el comprobante, la pantalla"
-                className="mt-1 w-full rounded-[8px] border bg-background px-2.5 py-1.5 text-sm outline-none"
+              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-wide text-gold">Estructura</label>
+              <textarea
+                value={v.estructura ?? ""}
+                onChange={(e) => cambiar((d) => { d.enCola[sel].estructura = e.target.value })}
+                placeholder="Cómo se desarrolla: los pasos del formato, en tus palabras"
+                rows={5}
+                className="mt-1 w-full resize-y rounded-[8px] border bg-background px-2.5 py-2 text-[14px] font-medium leading-relaxed outline-none"
+              />
+              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-wide text-gold">CTA</label>
+              <textarea
+                value={v.cta ?? ""}
+                onChange={(e) => cambiar((d) => { d.enCola[sel].cta = e.target.value })}
+                placeholder="Qué le pides al que mira, al final"
+                rows={2}
+                className="mt-1 w-full resize-y rounded-[8px] border bg-background px-2.5 py-2 text-[14px] font-medium leading-relaxed outline-none"
               />
             </article>
           </div>

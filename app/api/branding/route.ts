@@ -122,18 +122,12 @@ function valido(c: unknown): c is Contenido {
     }
   }
 
-  // El guion de cada video es opcional, pero si viene se revisa entero: un
-  // guion mal formado rompería la pestaña Guiones al cargar.
+  // Los campos del guion son opcionales, pero si vienen tienen que ser texto:
+  // otra cosa rompería la sección Guiones e ideas al cargar.
   for (const v of x.enCola as unknown[]) {
     if (!v || typeof v !== "object") return false
-    const g = (v as Record<string, unknown>).guion
-    if (g === undefined) continue
-    if (!Array.isArray(g)) return false
-    for (const t of g as unknown[]) {
-      if (!t || typeof t !== "object") return false
-      const o = t as Record<string, unknown>
-      if (!texto(o.dice) || (o.pantalla !== undefined && !texto(o.pantalla))) return false
-    }
+    const o = v as Record<string, unknown>
+    if (!["gancho", "estructura", "cta", "prueba"].every((k) => o[k] === undefined || texto(o[k]))) return false
   }
 
   const pro = x.produccion as Record<string, unknown> | undefined

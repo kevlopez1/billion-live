@@ -39,7 +39,7 @@ const SECCIONES: Entrada[] = [
   { id: "pruebas", nombre: "La bóveda de pruebas" },
   { id: "distribucion", nombre: "Distribución" },
   { id: "produccion", nombre: "Producción" },
-  { id: "cola", nombre: "En cola" },
+  { id: "cola", nombre: "Guiones e ideas" },
   { id: "hoy", nombre: "Qué funciona hoy" },
   { id: "futuro", nombre: "Hacia 2028" },
 ]
@@ -1059,9 +1059,9 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
             </div>
           </section>
 
-          {/* ── En cola ── */}
+          {/* ── Guiones e ideas ── */}
           <section>
-            <Titulo id="cola" emoji="🎯" numero={`${doc.enCola.length} videos`}>En cola</Titulo>
+            <Titulo id="cola" emoji="🎯" numero={`${doc.enCola.length} videos`}>Guiones e ideas</Titulo>
 
             {/* ── La línea de producción ──
                 Una fábrica tiene estaciones. Ver cuántos hay en cada una es lo
@@ -1132,31 +1132,42 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
                       )}
                     </div>
 
-                    {/* El gancho y la prueba se escriben ANTES de grabar. El
-                        manual exige las dos cosas; pedirlas aquí es lo que
-                        evita llegar a la edición sin ninguna. */}
-                    {(editando || v.gancho || v.prueba) && (
-                      <div className="mt-3 space-y-1.5 border-t border-border pt-3">
-                        <div className="flex gap-2">
-                          <span className="shrink-0 pt-px text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Gancho</span>
+                    {/* El guion, como lo define Kev: gancho + estructura + CTA. No es un
+                        texto palabra por palabra; tiene que ser coherente de
+                        punta a punta. */}
+                    {(editando || v.gancho || v.estructura || v.cta) && (
+                      <div className="mt-3 space-y-2.5 border-t border-border pt-3">
+                        <div className="grid gap-1 sm:grid-cols-[92px_1fr]">
+                          <span className="pt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-gold">Gancho</span>
                           <Campo
                             valor={v.gancho ?? ""}
                             onChange={(x) => editar((d) => { d.enCola[i].gancho = x; return d })}
                             editando={editando}
                             multilinea
-                            className="text-[13px] leading-snug text-muted-foreground"
-                            placeholder="Los tres primeros segundos, tal cual se van a decir"
+                            className="text-[14px] font-medium leading-relaxed text-foreground/85"
+                            placeholder="Lo que engancha en los 3 primeros segundos"
                           />
                         </div>
-                        <div className="flex gap-2">
-                          <span className="shrink-0 pt-px text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Prueba</span>
+                        <div className="grid gap-1 sm:grid-cols-[92px_1fr]">
+                          <span className="pt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-gold">Estructura</span>
                           <Campo
-                            valor={v.prueba ?? ""}
-                            onChange={(x) => editar((d) => { d.enCola[i].prueba = x; return d })}
+                            valor={v.estructura ?? ""}
+                            onChange={(x) => editar((d) => { d.enCola[i].estructura = x; return d })}
                             editando={editando}
                             multilinea
-                            className="text-[13px] leading-snug text-muted-foreground"
-                            placeholder="Qué se muestra en pantalla que lo compruebe"
+                            className="text-[14px] font-medium leading-relaxed text-foreground/85"
+                            placeholder="Cómo se desarrolla: los pasos del formato, en tus palabras"
+                          />
+                        </div>
+                        <div className="grid gap-1 sm:grid-cols-[92px_1fr]">
+                          <span className="pt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-gold">CTA</span>
+                          <Campo
+                            valor={v.cta ?? ""}
+                            onChange={(x) => editar((d) => { d.enCola[i].cta = x; return d })}
+                            editando={editando}
+                            multilinea
+                            className="text-[14px] font-medium leading-relaxed text-foreground/85"
+                            placeholder="Qué le pides al que mira, al final"
                           />
                         </div>
                       </div>
