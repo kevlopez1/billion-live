@@ -307,8 +307,14 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
     const sec = seccionDe(idNodo)
     if (!sec) return
     setVista("documento")
-    setTimeout(() => document.getElementById(ANCLA[sec])?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
+    // Una sección a la vez: al cambiar se vuelve arriba del documento.
+    setTimeout(() => document.getElementById("manual-arriba")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
   }
+
+  // La sección que se ve. El norte se muestra también con el personaje: en el
+  // índice cuelga de él.
+  const activa = ANCLA[seccionDe(nodoSel) ?? "personaje"] ?? "personaje"
+  const ver = (id: string) => (activa === id || (activa === "personaje" && id === "norte") ? "" : "hidden")
 
   const proponer = async () => {
     if (!clave) { setPidiendoClave(true); return }
@@ -558,6 +564,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           uso={uso}
           onCerrar={() => setVerRevision(false)}
           onRevisar={revisar}
+          onIr={(sec) => irANodo(idRama(sec))}
         />
       )}
 
@@ -584,9 +591,9 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           />
         </aside>
 
-        <div className="min-w-0 flex-1 space-y-16 md:space-y-20">
+        <div id="manual-arriba" className="min-w-0 flex-1 scroll-mt-6 space-y-16 md:space-y-20">
           {/* ── El personaje ── */}
-          <section>
+          <section className={ver("personaje")}>
             <Titulo id="personaje" emoji="👤">El personaje</Titulo>
             <Campo
               valor={doc.personaje.nombre}
@@ -618,7 +625,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           </section>
 
           {/* ── El norte ── */}
-          <section>
+          <section className={ver("norte")}>
             <Titulo id="norte" emoji="🧭" numero={`${doc.norte.length} principios`}>El norte</Titulo>
             <p className="mb-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
               Lo que se toma en cuenta siempre. Si un video no responde a esto, no se publica.
@@ -689,7 +696,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           </section>
 
           {/* ── Los formatos ── */}
-          <section>
+          <section className={ver("formatos")}>
             <Titulo id="formatos" emoji="🎬" numero={`${doc.formatos.length} formatos`}>Los formatos</Titulo>
             <p className="mb-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
               La estructura puede variar, pero el objetivo no: posicionar las ambiciones reales y construir el apego a
@@ -777,7 +784,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           </section>
 
           {/* ── La edición ── */}
-          <section>
+          <section className={ver("edicion")}>
             <Titulo id="edicion" emoji="✂️" numero={`${doc.edicion.bloques.length} bloques`}>La edición</Titulo>
 
             <div className="mb-5 rounded-2xl border border-gold/40 bg-gold/[0.05] px-4 py-4 md:px-5">
@@ -937,7 +944,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           <Pruebas />
 
           {/* ── Distribución ── */}
-          <section>
+          <section className={ver("distribucion")}>
             <Titulo id="distribucion" emoji="📡" numero={`${enUso} de ${doc.redes.length} en uso`}>Distribución</Titulo>
 
             <p className="mb-4 max-w-2xl text-[14.5px] leading-relaxed text-muted-foreground">
@@ -1041,7 +1048,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           </section>
 
           {/* ── Producción ── */}
-          <section>
+          <section className={ver("produccion")}>
             <Titulo id="produccion" emoji="👕">Producción</Titulo>
             <div className="grid gap-3 sm:grid-cols-2">
               {([["Personaje", "personaje"], ["Equipo", "equipo"]] as const).map(([rotulo, llave]) => (
@@ -1060,7 +1067,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           </section>
 
           {/* ── Guiones e ideas ── */}
-          <section>
+          <section className={ver("cola")}>
             <Titulo id="cola" emoji="🎯" numero={`${doc.enCola.length} videos`}>Guiones e ideas</Titulo>
 
             {/* ── La línea de producción ──
@@ -1266,7 +1273,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
             ["hoy", "Qué funciona hoy", "2026", "✨", "hoy"],
             ["futuro", "Hacia dónde va", "2028", "📈", "futuro"],
           ] as const).map(([id, titulo, anio, Icono, llave]) => (
-            <section key={id}>
+            <section key={id} className={ver(id)}>
               <Titulo id={id} emoji={Icono} numero={anio}>{titulo}</Titulo>
               {id === "futuro" && (
                 <p className="mb-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">

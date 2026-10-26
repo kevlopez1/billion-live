@@ -33,6 +33,7 @@ export function PanelRevision({
   uso,
   onCerrar,
   onRevisar,
+  onIr,
 }: {
   revision: Revision | null
   cargando: boolean
@@ -40,8 +41,12 @@ export function PanelRevision({
   uso: { entrada: number; salida: number; costoUsd: number } | null
   onCerrar: () => void
   onRevisar: () => void
+  /** Llevar a una sección. El manual muestra una a la vez, así que no basta
+   *  con hacer scroll: hay que abrirla. */
+  onIr?: (s: Hallazgo["seccion"]) => void
 }) {
-  const ir = (h: Hallazgo) => document.getElementById(ANCLA[h.seccion])?.scrollIntoView({ behavior: "smooth", block: "start" })
+  const ir = (h: Hallazgo) =>
+    onIr ? onIr(h.seccion) : document.getElementById(ANCLA[h.seccion])?.scrollIntoView({ behavior: "smooth", block: "start" })
 
   return (
     <aside className="mb-8 rounded-2xl border border-gold/35 bg-gold/[0.03] p-4 md:p-5">
