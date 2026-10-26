@@ -27,6 +27,9 @@ type Rama = {
   hojas: string[]
   /** Estado por hoja, cuando la sección lo tiene (las redes). */
   estados?: Estado[]
+  /** De qué rama cuelga, si no es de la raíz. El norte cuelga del personaje:
+   *  son sus principios, y Kev los quiere ver al desplegarlo. */
+  dentroDe?: Seccion
 }
 
 /** El estado de una red, en los cuatro que entiende el mapa. */
@@ -36,7 +39,7 @@ function ramas(c: Contenido): Rama[] {
   const limpio = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean)
   return [
     { id: "personaje", icono: "", hojas: limpio([...c.personaje.fortalezas, ...c.personaje.debilidades, ...c.personaje.oportunidades]) },
-    { id: "norte", icono: "", hojas: limpio(c.norte.map((p) => p.titulo)) },
+    { id: "norte", icono: "", hojas: limpio(c.norte.map((p) => p.titulo)), dentroDe: "personaje" },
     { id: "formatos", icono: "", hojas: limpio(c.formatos.map((f) => f.nombre)) },
     { id: "edicion", icono: "", hojas: limpio(c.edicion.bloques.map((b) => b.titulo)) },
     {
@@ -71,9 +74,12 @@ export function aDoc(c: Contenido, plegados: Set<string>): Doc {
 
   for (const r of ramas(c)) {
     const id = idRama(r.id)
+    const padre = r.dentroDe ? idRama(r.dentroDe) : RAIZ
+    // Si la rama que la contiene está plegada, esta no se muestra.
+    if (r.dentroDe && plegados.has(padre)) continue
     nodos.push({
       id,
-      padre: RAIZ,
+      padre,
       titulo: ETIQUETA_SECCION[r.id],
       icono: r.icono,
       ...vacio,

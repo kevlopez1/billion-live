@@ -180,6 +180,9 @@
   body {
     @apply bg-background text-foreground antialiased;
     letter-spacing: -0.01em;
+    /* Kev: «las palabras de la web, más negritas». El cuerpo pasa de 400 a
+       500, y lo que ya era más grueso sube un escalón abajo. */
+    font-weight: 500;
   }
   h1,
   h2,
@@ -967,3 +970,9 @@ body::after {
 .ripple:active::after {
   opacity: 1;
 }
+
+/* Más gruesa en toda la web (Kev). Van fuera de las capas a propósito: así le
+   ganan a las utilidades de Tailwind sin tocar cada componente. */
+.font-light { font-weight: 400; }
+.font-normal { font-weight: 500; }
+.font-medium { font-weight: 600; }
