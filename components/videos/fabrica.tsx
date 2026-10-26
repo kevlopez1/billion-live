@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2, Plus, Send, Trash2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2, Plus, Send, Trash2, X } from "lucide-react"
 import { Numeros } from "@/components/branding/numeros"
 import { leerClave } from "@/lib/clave"
 import { ETAPAS, ETIQUETA_ETAPA, type Contenido, type Etapa } from "@/lib/branding"
@@ -13,9 +13,10 @@ import { ETAPAS, ETIQUETA_ETAPA, type Contenido, type Etapa } from "@/lib/brandi
 // son "La edición". Así el manual y la fábrica no pueden discrepar.
 // ──────────────────────────────────────────────────────────────
 
-type Parte = "videos" | "edicion" | "publicacion" | "metricas"
+type Parte = "videos" | "guiones" | "edicion" | "publicacion" | "metricas"
 const PARTES: [Parte, string][] = [
   ["videos", "Videos"],
+  ["guiones", "Guiones"],
   ["edicion", "Edición"],
   ["publicacion", "Publicación"],
   ["metricas", "Métricas"],
@@ -26,6 +27,7 @@ export function Fabrica() {
   const [estado, setEstado] = useState<"limpio" | "sucio" | "guardando" | "error">("limpio")
   const [mensaje, setMensaje] = useState("")
   const [parte, setParte] = useState<Parte>("videos")
+  const [abierto, setAbierto] = useState(0)
   const visto = useRef<string | null>(null)
   const espera = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -165,6 +167,98 @@ export function Fabrica() {
           })}
         </div>
       )}
+
+      {parte === "guiones" && (() => {
+        if (videos.length === 0) {
+          return <p className="text-xs text-muted-foreground">Todavía no hay videos. Agrega uno en Videos y aquí se escribe su guion.</p>
+        }
+        const sel = Math.min(abierto, videos.length - 1)
+        const v = doc.enCola[sel]
+        const tomas = v.guion ?? []
+        const formato = doc.formatos.find((f) => f.nombre === v.formato)
+        return (
+          <div className="grid gap-4 md:grid-cols-[240px_1fr]">
+            {/* La lista: un guion por video del tablero. */}
+            <nav className="space-y-1">
+              {videos.map(({ v: x, i, etapa }) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setAbierto(i)}
+                  aria-pressed={i === sel}
+                  className={`w-full rounded-[10px] border px-2.5 py-2 text-left transition-colors ${i === sel ? "border-foreground/40 bg-foreground/[0.05]" : "hover:bg-foreground/[0.03]"}`}
+                >
+                  <span className="block truncate text-[13px] font-medium">{x.titulo || "Sin título"}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {ETIQUETA_ETAPA[etapa]} · {(x.guion ?? []).length} tomas
+                  </span>
+                </button>
+              ))}
+            </nav>
+
+            <article className="rounded-[14px] border bg-card/40 p-4">
+              <h3 className="text-base font-semibold">{v.titulo || "Sin título"}</h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">{v.formato || "Sin formato"}</p>
+
+              {/* Los pasos del formato, como guía mientras se escribe. */}
+              {formato && (
+                <ol className="mt-3 flex flex-wrap gap-1.5">
+                  {formato.beats.map((b, k) => (
+                    <li key={k} className="rounded-full bg-foreground/[0.05] px-2 py-0.5 text-[11px] text-muted-foreground">{k + 1}. {b.paso}</li>
+                  ))}
+                </ol>
+              )}
+
+              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Gancho (3 primeros segundos)</label>
+              <input
+                value={v.gancho ?? ""}
+                onChange={(e) => cambiar((d) => { d.enCola[sel].gancho = e.target.value })}
+                className="mt-1 w-full rounded-[8px] border bg-background px-2.5 py-1.5 text-sm outline-none"
+              />
+
+              <div className="mt-4 space-y-2">
+                {tomas.map((t, k) => (
+                  <div key={k} className="group grid gap-2 rounded-[10px] border bg-background p-2.5 sm:grid-cols-[28px_1fr_1fr_24px]">
+                    <span className="pt-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{k + 1}</span>
+                    <textarea
+                      value={t.dice}
+                      onChange={(e) => cambiar((d) => { d.enCola[sel].guion![k].dice = e.target.value })}
+                      placeholder="Lo que dices"
+                      rows={3}
+                      className="w-full resize-y rounded-[6px] bg-foreground/[0.03] px-2 py-1.5 text-[13px] outline-none"
+                    />
+                    <textarea
+                      value={t.pantalla ?? ""}
+                      onChange={(e) => cambiar((d) => { d.enCola[sel].guion![k].pantalla = e.target.value })}
+                      placeholder="Lo que se ve: toma, prueba, texto en pantalla"
+                      rows={3}
+                      className="w-full resize-y rounded-[6px] bg-foreground/[0.03] px-2 py-1.5 text-[12px] text-muted-foreground outline-none"
+                    />
+                    <button type="button" aria-label="Borrar toma" onClick={() => cambiar((d) => { d.enCola[sel].guion!.splice(k, 1) })} className="self-start rounded p-1 text-muted-foreground/50 opacity-0 hover:text-rojo group-hover:opacity-100 max-md:opacity-60">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => cambiar((d) => { (d.enCola[sel].guion ??= []).push({ dice: "", pantalla: "" }) })}
+                  className="flex items-center gap-1.5 rounded-[10px] border border-dashed px-2.5 py-2 text-xs text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Toma
+                </button>
+              </div>
+
+              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Prueba en pantalla</label>
+              <input
+                value={v.prueba ?? ""}
+                onChange={(e) => cambiar((d) => { d.enCola[sel].prueba = e.target.value })}
+                placeholder="Si se menciona un número, se muestra: el saldo, el comprobante, la pantalla"
+                className="mt-1 w-full rounded-[8px] border bg-background px-2.5 py-1.5 text-sm outline-none"
+              />
+            </article>
+          </div>
+        )
+      })()}
 
       {parte === "edicion" && (
         <div className="grid gap-3 md:grid-cols-2">

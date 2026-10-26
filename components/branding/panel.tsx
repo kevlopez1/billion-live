@@ -734,17 +734,15 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
                                   placeholder="El paso"
                                 />
                                 {(editando || b.ejemplo) && (
-                                  <div className={editando ? "" : "border-l-2 border-gold/40 pl-3"}>
+                                  // Como una nota pegada al paso: letra normal y legible, sobre un
+                                  // fondo propio. La serif en cursiva se leía fina y apretada.
+                                  <div className="rounded-[10px] border border-gold/25 bg-gold/[0.07] px-3 py-2">
                                     <Campo
                                       valor={b.ejemplo ?? ""}
                                       onChange={(v) => editar((d) => { d.formatos[i].beats[k].ejemplo = v; return d })}
                                       editando={editando}
                                       multilinea
-                                      className={
-                                        editando
-                                          ? "font-serif-display text-[13.5px] italic text-muted-foreground"
-                                          : "font-serif-display text-[14px] italic leading-relaxed text-foreground/75"
-                                      }
+                                      className="text-[14.5px] font-medium leading-relaxed text-foreground/90"
                                       placeholder="Guion de ejemplo (opcional)"
                                     />
                                   </div>

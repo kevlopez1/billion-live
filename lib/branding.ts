@@ -52,6 +52,9 @@ export const ETIQUETA_ETAPA: Record<Etapa, string> = {
   publicado: "Publicado",
 }
 
+/** Una toma del guion: lo que Kev dice y lo que se ve mientras lo dice. */
+export type Toma = { dice: string; pantalla?: string }
+
 export type Video = {
   titulo: string
   formato: string
@@ -61,6 +64,9 @@ export type Video = {
   /** Qué prueba en pantalla lleva. El manual lo exige: si se menciona un
    *  número, se muestra. */
   prueba?: string
+  /** El guion completo, toma por toma. Opcional: los videos que todavía son
+   *  idea no lo tienen, y los documentos viejos se leen igual. */
+  guion?: Toma[]
 }
 export type Lectura = { titulo: string; cuerpo: string }
 export type BloqueEdicion = { titulo: string; nota: string; reglas: string[] }
