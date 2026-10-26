@@ -311,10 +311,9 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
     setTimeout(() => document.getElementById("manual-arriba")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
   }
 
-  // La sección que se ve. El norte se muestra también con el personaje: en el
-  // índice cuelga de él.
+  // La sección que se ve: una sola, separada de las demás.
   const activa = ANCLA[seccionDe(nodoSel) ?? "personaje"] ?? "personaje"
-  const ver = (id: string) => (activa === id || (activa === "personaje" && id === "norte") ? "" : "hidden")
+  const ver = (id: string) => (activa === id ? "" : "hidden")
 
   const proponer = async () => {
     if (!clave) { setPidiendoClave(true); return }
