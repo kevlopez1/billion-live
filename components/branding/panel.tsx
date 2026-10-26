@@ -938,10 +938,11 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
             </div>
           </section>
 
-          {/* ── Los números ── */}
-          <Numeros formatos={doc.formatos} clave={clave} />
+          {/* ── Los números ── van con los formatos: miden cómo rinde cada uno. */}
+          <div className={ver("formatos")}><Numeros formatos={doc.formatos} clave={clave} /></div>
 
-          <Pruebas />
+          {/* La bóveda de pruebas va con los guiones: de ahí sale lo que se muestra en pantalla. */}
+          <div className={ver("cola")}><Pruebas /></div>
 
           {/* ── Distribución ── */}
           <section className={ver("distribucion")}>
