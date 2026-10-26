@@ -41,14 +41,17 @@ export type Red = { nombre: string; estado: Estado; nota?: string; salida?: Sali
 // Una fábrica tiene estaciones. Un video no está "en cola" o "publicado": pasa
 // por cinco estados, y saber en cuál está es lo que permite ver dónde se
 // atasca el trabajo.
-export const ETAPAS = ["idea", "guion", "grabado", "editado", "publicado"] as const
+export const ETAPAS = ["idea", "guion", "grabado", "editado", "aprobado", "publicado"] as const
 export type Etapa = (typeof ETAPAS)[number]
 
 export const ETIQUETA_ETAPA: Record<Etapa, string> = {
   idea: "Idea",
   guion: "Guion",
   grabado: "Grabado",
-  editado: "Editado",
+  // "editado" es el video que el editor entregó y espera la revisión de Kev.
+  // El id se queda igual para no romper lo guardado; cambia lo que se lee.
+  editado: "En revisión",
+  aprobado: "Aprobado",
   publicado: "Publicado",
 }
 
@@ -65,7 +68,27 @@ export type Video = {
    *  entre sí. No es un texto palabra por palabra: se dice con sus palabras. */
   estructura?: string
   cta?: string
+
+  // ── El camino del video, del filmmaker a las redes ──
+  /** Link del material crudo que sube el filmmaker (Drive). */
+  material?: string
+  /** Link del video editado, la versión que Kev revisa (Drive). */
+  editado?: string
+  /** Cuántas veces volvió al editor. La v1 es la primera entrega. */
+  version?: number
+  /** Las correcciones que pidió Kev, en orden. La última sin `resuelta` es la
+   *  que el editor tiene que hacer. */
+  correcciones?: Correccion[]
+  /** El texto que acompaña la publicación. Sale del gancho y el CTA; Kev lo
+   *  edita antes de publicar. */
+  copy?: string
+  /** Dónde se publica. */
+  redes?: string[]
+  /** Lo que devolvió cada red al publicar. */
+  enlaces?: Record<string, string>
 }
+
+export type Correccion = { texto: string; fecha: string; version: number; resuelta?: boolean }
 export type Lectura = { titulo: string; cuerpo: string }
 export type BloqueEdicion = { titulo: string; nota: string; reglas: string[] }
 

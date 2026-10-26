@@ -12,7 +12,20 @@ import { useEffect, useState } from "react"
 
 export type Entrada = { id: string; nombre: string }
 
-export function Indice({ entradas, soloMovil = false }: { entradas: Entrada[]; soloMovil?: boolean }) {
+export function Indice({
+  entradas,
+  soloMovil = false,
+  onIr,
+  activaFija,
+}: {
+  entradas: Entrada[]
+  soloMovil?: boolean
+  /** Abrir una sección en vez de hacer scroll. El manual muestra una a la
+   *  vez: sin esto, tocar una entrada en el celular no hacía nada. */
+  onIr?: (id: string) => void
+  /** La entrada marcada, cuando la decide quien usa el índice. */
+  activaFija?: string
+}) {
   const [activa, setActiva] = useState(entradas[0]?.id ?? "")
   const [abierto, setAbierto] = useState(false)
 
@@ -35,8 +48,10 @@ export function Indice({ entradas, soloMovil = false }: { entradas: Entrada[]; s
 
   const ir = (id: string) => {
     setAbierto(false)
+    if (onIr) { onIr(id); return }
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
+  const marcada = activaFija ?? activa
 
   return (
     <>
@@ -51,7 +66,7 @@ export function Indice({ entradas, soloMovil = false }: { entradas: Entrada[]; s
             Índice
           </span>
           <span className="truncate pl-3 text-[13px] text-foreground">
-            {entradas.find((e) => e.id === activa)?.nombre ?? entradas[0]?.nombre}
+            {entradas.find((e) => e.id === marcada)?.nombre ?? entradas[0]?.nombre}
           </span>
         </button>
         {abierto && (
@@ -61,7 +76,7 @@ export function Indice({ entradas, soloMovil = false }: { entradas: Entrada[]; s
                 key={e.id}
                 onClick={() => ir(e.id)}
                 className={`rounded-lg px-3 py-2 text-left text-[14px] transition-colors ${
-                  e.id === activa ? "bg-foreground/[0.07] font-semibold text-foreground" : "text-muted-foreground"
+                  e.id === marcada ? "bg-foreground/[0.07] font-semibold text-foreground" : "text-muted-foreground"
                 }`}
               >
                 {e.nombre}
@@ -82,7 +97,7 @@ export function Indice({ entradas, soloMovil = false }: { entradas: Entrada[]; s
             key={e.id}
             onClick={() => ir(e.id)}
             className={`rounded-lg px-3 py-1.5 text-left text-[14px] leading-snug transition-colors ${
-              e.id === activa
+              e.id === marcada
                 ? "bg-foreground/[0.07] font-semibold text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
