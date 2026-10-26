@@ -14,7 +14,7 @@ import { Diagrama } from "@/components/branding/diagrama"
 import { guardarClave, leerClave } from "@/lib/clave"
 import { devolver, dondeEstaba, type Borrado } from "@/lib/papelera"
 import { Arbol } from "@/components/proyectos/arbol"
-import { aDoc, idRama, seccionDe } from "@/lib/branding-arbol"
+import { aDoc, idRama, ordenActual, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
 import { ANCLA, type Revision } from "@/lib/revision"
 import { Indice, type Entrada } from "@/components/branding/indice"
@@ -588,6 +588,18 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
             seleccionado={nodoSel}
             onSeleccionar={irANodo}
             cerradosIniciales={SECCIONES_ARBOL}
+            onMover={editando ? (id, paso) => {
+              const sec = seccionDe(id)
+              if (!sec) return
+              editar((d) => {
+                const orden = ordenActual(d)
+                const i = orden.indexOf(sec)
+                const j = i + paso
+                if (i === -1 || j < 0 || j >= orden.length) return d
+                ;[orden[i], orden[j]] = [orden[j], orden[i]]
+                return { ...d, ordenSecciones: orden }
+              })
+            } : undefined}
           />
         </aside>
 

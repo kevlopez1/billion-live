@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Plus } from "lucide-react"
+import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
 import { RAIZ, hijosDe, type Doc, type Nodo } from "@/lib/proyectos"
 
@@ -12,6 +12,7 @@ export function Arbol({
   onSeleccionar,
   onAgregar,
   cerradosIniciales,
+  onMover,
 }: {
   doc: Doc
   seleccionado: string
@@ -21,6 +22,8 @@ export function Arbol({
   /** Ramas recogidas al abrir. El manual tiene ~70 hojas: desplegadas todas,
    *  el índice mide tres pantallas y deja de servir como índice. */
   cerradosIniciales?: string[]
+  /** Subir (-1) o bajar (1) una rama de primer nivel. Solo el manual lo usa. */
+  onMover?: (id: string, paso: -1 | 1) => void
 }) {
   // Abierto por defecto: la raíz y sus ramas. Lo que el usuario cierra, queda cerrado.
   const [cerrados, setCerrados] = useState<Set<string>>(() => new Set(cerradosIniciales ?? []))
@@ -58,6 +61,16 @@ export function Arbol({
               {conPrime(n.titulo || "Sin título", false)}
             </span>
           </button>
+          {onMover && n.padre === RAIZ && (
+            <span className="flex shrink-0 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 max-lg:opacity-60">
+              <button type="button" onClick={() => onMover(n.id, -1)} aria-label={`Subir ${n.titulo}`} className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground">
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" onClick={() => onMover(n.id, 1)} aria-label={`Bajar ${n.titulo}`} className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground">
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          )}
           {onAgregar && <button
             type="button"
             onClick={() => onAgregar(n.id)}

@@ -100,11 +100,27 @@ export function Campo({
   useEffect(() => {
     const el = ref.current
     if (!el || !editando) return
-    el.style.height = "auto"
-    // scrollHeight no cuenta el borde, y la caja es border-box: sin sumarlo,
-    // cada caja quedaba 2 px más baja que su texto, cortaba la última línea y
-    // por eso mostraba una barra de desplazamiento.
-    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
+    const medir = () => {
+      // Oculta (otra sección del manual) no se puede medir: daría alto 0 y
+      // el texto quedaría escondido. Se mide cuando aparece.
+      if (!el.offsetParent) return
+      el.style.height = "auto"
+      // scrollHeight no cuenta el borde, y la caja es border-box: sin sumarlo,
+      // cada caja quedaba 2 px más baja que su texto, cortaba la última línea y
+      // por eso mostraba una barra de desplazamiento.
+      el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
+    }
+    medir()
+    // El manual muestra una sección a la vez: al pasar de oculta a visible
+    // cambia el ancho de la caja, y ahí se vuelve a medir.
+    let ancho = el.clientWidth
+    const ro = new ResizeObserver(() => {
+      if (el.clientWidth === ancho) return
+      ancho = el.clientWidth
+      medir()
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [local, editando])
 
   if (!editando) {

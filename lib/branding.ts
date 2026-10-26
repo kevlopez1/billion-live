@@ -95,6 +95,9 @@ export type Contenido = {
   preguntas?: Pregunta[]
   /** El estado del diagrama. Opcional: el manual se lee igual sin él. */
   lienzo?: Lienzo
+  /** El orden de las secciones en el índice, como lo dejó Kev. Opcional: sin
+   *  él, el orden de siempre. */
+  ordenSecciones?: string[]
 }
 
 export const ETIQUETA_ESTADO: Record<Estado, string> = {
