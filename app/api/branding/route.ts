@@ -122,6 +122,20 @@ function valido(c: unknown): c is Contenido {
     }
   }
 
+  // El guion de cada video es opcional, pero si viene se revisa entero: un
+  // guion mal formado rompería la pestaña Guiones al cargar.
+  for (const v of x.enCola as unknown[]) {
+    if (!v || typeof v !== "object") return false
+    const g = (v as Record<string, unknown>).guion
+    if (g === undefined) continue
+    if (!Array.isArray(g)) return false
+    for (const t of g as unknown[]) {
+      if (!t || typeof t !== "object") return false
+      const o = t as Record<string, unknown>
+      if (!texto(o.dice) || (o.pantalla !== undefined && !texto(o.pantalla))) return false
+    }
+  }
+
   const pro = x.produccion as Record<string, unknown> | undefined
   if (!pro || typeof pro !== "object") return false
   if (!["personaje", "equipo"].every((k) => listaDeTextos(pro[k]))) return false
