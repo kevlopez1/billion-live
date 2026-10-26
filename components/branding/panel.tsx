@@ -577,7 +577,18 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
         />
       ) : (
       <div className="lg:flex lg:gap-10">
-        <Indice entradas={SECCIONES} soloMovil />
+        <Indice
+          entradas={SECCIONES}
+          soloMovil
+          activaFija={activa}
+          onIr={(ancla) => {
+            // Del ancla de la entrada a la sección. Los números van con los
+            // formatos y la bóveda con los guiones, como en escritorio.
+            const sec = (Object.keys(ANCLA) as (keyof typeof ANCLA)[]).find((k) => ANCLA[k] === ancla && k !== "meta")
+              ?? (ancla === "numeros" ? "formatos" : ancla === "pruebas" ? "enCola" : null)
+            if (sec) irANodo(idRama(sec))
+          }}
+        />
         <aside className="sticky top-10 hidden h-fit w-60 shrink-0 lg:block">
           <span className="mb-2 block px-2 text-[11px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Índice

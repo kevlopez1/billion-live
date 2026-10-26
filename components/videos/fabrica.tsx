@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2, Plus, Send, Trash2, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, CloudOff, ExternalLink, Loader2, Plus, RotateCcw, Send, Trash2, X } from "lucide-react"
 import { Numeros } from "@/components/branding/numeros"
 import { EjemploEdicion, GuiaEditores } from "@/components/videos/ejemplos-edicion"
 import { leerClave } from "@/lib/clave"
-import { ETAPAS, ETIQUETA_ETAPA, type Contenido, type Etapa } from "@/lib/branding"
+import { ETAPAS, ETIQUETA_ETAPA, type Contenido, type Etapa, type Video } from "@/lib/branding"
 
 // ──────────────────────────────────────────────────────────────
 // LA FÁBRICA — videos, edición, publicación y métricas en un solo lugar.
@@ -14,14 +14,34 @@ import { ETAPAS, ETIQUETA_ETAPA, type Contenido, type Etapa } from "@/lib/brandi
 // son "La edición". Así el manual y la fábrica no pueden discrepar.
 // ──────────────────────────────────────────────────────────────
 
-type Parte = "videos" | "guiones" | "edicion" | "publicacion" | "metricas"
+type Parte = "videos" | "guiones" | "edicion" | "revision" | "publicacion" | "metricas"
 const PARTES: [Parte, string][] = [
   ["videos", "Videos"],
   ["guiones", "Guiones"],
   ["edicion", "Edición"],
+  ["revision", "Revisión"],
   ["publicacion", "Publicación"],
   ["metricas", "Métricas"],
 ]
+
+// ── El camino del video ──
+// Filmmaker graba y sube al Drive → editor entrega su versión (Drive) → Kev
+// aprueba o pide cambios → se publica con su copy. Todo queda en el mismo
+// video del tablero, así nadie pregunta «¿en qué va?».
+
+/** Un link de Drive para verlo, convertido en uno de descarga directa: Meta
+ *  necesita el archivo, no la página de Drive. Funciona con archivos
+ *  compartidos con «cualquiera con el link» y de hasta ~100 MB (un capítulo
+ *  de 20–40 s pesa mucho menos). */
+export function directo(link: string): string {
+  const id = link.match(/\/d\/([\w-]{10,})/)?.[1] ?? link.match(/[?&]id=([\w-]{10,})/)?.[1]
+  return id ? `https://drive.google.com/uc?export=download&id=${id}` : link.trim()
+}
+
+const pendiente = (v: Video) => (v.correcciones ?? []).find((c) => !c.resuelta)
+const copyInicial = (v: Video) => [v.gancho, v.cta].filter(Boolean).join("\n\n")
+
+const REDES: [string, string][] = [["ig", "Instagram"], ["fb", "Facebook"]]
 
 export function Fabrica() {
   const [doc, setDoc] = useState<Contenido | null>(null)
@@ -29,6 +49,9 @@ export function Fabrica() {
   const [mensaje, setMensaje] = useState("")
   const [parte, setParte] = useState<Parte>("videos")
   const [abierto, setAbierto] = useState(0)
+  const [notas, setNotas] = useState<Record<number, string>>({})
+  const [publicando, setPublicando] = useState<number | null>(null)
+  const [errores, setErrores] = useState<Record<number, string>>({})
   const visto = useRef<string | null>(null)
   const espera = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -80,7 +103,76 @@ export function Fabrica() {
       const actual = ETAPAS.indexOf((d.enCola[i].etapa ?? "idea") as Etapa)
       d.enCola[i].etapa = ETAPAS[Math.min(ETAPAS.length - 1, Math.max(0, actual + paso))]
     })
-  const listos = videos.filter((x) => x.etapa === "editado")
+  const enRevision = videos.filter((x) => x.etapa === "editado")
+  const aprobados = videos.filter((x) => x.etapa === "aprobado")
+
+  // El editor pega una versión nueva: si había una corrección pendiente,
+  // queda resuelta y la versión sube.
+  const entregar = (i: number, link: string) =>
+    cambiar((d) => {
+      const v = d.enCola[i]
+      const p = pendiente(v)
+      if (p && link.trim() && link.trim() !== (v.editado ?? "").trim()) {
+        p.resuelta = true
+        v.version = (v.version ?? 1) + 1
+      }
+      v.editado = link
+      if (!v.version && link.trim()) v.version = 1
+    })
+
+  const pedirCambios = (i: number) => {
+    const texto = (notas[i] ?? "").trim()
+    if (!texto) return
+    cambiar((d) => {
+      const v = d.enCola[i]
+      ;(v.correcciones ??= []).push({ texto, fecha: new Date().toISOString(), version: v.version ?? 1 })
+    })
+    setNotas((n) => ({ ...n, [i]: "" }))
+  }
+
+  const aprobar = (i: number) =>
+    cambiar((d) => {
+      const v = d.enCola[i]
+      v.etapa = "aprobado"
+      if (!v.copy) v.copy = copyInicial(v)
+      if (!v.redes) v.redes = ["ig", "fb"]
+    })
+
+  const publicar = async (i: number) => {
+    const v = doc.enCola[i]
+    const clave = leerClave()
+    setErrores((e) => ({ ...e, [i]: "" }))
+    if (!clave) { setErrores((e) => ({ ...e, [i]: "Para publicar, entra con tu clave en la pestaña Kev López." })); return }
+    if (!v.editado?.trim()) { setErrores((e) => ({ ...e, [i]: "Falta el link del video editado." })); return }
+    if (!v.redes?.length) { setErrores((e) => ({ ...e, [i]: "Elige al menos una red." })); return }
+    setPublicando(i)
+    try {
+      const r = await fetch("/api/publicar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
+        body: JSON.stringify({ tipo: "video", url: directo(v.editado), texto: v.copy ?? "", destinos: v.redes }),
+      })
+      const j = await r.json()
+      const res = (j.resultado ?? {}) as Record<string, { ok: boolean; enlace?: string; id?: string; error?: string } | undefined>
+      const bien = Object.entries(res).filter(([, x]) => x?.ok)
+      const mal = Object.entries(res).filter(([, x]) => x && !x.ok)
+      if (bien.length) {
+        cambiar((d) => {
+          const w = d.enCola[i]
+          w.enlaces = { ...(w.enlaces ?? {}), ...Object.fromEntries(bien.map(([k, x]) => [k, x!.enlace ?? x!.id ?? ""])) }
+          if (!mal.length) w.etapa = "publicado"
+        })
+      }
+      const msg = [j.error, ...mal.map(([k, x]) => `${k === "ig" ? "Instagram" : "Facebook"}: ${x!.error}`)].filter(Boolean).join(" · ")
+      if (msg) setErrores((e) => ({ ...e, [i]: msg }))
+    } catch {
+      setErrores((e) => ({ ...e, [i]: "Error de red. No se publicó nada." }))
+    } finally {
+      setPublicando(null)
+    }
+  }
+
+  const campo = "w-full rounded-[8px] border bg-background px-2.5 py-1.5 text-[13px] outline-none placeholder:text-muted-foreground/60"
 
   return (
     <div className="p-4 sm:p-6">
@@ -108,7 +200,7 @@ export function Fabrica() {
       </div>
 
       {parte === "videos" && (
-        <div className="grid gap-3 md:grid-cols-5">
+        <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
           {ETAPAS.map((et) => {
             const aqui = videos.filter((x) => x.etapa === et)
             return (
@@ -140,6 +232,27 @@ export function Fabrica() {
                         placeholder="Gancho: los 3 primeros segundos"
                         className="mt-1 w-full bg-transparent text-[11.5px] outline-none placeholder:text-muted-foreground/60"
                       />
+                      {et === "grabado" && (
+                        <input
+                          value={v.material ?? ""}
+                          onChange={(e) => cambiar((d) => { d.enCola[i].material = e.target.value })}
+                          placeholder="Filmmaker: link del Drive con lo grabado"
+                          className="mt-1.5 w-full rounded-[6px] bg-foreground/[0.04] px-1.5 py-1 text-[11px] outline-none placeholder:text-muted-foreground/60"
+                        />
+                      )}
+                      {et === "editado" && (
+                        <>
+                          <input
+                            value={v.editado ?? ""}
+                            onChange={(e) => entregar(i, e.target.value)}
+                            placeholder="Editor: link del Drive con el video"
+                            className="mt-1.5 w-full rounded-[6px] bg-foreground/[0.04] px-1.5 py-1 text-[11px] outline-none placeholder:text-muted-foreground/60"
+                          />
+                          {pendiente(v) && (
+                            <p className="mt-1 rounded-[6px] bg-rojo/10 px-1.5 py-1 text-[11px] font-semibold text-rojo">Cambios pedidos: {pendiente(v)!.texto}</p>
+                          )}
+                        </>
+                      )}
                       <div className="mt-1.5 flex items-center justify-between">
                         <button type="button" aria-label="Etapa anterior" disabled={et === "idea"} onClick={() => mover(i, -1)} className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
                           <ArrowLeft className="h-3.5 w-3.5" />
@@ -260,21 +373,131 @@ export function Fabrica() {
         </div>
       )}
 
+      {parte === "revision" && (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            El editor pega aquí el link de su versión. Tú la miras y la apruebas o pides cambios. Al aprobarla pasa a Publicación.
+          </p>
+          {enRevision.length === 0 && <p className="text-sm text-muted-foreground">Ningún video espera revisión.</p>}
+          {enRevision.map(({ v, i }) => {
+            const p = pendiente(v)
+            return (
+              <article key={i} className="rounded-[14px] border bg-card/40 p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-[15px] font-semibold">{v.titulo || "Sin título"}</h3>
+                  <span className="text-xs text-muted-foreground">{v.formato || "Sin formato"} · v{v.version ?? 1}</span>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input value={v.editado ?? ""} onChange={(e) => entregar(i, e.target.value)} placeholder="Link del Drive con el video editado" className={campo} />
+                  {v.editado?.trim() && (
+                    <a href={v.editado} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-[8px] border px-3 py-1.5 text-xs font-semibold hover:bg-foreground/[0.04]">
+                      <ExternalLink className="h-3.5 w-3.5" /> Ver video
+                    </a>
+                  )}
+                </div>
+                {v.material?.trim() && (
+                  <a href={v.material} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-[11px] text-muted-foreground underline">Material crudo del filmmaker</a>
+                )}
+
+                {(v.correcciones ?? []).length > 0 && (
+                  <ol className="mt-3 space-y-1.5">
+                    {v.correcciones!.map((c, k) => (
+                      <li key={k} className={`rounded-[8px] px-2.5 py-1.5 text-[12.5px] ${c.resuelta ? "bg-foreground/[0.04] text-muted-foreground line-through" : "bg-rojo/10 font-semibold text-rojo"}`}>
+                        v{c.version} · {c.texto}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+
+                <textarea
+                  value={notas[i] ?? ""}
+                  onChange={(e) => setNotas((n) => ({ ...n, [i]: e.target.value }))}
+                  placeholder="Qué hay que cambiar (si hace falta)"
+                  rows={2}
+                  className={`mt-3 resize-y ${campo}`}
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => pedirCambios(i)} disabled={!(notas[i] ?? "").trim()} className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold hover:bg-foreground/[0.04] disabled:opacity-40">
+                    <RotateCcw className="h-3.5 w-3.5" /> Pedir cambios
+                  </button>
+                  <button type="button" onClick={() => aprobar(i)} disabled={!v.editado?.trim() || !!p} className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background disabled:opacity-40">
+                    <Check className="h-3.5 w-3.5" /> Aprobar
+                  </button>
+                  {p && <span className="self-center text-[11px] text-muted-foreground">Se aprueba cuando el editor entrega la versión corregida.</span>}
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+
       {parte === "publicacion" && (
         <div className="space-y-3">
-          <a href="/publicar" className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background">
-            <Send className="h-4 w-4" /> Publicar en Instagram y Facebook
-          </a>
-          <h3 className="pt-2 text-sm font-semibold">Listos para publicar ({listos.length})</h3>
-          {listos.length === 0 && <p className="text-xs text-muted-foreground">Ningún video está en Editado.</p>}
-          {listos.map(({ v, i }) => (
-            <div key={i} className="flex items-center justify-between gap-3 rounded-[10px] border bg-background px-3 py-2">
-              <span className="min-w-0 truncate text-[13px]">{v.titulo || "Sin título"} <span className="text-muted-foreground">· {v.formato || "sin formato"}</span></span>
-              <button type="button" onClick={() => mover(i, 1)} className="shrink-0 rounded-full border px-3 py-1 text-xs hover:bg-foreground/[0.04]">
-                Marcar publicado
-              </button>
-            </div>
+          <p className="text-xs text-muted-foreground">
+            Los videos aprobados, con su copy. El video se toma del Drive: tiene que estar compartido con «cualquiera con el link».
+          </p>
+          {aprobados.length === 0 && <p className="text-sm text-muted-foreground">Ningún video aprobado todavía. Se aprueban en Revisión.</p>}
+          {aprobados.map(({ v, i }) => (
+            <article key={i} className="rounded-[14px] border bg-card/40 p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-[15px] font-semibold">{v.titulo || "Sin título"}</h3>
+                {v.editado?.trim() && (
+                  <a href={v.editado} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold underline"><ExternalLink className="h-3 w-3" /> Ver video</a>
+                )}
+              </div>
+              <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-gold">Copy</label>
+              <textarea
+                value={v.copy ?? ""}
+                onChange={(e) => cambiar((d) => { d.enCola[i].copy = e.target.value })}
+                rows={5}
+                className={`mt-1 resize-y ${campo} text-[14px] leading-relaxed`}
+              />
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {REDES.map(([k, nombre]) => {
+                  const on = (v.redes ?? []).includes(k)
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => cambiar((d) => {
+                        const r = new Set(d.enCola[i].redes ?? [])
+                        if (r.has(k)) r.delete(k); else r.add(k)
+                        d.enCola[i].redes = [...r]
+                      })}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${on ? "border-foreground bg-foreground text-background" : "text-muted-foreground"}`}
+                    >
+                      {nombre}{v.enlaces?.[k] ? " ✓" : ""}
+                    </button>
+                  )
+                })}
+                <span className="text-[11px] text-muted-foreground">YouTube Shorts y TikTok, en la próxima etapa.</span>
+              </div>
+              {errores[i] && <p className="mt-2 rounded-[8px] bg-rojo/10 px-2.5 py-1.5 text-[12px] text-rojo">{errores[i]}</p>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={() => publicar(i)} disabled={publicando !== null} className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50">
+                  {publicando === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Publicar ahora
+                </button>
+                <button type="button" onClick={() => mover(i, -1)} className="rounded-full border px-3.5 py-2 text-xs font-semibold hover:bg-foreground/[0.04]">Volver a revisión</button>
+              </div>
+            </article>
           ))}
+          {videos.some((x) => x.etapa === "publicado") && (
+            <>
+              <h3 className="pt-3 text-sm font-semibold">Publicados</h3>
+              {videos.filter((x) => x.etapa === "publicado").map(({ v, i }) => (
+                <div key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border bg-background px-3 py-2 text-[13px]">
+                  <span className="min-w-0 truncate">{v.titulo || "Sin título"}</span>
+                  <span className="flex gap-3 text-xs">
+                    {Object.entries(v.enlaces ?? {}).map(([k, url]) => url.startsWith("http")
+                      ? <a key={k} href={url} target="_blank" rel="noreferrer" className="underline">{k === "ig" ? "Instagram" : "Facebook"}</a>
+                      : <span key={k}>{k === "ig" ? "Instagram" : "Facebook"} ✓</span>)}
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 

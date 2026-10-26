@@ -127,7 +127,19 @@ function valido(c: unknown): c is Contenido {
   for (const v of x.enCola as unknown[]) {
     if (!v || typeof v !== "object") return false
     const o = v as Record<string, unknown>
-    if (!["gancho", "estructura", "cta", "prueba"].every((k) => o[k] === undefined || texto(o[k]))) return false
+    if (!["gancho", "estructura", "cta", "prueba", "material", "editado", "copy"].every((k) => o[k] === undefined || texto(o[k]))) return false
+    if (o.version !== undefined && (typeof o.version !== "number" || !Number.isFinite(o.version))) return false
+    if (o.redes !== undefined && !listaDeTextos(o.redes)) return false
+    if (o.enlaces !== undefined && (!o.enlaces || typeof o.enlaces !== "object" || !Object.values(o.enlaces as object).every(texto))) return false
+    if (o.correcciones !== undefined) {
+      if (!Array.isArray(o.correcciones)) return false
+      for (const c of o.correcciones as unknown[]) {
+        if (!c || typeof c !== "object") return false
+        const r = c as Record<string, unknown>
+        if (!texto(r.texto) || !texto(r.fecha) || typeof r.version !== "number") return false
+        if (r.resuelta !== undefined && typeof r.resuelta !== "boolean") return false
+      }
+    }
   }
 
   if (x.ordenSecciones !== undefined && !listaDeTextos(x.ordenSecciones)) return false
