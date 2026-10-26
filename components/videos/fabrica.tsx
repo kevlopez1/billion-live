@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2, Plus, Send, Trash2, X } from "lucide-react"
 import { Numeros } from "@/components/branding/numeros"
+import { EjemploEdicion, GuiaEditores } from "@/components/videos/ejemplos-edicion"
 import { leerClave } from "@/lib/clave"
 import { ETAPAS, ETIQUETA_ETAPA, type Contenido, type Etapa } from "@/lib/branding"
 
@@ -251,9 +252,11 @@ export function Fabrica() {
                 ))}
                 {b.reglas.length === 0 && <li className="text-xs text-rojo/80">Falta definir las reglas.</li>}
               </ul>
+              <EjemploEdicion titulo={b.titulo} />
             </section>
           ))}
           <p className="text-xs text-muted-foreground md:col-span-2">Las reglas se cambian en Kev Project GTA Branding, sección La edición.</p>
+          <div className="md:col-span-2"><GuiaEditores /></div>
         </div>
       )}
 
