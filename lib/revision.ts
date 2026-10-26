@@ -49,7 +49,7 @@ export const ETIQUETA_SECCION: Record<Seccion, string> = {
   edicion: "La edición",
   redes: "Las redes",
   produccion: "La producción",
-  enCola: "En cola",
+  enCola: "Guiones e ideas",
   pendientes: "Pendientes",
   hoy: "Lo de hoy",
   futuro: "Lo que viene",

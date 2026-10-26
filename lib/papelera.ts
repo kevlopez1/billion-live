@@ -99,7 +99,7 @@ export function devolver<T>(doc: T, b: Borrado): T {
 
 const NOMBRES: Record<string, string> = {
   personaje: "El personaje", norte: "El norte", formatos: "Los formatos", edicion: "La edición",
-  redes: "Las redes", produccion: "La producción", enCola: "En cola", pendientes: "Pendientes",
+  redes: "Las redes", produccion: "La producción", enCola: "Guiones e ideas", pendientes: "Pendientes",
   hoy: "Lo de hoy", futuro: "Lo que viene", fortalezas: "Fortalezas", debilidades: "Debilidades",
   oportunidades: "Oportunidades", bloques: "Bloques", reglas: "Reglas", nunca: "Nunca", detalle: "Detalle",
   beats: "Pasos", estructura: "La estructura", equipo: "Equipo",
