@@ -145,12 +145,16 @@ export function Fabrica() {
     if (!clave) { setErrores((e) => ({ ...e, [i]: "Para publicar, entra con tu clave en la pestaña Kev López." })); return }
     if (!v.editado?.trim()) { setErrores((e) => ({ ...e, [i]: "Falta el link del video editado." })); return }
     if (!v.redes?.length) { setErrores((e) => ({ ...e, [i]: "Elige al menos una red." })); return }
+    // Solo las redes donde todavía no salió: si Instagram falló y Facebook
+    // no, reintentar no tiene que duplicar el post de Facebook.
+    const faltan = v.redes.filter((r) => !v.enlaces?.[r])
+    if (!faltan.length) { cambiar((d) => { d.enCola[i].etapa = "publicado" }); return }
     setPublicando(i)
     try {
       const r = await fetch("/api/publicar", {
         method: "POST",
         headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
-        body: JSON.stringify({ tipo: "video", url: directo(v.editado), texto: v.copy ?? "", destinos: v.redes }),
+        body: JSON.stringify({ tipo: "video", url: directo(v.editado), texto: v.copy ?? "", destinos: faltan }),
       })
       const j = await r.json()
       const res = (j.resultado ?? {}) as Record<string, { ok: boolean; enlace?: string; id?: string; error?: string } | undefined>
@@ -160,7 +164,7 @@ export function Fabrica() {
         cambiar((d) => {
           const w = d.enCola[i]
           w.enlaces = { ...(w.enlaces ?? {}), ...Object.fromEntries(bien.map(([k, x]) => [k, x!.enlace ?? x!.id ?? ""])) }
-          if (!mal.length) w.etapa = "publicado"
+          if ((w.redes ?? []).every((r) => w.enlaces?.[r])) w.etapa = "publicado"
         })
       }
       const msg = [j.error, ...mal.map(([k, x]) => `${k === "ig" ? "Instagram" : "Facebook"}: ${x!.error}`)].filter(Boolean).join(" · ")
