@@ -1,8 +1,17 @@
-import { redirect } from "next/navigation"
+import type { Metadata } from "next"
+import { Espacio } from "@/components/proyectos/espacio"
 
-// El manual vive en el espacio de trabajo, junto a Preguntas, Videos y el
-// área de Kev López. Kev: "fusiona proyectos y branding". Esta dirección
-// queda para que los enlaces viejos sigan funcionando.
+// ──────────────────────────────────────────────────────────────
+// /branding — el espacio de trabajo: el manual de marca, Preguntas, Videos y
+// el área de Kev López (con clave). Kev: "conserva el link de branding y
+// borra el otro".
+// ──────────────────────────────────────────────────────────────
+
+export const metadata: Metadata = {
+  title: "Kev Project GTA Branding",
+  robots: { index: false, follow: false, nocache: true },
+}
+
 export default function BrandingPage() {
-  redirect("/kevlopez_proyectos")
+  return <Espacio />
 }

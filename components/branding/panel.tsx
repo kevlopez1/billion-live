@@ -391,7 +391,7 @@ export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
           </Link>
           )}
           {!incrustado && (
-            <Link href="/kevlopez_proyectos" className="hidden items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground sm:flex">
+            <Link href="/branding" className="hidden items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground sm:flex">
               <NotebookPen className="h-3 w-3" /> Proyectos
             </Link>
           )}
