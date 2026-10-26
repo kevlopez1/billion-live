@@ -130,6 +130,8 @@ function valido(c: unknown): c is Contenido {
     if (!["gancho", "estructura", "cta", "prueba"].every((k) => o[k] === undefined || texto(o[k]))) return false
   }
 
+  if (x.ordenSecciones !== undefined && !listaDeTextos(x.ordenSecciones)) return false
+
   const pro = x.produccion as Record<string, unknown> | undefined
   if (!pro || typeof pro !== "object") return false
   if (!["personaje", "equipo"].every((k) => listaDeTextos(pro[k]))) return false

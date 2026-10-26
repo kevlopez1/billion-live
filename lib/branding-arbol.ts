@@ -37,7 +37,7 @@ const DE_RED: Record<string, Estado> = { usamos: "listo", pendiente: "idea", no:
 
 function ramas(c: Contenido): Rama[] {
   const limpio = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean)
-  return [
+  return ordenar(c, [
     { id: "personaje", icono: "", hojas: limpio([...c.personaje.fortalezas, ...c.personaje.debilidades, ...c.personaje.oportunidades]) },
     { id: "norte", icono: "", hojas: limpio(c.norte.map((p) => p.titulo)), dentroDe: "personaje" },
     { id: "formatos", icono: "", hojas: limpio(c.formatos.map((f) => f.nombre)) },
@@ -53,7 +53,23 @@ function ramas(c: Contenido): Rama[] {
     { id: "pendientes", icono: "", hojas: limpio(c.pendientes) },
     { id: "hoy", icono: "", hojas: limpio(c.hoy.map((l) => l.titulo)) },
     { id: "futuro", icono: "", hojas: limpio(c.futuro.map((l) => l.titulo)) },
-  ]
+  ])
+}
+
+/** Las ramas de primer nivel en el orden que dejó Kev; lo que no figura en su
+ *  orden (una sección nueva) va al final, en el orden de siempre. */
+function ordenar(c: Contenido, rs: Rama[]): Rama[] {
+  const orden = c.ordenSecciones ?? []
+  const pos = (r: Rama) => {
+    const i = orden.indexOf(r.dentroDe ?? r.id)
+    return i === -1 ? orden.length + rs.indexOf(r) : i
+  }
+  return [...rs].sort((a, b) => pos(a) - pos(b) || rs.indexOf(a) - rs.indexOf(b))
+}
+
+/** Las secciones de primer nivel, en el orden en que se ven. */
+export function ordenActual(c: Contenido): Seccion[] {
+  return ramas(c).filter((r) => !r.dentroDe).map((r) => r.id)
 }
 
 /** `sec:norte` para una rama, `sec:norte:2` para su tercera hoja. */
