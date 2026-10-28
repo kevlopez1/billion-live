@@ -487,7 +487,7 @@ function bloqueConciencia(ids: string[], cs: Map<string, Conciencia> | null, pre
     const op = opinionesRelevantes(c.opiniones, presentes)
     const filas = [
       c.animo && `- Ánimo: ${neutralizar(c.animo)}`,
-      c.meta && `- Tu meta ${c.dia === hoy ? "de hoy" : "de tu último día"}: ${neutralizar(c.meta)}`,
+      c.meta && `- ${c.dia === hoy ? "Tu meta de hoy" : "Tu meta"}: ${neutralizar(c.meta)}`,
       c.pensamiento && `- Lo que piensas: ${neutralizar(c.pensamiento)}`,
       op && `- Lo que opinas de otros (de -100 a 100): ${op}`,
     ].filter(Boolean)

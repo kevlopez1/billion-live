@@ -9,7 +9,11 @@
 // - seguir: detrás y arriba del personaje, con retraso suave (tipo GTA). Se
 //   puede orbitar con el dedo; al soltar, vuelve a ponerse detrás.
 // - cine: rota entre las tomas del modo grabación (TOMAS_CINE).
-// - nivel: vista de casa de muñecas de un subsuelo, desde arriba a ~55°.
+// - nivel: vista de casa de muñecas de un subsuelo (desde arriba a ~55°) o de
+//   la ciudad subterránea (desde lo alto de la caverna).
+// - viaje (dentro de dron y nivel): al cambiar de nivel, la cámara va al
+//   ascensor, baja o sube por el tubo de vidrio y sale al nivel nuevo. Así se
+//   entiende que los niveles están uno debajo del otro.
 //
 // Las tomas son datos: agregar una es agregar una entrada a TOMAS.
 // ──────────────────────────────────────────────────────────────
@@ -18,6 +22,8 @@ import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { ALTURA_NIVEL, type NivelId } from "../tipos"
 import { CELDAS, HUELLAS, LUGAR } from "../lugares"
+import { ORDEN_NIVELES, PABELLON_ASCENSOR, ejeAscensor } from "../navegacion"
+import { VISTAS_CIUDAD, tomaDescensoCiudad } from "./ciudad"
 import type { ModoCamara } from "./contrato"
 
 export interface Pose {
@@ -67,6 +73,8 @@ interface Toma {
   nombre: string
   duracion: number
   maqueta?: boolean
+  /** La toma pasa por el ascensor: cambia de nivel sin fundido (el velo de los cruces de losa lo tapa). */
+  ascensor?: boolean
   nivel(t: number): NivelId
   pose(t: number, out: Pose, ctx: CtxToma, dt: number): boolean
 }
@@ -76,6 +84,97 @@ const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
 const lerp = THREE.MathUtils.lerp
 const suave = (t: number) => t * t * (3 - 2 * t)
 const muySuave = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
+const tramo = (t: number, a: number, b: number) => Math.min(1, Math.max(0, (t - a) / (b - a)))
+
+// ── El tubo del ascensor ─────────────────────────────────────
+/** Grosor de la losa bajo cada nivel (la del subsuelo mide 1,2 m). */
+const LOSA = 1.2
+/** Qué nivel se ve con la cámara a esta altura: el de la losa que queda justo debajo. */
+export function nivelDeAltura(y: number): NivelId {
+  for (const n of ORDEN_NIVELES) if (n !== "ciudad" && y > ALTURA_NIVEL[n] - LOSA) return n
+  return "ciudad"
+}
+/**
+ * Negro extra al cruzar una losa (0..1): pasar por el concreto entre dos
+ * niveles es un parpadeo oscuro, no un corte. `ancho` en metros.
+ */
+function veloCruce(y: number, ancho = 2.2): number {
+  let v = 0
+  for (const n of ORDEN_NIVELES) {
+    if (n === "superficie" || n === "ciudad") continue
+    const corte = ALTURA_NIVEL[n] - LOSA
+    v = Math.max(v, 1 - Math.abs(y - corte) / ancho)
+  }
+  // La boca del pabellón (de la superficie al Subsuelo 1) y la bóveda de la ciudad.
+  v = Math.max(v, 1 - Math.abs(y - (ALTURA_NIVEL.superficie - LOSA)) / ancho)
+  return Math.max(0, Math.min(1, v)) * 0.92
+}
+/** Altura de la cámara dentro del tubo en cada nivel (sobre el piso). */
+const ALTO_TUBO: Record<NivelId, number> = { superficie: 5.5, n1: 4.5, n2: 4.5, n3: 4.5, ciudad: 11 }
+/**
+ * La cámara en el tubo: afuera del vidrio, mirando el eje hacia abajo. El
+ * punto x/z se mezcla entre el eje del nivel de arriba y el de abajo (el
+ * pabellón de la superficie no está justo encima del núcleo).
+ */
+function poseTubo(y: number, out: Pose): Pose {
+  const n = nivelDeAltura(y)
+  const i = ORDEN_NIVELES.indexOf(n)
+  const arriba = ORDEN_NIVELES[Math.max(0, i - 1)]
+  // Recién cruzada la losa de arriba, todavía en el eje de arriba; 3 m más abajo, en el propio.
+  const yCorte = ALTURA_NIVEL[arriba] - LOSA
+  const k = i === 0 ? 0 : suave(Math.min(1, Math.max(0, (yCorte - y) / 3)))
+  const a = ejeAscensor(arriba)
+  const b = ejeAscensor(n)
+  const x = lerp(a.x, b.x, k)
+  const z = lerp(a.z, b.z, k)
+  out.pos.set(x + 6.4, y, z - 8.2)
+  out.mira.set(x, y - 6.5, z + 1.5)
+  out.fov = 50
+  return out
+}
+
+// ── Descenso a la ciudad (toma de cine) ──────────────────────
+const PAB = PABELLON_ASCENSOR
+const ALTO_SALIDA_CIUDAD = ALTURA_NIVEL.superficie - 30
+/** Altura de la cámara en la parte del ascensor de la toma (t de 0 a 1 dentro del tramo). */
+const alturaBajada = (k: number) => lerp(ALTO_TUBO.superficie, ALTO_SALIDA_CIUDAD, muySuave(k))
+const _pc = { pos: new THREE.Vector3(), mira: new THREE.Vector3(), fov: 50 } as Pose
+function poseDescensoCiudad(t: number, o: Pose) {
+  // 0–0,3: el Jardín Sur, hacia el pabellón. 0,3–0,55: el tubo. 0,55–0,85: la
+  // bajada dentro de la caverna. 0,85–1: el Mirador.
+  if (t < 0.3) {
+    const k = muySuave(tramo(t, 0, 0.3))
+    poseTubo(ALTO_TUBO.superficie, _pc)
+    o.pos.set(lerp(-14, _pc.pos.x, k), lerp(26, _pc.pos.y, k), lerp(PAB.z + 64, _pc.pos.z, k))
+    o.mira.set(lerp(0, _pc.mira.x, k), lerp(4, _pc.mira.y, k), lerp(PAB.z - 6, _pc.mira.z, k))
+    o.fov = lerp(46, _pc.fov, k)
+  } else if (t < 0.55) {
+    const k = tramo(t, 0.3, 0.55)
+    poseTubo(alturaBajada(k), o)
+    // Al final del tubo, se acomoda a donde empieza la bajada de la ciudad.
+    const fin = suave(tramo(k, 0.75, 1))
+    if (fin > 0) {
+      _pc.fov = tomaDescensoCiudad(0, _pc.pos, _pc.mira)
+      o.pos.lerp(_pc.pos, fin)
+      o.mira.lerp(_pc.mira, fin)
+      o.fov = lerp(o.fov, _pc.fov, fin)
+    }
+  } else if (t < 0.85) {
+    o.fov = tomaDescensoCiudad(tramo(t, 0.55, 0.85), o.pos, o.mira)
+  } else {
+    const k = muySuave(tramo(t, 0.85, 1))
+    const fov = tomaDescensoCiudad(1, _pc.pos, _pc.mira)
+    const m = VISTAS_CIUDAD.mirador
+    o.pos.set(lerp(_pc.pos.x, m.pos[0], k), lerp(_pc.pos.y, m.pos[1], k), lerp(_pc.pos.z, m.pos[2], k))
+    o.mira.set(lerp(_pc.mira.x, m.mira[0], k), lerp(_pc.mira.y, m.mira[1], k), lerp(_pc.mira.z, m.mira[2], k))
+    o.fov = lerp(fov, m.fov, k)
+  }
+}
+function nivelDescensoCiudad(t: number): NivelId {
+  if (t < 0.3) return S
+  if (t < 0.55) return nivelDeAltura(alturaBajada(tramo(t, 0.3, 0.55)))
+  return "ciudad"
+}
 
 /** Centro de un lugar (para las tomas que lo usan), o un punto de respaldo. */
 function centroLugar(id: string, respaldo: THREE.Vector3): THREE.Vector3 {
@@ -178,6 +277,17 @@ const TOMAS: Toma[] = [
     },
   },
   {
+    id: "ciudad",
+    nombre: "Descenso a la ciudad",
+    duracion: 16,
+    ascensor: true,
+    nivel: nivelDescensoCiudad,
+    pose(t, o) {
+      poseDescensoCiudad(t, o)
+      return true
+    },
+  },
+  {
     id: "maqueta",
     nombre: "Modo maqueta",
     duracion: 10,
@@ -228,24 +338,56 @@ export function poseAerea(out: Pose = nuevaPose()): Pose {
   return out
 }
 
-/** Vista por defecto de un subsuelo: desde el norte, a ~55° sobre el horizonte. */
+/**
+ * Vista por defecto de un nivel bajo tierra. Subsuelo: desde el norte, a ~55°
+ * sobre el horizonte. Ciudad: la caverna entera desde lo alto, a ~42° (la
+ * bóveda no tapa: sus caras miran hacia adentro, como una maqueta abierta).
+ */
 function poseNivel(n: NivelId, out: Pose = nuevaPose()): Pose {
   const y = ALTURA_NIVEL[n]
-  const S2 = HUELLAS.subsuelo
-  const cx = (S2.x0 + S2.x1) / 2
-  const cz = (S2.z0 + S2.z1) / 2
-  const elev = 55 * THREE.MathUtils.DEG2RAD
-  const d = 175
+  const zona = n === "ciudad" ? HUELLAS.ciudad : HUELLAS.subsuelo
+  const cx = (zona.x0 + zona.x1) / 2
+  const cz = (zona.z0 + zona.z1) / 2 + (n === "ciudad" ? 20 : 0)
+  const elev = (n === "ciudad" ? 42 : 55) * THREE.MathUtils.DEG2RAD
+  const d = n === "ciudad" ? 340 : 175
   out.mira.set(cx, y, cz)
-  out.pos.set(cx + 18, y + Math.sin(elev) * d, cz - Math.cos(elev) * d)
+  out.pos.set(cx + (n === "ciudad" ? 40 : 18), y + Math.sin(elev) * d, cz - Math.cos(elev) * d)
   out.fov = 45
   return out
 }
 
-const LIMITES: Record<"superficie" | "nivel" | "seguir", Partial<OrbitControls>> = {
+/** Mira un punto a `distancia` m, desde el norte y un poco al este, alto: para encuadrar un lugar. */
+export function poseEnfoque(p: THREE.Vector3, distancia: number, n: NivelId, out: Pose = nuevaPose()): Pose {
+  const elev = (n === S ? 38 : n === "ciudad" ? 45 : 52) * THREE.MathUtils.DEG2RAD
+  const dir = new THREE.Vector3(0.3, 0, -1).normalize()
+  out.mira.copy(p)
+  out.pos.set(p.x + dir.x * Math.cos(elev) * distancia, p.y + Math.sin(elev) * distancia, p.z + dir.z * Math.cos(elev) * distancia)
+  out.fov = 45
+  return out
+}
+
+type TipoLimite = "superficie" | "nivel" | "ciudad" | "seguir"
+const LIMITES: Record<TipoLimite, Partial<OrbitControls>> = {
   superficie: { minDistance: 4, maxDistance: 1100, minPolarAngle: 0.05, maxPolarAngle: 1.5, enablePan: true },
   nivel: { minDistance: 12, maxDistance: 300, minPolarAngle: 0.12, maxPolarAngle: 1.12, enablePan: true },
+  ciudad: { minDistance: 8, maxDistance: 520, minPolarAngle: 0.1, maxPolarAngle: 1.3, enablePan: true },
   seguir: { minDistance: 2.5, maxDistance: 45, minPolarAngle: 0.2, maxPolarAngle: 1.45, enablePan: false },
+}
+const limiteDe = (n: NivelId): TipoLimite => (n === S ? "superficie" : n === "ciudad" ? "ciudad" : "nivel")
+
+interface Viaje {
+  t: number
+  /** Duración de cada tramo: acercarse al ascensor, el tubo y la salida. */
+  dA: number
+  dR: number
+  dX: number
+  hacia: NivelId
+  p0: THREE.Vector3
+  m0: THREE.Vector3
+  fov0: number
+  y0: number
+  y1: number
+  destino: Pose
 }
 
 export class ControlCamara {
@@ -267,6 +409,9 @@ export class ControlCamara {
   private poseSuperficie: Pose | null = null
   private readonly pose = nuevaPose()
   private fovBase = 45
+  private viaje: Viaje | null = null
+  /** Negro extra que pide la cámara (0..1): el motor lo suma al fundido. Lo usan el viaje y las tomas por el ascensor. */
+  velo = 0
 
   constructor(canvas: HTMLCanvasElement, deps: DepsCamara) {
     this.deps = deps
@@ -296,7 +441,7 @@ export class ControlCamara {
     this.ultimaInteraccion = this.reloj
   }
 
-  private aplicarLimites(tipo: keyof typeof LIMITES) {
+  private aplicarLimites(tipo: TipoLimite) {
     Object.assign(this.controles, LIMITES[tipo])
   }
 
@@ -378,14 +523,11 @@ export class ControlCamara {
     if (this.intro) this.terminarIntro()
     if (modo !== "cine") this.salirDeCine()
     this.enfoque = null
+    this.cortarViaje()
     if (modo === "dron") {
-      if (this.deps.nivel() !== S) {
-        this.deps.fundir(() => {
-          this.deps.aplicarNivel(S)
-          this.ponerPose(this.poseSuperficie ?? poseAerea(this.pose))
-          this.entrarDron()
-        })
-      } else this.entrarDron()
+      // Bajo tierra, el dron es la vista libre del nivel: no saca a nadie del subsuelo.
+      if (this.deps.nivel() !== S) this.entrarNivel(this.deps.nivel())
+      else this.entrarDron()
     } else if (modo === "seguir") {
       const id = objetivoId ?? this.seguirId ?? this.deps.elegirPersonaje()
       if (!id || !this.deps.personaje(id)) {
