@@ -76,7 +76,10 @@ export class Lote {
   private readonly bSi = new Buf(Uint16Array, 16384)
   private readonly bSw = new Buf(Float32Array, 16384)
   private readonly bIdx = new Buf(Uint32Array, 24576)
+  private readonly bEx = new Buf(Float32Array, 4)
   usaUv1 = false
+  /** Atributo extra por vértice (aArr: coordenadas del mapa de arrugas, edad, hoyuelo). */
+  usaEx = false
   private piezas: Array<[number, number, number, number]> = []
   private v0 = 0
   private i0 = 0
@@ -95,6 +98,34 @@ export class Lote {
 
   get nv(): number {
     return this.bPos.n / 3
+  }
+  /** Huesos y pesos de piel (4 por vértice), para retocar la pose de reposo. */
+  get huesosV(): Uint16Array {
+    return this.bSi.a
+  }
+  get pesosV(): Float32Array {
+    return this.bSw.a
+  }
+  /** Colores (4 por vértice), lectura y escritura. */
+  get colores(): Float32Array {
+    return this.bCol.a
+  }
+
+  /** Atributo extra del último vértice agregado (4 valores). */
+  ex(a: number, b: number, c: number, d: number) {
+    if (!this.usaEx) {
+      this.usaEx = true
+      this.bEx.reservar(this.nv * 4)
+      this.bEx.a.fill(0, 0, this.nv * 4)
+      this.bEx.n = this.nv * 4
+    }
+    const i = (this.nv - 1) * 4
+    this.bEx.reservar(4)
+    if (this.bEx.n < i + 4) this.bEx.n = i + 4
+    this.bEx.set(i, a)
+    this.bEx.set(i + 1, b)
+    this.bEx.set(i + 2, c)
+    this.bEx.set(i + 3, d)
   }
 
   /** Agrega un vértice y devuelve su índice. */
@@ -116,6 +147,7 @@ export class Lote {
     const e0 = p[0], e1 = p[1], e2 = p[2], e3 = p[3]
     this.bSi.push4(e0 ? e0[0] : 0, e1 ? e1[0] : 0, e2 ? e2[0] : 0, e3 ? e3[0] : 0)
     this.bSw.push4(e0 ? e0[1] * s : 0, e1 ? e1[1] * s : 0, e2 ? e2[1] * s : 0, e3 ? e3[1] * s : 0)
+    if (this.usaEx) this.bEx.push4(0, 0, 0, 0)
     return this.nv - 1
   }
 
@@ -256,6 +288,11 @@ export class Lote {
     g.setAttribute("normal", new THREE.BufferAttribute(normales, 3))
     g.setAttribute("uv", new THREE.BufferAttribute(this.bUv.vista().slice(), 2))
     if (this.usaUv1) g.setAttribute("uv1", new THREE.BufferAttribute(this.bUv1.vista().slice(), 2))
+    if (this.usaEx) {
+      const ex = new Float32Array(n * 4)
+      ex.set(this.bEx.a.subarray(0, Math.min(this.bEx.n, n * 4)))
+      g.setAttribute("aArr", new THREE.BufferAttribute(ex, 4))
+    }
     g.setAttribute("color", new THREE.BufferAttribute(this.bCol.vista().slice(), 4))
     g.setAttribute("aMat", new THREE.BufferAttribute(this.bMat.vista().slice(), 2))
     g.setAttribute("skinIndex", new THREE.BufferAttribute(this.bSi.vista().slice(), 4))

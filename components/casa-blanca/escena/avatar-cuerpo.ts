@@ -15,7 +15,8 @@
 
 import * as THREE from "three"
 import type { Personaje } from "../tipos"
-import { Cabeza, rasgosDe, type Rasgos } from "./avatar-cabeza"
+import { Cabeza, barbaEn, peloEn, rasgosDe, type Rasgos } from "./avatar-cabeza"
+import type { CuerpoR } from "./avatar-fichas"
 import { campana, clamp, lerp, Lote, suave, tablaSuave, type Mat2, type Pesos, type RGBA } from "./avatar-geo"
 
 export const HUESOS = [
@@ -212,22 +213,8 @@ export interface FilaCabeza {
   radial: boolean
 }
 
-export interface Complexion {
-  hombros: number
-  pecho: number
-  prof: number
-  cintura: number
-  cadera: number
-  musculo: number
-  panza: number
-}
-
-const COMPLEXION: Record<string, Complexion> = {
-  delgado: { hombros: 0.95, pecho: 0.93, prof: 0.9, cintura: 0.9, cadera: 0.95, musculo: 0.88, panza: 0 },
-  medio: { hombros: 1, pecho: 1, prof: 1, cintura: 1, cadera: 1, musculo: 1, panza: 0.006 },
-  fuerte: { hombros: 1.08, pecho: 1.09, prof: 1.12, cintura: 1.14, cadera: 1.06, musculo: 1.12, panza: 0.026 },
-  atletico: { hombros: 1.1, pecho: 1.07, prof: 1.06, cintura: 0.95, cadera: 0.98, musculo: 1.16, panza: 0 },
-}
+/** Complexión resuelta (ver avatar-fichas.ts: CuerpoR). */
+export type Complexion = CuerpoR
 
 const _m: Marco = { c: new THREE.Vector3(), T: new THREE.Vector3(), N: new THREE.Vector3(), L: new THREE.Vector3() }
 
@@ -243,28 +230,33 @@ export class Cuerpo {
   readonly piernas: [Cadena, Cadena]
   /** Holgura extra de la ropa (m) para separar brazos del cuerpo. */
   readonly holgura: number
+  /** Cuánto se adelanta la parte alta del tronco (encorvado). */
+  readonly zTop: number
   private filas: FilaCabeza[] | null = null
 
   constructor(p: Personaje, holguraRopa = 0) {
-    const ap = p.apariencia
-    this.H = clamp(ap.altura || 1.78, 1.5, 2.05)
+    this.rasgos = rasgosDe(p)
+    const fi = this.rasgos.f
+    this.H = fi.estatura
     const Hh = this.H
     const s = (this.s = Hh / 1.78)
-    this.rasgos = rasgosDe(p)
     this.fem = this.rasgos.fem
-    const base = COMPLEXION[ap.complexion] ?? COMPLEXION.medio
-    this.k = this.fem ? { ...base, hombros: base.hombros * 0.87, pecho: base.pecho * 0.9, cadera: base.cadera * 1.0, musculo: base.musculo * 0.86, cintura: base.cintura * 0.98 } : base
+    const base = fi.cuerpo
+    this.k = this.fem && !fi.conFicha ? { ...base, hombros: base.hombros * 0.87, pecho: base.pecho * 0.9, mBrazos: base.mBrazos * 0.86, mAntebrazos: base.mAntebrazos * 0.86, mPiernas: base.mPiernas * 0.95, cintura: base.cintura * 0.98 } : base
     this.holgura = holguraRopa
     const k = this.k
-    const hs = Math.pow(s, 0.5) * (this.fem ? 0.94 : 1)
-    const c = new THREE.Vector3(0, Hh - 0.123 * hs, 0.006 * s)
+    const hs = Math.pow(s, 0.5) * (this.fem ? 0.94 : 1) * k.cabeza
+    // Encorvado: la parte alta del tronco y la cabeza van hacia adelante.
+    const enc = clamp(k.encorvado, 0, 1)
+    this.zTop = enc * 0.022 * s
+    const c = new THREE.Vector3(0, Hh - 0.123 * hs, 0.006 * s + enc * 0.042 * s)
     this.cab = new Cabeza(c, hs, this.rasgos)
     const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
     const j = this.j
     j.cadera = V(0, 0.548 * Hh, -0.008 * s)
     j.columna = V(0, 0.615 * Hh, -0.03 * s)
-    j.pecho = V(0, 0.705 * Hh, -0.035 * s)
-    j.cuello = V(0, 0.826 * Hh, -0.04 * s)
+    j.pecho = V(0, 0.705 * Hh, -0.035 * s + this.zTop * 0.3)
+    j.cuello = V(0, 0.826 * Hh, -0.04 * s + this.zTop)
     j.cabeza = this.cab.aAvatar(0, -0.04, -0.02, V(0, 0, 0))
     j.mandibula = this.cab.aAvatar(0, -0.012, 0.004, V(0, 0, 0))
     const o = this.cab.ojo
@@ -272,41 +264,117 @@ export class Cuerpo {
     j.ojoD = this.cab.aAvatar(-o.x, o.y, o.z, V(0, 0, 0))
     j.parpadoI = j.ojoI.clone()
     j.parpadoD = j.ojoD.clone()
-    // Brazos: separados del cuerpo lo justo para no atravesar cintura y cadera (con la ropa).
-    const anchoCintura = 0.149 * s * k.cintura * (this.fem ? 0.88 : 1) + k.panza * 0.4
+    // Brazos: separados del cuerpo lo justo para no atravesar cintura, vientre y cadera (con la ropa).
+    const anchoCintura = 0.149 * s * k.cintura * (this.fem ? 0.88 : 1) + k.panza * 0.9 + Math.max(0, k.mEspalda - 1) * 0.03 * s
     const anchoCadera = 0.17 * s * k.cadera * (this.fem ? 1.06 : 1)
+    const mano = k.manos
     for (const [lado, L] of [[1, "I"], [-1, "D"]] as const) {
       const hx = 0.176 * s * k.hombros
-      const hom = V(lado * hx, 0.805 * Hh, -0.028 * s)
-      const rB = 0.037 * s * k.musculo
+      const hom = V(lado * hx, 0.805 * Hh, -0.028 * s + enc * 0.02 * s)
+      const rB = 0.037 * s * k.mBrazos
       const cx = Math.max(hx + 0.022 * s, anchoCintura + rB + 0.012 + holguraRopa * 1.6)
-      const codo = V(lado * cx, hom.y - 0.33 * s, -0.04 * s)
+      const codo = V(lado * cx, hom.y - 0.33 * s, -0.04 * s + enc * 0.02 * s)
       const mx = Math.max(cx + 0.006 * s, anchoCadera + 0.024 * s + holguraRopa * 1.4)
-      const mano = V(lado * mx, codo.y - 0.256 * s, -0.016 * s)
-      j[`clavicula${L}`] = V(lado * 0.024 * s, 0.814 * Hh, 0.01 * s)
+      const man = V(lado * mx, codo.y - 0.256 * s, -0.016 * s + enc * 0.01 * s)
+      j[`clavicula${L}`] = V(lado * 0.024 * s, 0.814 * Hh, 0.01 * s + this.zTop)
       j[`hombro${L}`] = hom
       j[`codo${L}`] = codo
-      j[`mano${L}`] = mano
-      j[`dedos${L}`] = V(mano.x + lado * 0.002 * s, mano.y - 0.094 * s, mano.z + 0.002 * s)
-      j[`dedos2${L}`] = V(mano.x + lado * 0.002 * s, mano.y - 0.132 * s, mano.z + 0.0)
-      j[`pulgar${L}`] = V(mano.x - lado * 0.008 * s, mano.y - 0.024 * s, mano.z + 0.02 * s)
+      j[`mano${L}`] = man
+      j[`dedos${L}`] = V(man.x + lado * 0.002 * s, man.y - 0.094 * s * mano, man.z + 0.002 * s)
+      j[`dedos2${L}`] = V(man.x + lado * 0.002 * s, man.y - 0.132 * s * mano, man.z + 0.0)
+      j[`pulgar${L}`] = V(man.x - lado * 0.008 * s, man.y - 0.024 * s * mano, man.z + 0.02 * s)
       const px = 0.087 * s * k.cadera * (this.fem ? 1.05 : 1)
       j[`muslo${L}`] = V(lado * px, 0.522 * Hh, 0.0)
       j[`rodilla${L}`] = V(lado * (px - 0.004 * s), 0.287 * Hh, 0.012 * s)
       j[`tobillo${L}`] = V(lado * (px - 0.002 * s), 0.047 * Hh, -0.022 * s)
-      j[`punta${L}`] = V(lado * (px + 0.012 * s), 0.014 * Hh, 0.118 * s)
+      j[`punta${L}`] = V(lado * (px + 0.012 * s), 0.014 * Hh, (0.118 + 0.268 * (k.pies - 1) * 0.6) * s)
     }
-    const cad = (L: "I" | "D", lado: 1 | -1) => {
-      const hom = j[`hombro${L}`]
-      return new Cadena([V(hom.x - lado * 0.004, hom.y + 0.03 * s, hom.z), hom, j[`codo${L}`], j[`mano${L}`], j[`dedos${L}`]], 1, lado)
+    this.brazos = [this.cadenaBrazo("I", 1), this.cadenaBrazo("D", -1)]
+    this.piernas = [this.cadenaPierna("I", 1), this.cadenaPierna("D", -1)]
+  }
+
+  private cadenaBrazo(L: "I" | "D", lado: 1 | -1): Cadena {
+    const j = this.j
+    const hom = j[`hombro${L}`]
+    return new Cadena([new THREE.Vector3(hom.x - lado * 0.004, hom.y + 0.03 * this.s, hom.z), hom, j[`codo${L}`], j[`mano${L}`], j[`dedos${L}`]], 1, lado)
+  }
+  private cadenaPierna(L: "I" | "D", lado: 1 | -1): Cadena {
+    const j = this.j
+    const m = j[`muslo${L}`]
+    const t = j[`tobillo${L}`]
+    return new Cadena([new THREE.Vector3(m.x, m.y + 0.05 * this.s, m.z), m, j[`rodilla${L}`], t, new THREE.Vector3(t.x, t.y - 0.04 * this.s, t.z + 0.004)], 1, lado)
+  }
+
+  /**
+   * Largo de piernas, brazos y cuello (avatar-fichas: piernas, brazos,
+   * cuello.largo): se arma todo con las proporciones medias y al final se
+   * estira cada hueso a lo largo de sí mismo, con los mismos pesos de piel
+   * (la piel, la ropa y el pelo siguen igual). Después se escala el conjunto
+   * para que la estatura no cambie. Actualiza las articulaciones.
+   */
+  reproporcionar(lotes: Lote[]) {
+    const k = this.k
+    const fP = k.piernas
+    const fB = k.brazos
+    const fC = k.cuelloLargo
+    if (Math.abs(fP - 1) < 1e-3 && Math.abs(fB - 1) < 1e-3 && Math.abs(fC - 1) < 1e-3) return
+    const j = this.j
+    const n = HUESOS.length
+    // Por hueso: factor de estiramiento y dirección (hacia su hijo).
+    const fac = new Float64Array(n).fill(1)
+    const dir: THREE.Vector3[] = HUESOS.map(() => new THREE.Vector3())
+    const hijo: Partial<Record<NombreHueso, NombreHueso>> = { cuello: "cabeza", musloI: "rodillaI", rodillaI: "tobilloI", musloD: "rodillaD", rodillaD: "tobilloD", hombroI: "codoI", codoI: "manoI", hombroD: "codoD", codoD: "manoD" }
+    for (const [h, c] of Object.entries(hijo) as Array<[NombreHueso, NombreHueso]>) {
+      const i = H[h]
+      fac[i] = h === "cuello" ? fC : h.startsWith("muslo") || h.startsWith("rodilla") ? fP : fB
+      dir[i].subVectors(j[c], j[h]).normalize()
     }
-    this.brazos = [cad("I", 1), cad("D", -1)]
-    const pie = (L: "I" | "D", lado: 1 | -1) => {
-      const m = j[`muslo${L}`]
-      const t = j[`tobillo${L}`]
-      return new Cadena([V(m.x, m.y + 0.05 * s, m.z), m, j[`rodilla${L}`], t, V(t.x, t.y - 0.04 * s, t.z + 0.004)], 1, lado)
+    // Articulaciones nuevas, del tronco a las puntas.
+    const nuevo = {} as Record<NombreHueso, THREE.Vector3>
+    const T = (i: number, p: THREE.Vector3, out: THREE.Vector3) => {
+      const h = HUESOS[i]
+      const j0 = j[h]
+      const j1 = nuevo[h]
+      out.copy(p).sub(j0)
+      if (fac[i] !== 1) out.addScaledVector(dir[i], (fac[i] - 1) * out.dot(dir[i]))
+      return out.add(j1)
     }
-    this.piernas = [pie("I", 1), pie("D", -1)]
+    for (let i = 0; i < n; i++) {
+      const h = HUESOS[i]
+      const padre = PADRE[h]
+      nuevo[h] = padre ? T(H[padre], j[h], new THREE.Vector3()) : j[h].clone()
+    }
+    // Los pies vuelven al piso y la coronilla a la estatura.
+    const subir = j.tobilloI.y - nuevo.tobilloI.y
+    const coronilla = T(H.cabeza, new THREE.Vector3(0, this.H, this.cab.c.z), new THREE.Vector3()).y + subir
+    const esc = this.H / coronilla
+    const q = new THREE.Vector3()
+    const r = new THREE.Vector3()
+    for (const lote of lotes) {
+      const P = lote.pos
+      const SI = lote.huesosV
+      const SW = lote.pesosV
+      for (let v = 0; v < lote.nv; v++) {
+        q.set(P[v * 3], P[v * 3 + 1], P[v * 3 + 2])
+        let x = 0, y = 0, z = 0
+        for (let c = 0; c < 4; c++) {
+          const w = SW[v * 4 + c]
+          if (w <= 0) continue
+          T(SI[v * 4 + c], q, r)
+          x += r.x * w
+          y += r.y * w
+          z += r.z * w
+        }
+        P[v * 3] = x * esc
+        P[v * 3 + 1] = (y + subir) * esc
+        P[v * 3 + 2] = z * esc
+      }
+    }
+    for (const h of HUESOS) j[h].copy(nuevo[h]).setY(nuevo[h].y + subir).multiplyScalar(esc)
+    this.brazos[0] = this.cadenaBrazo("I", 1)
+    this.brazos[1] = this.cadenaBrazo("D", -1)
+    this.piernas[0] = this.cadenaPierna("I", 1)
+    this.piernas[1] = this.cadenaPierna("D", -1)
   }
 
   /** Crea los huesos (en reposo, sin rotaciones) y el esqueleto. */
@@ -341,12 +409,32 @@ export class Cuerpo {
     const fw =
       t < 0.56 ? k.cadera : t < 0.6 ? lerp(k.cadera, k.cintura, (t - 0.56) / 0.04) : t < 0.68 ? k.cintura : t < 0.72 ? lerp(k.cintura, k.pecho, (t - 0.68) / 0.04) : t < 0.775 ? k.pecho : lerp(k.pecho, k.hombros, clamp((t - 0.775) / 0.03, 0, 1))
     const fp = t < 0.68 ? lerp(1, k.prof, 0.5) : k.prof
-    const w = tablaSuave(T, t, 1) * s * fw
+    // Vientre: alto (bajo el esternón) o bajo (en el ombligo); se ensancha un poco.
+    const tB = lerp(0.6, 0.665, clamp(k.panzaAlta, 0, 1))
+    const vientre = campana(t, tB, 0.052)
+    // Dorsales (forma de V), trapecio (sube hacia el cuello) y la base del cuello.
+    const dorsal = Math.max(-0.5, k.mEspalda - 1) * campana(t, 0.71, 0.04)
+    const trap = clamp(k.trapecio, 0, 1.5) * campana(t, 0.826, 0.014)
+    const cue = lerp(1, k.cuelloGrosor, suave(0.814, 0.839, t))
+    let w = tablaSuave(T, t, 1) * s * fw * (1 + k.panza * 1.7 * vientre) + dorsal * 0.034 * s + trap * 0.024 * s
+    w *= t > 0.814 ? Math.max(cue, 1 + trap * 0.12) : 1
     let zf = tablaSuave(T, t, 2) * s * fp
-    const zb = tablaSuave(T, t, 3) * s * fp
-    const zc = tablaSuave(T, t, 4) * s
-    // Vientre
-    zf += k.panza * campana(t, 0.618, 0.05) * s
+    let zb = tablaSuave(T, t, 3) * s * fp - dorsal * 0.008 * s - trap * 0.012 * s
+    let zc = tablaSuave(T, t, 4) * s
+    if (t > 0.814) {
+      zf *= cue
+      zb *= cue
+    }
+    zf += k.panza * vientre
+    // Encorvado: espalda alta redonda y todo lo de arriba hacia adelante.
+    const enc = clamp(k.encorvado, 0, 1)
+    if (enc > 0) {
+      const sube = suave(0.7, 0.84, t)
+      zb -= enc * 0.016 * s * campana(t, 0.77, 0.04)
+      zf += this.zTop * sube
+      zb += this.zTop * sube
+      zc += this.zTop * sube
+    }
     const pf = 2.25
     const pb = 2.7
     for (let j = 0; j < M; j++) {
@@ -370,7 +458,7 @@ export class Cuerpo {
       nx[j] = tz / l
       nz[j] = -tx / l
     }
-    const mu = k.musculo
+    const mu = k.mPecho
     for (let j = 0; j < M; j++) {
       const x = xs[j]
       const ax = Math.abs(x)
@@ -384,12 +472,12 @@ export class Cuerpo {
         d -= fr * 0.003 * s * campana(ax, 0, 0.012 * s) * campana(y, 0.74 * Hh, 0.05 * s)
         d += (1 - fr) * 0.015 * s * campana(ax, 0.062 * s, 0.05 * s) * campana(y, 0.505 * Hh, 0.045 * s)
       }
-      d += (1 - fr) * 0.008 * s * mu * campana(ax, 0.075 * s, 0.04 * s) * campana(y, 0.77 * Hh, 0.05 * s)
+      d += (1 - fr) * 0.008 * s * k.mEspalda * campana(ax, 0.075 * s, 0.04 * s) * campana(y, 0.77 * Hh, 0.05 * s)
       d -= (1 - fr) * 0.005 * s * campana(ax, 0, 0.013 * s) * campana(y, 0.68 * Hh, 0.12 * s)
       d -= (1 - fr) * 0.012 * s * campana(ax, 0, 0.01 * s) * suave(0.53 * Hh, 0.5 * Hh, y)
       // Deltoides: los hombros son parte del tronco (el brazo nace debajo, sin unión
       // visible). Es forma, no músculo: la ropa lo conserva entero.
-      const delt = 0.046 * s * mu * this.k.hombros * suave(0.1 * s, 0.168 * s, ax) * campana(y, 0.788 * Hh, 0.026 * Hh) * (this.fem ? 0.72 : 1)
+      const delt = 0.046 * s * k.mDeltoides * this.k.hombros * suave(0.1 * s, 0.168 * s, ax) * campana(y, 0.788 * Hh, 0.026 * Hh) * (this.fem ? 0.72 : 1)
       // Clavículas
       d += fr * 0.004 * s * campana(y, 0.812 * Hh - ax * 0.05, 0.01 * s) * suave(0.015 * s, 0.04 * s, ax) * suave(0.16 * s, 0.12 * s, ax)
       xs[j] += nx[j] * (d * bultos + delt)
@@ -443,6 +531,9 @@ export class Cuerpo {
 
   // ── Cabeza y cuello ────────────────────────────────────────
 
+  /** Fila de la línea de la boca dentro de filasCabeza() (se abre al hablar). */
+  filaBoca = -1
+
   /** Filas de la cabeza, desde la base del cuello hasta la coronilla. */
   filasCabeza(): FilaCabeza[] {
     if (this.filas) return this.filas
@@ -450,15 +541,55 @@ export class Cuerpo {
     const radial: FilaCabeza[] = []
     const dir = new THREE.Vector3()
     const tPrev = new Float64Array(M).fill(0.2)
+    // La fila más cercana a la boca se corre justo a la línea de los labios
+    // (columna por columna), así la boca se puede abrir por ahí.
+    const yb = cab.yBoca
+    const alfaDe = (phi: number, al: number) => {
+      dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
+      return cab.rayo(0, 0, 0, dir.x, dir.y, dir.z, 0.2)
+    }
+    const aMaxF = 139 + 1.2
+    let alBoca = 119.5 * (Math.PI / 180)
+    for (let it = 0; it < 4; it++) {
+      const t = alfaDe(Math.PI / 2, alBoca)
+      const y = Math.cos(alBoca) * t
+      const z = Math.sin(alBoca) * t
+      alBoca += (y - yb) / Math.hypot(y, z)
+    }
+    const kBoca = (() => {
+      const a = (alBoca * 180) / Math.PI / aMaxF * 146
+      let best = 0
+      for (let k = 1; k < ALFAS.length; k++) if (Math.abs(ALFAS[k] - a) < Math.abs(ALFAS[best] - a)) best = k
+      return best
+    })()
+    const anchoB = cab.anchoBoca
     for (let k = 0; k < ALFAS.length; k++) {
       const fila: FilaCabeza = { P: [], l: [], n: [], radial: true }
       for (let j = 0; j < M; j++) {
         const phi = ANG[j]
         const aMax = 139 + 1.2 * Math.sin(phi)
-        const al = (ALFAS[k] * aMax) / 146 * (Math.PI / 180)
-        dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
-        // Arranque cálido: donde pegó el rayo de la fila anterior en esta columna.
-        const t = k === 0 ? cab.rayo(0, 0, 0, dir.x, dir.y, dir.z, 0.2) : cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
+        let al = (ALFAS[k] * aMax) / 146 * (Math.PI / 180)
+        let t: number
+        if (k === kBoca && Math.sin(phi) > 0.55) {
+          // Fila de la boca: el ángulo que pega en la línea de los labios.
+          al = alBoca
+          t = 0
+          for (let it = 0; it < 3; it++) {
+            dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
+            t = cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
+            const x = dir.x * t
+            if (Math.abs(x) > anchoB * 1.3) break
+            const kx = x / (0.025 * cab.anchoBoca / 0.024)
+            const yObj = yb + cab.f.cara.labios.comisuras * 0.0035 * kx * kx
+            al += (dir.y * t - yObj) / t
+          }
+          dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
+          t = cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
+        } else {
+          dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
+          // Arranque cálido: donde pegó el rayo de la fila anterior en esta columna.
+          t = k === 0 ? cab.rayo(0, 0, 0, dir.x, dir.y, dir.z, 0.2) : cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
+        }
         tPrev[j] = t
         const l = new THREE.Vector3(dir.x * t, dir.y * t, dir.z * t)
         fila.l.push(l)
@@ -472,6 +603,7 @@ export class Cuerpo {
     const yFin = clamp((0.846 * this.H - cab.c.y) / cab.hs, -0.2, -0.13)
     const k = cab.cuello
     const cuello: FilaCabeza[] = []
+    const corr = cab.c.z - 0.006 * this.s - this.zTop
     for (let r = 1; r <= FILAS_CUELLO; r++) {
       const fila: FilaCabeza = { P: [], l: [], n: [], radial: false }
       const f = Math.pow(r / FILAS_CUELLO, 0.85)
@@ -485,11 +617,15 @@ export class Cuerpo {
         const l = new THREE.Vector3(dx * t, y, zEje + dz * t)
         fila.l.push(l)
         fila.n.push(new THREE.Vector3())
-        fila.P.push(cab.aAvatar(l.x, l.y, l.z, new THREE.Vector3()))
+        const P = cab.aAvatar(l.x, l.y, l.z, new THREE.Vector3())
+        // Encorvado: la cabeza va adelante; la base del cuello, con el tronco.
+        P.z -= corr * Math.pow(f, 1.4)
+        fila.P.push(P)
       }
       cuello.push(fila)
     }
     this.filas = [...cuello.reverse(), ...radial.reverse()]
+    this.filaBoca = FILAS_CUELLO + (ALFAS.length - 1 - kBoca)
     // Normales locales desde la propia grilla (sin evaluar el campo otra vez).
     const F = this.filas
     const a = new THREE.Vector3()
@@ -514,8 +650,14 @@ export class Cuerpo {
   pesosCabeza(l: THREE.Vector3): Pesos {
     const y = l.y
     const cab = this.cab
-    // Mandíbula: debajo de la boca y por delante del ángulo.
-    const wM = suave(cab.yBoca + 0.0015, cab.yBoca - 0.007, y) * suave(-0.03, 0.012, l.z) * suave(-0.15, -0.115, y) * 0.9
+    // Mandíbula: debajo de la boca (el labio de abajo entero) y por delante del
+    // ángulo; hacia los costados la línea baja (las mejillas no se mueven) y
+    // cerca de las comisuras el labio se mueve menos.
+    const ax = Math.abs(l.x)
+    const lado = suave(cab.anchoBoca * 0.8, 0.045, ax)
+    const yTop = cab.yBoca + 0.0005 - 0.012 * lado
+    const comis = 1 - 0.8 * suave(0.6, 1.1, ax / cab.anchoBoca) * campana(y - cab.yBoca, 0, 0.006)
+    const wM = suave(yTop + 0.0015, yTop - 0.0045, y) * suave(-0.035, 0.012, l.z) * suave(-0.15, -0.115, y) * 0.92 * comis
     // Cuello: de la cabeza al cuello y al pecho, hacia la base.
     const a = suave(-0.055, -0.13, y)
     const b = suave(-0.13, -0.2, y)
@@ -543,19 +685,20 @@ export class Cuerpo {
   radiosBrazo(u: number): number[] {
     const s = this.s
     const us = u / s
-    const mu = this.k.musculo
-    // La mano no engorda con el músculo.
-    const f = us < 0.56 ? mu : lerp(mu, 1, clamp((us - 0.56) / 0.04, 0, 1))
+    const k = this.k
+    // Brazo, antebrazo y mano: cada uno con su músculo (la mano, con su tamaño).
+    const f = us < 0.3 ? k.mBrazos : us < 0.38 ? lerp(k.mBrazos, k.mAntebrazos, (us - 0.3) / 0.08) : us < 0.56 ? k.mAntebrazos : lerp(k.mAntebrazos, k.manos, clamp((us - 0.56) / 0.04, 0, 1))
     const g = this.fem ? 0.9 : 1
-    return [1, 2, 3, 4].map((k) => tablaSuave(BRAZO, us, k) * s * f * g)
+    return [1, 2, 3, 4].map((i) => tablaSuave(BRAZO, us, i) * s * f * g)
   }
   radiosPierna(u: number): number[] {
     const s = this.s
     const us = u / s
-    const mu = this.k.musculo
+    const k = this.k
     const g = this.fem ? 1.04 : 1
-    const ca = us < 0.4 ? this.k.cadera : 1
-    return [1, 2, 3, 4].map((k) => tablaSuave(PIERNA, us, k) * s * mu * g * (k === 1 && us < 0.25 ? ca : 1))
+    const ca = us < 0.4 ? k.cadera : 1
+    const f = us < 0.38 ? k.mPiernas * k.muslo : us < 0.46 ? lerp(k.mPiernas * k.muslo, k.mPantorrillas, (us - 0.38) / 0.08) : k.mPantorrillas
+    return [1, 2, 3, 4].map((i) => tablaSuave(PIERNA, us, i) * s * f * g * (i === 1 && us < 0.25 ? ca : 1))
   }
 
   pesosBrazo(lado: 1 | -1, u: number): Pesos {
