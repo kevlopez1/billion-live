@@ -70,9 +70,10 @@ const TRONCO_H = [
   [0.775, 0.176, 0.097, -0.104, -0.007],
   [0.795, 0.18, 0.08, -0.1, -0.012],
   [0.806, 0.172, 0.066, -0.094, -0.016],
-  [0.815, 0.152, 0.054, -0.088, -0.02],
-  [0.823, 0.118, 0.045, -0.082, -0.024],
-  [0.83, 0.085, 0.038, -0.077, -0.026],
+  [0.816, 0.156, 0.054, -0.09, -0.02],
+  [0.825, 0.13, 0.044, -0.085, -0.024],
+  [0.833, 0.1, 0.038, -0.08, -0.026],
+  [0.839, 0.078, 0.036, -0.077, -0.028],
 ]
 const TRONCO_M = [
   [0.448, 0.05, 0.024, -0.05, -0.012],
@@ -92,9 +93,10 @@ const TRONCO_M = [
   [0.775, 0.158, 0.088, -0.09, -0.007],
   [0.795, 0.16, 0.072, -0.088, -0.012],
   [0.806, 0.153, 0.06, -0.083, -0.016],
-  [0.815, 0.135, 0.05, -0.078, -0.02],
-  [0.823, 0.105, 0.042, -0.074, -0.024],
-  [0.83, 0.076, 0.036, -0.07, -0.026],
+  [0.816, 0.138, 0.05, -0.079, -0.02],
+  [0.825, 0.115, 0.042, -0.075, -0.024],
+  [0.833, 0.09, 0.036, -0.071, -0.026],
+  [0.839, 0.07, 0.034, -0.068, -0.028],
 ]
 
 /** Brazo: [u (m desde el hombro, base 1,78), lateral, frente, medial, atrás]. */
@@ -385,12 +387,13 @@ export class Cuerpo {
       d += (1 - fr) * 0.008 * s * mu * campana(ax, 0.075 * s, 0.04 * s) * campana(y, 0.77 * Hh, 0.05 * s)
       d -= (1 - fr) * 0.005 * s * campana(ax, 0, 0.013 * s) * campana(y, 0.68 * Hh, 0.12 * s)
       d -= (1 - fr) * 0.012 * s * campana(ax, 0, 0.01 * s) * suave(0.53 * Hh, 0.5 * Hh, y)
-      // Deltoides: los hombros son parte del tronco (el brazo nace debajo, sin unión visible).
-      d += 0.046 * s * mu * this.k.hombros * suave(0.1 * s, 0.168 * s, ax) * campana(y, 0.788 * Hh, 0.026 * Hh) * (this.fem ? 0.72 : 1)
+      // Deltoides: los hombros son parte del tronco (el brazo nace debajo, sin unión
+      // visible). Es forma, no músculo: la ropa lo conserva entero.
+      const delt = 0.046 * s * mu * this.k.hombros * suave(0.1 * s, 0.168 * s, ax) * campana(y, 0.788 * Hh, 0.026 * Hh) * (this.fem ? 0.72 : 1)
       // Clavículas
       d += fr * 0.004 * s * campana(y, 0.812 * Hh - ax * 0.05, 0.01 * s) * suave(0.015 * s, 0.04 * s, ax) * suave(0.16 * s, 0.12 * s, ax)
-      xs[j] += nx[j] * d * bultos
-      zs[j] += nz[j] * d * bultos
+      xs[j] += nx[j] * (d * bultos + delt)
+      zs[j] += nz[j] * (d * bultos + delt)
     }
   }
 
@@ -434,7 +437,7 @@ export class Cuerpo {
 
   /** Alturas de las filas del tronco (m). */
   filasTronco(): number[] {
-    const fr = [0.448, 0.458, 0.468, 0.48, 0.495, 0.51, 0.525, 0.54, 0.555, 0.57, 0.585, 0.6, 0.615, 0.63, 0.645, 0.66, 0.675, 0.69, 0.705, 0.72, 0.735, 0.75, 0.763, 0.775, 0.787, 0.798, 0.808, 0.817, 0.825]
+    const fr = [0.448, 0.458, 0.468, 0.48, 0.495, 0.51, 0.525, 0.54, 0.555, 0.57, 0.585, 0.6, 0.615, 0.63, 0.645, 0.66, 0.675, 0.69, 0.705, 0.72, 0.735, 0.75, 0.763, 0.775, 0.787, 0.798, 0.808, 0.817, 0.825, 0.832, 0.838]
     return fr.map((f) => f * this.H)
   }
 
@@ -454,21 +457,19 @@ export class Cuerpo {
         const aMax = 139 + 1.2 * Math.sin(phi)
         const al = (ALFAS[k] * aMax) / 146 * (Math.PI / 180)
         dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
-        // Arranque cálido: un poco por fuera del anterior de la misma columna.
-        let t0 = Math.min(0.2, tPrev[j] + 0.03)
-        if (cab.sdf(dir.x * t0, dir.y * t0, dir.z * t0) <= 0) t0 = 0.2
-        const t = cab.rayo(0, 0, 0, dir.x, dir.y, dir.z, t0)
+        // Arranque cálido: donde pegó el rayo de la fila anterior en esta columna.
+        const t = k === 0 ? cab.rayo(0, 0, 0, dir.x, dir.y, dir.z, 0.2) : cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
         tPrev[j] = t
         const l = new THREE.Vector3(dir.x * t, dir.y * t, dir.z * t)
         fila.l.push(l)
-        fila.n.push(cab.normal(l.x, l.y, l.z, new THREE.Vector3()))
+        fila.n.push(new THREE.Vector3())
         fila.P.push(cab.aAvatar(l.x, l.y, l.z, new THREE.Vector3()))
       }
       radial.push(fila)
     }
     // Cuello: rayos horizontales desde su eje, de la última fila radial a la base.
     const ult = radial[radial.length - 1]
-    const yFin = clamp((0.836 * this.H - cab.c.y) / cab.hs, -0.21, -0.14)
+    const yFin = clamp((0.846 * this.H - cab.c.y) / cab.hs, -0.2, -0.13)
     const k = cab.cuello
     const cuello: FilaCabeza[] = []
     for (let r = 1; r <= FILAS_CUELLO; r++) {
@@ -480,15 +481,32 @@ export class Cuerpo {
         const zEje = lerp(k.z0, k.z1, clamp((y - k.y0) / (k.y1 - k.y0), 0, 1))
         const dx = Math.cos(phi)
         const dz = Math.sin(phi)
-        const t = cab.rayo(0, y, zEje, dx, 0, dz, 0.13)
+        const t = cab.rayoDesde(0, y, zEje, dx, 0, dz, Math.hypot(ult.l[j].x, ult.l[j].z - zEje), 0.13)
         const l = new THREE.Vector3(dx * t, y, zEje + dz * t)
         fila.l.push(l)
-        fila.n.push(cab.normal(l.x, l.y, l.z, new THREE.Vector3()))
+        fila.n.push(new THREE.Vector3())
         fila.P.push(cab.aAvatar(l.x, l.y, l.z, new THREE.Vector3()))
       }
       cuello.push(fila)
     }
     this.filas = [...cuello.reverse(), ...radial.reverse()]
+    // Normales locales desde la propia grilla (sin evaluar el campo otra vez).
+    const F = this.filas
+    const a = new THREE.Vector3()
+    const b = new THREE.Vector3()
+    for (let i = 0; i < F.length; i++) {
+      const arriba = F[Math.min(F.length - 1, i + 1)].l
+      const abajo = F[Math.max(0, i - 1)].l
+      for (let j = 0; j < M; j++) {
+        a.subVectors(F[i].l[(j + 1) % M], F[i].l[(j - 1 + M) % M])
+        b.subVectors(arriba[j], abajo[j])
+        const n = F[i].n[j].crossVectors(a, b)
+        // Hacia afuera del centro de la cabeza.
+        if (n.dot(F[i].l[j]) < 0) n.negate()
+        if (n.lengthSq() < 1e-14) n.copy(F[i].l[j])
+        n.normalize()
+      }
+    }
     return this.filas
   }
 
@@ -627,7 +645,7 @@ export interface Cobertura {
 const BLANCO: RGBA = [1, 1, 1, 1]
 
 /** Construye la malla de piel: tronco + cuello + cabeza (una grilla), brazos, manos, piernas, pies, párpados y orejas. */
-export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number; barbaDias: boolean }): { lote: Lote; ojos: Lote } {
+export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number }): { lote: Lote; ojos: Lote } {
   const lote = new Lote()
   const cab = cu.cab
   const s = cu.s
@@ -708,7 +726,6 @@ export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number;
     mallaOreja(lote, cu, lado)
     mallaGlobo(ojos, cu, lado)
   }
-  void op
   return { lote, ojos }
 }
 
@@ -718,12 +735,12 @@ function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura) {
   const lado = c.lado
   const uMano = c.u[3]
   const uFin = c.largo
-  const cols = 20
+  const cols = 16
   const filas: number[] = []
   for (let u = -0.02 * s; u < uFin - 0.001; ) {
     filas.push(u)
     const enMano = u > uMano - 0.02 * s
-    u += (u < 0.03 * s ? 0.012 : enMano ? 0.016 : 0.028) * s
+    u += (u < 0.03 * s ? 0.014 : enMano ? 0.018 : 0.032) * s
   }
   filas.push(uFin - 0.004 * s)
   const ids: number[][] = []
@@ -758,7 +775,6 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
   const s = cu.s
   const lado = c.lado
   const L = lado > 0 ? "I" : "D"
-  const uMano = c.u[3]
   c.marco(c.largo - 0.004 * s, _m)
   const base = _m.c.clone()
   const T = _m.T.clone()
@@ -781,10 +797,10 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
     const a0 = base.clone().addScaledVector(N, f * s * g).addScaledVector(T, -0.012 * s)
     // Dedos un poco convergentes.
     const dir = T.clone().addScaledVector(N, -f * 0.25).normalize()
-    const filas = [0, 0.15, 0.35, 0.45, 0.55, 0.72, 0.8, 0.88, 0.95, 1]
+    const filas = [0, 0.3, 0.45, 0.6, 0.76, 0.88, 0.96, 1]
     const ids: number[][] = []
     const centros: THREE.Vector3[] = []
-    const cols = 8
+    const cols = 6
     for (const t of filas) {
       m.c.copy(a0).addScaledVector(dir, t * (l + 0.012 * s))
       m.T.copy(dir)
@@ -826,10 +842,10 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
     const dir = T.clone().multiplyScalar(0.82).addScaledVector(N, 0.5).addScaledVector(Lat, -0.15).normalize()
     const l = 0.085 * s * g
     const r = 0.0105 * s * g
-    const filas = [0, 0.12, 0.3, 0.5, 0.62, 0.78, 0.88, 0.95, 1]
+    const filas = [0, 0.2, 0.45, 0.62, 0.8, 0.92, 1]
     const ids: number[][] = []
     const centros: THREE.Vector3[] = []
-    const cols = 8
+    const cols = 6
     const Np = Lat.clone().cross(dir).normalize().multiplyScalar(-lado)
     for (const t of filas) {
       m.c.copy(cmc).addScaledVector(dir, t * l)
@@ -857,13 +873,12 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
     for (let k = 0; k < cols; k++) lote.t(tip, ult[k], ult[(k + 1) % cols])
     lote.pieza()
   }
-  void uMano
 }
 
 function mallaPierna(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura) {
   const s = cu.s
   const lado = c.lado
-  const cols = 20
+  const cols = 16
   const filas: number[] = []
   const uRod = c.u[2]
   for (let u = -0.05 * s; u < c.largo - 0.001; ) {
@@ -935,8 +950,8 @@ export function mallaPie(lote: Lote, cu: Cuerpo, lado: 1 | -1, holg: number, col
   for (const [i, sgn] of [[0, -1], [ids.length - 1, 1]] as const) {
     const c = centros[i]
     const pz = c.z + sgn * 0.002
-    const L = lado > 0 ? "I" : "D"
-    const cen = lote.v(c.x, c.y, pz, 0, 0, col, [[H[sgn < 0 ? `tobillo${L}` : `punta${L}`], 1]], mat)
+    const hueso = lado > 0 ? (sgn < 0 ? H.tobilloI : H.puntaI) : sgn < 0 ? H.tobilloD : H.puntaD
+    const cen = lote.v(c.x, c.y, pz, 0, 0, col, [[hueso, 1]], mat)
     const f = ids[i]
     for (let k = 0; k < cols; k++) {
       if (sgn < 0) lote.t(cen, f[k], f[(k + 1) % cols])
@@ -955,7 +970,7 @@ function mallaParpado(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
   const cab = cu.cab
   const o = cab.ojo
   const L = lado > 0 ? "I" : "D"
-  const cols = 40
+  const cols = 32
   const lambdas = [1, 1.025, 1.08, 1.18, 1.32, 1.5]
   const ids: number[][] = []
   const P = new THREE.Vector3()
@@ -1004,12 +1019,13 @@ function mallaGlobo(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
   const cab = cu.cab
   const o = cab.ojo
   const L = lado > 0 ? "I" : "D"
-  const cols = 24
-  const filas = 14
+  const cols = 18
+  const filas = 10
   const ids: number[][] = []
   const P = new THREE.Vector3()
   for (let i = 0; i <= filas; i++) {
-    const ang = (i / filas) * Math.PI
+    // Más filas al frente (iris y córnea); atrás casi nada se ve.
+    const ang = Math.pow(i / filas, 1.35) * Math.PI
     const fila: number[] = []
     for (let k = 0; k <= cols; k++) {
       const az = (k / cols) * Math.PI * 2
@@ -1031,7 +1047,6 @@ function mallaGlobo(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
 /** Oreja: lámina con borde enrollado (hélix), antehélix y concha. */
 function mallaOreja(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
   const cab = cu.cab
-  const hs = cab.hs
   const tam = cab.r.oreja
   const alto = 0.06 * tam
   const ancho = 0.033 * tam
@@ -1042,8 +1057,8 @@ function mallaOreja(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
   const arriba = new THREE.Vector3(0, 1, 0.22).normalize()
   const atras = new THREE.Vector3().crossVectors(arriba, n).normalize()
   if (atras.z > 0) atras.negate()
-  const cols = 26
-  const ts = [0, 0.1, 0.22, 0.38, 0.55, 0.72, 0.88, 1]
+  const cols = 18
+  const ts = [0, 0.1, 0.25, 0.45, 0.68, 1]
   const P = new THREE.Vector3()
   const caras: number[][][] = [[], []]
   for (const cara of [0, 1]) {
@@ -1075,7 +1090,6 @@ function mallaOreja(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
       caras[cara].push(fila)
     }
   }
-  void hs
   // Cara de adelante (mira según n) y de atrás (al revés); unidas por el borde (t = 0).
   const c0 = cab.aAvatar(centro.x, centro.y, centro.z, new THREE.Vector3())
   const cAfuera = c0.clone().addScaledVector(cab.aAvatar(n.x, n.y, n.z, new THREE.Vector3()).sub(cab.c), 1)

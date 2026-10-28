@@ -228,7 +228,11 @@ function Plano({
 }) {
   return (
     <div className="rounded-[16px] border border-white/[0.07] bg-black/25 p-2">
-      <div className="mb-1 flex items-center justify-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#e3b866]">
+      <div className="relative mb-1 flex items-center justify-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#e3b866]">
+        {/* El plano va con el norte arriba, como el radar. */}
+        <span className="cb-cond absolute left-1 top-1/2 -translate-y-1/2 text-[10px] font-bold tracking-[0.1em] text-white/40" aria-hidden>
+          N ↑
+        </span>
         <ArrowDownUp className="h-3 w-3" />
         Ascensores
       </div>
@@ -264,7 +268,7 @@ function Plano({
                       </span>
                     )}
                   </span>
-                  <span className="line-clamp-2 pl-0.5 text-[11px] font-extrabold leading-[1.15] text-white">{conPrime(nombreCorto(lugarId), false)}</span>
+                  <span lang="es" className="line-clamp-3 hyphens-auto break-words pl-0.5 text-[10px] font-extrabold leading-[1.15] text-white sm:line-clamp-2 sm:text-[11px]">{conPrime(nombreCorto(lugarId), false)}</span>
                   {lider && <span className="truncate pl-0.5 text-[10px] font-semibold leading-none text-white/55">{lider.corto}</span>}
                 </button>
               )

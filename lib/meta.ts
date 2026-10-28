@@ -31,18 +31,44 @@ export type Resultado = { ok: true; id: string; enlace?: string } | { ok: false;
 type Pagina = { tokenPagina: string; idPagina: string; idInstagram: string | null }
 
 class ErrorMeta extends Error {}
+/** Meta no contestó antes del límite. No dice si lo pedido se hizo o no. */
+class SinRespuesta extends ErrorMeta {}
 
-async function llamar(ruta: string, token: string, metodo: "GET" | "POST" = "GET", cuerpo?: Record<string, string>) {
+// Lo que espera una llamada que no trae límite propio.
+const LLAMADA_MS = 15_000
+
+/**
+ * `limite` = el instante (ms) en que hay que dejar de esperar. Sin él, la
+ * llamada tiene LLAMADA_MS. Una llamada colgada no puede llevarse la ruta
+ * entera: Vercel la corta a los 60 s y la página se queda sin saber qué salió.
+ */
+async function llamar(
+  ruta: string,
+  token: string,
+  metodo: "GET" | "POST" = "GET",
+  cuerpo?: Record<string, string>,
+  limite?: number,
+) {
   const url = new URL(`${GRAPH}/${ruta}`)
-  const init: RequestInit = { method: metodo, cache: "no-store" }
+  const espera = limite === undefined ? LLAMADA_MS : Math.max(1_000, limite - Date.now())
+  const init: RequestInit = { method: metodo, cache: "no-store", signal: AbortSignal.timeout(espera) }
   if (metodo === "GET") {
     url.searchParams.set("access_token", token)
   } else {
     init.headers = { "Content-Type": "application/x-www-form-urlencoded" }
     init.body = new URLSearchParams({ ...cuerpo, access_token: token })
   }
-  const r = await fetch(url, init)
-  const j = (await r.json().catch(() => ({}))) as Record<string, unknown> & { error?: { message?: string } }
+  let r: Response
+  let j: Record<string, unknown> & { error?: { message?: string } }
+  try {
+    r = await fetch(url, init)
+    j = (await r.json().catch(() => ({}))) as typeof j
+  } catch (e) {
+    if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) {
+      throw new SinRespuesta(`Meta no contestó en ${Math.round(espera / 1000)} s.`)
+    }
+    throw e
+  }
   if (!r.ok || j.error) {
     // El mensaje de Meta tal cual: es el que dice qué permiso falta.
     throw new ErrorMeta(j.error?.message || `Meta respondió ${r.status}.`)
@@ -58,11 +84,11 @@ export function configurado(
   return falta ? { ok: false, falta } : { ok: true }
 }
 
-async function pagina(cuenta: Cuenta): Promise<Pagina> {
+async function pagina(cuenta: Cuenta, limite?: number): Promise<Pagina> {
   const v = VARIABLES[cuenta]
   const sistema = process.env[v.token]!.trim()
   const id = process.env[v.pagina]!.trim()
-  const j = await llamar(`${id}?fields=access_token,instagram_business_account`, sistema)
+  const j = await llamar(`${id}?fields=access_token,instagram_business_account`, sistema, "GET", undefined, limite)
   const tokenPagina = typeof j.access_token === "string" ? j.access_token : null
   if (!tokenPagina) {
     throw new ErrorMeta("El usuario del sistema no tiene acceso a esta página. Asígnale la página en Meta Business.")
@@ -74,36 +100,61 @@ async function pagina(cuenta: Cuenta): Promise<Pagina> {
 // La ruta tiene 60 s (maxDuration). Lo que no termina antes de esto se
 // devuelve como "en proceso" en vez de dejar que Vercel corte a la mitad.
 const PRESUPUESTO_MS = 45_000
+// Después del presupuesto se deja de ESPERAR a Meta: ninguna llamada pasa de
+// aquí (45 + 10 = 55 s, antes de los 60 de Vercel).
+const MARGEN_MS = 10_000
 const PAUSA_MS = 5_000
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-const permalink = async (id: string, token: string) => {
-  const e = await llamar(`${id}?fields=permalink`, token).catch(() => ({}) as Record<string, unknown>)
+const permalink = async (id: string, token: string, limite?: number) => {
+  const e = await llamar(`${id}?fields=permalink`, token, "GET", undefined, limite).catch(() => ({}) as Record<string, unknown>)
   return typeof e.permalink === "string" ? e.permalink : undefined
 }
 
 // Un video en Instagram no se publica al instante: Meta lo descarga y lo
 // procesa (status_code IN_PROGRESS). Solo con FINISHED se puede llamar a
 // media_publish; antes, falla. Si el tiempo no alcanza, queda pendiente.
+//
+// Con el contenedor ya creado, nada se da por fallido por falta de tiempo:
+// una llamada sin respuesta deja el reel "en proceso", y la próxima vuelta lee
+// status_code (PUBLISHED = ya salió, no se publica otra vez).
 async function esperarYPublicar(idInstagram: string, contenedor: string, token: string, hasta: number): Promise<Resultado> {
-  for (;;) {
-    const j = await llamar(`${contenedor}?fields=status_code,status`, token)
-    const estado = String(j.status_code ?? "")
-    if (estado === "FINISHED") {
-      const pub = await llamar(`${idInstagram}/media_publish`, token, "POST", { creation_id: contenedor })
-      const id = String(pub.id)
-      return { ok: true, id, enlace: await permalink(id, token) }
+  const duro = hasta + MARGEN_MS
+  const enProceso: Resultado = { ok: false, pendiente: contenedor, error: "Instagram sigue procesando el video." }
+  const estadoDe = async () => {
+    const j = await llamar(`${contenedor}?fields=status_code,status`, token, "GET", undefined, duro)
+    return { estado: String(j.status_code ?? ""), detalle: String(j.status ?? j.status_code ?? "") }
+  }
+  try {
+    for (;;) {
+      const { estado, detalle } = await estadoDe()
+      if (estado === "FINISHED") {
+        let pub: Record<string, unknown>
+        try {
+          pub = await llamar(`${idInstagram}/media_publish`, token, "POST", { creation_id: contenedor }, duro)
+        } catch (e) {
+          if (e instanceof SinRespuesta) throw e
+          // Otra vuelta pudo publicarlo justo antes (dos pedidos sobre el mismo
+          // contenedor): si Meta ya lo marca PUBLISHED, salió, no es un error.
+          const ahora = await estadoDe().catch(() => null)
+          if (ahora?.estado === "PUBLISHED") return { ok: true, id: contenedor }
+          throw e
+        }
+        const id = String(pub.id)
+        return { ok: true, id, enlace: await permalink(id, token, duro) }
+      }
+      // Ya salió (otra pestaña, o un intento anterior que no llegó a contestar).
+      // No se publica de nuevo: un segundo media_publish sería un reel repetido.
+      if (estado === "PUBLISHED") return { ok: true, id: contenedor }
+      if (estado === "ERROR" || estado === "EXPIRED") {
+        return { ok: false, error: `Instagram no pudo procesar el video (${detalle}).` }
+      }
+      if (Date.now() + PAUSA_MS > hasta) return enProceso
+      await dormir(PAUSA_MS)
     }
-    // Ya salió (otra pestaña, o un intento anterior que no llegó a contestar).
-    // No se publica de nuevo: un segundo media_publish sería un reel repetido.
-    if (estado === "PUBLISHED") return { ok: true, id: contenedor }
-    if (estado === "ERROR" || estado === "EXPIRED") {
-      return { ok: false, error: `Instagram no pudo procesar el video (${String(j.status ?? estado)}).` }
-    }
-    if (Date.now() + PAUSA_MS > hasta) {
-      return { ok: false, pendiente: contenedor, error: "Instagram sigue procesando el video." }
-    }
-    await dormir(PAUSA_MS)
+  } catch (e) {
+    if (e instanceof SinRespuesta) return enProceso
+    throw e
   }
 }
 
@@ -117,21 +168,44 @@ async function instagram(p: Pagina, tipo: Tipo, url: string, texto: string, hast
     tipo === "video"
       ? { media_type: "REELS", video_url: url, caption: texto, share_to_feed: "true" }
       : { image_url: url, caption: texto }
-  const c = await llamar(`${p.idInstagram}/media`, p.tokenPagina, "POST", cuerpo)
+  const duro = hasta + MARGEN_MS
+  let c: Record<string, unknown>
+  try {
+    c = await llamar(`${p.idInstagram}/media`, p.tokenPagina, "POST", cuerpo, duro)
+  } catch (e) {
+    // Sin id de contenedor no hay nada que retomar, y un contenedor que nadie
+    // publica no sale: volver a intentarlo no lo duplica.
+    if (e instanceof SinRespuesta) return { ok: false, error: "Instagram no contestó a tiempo. Inténtalo de nuevo." }
+    throw e
+  }
   const contenedor = String(c.id)
   if (tipo === "video") return esperarYPublicar(p.idInstagram, contenedor, p.tokenPagina, hasta)
-  const pub = await llamar(`${p.idInstagram}/media_publish`, p.tokenPagina, "POST", { creation_id: contenedor })
+  const pub = await llamar(`${p.idInstagram}/media_publish`, p.tokenPagina, "POST", { creation_id: contenedor }, duro)
   const id = String(pub.id)
-  return { ok: true, id, enlace: await permalink(id, p.tokenPagina) }
+  return { ok: true, id, enlace: await permalink(id, p.tokenPagina, duro) }
 }
 
-async function facebook(p: Pagina, tipo: Tipo, url: string, texto: string): Promise<Resultado> {
+async function facebook(p: Pagina, tipo: Tipo, url: string, texto: string, limite: number): Promise<Resultado> {
   // Video: /{página}/videos con file_url. Meta lo descarga de esa dirección y
   // lo procesa por su cuenta; contesta con el id del video apenas lo acepta.
-  const j =
-    tipo === "video"
-      ? await llamar(`${p.idPagina}/videos`, p.tokenPagina, "POST", { file_url: url, description: texto })
-      : await llamar(`${p.idPagina}/photos`, p.tokenPagina, "POST", { url, caption: texto })
+  let j: Record<string, unknown>
+  try {
+    j =
+      tipo === "video"
+        ? await llamar(`${p.idPagina}/videos`, p.tokenPagina, "POST", { file_url: url, description: texto }, limite)
+        : await llamar(`${p.idPagina}/photos`, p.tokenPagina, "POST", { url, caption: texto }, limite)
+  } catch (e) {
+    // Facebook no tiene un "en proceso" que se pueda retomar: si no contesta
+    // antes del corte, no se sabe si salió. Se dice así, sin dar por fallido
+    // algo que puede estar publicándose (reintentar lo duplicaría).
+    if (e instanceof SinRespuesta) {
+      return {
+        ok: false,
+        error: "Facebook no contestó a tiempo. Puede que el video igual salga: revisa la página antes de volver a publicarlo.",
+      }
+    }
+    throw e
+  }
   const id = String(j.post_id ?? j.id)
   return { ok: true, id, enlace: `https://www.facebook.com/${id}` }
 }
@@ -146,12 +220,13 @@ export async function publicar(
   url: string,
   texto: string,
   destinos: Destino[],
+  presupuestoMs = PRESUPUESTO_MS,
 ): Promise<Record<Destino, Resultado | undefined>> {
-  const hasta = Date.now() + PRESUPUESTO_MS
+  const hasta = Date.now() + presupuestoMs
   const salida: Record<Destino, Resultado | undefined> = { ig: undefined, fb: undefined }
   let p: Pagina
   try {
-    p = await pagina(cuenta)
+    p = await pagina(cuenta, hasta)
   } catch (e) {
     const error = mensaje(e, "No se pudo leer la página.")
     for (const d of destinos) salida[d] = { ok: false, error }
@@ -164,25 +239,9 @@ export async function publicar(
           salida.ig = await instagram(p, tipo, url, texto, hasta)
           return
         }
-        // Facebook no tiene un "en proceso" que se pueda retomar: si no contesta
-        // antes del corte, no se sabe si salió. Se dice así, sin dar por fallido
-        // algo que puede estar publicándose (reintentar lo duplicaría).
-        let reloj: ReturnType<typeof setTimeout> | undefined
-        const limite = new Promise<Resultado>((r) => {
-          reloj = setTimeout(
-            () =>
-              r({
-                ok: false,
-                error: "Facebook no contestó a tiempo. Puede que el video igual salga: revisa la página antes de volver a publicarlo.",
-              }),
-            Math.max(0, hasta - Date.now()) + 8_000,
-          )
-        })
-        try {
-          salida.fb = await Promise.race([facebook(p, tipo, url, texto), limite])
-        } finally {
-          clearTimeout(reloj)
-        }
+        // Hasta 53 s: después de los 45 del presupuesto, unos segundos más
+        // para que Meta acepte el archivo, y antes de los 60 de Vercel.
+        salida.fb = await facebook(p, tipo, url, texto, hasta + 8_000)
       } catch (e) {
         salida[d] = { ok: false, error: mensaje(e, "Error desconocido.") }
       }
@@ -192,12 +251,15 @@ export async function publicar(
 }
 
 /** Vuelve a mirar un reel que quedó en proceso y, si ya terminó, lo publica. */
-export async function continuar(cuenta: Cuenta, contenedor: string): Promise<Resultado> {
+export async function continuar(cuenta: Cuenta, contenedor: string, presupuestoMs = PRESUPUESTO_MS): Promise<Resultado> {
+  const hasta = Date.now() + presupuestoMs
   try {
-    const p = await pagina(cuenta)
+    const p = await pagina(cuenta, hasta)
     if (!p.idInstagram) return { ok: false, error: "La página no tiene una cuenta de Instagram profesional conectada." }
-    return await esperarYPublicar(p.idInstagram, contenedor, p.tokenPagina, Date.now() + PRESUPUESTO_MS)
+    return await esperarYPublicar(p.idInstagram, contenedor, p.tokenPagina, hasta)
   } catch (e) {
+    // Sin respuesta de Meta no se sabe nada nuevo: el reel sigue pendiente.
+    if (e instanceof SinRespuesta) return { ok: false, pendiente: contenedor, error: "Meta no contestó a tiempo." }
     return { ok: false, error: mensaje(e, "Error desconocido.") }
   }
 }

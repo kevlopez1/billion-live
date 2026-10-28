@@ -272,8 +272,22 @@ function BotonMapa({ onClick, abierto }: { onClick: () => void; abierto?: boolea
   )
 }
 
+/** true por debajo de 1024 px: ahí la botonera completa no entra en una fila. */
+function useAngosto() {
+  const [a, setA] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)")
+    const f = () => setA(mq.matches)
+    f()
+    mq.addEventListener("change", f)
+    return () => mq.removeEventListener("change", f)
+  }, [])
+  return a
+}
+
 export function Dock(props: PropsDock) {
-  if (props.compacto) return <DockCompacto {...props} />
+  const angosto = useAngosto()
+  if (props.compacto || angosto) return <DockCompacto {...props} />
   const ic = "h-3.5 w-3.5 shrink-0"
   const camarasVisibles = CAMARAS.filter((c) => c.id !== "maqueta" || props.hayMaqueta)
   // Las acciones llevan nombre desde 1360 px; más angosto, solo el ícono (el nombre queda en title y aria-label).
@@ -288,7 +302,7 @@ export function Dock(props: PropsDock) {
         {camarasVisibles.map((c) => (
           <Boton key={c.id} activo={camaraActiva(props, c.id)} onClick={() => props.onCamara(c.id)} etiqueta={c.ayuda} className="px-2.5">
             <c.Icono className={ic} />
-            {c.nombre}
+            <span className="hidden min-[1180px]:inline">{c.nombre}</span>
           </Boton>
         ))}
       </Grupo>

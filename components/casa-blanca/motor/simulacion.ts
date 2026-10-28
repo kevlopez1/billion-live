@@ -715,6 +715,45 @@ export class Simulacion {
     }
   }
 
+  /**
+   * Salta el reloj a `minutos` (y a `dia`, si viene): cada uno aparece ya en
+   * su lugar del horario, sin caminar. Las conversaciones en curso se
+   * descartan. Es un corte de montaje: lo usa el estudio (/casa-blanca/estudio)
+   * cuando un plano pide otra hora.
+   */
+  saltarA(minutos: number, dia?: number): void {
+    if (!Number.isFinite(minutos)) return
+    for (const ci of [...this.convs.values()]) this.descartar(ci)
+    if (typeof dia === "number" && Number.isInteger(dia) && dia >= 1) this.reloj.dia = dia
+    this.reloj.minutos = normalizarMinutos(minutos)
+    const h = this.reloj.minutos / 60
+    for (const id of this.ids) {
+      const s = this.int[id]
+      s.manual = null
+      s.entrada = indiceEntrada(s.horario, h)
+      this.pj[id].burbuja = null
+      this.aplicarHorario(id, true)
+    }
+    this.marcaHora = this.horaAbsoluta()
+    this.refrescar()
+  }
+
+  /**
+   * Como reunir(), pero ya están ahí: cada uno aparece en su puesto de la
+   * ronda, mirando al centro (sin cruzar la casa). Para el estudio: el plano
+   * empieza con todos en cuadro.
+   */
+  reunirYa(lugarId: string, ids: string[], titulo?: string): Conversacion {
+    const conv = this.reunir(lugarId, ids, titulo)
+    for (const id of conv.ids) {
+      const m = this.int[id].meta
+      const l = m ? LUGAR[m.lugarId] : undefined
+      if (m && l) this.colocar(id, l, copia(m.spot), m.rumbo)
+    }
+    this.refrescar()
+    return conv
+  }
+
   /** Una conversación de guion a mano: si no están en el lugar, van. */
   conversarGuion(lugarId: string, ids: string[], tema?: Tema): Conversacion {
     const l = LUGAR[lugarId] ?? LUGAR[LUGAR_RESERVA]

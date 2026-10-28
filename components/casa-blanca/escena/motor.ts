@@ -85,7 +85,7 @@ export interface EscenaMotor extends Escena {
    * ascensor y sale encuadrándolo. `centro` y `distancia` salen de
    * navegacion.encuadreDe().
    */
-  encuadrar(centro: Vec3, distancia: number, lugarId?: string): void
+  encuadrar(centro: Vec3, distancia: number, lugarId?: string, opciones?: { subir?: number }): void
   /** true mientras la cámara baja o sube por el ascensor. */
   viajando(): boolean
   /** Solo para pruebas y depuración. */
@@ -100,12 +100,12 @@ export interface EscenaMotor extends Escena {
 
 const NIVELES: NivelId[] = ["superficie", "n1", "n2", "n3", "ciudad"]
 
-/** El nivel al que pertenece una altura (superficie si y > -4, n1 si -12 < y ≤ -4… y la ciudad por debajo de -40). */
+/** El nivel al que pertenece una altura (superficie si y > -4, n1 si -12 < y ≤ -4… y la ciudad por debajo de la mitad entre n3 y ella). */
 export function nivelDeY(y: number): NivelId {
   if (y > -4) return "superficie"
   if (y > -12) return "n1"
   if (y > -20) return "n2"
-  if (y > -40) return "n3"
+  if (y > (ALTURA_NIVEL.n3 + ALTURA_NIVEL.ciudad) / 2) return "n3"
   return "ciudad"
 }
 
@@ -486,9 +486,10 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       _ejeX.y = 0
       if (_ejeX.lengthSq() > 1e-6) _centro.addScaledVector(_ejeX.normalize(), mitad * 0.35)
     } else if (nivelActual === "ciudad") {
-      // La caverna entera (400 x 400 m) en una sola sombra fija.
-      mitad = 210
-      _centro.set(0, ALTURA_NIVEL.ciudad, 80)
+      // La ciudad entera (HUELLAS.ciudad) en una sola sombra fija.
+      const C = HUELLAS.ciudad
+      mitad = Math.max(C.x1 - C.x0, C.z1 - C.z0) / 2 + 10
+      _centro.set((C.x0 + C.x1) / 2, ALTURA_NIVEL.ciudad, (C.z0 + C.z1) / 2)
     } else {
       mitad = 105
       _centro.set(0, ALTURA_NIVEL[nivelActual], 80)
@@ -850,7 +851,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
     },
     mostrarNivel(n) {
       if (n === nivelActual && !trans && !camara.viajando) return
-      // Con la cámara libre, se baja (o sube) por el ascensor; en cine o siguiendo a alguien, fundido.
+      // Elegir un nivel mientras se sigue a alguien es dejar de seguirlo (si no, la cámara volvería con él).
+      if (camara.modo === "seguir") camara.setModo(nivelActual === "superficie" ? "dron" : "nivel")
+      // Con la cámara libre, se baja (o sube) por el ascensor; en cine, fundido.
       if (camara.puedeViajar) camara.viajar(n)
       else fundir(() => aplicarNivel(n))
     },
@@ -880,12 +883,22 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
         })
       } else camara.enfocar(destino, distancia)
     },
-    encuadrar(p, distancia, lugarId) {
+    encuadrar(p, distancia, lugarId, opciones) {
       const n = nivelDeY(p.y)
       const destino = new THREE.Vector3(p.x, p.y, p.z)
       // Salir de cine o de seguir: encuadrar un lugar es mirar el lugar, no seguir a alguien.
       if (!camara.puedeViajar) camara.setModo(n === "superficie" ? "dron" : "nivel")
       const pose = poseEnfoque(destino, distancia, n, undefined, lugarId)
+      // "subir": el lugar queda más arriba en la pantalla (en celular, un panel tapa la mitad de abajo).
+      const subir = opciones?.subir ?? 0
+      if (subir) {
+        const atras = pose.pos.clone().sub(pose.mira).setY(0)
+        if (atras.lengthSq() > 1e-6) {
+          atras.setLength(distancia * subir)
+          pose.pos.add(atras)
+          pose.mira.add(atras)
+        }
+      }
       if (n !== nivelActual || camara.viajando) camara.viajar(n, pose)
       else camara.irAPose(pose)
     },

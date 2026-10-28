@@ -68,7 +68,7 @@ type EscenaPlus = Escena & {
   /** Hover sobre la escena (personaje, puesto o lugar bajo el cursor), si el motor lo ofrece. */
   alPasar?: (fn: (t: Toque | null, x: number, y: number) => void) => void
   /** Muestra un lugar entero (por el ascensor si está en otro nivel). */
-  encuadrar?: (centro: { x: number; y: number; z: number }, distancia: number, lugarId?: string) => void
+  encuadrar?: (centro: { x: number; y: number; z: number }, distancia: number, lugarId?: string, opciones?: { subir?: number }) => void
 }
 
 type ModoCam = ModoCamara
@@ -196,6 +196,8 @@ export default function CasaBlancaViva() {
   const [sesion, setSesion] = useState<SesionConsejo | null>(null)
   const [chats, setChats] = useState<Record<string, MensajeChat[]>>({})
   const compacto = useCompacto()
+  const compactoRef = useRef(compacto)
+  compactoRef.current = compacto
 
   // Refs con el último valor, para el bucle y los callbacks del motor (que se registran una vez).
   const mundoRef = useRef(mundo)
@@ -652,7 +654,8 @@ export default function CasaBlancaViva() {
       const e = encuadreDe(lugarId)
       if (!m || !e) return
       apagarMaqueta()
-      if (m.escena.encuadrar) m.escena.encuadrar(e.centro, e.distancia, lugarId)
+      // En celular el panel tapa la mitad de abajo: el lugar se encuadra más arriba.
+      if (m.escena.encuadrar) m.escena.encuadrar(e.centro, e.distancia, lugarId, compactoRef.current ? { subir: 0.42 } : undefined)
       else m.escena.enfocar(e.centro, e.distancia)
       setNivel(e.nivel)
       const d = DEP_POR_LUGAR[lugarId]

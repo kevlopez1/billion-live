@@ -54,6 +54,8 @@ export interface Plano {
   reunir?: string[]
   /** Tilt-shift de maqueta. */
   maqueta?: boolean
+  /** El visor de este plano; sin él, el del episodio. */
+  visor?: Visor
 }
 
 export interface Episodio {
@@ -93,6 +95,7 @@ export function guionValido(ep: Episodio, ids: { personajes: Set<string>; lugare
     const n = `plano ${i + 1}`
     if (!(p.dur > 0 && p.dur <= 60)) errores.push(`${n}: dur ${p.dur} (va de 0 a 60 s)`)
     if (p.hora !== undefined && !HORA.test(p.hora)) errores.push(`${n}: hora "${p.hora}" (va "HH:MM")`)
+    if (p.visor !== undefined && p.visor !== "cine" && p.visor !== "camara") errores.push(`${n}: visor "${p.visor}": va cine o camara`)
     const c = p.camara
     if (c.tipo === "toma") {
       if (!ids.tomas.has(c.toma)) errores.push(`${n}: la toma "${c.toma}" no existe`)

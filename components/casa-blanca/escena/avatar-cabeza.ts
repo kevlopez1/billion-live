@@ -80,7 +80,7 @@ export function rasgosDe(p: Personaje): Rasgos {
     nariz: { largo: v(0.08) * (fem ? 0.93 : 1), ancho: v(0.1) * (fem ? 0.88 : 1), proy: v(0.1), bulbo: v(0.12), puente: r() * (fem ? 0.2 : 0.8) },
     labios: v(0.15) * (fem ? 1.25 : 1),
     bocaAncho: v(0.06),
-    ojo: { tam: v(0.05) * (fem ? 1.05 : 1), sep: v(0.03), abierto: v(0.1) * (1 - edad * 0.12), incl: (r() - 0.4) * 0.12 + (fem ? 0.06 : 0) },
+    ojo: { tam: v(0.05) * (fem ? 1.08 : 1.03), sep: v(0.03), abierto: v(0.1) * (1 - edad * 0.12), incl: (r() - 0.4) * 0.12 + (fem ? 0.06 : 0) },
     oreja: v(0.08) * (1 + edad * 0.08),
     cuello: v(0.05) * (fem ? 0.82 : fuerte ? 1.12 : 1) * (1 + grasa * 0.06),
     iris,
@@ -131,6 +131,13 @@ function cono(px: number, py: number, pz: number, ax: number, ay: number, az: nu
   if (Math.sign(y) * a2 * y2 < k) return Math.sqrt(x2 + y2) * il2 - r1
   return (Math.sqrt(x2 * a2 * il2) + y * rr) * il2 - r1
 }
+/** ¿El grupo (dentro de una esfera c, r) está tan lejos que no cambia d? Así se salta sin error. */
+function lejos(px: number, py: number, pz: number, cx: number, cy: number, cz: number, r: number, d: number, k: number): boolean {
+  const x = px - cx
+  const y = py - cy
+  const z = pz - cz
+  return Math.sqrt(x * x + y * y + z * z) - r > Math.abs(d) + k
+}
 function smin(a: number, b: number, k: number): number {
   const h = Math.max(k - Math.abs(a - b), 0) / k
   return Math.min(a, b) - h * h * k * 0.25
@@ -175,7 +182,7 @@ export class Cabeza {
     this.nariz = { y: -0.026 * L * nl, z: 0.1145 + 0.008 * (r.nariz.proy - 1) }
     this.yMenton = -0.108 * L
     const nk = r.cuello
-    this.cuello = { y0: -0.035, z0: -0.022, y1: -0.21, z1: -0.04, r0: 0.053 * nk, r1: 0.061 * nk }
+    this.cuello = { y0: -0.035, z0: -0.022, y1: -0.21, z1: -0.042, r0: 0.054 * nk, r1: 0.064 * nk }
     // Parámetros empaquetados para la función de distancia (rápida, sin objetos).
     this.P = [W, L, r.mandibula, r.menton, r.pomulos, r.cejas, nl, r.nariz.ancho, r.nariz.proy, r.nariz.bulbo, r.nariz.puente, r.labios, r.bocaAncho, r.grasa, r.edad, r.fem ? 1 : 0, nk]
   }
@@ -191,29 +198,35 @@ export class Cabeza {
     // Base de la cara: cráneo ensanchado hacia los pómulos (sin borde de "máscara").
     d = smin(d, elip(x, y, z, 0, -0.012, 0.012, 0.07 * W, 0.07, 0.085), 0.03)
     // Maxilar (media cara) y mejillas
-    d = smin(d, elip(x, y, z, 0, -0.03 * L, 0.054, (0.05 + 0.005 * G) * W, 0.046 * L, 0.052), 0.026)
-    d = smin(d, elip(ax, y, z, 0.049 * W, -0.005, 0.063, 0.021 * Pm, 0.014, 0.021), 0.02)
-    // Arco cigomático: del pómulo a la oreja
-    d = smin(d, cono(ax, y, z, 0.05 * W, -0.004, 0.06, 0.068 * W, 0.0, 0.012, 0.009, 0.006), 0.02)
-    // Carrillos (más con grasa)
-    d = smin(d, elip(ax, y, z, 0.04 * W, -0.04 * L, 0.06, 0.022 + 0.008 * G, 0.024, 0.024), 0.024)
-    // Mandíbula: de cada ángulo al mentón
-    d = smin(d, cono(ax, y, z, 0.052 * J * W, -0.058 * L, 0.004, 0.019 * Mn, -0.095 * L, 0.084, 0.0145 + 0.004 * G, 0.0145), 0.03)
-    d = smin(d, elip(x, y, z, 0, -0.064 * L, 0.046, 0.05 * J, 0.033 * L, 0.052), 0.026)
-    // Mentón
-    d = smin(d, elip(x, y, z, 0, -0.092 * L, 0.086 + 0.005 * (Mn - 1), 0.0195 * Mn * (1.1 - F * 0.15), 0.0158, 0.0162), 0.012)
+    d = smin(d, elip(x, y, z, 0, -0.03 * L, 0.052, (0.056 + 0.005 * G) * W, 0.046 * L, 0.051), 0.026)
+    if (!lejos(ax, y, z, 0.05, -0.02, 0.045, 0.06, d, 0.024)) {
+      d = smin(d, elip(ax, y, z, 0.049 * W, -0.005, 0.063, 0.021 * Pm, 0.014, 0.021), 0.02)
+      // Arco cigomático: del pómulo a la oreja
+      d = smin(d, cono(ax, y, z, 0.05 * W, -0.004, 0.06, 0.068 * W, 0.0, 0.012, 0.009, 0.006), 0.02)
+      // Carrillos (más con grasa)
+      d = smin(d, elip(ax, y, z, 0.041 * W, -0.038 * L, 0.064, 0.022 + 0.008 * G, 0.025, 0.026), 0.024)
+    }
+    if (!lejos(x, y, z, 0, -0.07, 0.04, 0.085, d, 0.03)) {
+      // Mandíbula: de cada ángulo al mentón
+      d = smin(d, cono(ax, y, z, 0.052 * J * W, -0.058 * L, 0.004, 0.019 * Mn, -0.095 * L, 0.084, 0.0145 + 0.004 * G, 0.0145), 0.03)
+      d = smin(d, elip(x, y, z, 0, -0.064 * L, 0.046, 0.05 * J, 0.033 * L, 0.052), 0.026)
+      // Mentón
+      d = smin(d, elip(x, y, z, 0, -0.092 * L, 0.089 + 0.005 * (Mn - 1), 0.021 * Mn * (1.1 - F * 0.15), 0.0165, 0.0165), 0.012)
+    }
     // Arco de las cejas
-    d = smin(d, cono(ax, y, z, 0.045 * W, 0.03, 0.077, 0.008, 0.033, 0.0935, 0.0095 * B, 0.0105 * B), 0.012)
+    if (!lejos(ax, y, z, 0.028, 0.031, 0.085, 0.04, d, 0.012)) d = smin(d, cono(ax, y, z, 0.045 * W, 0.03, 0.077, 0.008, 0.033, 0.0935, 0.0095 * B, 0.0105 * B), 0.012)
     // Ojos: cuenca, párpados (una esfera apenas mayor que el globo, fundida con la cara)
     // y la abertura en almendra. El borde fino del párpado es una malla aparte (mallaParpado).
     const ko = o.r / 0.0118
-    d = smax(d, -elip(ax, y, z, o.x + 0.002, o.y + 0.0008, o.z + 0.016, 0.0185 * ko, 0.0098 * ko, 0.0125), 0.006)
-    {
+    if (!lejos(ax, y, z, o.x + 0.002, o.y, o.z + 0.01, 0.032, d, 0.008)) {
+      d = smax(d, -elip(ax, y, z, o.x + 0.002, o.y + 0.0008, o.z + 0.016, 0.0185 * ko, 0.0098 * ko, 0.0125), 0.006)
       const ex = ax - o.x
       const ey = y - o.y
       const ez = z - o.z
       const rr = Math.sqrt(ex * ex + ey * ey + ez * ez)
       d = smin(d, rr - (o.r + 0.0011), 0.0035)
+      // Pliegue del párpado superior.
+      if (ey > 0.002 && ez > 0) d = smax(d, -(Math.abs(rr - (o.r + 0.0052)) - 0.0005), 0.0016)
       if (rr < o.r + 0.008) {
         const pa = this.parpado
         const u = Math.atan2(ex, ez)
@@ -225,30 +238,36 @@ export class Cabeza {
       }
     }
     // Sien
-    d = smax(d, -elip(ax, y, z, 0.072 * W, 0.03, 0.05, 0.012, 0.02, 0.02), 0.012)
+    if (!lejos(ax, y, z, 0.072 * W, 0.03, 0.05, 0.021, d, 0.012)) d = smax(d, -elip(ax, y, z, 0.072 * W, 0.03, 0.05, 0.012, 0.02, 0.02), 0.012)
     // Nariz: puente, punta y aletas
     const nty = this.nariz.y
     const ntz = this.nariz.z
-    d = smin(d, cono(x, y, z, 0, 0.013, 0.0925, 0, nty + 0.004, ntz - 0.0035, 0.0056 * NA, 0.0084 * NA), 0.008)
-    if (NH > 0.3) d = smin(d, esf(x, y, z, 0, -0.002, 0.1035 + 0.002 * NH, 0.005 * NA), 0.006)
-    d = smin(d, esf(x, y, z, 0, nty, ntz, 0.0102 * NB), 0.0065)
-    d = smin(d, esf(ax, y, z, 0.0136 * NA, nty - 0.0085, ntz - 0.0155, 0.0077 * NA), 0.0065)
-    d = smin(d, elip(x, y, z, 0, nty - 0.0115, ntz - 0.0125, 0.0092 * NA, 0.0044, 0.0078), 0.005)
+    if (!lejos(x, y, z, 0, -0.012, 0.1, 0.045, d, 0.01)) {
+      d = smin(d, cono(x, y, z, 0, 0.013, 0.0925, 0, nty + 0.004, ntz - 0.0035, 0.0056 * NA, 0.0084 * NA), 0.008)
+      if (NH > 0.3) d = smin(d, esf(x, y, z, 0, -0.002, 0.1035 + 0.002 * NH, 0.005 * NA), 0.006)
+      d = smin(d, esf(x, y, z, 0, nty, ntz, 0.0102 * NB), 0.0065)
+      d = smin(d, esf(ax, y, z, 0.0136 * NA, nty - 0.0085, ntz - 0.0155, 0.0077 * NA), 0.0065)
+      d = smin(d, elip(x, y, z, 0, nty - 0.0115, ntz - 0.0125, 0.0092 * NA, 0.0044, 0.0078), 0.005)
+    }
     // Labios con volumen, comisuras y la línea de la boca
     const yb = this.yBoca
-    d = smin(d, elip(x, y, z, 0, yb + 0.0066, 0.0985, 0.0228 * LW, 0.0062 * LF, 0.0082 * LF), 0.006)
-    d = smin(d, elip(x, y, z, 0, yb - 0.0068, 0.096, 0.0198 * LW, 0.0071 * LF, 0.0086 * LF), 0.006)
-    // Comisuras hundidas
-    d = smax(d, -esf(ax, y, z, 0.0255 * LW, yb, 0.0905, 0.0032), 0.004)
-    d = smax(d, -elip(x, y, z, 0, yb, 0.107, 0.025 * LW, 0.0008, 0.011), 0.0015)
-    // Surco bajo el labio inferior
-    d = smax(d, -cono(x, y, z, -0.012, yb - 0.0175, 0.1015, 0.012, yb - 0.0175, 0.1015, 0.0035, 0.0035), 0.005)
-    // Surco nasolabial (más marcado con la edad)
-    d = smax(d, -cono(ax, y, z, 0.019 * NA, nty - 0.008, ntz - 0.021, 0.027 * LW, yb - 0.004, 0.094, 0.0016 + 0.0012 * E, 0.0012), 0.004 + 0.003 * E)
+    if (!lejos(x, y, z, 0, yb, 0.09, 0.045, d, 0.008)) {
+      d = smin(d, elip(x, y, z, 0, yb + 0.0066, 0.0985, 0.0228 * LW, 0.0062 * LF, 0.0082 * LF), 0.006)
+      d = smin(d, elip(x, y, z, 0, yb - 0.0068, 0.096, 0.0198 * LW, 0.0071 * LF, 0.0086 * LF), 0.006)
+      d = smax(d, -elip(x, y, z, 0, yb, 0.107, 0.025 * LW, 0.0008, 0.011), 0.0015)
+      // Filtrum: el surco entre la nariz y el labio superior.
+      d = smax(d, -cono(x, y, z, 0, nty - 0.014, ntz - 0.008, 0, yb + 0.011, 0.1035, 0.0018, 0.0022), 0.003)
+      // Surco bajo el labio inferior
+      d = smax(d, -cono(x, y, z, -0.012, yb - 0.0175, 0.1015, 0.012, yb - 0.0175, 0.1015, 0.0035, 0.0035), 0.005)
+      // Surco nasolabial (más marcado con la edad)
+      d = smax(d, -cono(ax, y, z, 0.019 * NA, nty - 0.008, ntz - 0.021, 0.027 * LW, yb - 0.004, 0.094, 0.0016 + 0.0012 * E, 0.0012), 0.004 + 0.003 * E)
+    }
     // Cuello y nuez
     const k = this.cuello
     d = smin(d, cono(x, y, z, 0, k.y0, k.z0, 0, k.y1, k.z1, k.r0, k.r1), 0.03)
-    if (F < 0.5) d = smin(d, elip(x, y, z, 0, -0.132, k.z0 + k.r0 * 0.78, 0.0065, 0.011, 0.006), 0.01)
+    // Esternocleidomastoideos: la "V" del cuello, de detrás de la oreja al esternón.
+    if (!lejos(ax, y, z, 0.03, -0.1, 0.0, 0.09, d, 0.02)) d = smin(d, cono(ax, y, z, 0.05 * W, -0.025, -0.022, 0.014, -0.19, 0.028, 0.0115 * NK, 0.0105 * NK), 0.022)
+    if (F < 0.5 && !lejos(x, y, z, 0, -0.132, 0.03, 0.02, d, 0.01)) d = smin(d, elip(x, y, z, 0, -0.132, k.z0 + k.r0 * 0.78, 0.0065, 0.011, 0.006), 0.01)
     return d
   }
 
@@ -269,12 +288,12 @@ export class Cabeza {
   oclusion(x: number, y: number, z: number, n: THREE.Vector3): number {
     let o = 0
     let w = 1
-    for (let i = 1; i <= 4; i++) {
-      const h = 0.0035 * i
+    for (let i = 1; i <= 2; i++) {
+      const h = 0.0055 * i
       o += w * (h - this.sdf(x + n.x * h, y + n.y * h, z + n.z * h))
       w *= 0.6
     }
-    return clamp(1 - o * 10, 0, 1)
+    return clamp(1 - o * 8, 0, 1)
   }
 
   /** Distancia `t` del punto de la superficie más externo sobre el rayo o + d·t (t ≤ tMax). */
@@ -283,7 +302,7 @@ export class Cabeza {
     let s = f(ox + dx * t, oy + dy * t, oz + dz * t)
     if (s <= 0) return t
     for (let i = 0; i < 160; i++) {
-      const paso = Math.max(s * 0.92, 0.00045)
+      const paso = Math.max(s * 0.95, 0.0005)
       const t2 = t - paso
       if (t2 <= 0) return 0
       const s2 = f(ox + dx * t2, oy + dy * t2, oz + dz * t2)
@@ -291,7 +310,7 @@ export class Cabeza {
         // Bisección entre t2 (adentro) y t (afuera).
         let a = t2
         let b = t
-        for (let k = 0; k < 12; k++) {
+        for (let k = 0; k < 7; k++) {
           const m = (a + b) * 0.5
           if (f(ox + dx * m, oy + dy * m, oz + dz * m) < 0) a = m
           else b = m
@@ -301,6 +320,61 @@ export class Cabeza {
       t = t2
       s = s2
     }
+    return t
+  }
+
+  /**
+   * Como `rayo`, pero arrancando cerca de una respuesta conocida (la fila
+   * anterior): encierra la superficie y la refina por regula falsi. Unas 5
+   * evaluaciones en vez de 15; si algo no cuadra, vuelve al rayo completo.
+   */
+  rayoDesde(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, tMax: number): number {
+    const f = (t: number) => this.sdf(ox + dx * t, oy + dy * t, oz + dz * t)
+    let a = Math.min(t0, tMax)
+    let fa = f(a)
+    let b = a
+    let fb = fa
+    let n = 0
+    if (fa > 0) {
+      // Afuera: hacia adentro hasta cruzar.
+      while (fb > 0) {
+        a = b
+        fa = fb
+        b = a - Math.max(fb, 0.0015)
+        if (b <= 0 || ++n > 24) return this.rayo(ox, oy, oz, dx, dy, dz, tMax)
+        fb = f(b)
+      }
+    } else {
+      // Adentro: hacia afuera hasta salir.
+      while (fa <= 0) {
+        b = a
+        fb = fa
+        a = b + Math.max(-fa, 0.0015)
+        if (a > tMax || ++n > 24) return this.rayo(ox, oy, oz, dx, dy, dz, tMax)
+        fa = f(a)
+      }
+    }
+    // a afuera (fa > 0), b adentro (fb < 0): regula falsi (Illinois).
+    let lado = 0
+    let t = a
+    for (let k = 0; k < 6; k++) {
+      t = (b * fa - a * fb) / (fa - fb)
+      const ft = f(t)
+      if (Math.abs(ft) < 2e-6) break
+      if (ft > 0) {
+        a = t
+        fa = ft
+        if (lado === 1) fb *= 0.5
+        lado = 1
+      } else {
+        b = t
+        fb = ft
+        if (lado === -1) fa *= 0.5
+        lado = -1
+      }
+    }
+    // ¿Es la superficie de más afuera? Un poco más allá tiene que haber aire.
+    if (f(t + 0.006) <= 0) return this.rayo(ox, oy, oz, dx, dy, dz, tMax)
     return t
   }
 
@@ -327,11 +401,11 @@ export class Cabeza {
     b -= 0.06 * rubor
     // Labios
     const yb = this.yBoca
-    const labio = campana(ax, 0, 0.02 * this.r.bocaAncho) * campana(y, yb, 0.0105) * suave(0.083, 0.09, z)
-    const kl = this.r.fem ? 1.35 : 1
-    r -= 0.1 * labio * kl
-    g -= 0.32 * labio * kl
-    b -= 0.27 * labio * kl
+    const labio = campana(ax, 0, 0.021 * this.r.bocaAncho) * campana(y, yb, 0.0095) * suave(0.088, 0.096, z)
+    const kl = this.r.fem ? 1.4 : 1.1
+    r -= 0.08 * labio * kl
+    g -= 0.38 * labio * kl
+    b -= 0.32 * labio * kl
     // Línea de la boca
     const linea = campana(y, yb, 0.0013) * campana(ax, 0, 0.022) * suave(0.088, 0.096, z)
     r -= 0.35 * linea
@@ -355,10 +429,10 @@ export class Cabeza {
     // Sombra de barba (afeitado o de días): gris azulado sobre mandíbula, mentón y bigote.
     if (sombraBarba > 0) {
       const m = mascaraBarba(this, x, y, z, "completa")
-      const k = sombraBarba * m
-      r -= 0.3 * k
-      g -= 0.27 * k
-      b -= 0.22 * k
+      const k = sombraBarba * m * m
+      r -= 0.26 * k
+      g -= 0.24 * k
+      b -= 0.18 * k
     }
     const a = 0.55 + 0.45 * ao
     return [r * a, g * a, b * a]
@@ -379,9 +453,9 @@ export function mascaraBarba(cab: Cabeza, x: number, y: number, z: number, estil
   // Línea de la mejilla: baja hacia la boca.
   const mejilla = suave(-0.008 - ax * 0.25, -0.02 - ax * 0.25, y)
   // Labios: sin pelo (el bigote cae sobre el labio superior).
-  const labios = 1 - campana(ax, 0, 0.024) * suave(0.07, 0.085, z) * (campana(y, yb - 0.006, 0.0085))
+  const labios = 1 - campana(ax, 0, 0.026) * suave(0.07, 0.085, z) * campana(y, yb - 0.003, 0.0105)
   const bigote = campana(ax, 0, 0.026) * suave(ny - 0.011, ny - 0.016, y) * suave(yb + 0.0015, yb + 0.006, y) * suave(0.07, 0.085, z)
-  const bajoMandibula = suave(-0.2, -0.12, y)
+  const bajoMandibula = suave(-0.14, -0.118, y)
   switch (estilo) {
     case "candado": {
       const chivo = campana(ax, 0, 0.022) * suave(yb - 0.004, yb - 0.012, y) * suave(0.03, 0.06, z) * bajoMandibula
@@ -389,11 +463,14 @@ export function mascaraBarba(cab: Cabeza, x: number, y: number, z: number, estil
     }
     case "menton": {
       // Barba de collar: solo el borde de la mandíbula y el mentón, sin bigote.
-      const borde = suave(-0.045, -0.06, y + (0.07 - z) * 0.18)
-      return clamp(borde * delante * bajoMandibula * suave(-0.15, -0.115, y) * labios, 0, 1)
+      // La línea de la mandíbula va del ángulo (atrás, arriba) al mentón (adelante, abajo).
+      const L = cab.r.largo
+      const yj = -0.058 * L - 0.037 * L * clamp(z / 0.084, 0, 1.15)
+      const borde = suave(yj + 0.018, yj + 0.006, y)
+      return clamp(borde * delante * bajoMandibula * labios, 0, 1)
     }
     default: {
-      const cara = mejilla * delante * bajoMandibula * suave(-0.16, -0.12, y)
+      const cara = mejilla * delante * bajoMandibula
       return clamp(Math.max(cara * labios, bigote), 0, 1)
     }
   }
@@ -406,16 +483,16 @@ export function grosorBarba(cab: Cabeza, x: number, y: number, z: number, estilo
   const menton = campana(ax, 0, 0.03) * suave(yb - 0.01, yb - 0.04, y)
   switch (estilo) {
     case "corta":
-      return 0.0035 + 0.002 * menton
+      return 0.003 + 0.0015 * menton
     case "candado":
-      return 0.005 + 0.004 * menton
+      return 0.0045 + 0.003 * menton
     case "menton":
-      return 0.007 + 0.006 * menton
+      return 0.006 + 0.004 * menton
     case "larga":
-      return 0.009 + 0.012 * menton
+      return 0.007 + 0.008 * menton
     case "completa":
     default:
-      return 0.0065 + 0.007 * menton
+      return 0.0045 + 0.0045 * menton
   }
 }
 
@@ -428,24 +505,30 @@ export type EstiloPelo = Apariencia["pelo"]["estilo"]
 export function pelo(cab: Cabeza, x: number, y: number, z: number, estilo: EstiloPelo, conBarbaLarga: boolean): [number, number] {
   const ax = Math.abs(x)
   const e = cab.r.edad
-  // Línea de nacimiento en la frente (con entradas según la edad).
-  const entradas = 0.006 + e * 0.014
-  const yFrente = 0.064 + entradas * campana(ax, 0.042, 0.016) + e * 0.006 + (cab.r.fem ? -0.008 : 0)
-  const frente = suave(yFrente - 0.006, yFrente + 0.004, y) * suave(0.0, 0.03, z) + suave(0.03, 0.0, z)
-  // Patillas y contorno de la oreja.
-  const oreja = campana(z, -0.004, 0.026) * suave(0.05, 0.065, ax) * suave(0.036, 0.022, y)
-  const patilla = suave(0.055, 0.066, ax) * campana(z, 0.035, 0.012) * suave(-0.02, -0.005, y)
-  const lado = clamp(suave(0.028, 0.04, y) + patilla * 1.2, 0, 1)
-  const ladoZ = suave(0.055, 0.042, z) // por delante de la patilla, en la sien: piel
+  // Frente: línea de nacimiento (con entradas según la edad). Solo manda al frente.
+  const entradas = 0.004 + e * 0.014
+  // La melena lleva flequillo: el pelo cae sobre la frente hasta las cejas.
+  const yF = estilo === "melena_bob" ? 0.034 : 0.066 + entradas * campana(ax, 0.04, 0.016) + e * 0.006 + (cab.r.fem ? -0.008 : 0)
+  const wF = suave(0.025, 0.055, z) * suave(0.07, 0.05, ax)
+  const mFrente = 1 - wF * (1 - suave(yF - 0.012, yF + 0.01, y))
+  // Sien y patilla: delante de la oreja el pelo baja hasta la patilla.
+  const yT = lerp(0.0, 0.05, suave(0.028, 0.058, z))
+  const wT = suave(0.045, 0.06, ax) * suave(0.015, 0.03, z)
+  const mSien = 1 - wT * (1 - suave(yT - 0.012, yT + 0.01, y))
+  // Alrededor de la oreja: un hueco con su forma (más 1 cm).
+  const dOreja = ((y - 0.006) / 0.043) ** 2 + ((z + 0.008) / 0.03) ** 2
+  const mOreja = 1 - suave(0.05, 0.065, ax) * suave(1.3, 0.75, dOreja)
   // Nuca
   let yNuca = -0.072
-  if (estilo === "largo" || estilo === "melena_bob" || estilo === "rubio_tupe") yNuca = -0.2
-  const nuca = suave(yNuca - 0.006, yNuca + 0.008, y)
-  // Una máscara que combina: arriba siempre, a los lados por encima de la oreja, atrás hasta la nuca.
-  const enLado = suave(0.045, 0.06, ax)
-  let m = frente * (1 - enLado * (1 - lado * ladoZ)) * nuca * (1 - oreja * (estilo === "largo" || estilo === "melena_bob" ? 0 : 0.95))
-  // Por detrás de la oreja no hay patilla, hay nuca.
+  if (estilo === "largo" || estilo === "melena_bob") yNuca = -0.2
+  if (estilo === "rubio_tupe") yNuca = -0.112
+  const mNuca = 1 - suave(0.02, -0.02, z) * (1 - suave(yNuca - 0.012, yNuca + 0.012, y))
+  // Debajo de la oreja y por delante de la nuca (la mandíbula): sin pelo.
+  const mBajo = 1 - suave(0.0, -0.025, y) * suave(-0.03, 0.0, z)
+  const larga = estilo === "largo" || estilo === "melena_bob"
+  let m = mFrente * mSien * (larga ? 1 : mOreja) * mNuca * (larga ? 1 : mBajo)
   m = clamp(m, 0, 1)
+  const enLado = suave(0.045, 0.06, ax)
   const arriba = suave(-0.02, 0.07, y)
   const atras = suave(0.01, -0.07, z)
   let g = 0.008
@@ -459,7 +542,7 @@ export function pelo(cab: Cabeza, x: number, y: number, z: number, estilo: Estil
     case "rapado":
       return [m, 0.0018]
     case "corto":
-      g = 0.006 + 0.007 * arriba + 0.002 * atras
+      g = 0.004 + 0.008 * arriba + 0.002 * atras
       break
     case "peinado_lado":
       g = 0.007 + 0.013 * arriba + 0.004 * suave(-0.02, 0.04, x) * arriba
@@ -488,6 +571,8 @@ export function pelo(cab: Cabeza, x: number, y: number, z: number, estilo: Estil
       g = 0.01 + 0.006 * arriba + 0.014 * suave(0.02, -0.06, y) * (1 - campana(z, 0.09, 0.025)) + 0.004 * atras
       break
   }
+  // Patillas y costados bajos: el pelo se pega a la cabeza (sin "casco").
+  g *= lerp(1, lerp(0.12, 1, suave(0.0, 0.06, y)), enLado * suave(-0.03, 0.02, z))
   return [m, Math.max(0.0015, g)]
 }
 

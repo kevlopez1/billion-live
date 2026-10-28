@@ -103,7 +103,8 @@ function dibujar(ctx: CanvasRenderingContext2D, S: number, d: DatosRadar | null)
 
   const sub = d.nivel !== "superficie" && d.nivel !== "ciudad"
   // Metros que caben del centro al borde.
-  const alcance = d.nivel === "ciudad" ? 230 : sub ? 105 : 240
+  const C = HUELLAS.ciudad
+  const alcance = d.nivel === "ciudad" ? Math.max(C.x1 - C.x0, C.z1 - C.z0) * 0.58 : sub ? 105 : 240
   const k = (R - 4) / alcance
   const c = d.centro ?? d.cam
   const X = (x: number) => R + (x - c.x) * k
@@ -155,12 +156,12 @@ function dibujar(ctx: CanvasRenderingContext2D, S: number, d: DatosRadar | null)
     // El pabellón del ascensor (la entrada a los subsuelos).
     ascensor(ctx, X(PABELLON_ASCENSOR.x), Z(PABELLON_ASCENSOR.z))
   } else if (d.nivel === "ciudad") {
-    // La caverna (un cuadrado de esquinas muy redondeadas) y sus lugares.
-    const c = HUELLAS.ciudad
+    // El contorno de la ciudad (HUELLAS.ciudad) y sus lugares (LUGARES): si la ciudad cambia, el radar también.
+    const c = C
     ctx.fillStyle = "rgba(255,255,255,0.05)"
     ctx.strokeStyle = "rgba(255,255,255,0.18)"
     ctx.lineWidth = 1
-    redondo(ctx, X(c.x0), Z(c.z0), (c.x1 - c.x0) * k, (c.z1 - c.z0) * k, 120 * k)
+    redondo(ctx, X(c.x0), Z(c.z0), (c.x1 - c.x0) * k, (c.z1 - c.z0) * k, Math.min(c.x1 - c.x0, c.z1 - c.z0) * 0.25 * k)
     ctx.fill()
     ctx.stroke()
     for (const l of LUGARES) {

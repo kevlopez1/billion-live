@@ -451,5 +451,37 @@ seccion("determinismo, velocidad y pausa")
   ok(sinNaN(sim), "un salto de 30 s se recorta sin romper nada")
 }
 
+// ── Estudio: saltar de hora y reunir ya en el lugar ───────────
+seccion("Estudio: saltarA y reunirYa (cortes de montaje)")
+{
+  const sim = new Simulacion(PERSONAJES, ESPECIALES, { dia: 3, minutos: 8 * 60, semilla: 11 })
+  for (let i = 0; i < 50; i++) sim.avanzar(0.1, i * 100)
+  sim.saltarA(17 * 60 + 30)
+  ok(Math.abs(sim.reloj.minutos - (17 * 60 + 30)) < 1e-9 && sim.reloj.dia === 3, "saltarA fija la hora y deja el día")
+  ok(IDS.every((id) => sim.pj[id].lugarId === "dep-" + PERSONAJES.find((p) => p.id === id)!.departamentoId || sim.pj[id].lugarId === "gimnasio"), `a las 17:30 cada uno ya está en su lugar del horario (${IDS.map((id) => sim.pj[id].lugarId).join(", ")})`)
+  ok(IDS.every((id) => sim.pj[id].estado !== "camina" && sim.pj[id].estado !== "ascensor"), "después del salto nadie va caminando")
+  const conv = sim.reunirYa("sala-guerra", ["kobe", "hormozi", "claude"], "Plano de prueba")
+  ok(conv.ids.length === 3 && conv.ids.every((id) => sim.pj[id].lugarId === "sala-guerra"), "reunirYa: los tres ya están en la Sala de guerra")
+  ok(conv.ids.every((id) => sim.pj[id].conversacionId === conv.id), "reunirYa: quedan en la conversación")
+  sim.avanzar(0.1, 6000)
+  ok(conv.ids.every((id) => sim.pj[id].estado === "habla" && sim.pj[id].velocidad === 0), "reunirYa: al siguiente paso conversan, quietos")
+  let minimo = Infinity
+  for (const a of conv.ids) for (const b of conv.ids) if (a < b) minimo = Math.min(minimo, Math.hypot(sim.pj[a].pos.x - sim.pj[b].pos.x, sim.pj[a].pos.z - sim.pj[b].pos.z))
+  ok(minimo >= 0.9, `reunirYa: nadie encimado (${minimo.toFixed(2)} m)`)
+  // Misma semilla, mismos cortes: misma foto.
+  const foto = (s: Simulacion) => JSON.stringify(IDS.map((id) => [s.pj[id].pos, s.pj[id].rumbo, s.pj[id].estado]))
+  const hacer = () => {
+    const s = new Simulacion(PERSONAJES, ESPECIALES, { dia: 1, minutos: 9 * 60, semilla: 5 })
+    for (let i = 0; i < 30; i++) s.avanzar(1 / 30, i * 33)
+    s.saltarA(17 * 60 + 30)
+    s.reunirYa("sala-guerra", ["kobe", "claude"])
+    for (let i = 0; i < 90; i++) s.avanzar(1 / 30, 2000 + i * 33)
+    return foto(s)
+  }
+  ok(hacer() === hacer(), "con la misma semilla, los mismos cortes dan la misma escena")
+  sim.saltarA(Number.NaN)
+  ok(sinNaN(sim) && Math.abs(sim.reloj.minutos - (17 * 60 + 30 + 0.02)) < 1e-6, "saltarA(NaN) no toca nada")
+}
+
 console.log(`\n${pasaron} pasaron, ${fallas} fallaron`)
 if (fallas) process.exit(1)

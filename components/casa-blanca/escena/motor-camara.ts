@@ -23,7 +23,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { ALTURA_NIVEL, type NivelId } from "../tipos"
 import { CELDAS, HUELLAS, LUGAR } from "../lugares"
 import { ORDEN_NIVELES, PABELLON_ASCENSOR, ejeAscensor } from "../navegacion"
-import { VISTAS_CIUDAD, normaCaverna, techoCiudad, tomaDescensoCiudad } from "./ciudad"
+import { VISTAS_CIUDAD, techoCiudad, tomaDescensoCiudad } from "./ciudad"
 import type { ModoCamara } from "./contrato"
 
 export interface Pose {
@@ -75,6 +75,8 @@ interface Toma {
   maqueta?: boolean
   /** La toma pasa por el ascensor: cambia de nivel sin fundido (el velo de los cruces de losa lo tapa). */
   ascensor?: boolean
+  /** Negro propio de la toma (0..1), además del de los cruces de losa. */
+  velo?(t: number): number
   nivel(t: number): NivelId
   pose(t: number, out: Pose, ctx: CtxToma, dt: number): boolean
 }
@@ -110,7 +112,14 @@ function veloCruce(y: number, ancho = 2.2): number {
   return Math.max(0, Math.min(1, v)) * 0.92
 }
 /** Altura de la cámara dentro del tubo en cada nivel (sobre el piso). */
-const ALTO_TUBO: Record<NivelId, number> = { superficie: 5.5, n1: 4.5, n2: 4.5, n3: 4.5, ciudad: 11 }
+const ALTO_TUBO: Record<NivelId, number> = {
+  superficie: 5.5,
+  n1: 4.5,
+  n2: 4.5,
+  n3: 4.5,
+  // En la ciudad, por debajo de su techo (lo da ciudad.ts) sobre el ascensor.
+  ciudad: Math.max(3, Math.min(11, techoCiudad(ejeAscensor("ciudad").x, ejeAscensor("ciudad").z) - ALTURA_NIVEL.ciudad - 2.5)),
+}
 /**
  * La cámara en el tubo: afuera del vidrio, mirando el eje hacia abajo. El
  * punto x/z se mezcla entre el eje del nivel de arriba y el de abajo (el
@@ -127,53 +136,60 @@ function poseTubo(y: number, out: Pose): Pose {
   const b = ejeAscensor(n)
   const x = lerp(a.x, b.x, k)
   const z = lerp(a.z, b.z, k)
-  out.pos.set(x + 6.4, y, z - 8.2)
-  out.mira.set(x, y - 6.5, z + 1.5)
+  // Del lado sur (dentro de la huella del subsuelo): de fondo, el muro norte con el directorio.
+  out.pos.set(x + 6.4, y, z + 8.5)
+  out.mira.set(x, y - 6, z - 1)
   out.fov = 50
   return out
 }
 
+/**
+ * La ciudad no se cruza en el tubo: el viaje (y la toma) bajan hasta justo
+ * debajo de la losa del Subsuelo 3 y entran a la ciudad con un fundido. Así
+ * funciona con cualquier forma de ciudad (ciudad.ts manda en lo de adentro).
+ */
+const CORTE_CIUDAD = ALTURA_NIVEL.n3 - LOSA - 0.6
+
 // ── Descenso a la ciudad (toma de cine) ──────────────────────
 const PAB = PABELLON_ASCENSOR
-const ALTO_SALIDA_CIUDAD = ALTURA_NIVEL.superficie - 30
+/** Tramos de la toma (fracción de su duración). */
+const DC = { tubo: 0.3, negro: 0.52, ciudad: 0.56, mirador: 0.85 }
 /** Altura de la cámara en la parte del ascensor de la toma (t de 0 a 1 dentro del tramo). */
-const alturaBajada = (k: number) => lerp(ALTO_TUBO.superficie, ALTO_SALIDA_CIUDAD, muySuave(k))
+const alturaBajada = (k: number) => lerp(ALTO_TUBO.superficie, CORTE_CIUDAD, muySuave(k))
 const _pc = { pos: new THREE.Vector3(), mira: new THREE.Vector3(), fov: 50 } as Pose
 function poseDescensoCiudad(t: number, o: Pose) {
-  // 0–0,3: el Jardín Sur, hacia el pabellón. 0,3–0,55: el tubo. 0,55–0,85: la
-  // bajada dentro de la caverna. 0,85–1: el Mirador.
-  if (t < 0.3) {
-    const k = muySuave(tramo(t, 0, 0.3))
+  // Jardín Sur hacia el pabellón; el tubo por los tres subsuelos; un instante
+  // en negro (la roca sobre la ciudad); la bajada de ciudad.ts y el Mirador.
+  if (t < DC.tubo) {
+    const k = muySuave(tramo(t, 0, DC.tubo))
     poseTubo(ALTO_TUBO.superficie, _pc)
     o.pos.set(lerp(-14, _pc.pos.x, k), lerp(26, _pc.pos.y, k), lerp(PAB.z + 64, _pc.pos.z, k))
     o.mira.set(lerp(0, _pc.mira.x, k), lerp(4, _pc.mira.y, k), lerp(PAB.z - 6, _pc.mira.z, k))
     o.fov = lerp(46, _pc.fov, k)
-  } else if (t < 0.55) {
-    const k = tramo(t, 0.3, 0.55)
-    poseTubo(alturaBajada(k), o)
-    // Al final del tubo, se acomoda a donde empieza la bajada de la ciudad.
-    const fin = suave(tramo(k, 0.75, 1))
-    if (fin > 0) {
-      _pc.fov = tomaDescensoCiudad(0, _pc.pos, _pc.mira)
-      o.pos.lerp(_pc.pos, fin)
-      o.mira.lerp(_pc.mira, fin)
-      o.fov = lerp(o.fov, _pc.fov, fin)
-    }
-  } else if (t < 0.85) {
-    o.fov = tomaDescensoCiudad(tramo(t, 0.55, 0.85), o.pos, o.mira)
+  } else if (t < DC.negro) {
+    poseTubo(alturaBajada(tramo(t, DC.tubo, DC.negro)), o)
+  } else if (t < DC.mirador) {
+    o.fov = tomaDescensoCiudad(tramo(t, DC.ciudad, DC.mirador), o.pos, o.mira)
   } else {
-    const k = muySuave(tramo(t, 0.85, 1))
+    const k = muySuave(tramo(t, DC.mirador, 1))
     const fov = tomaDescensoCiudad(1, _pc.pos, _pc.mira)
-    const m = VISTAS_CIUDAD.mirador
+    const m = vistaDe("mirador")
     o.pos.set(lerp(_pc.pos.x, m.pos[0], k), lerp(_pc.pos.y, m.pos[1], k), lerp(_pc.pos.z, m.pos[2], k))
     o.mira.set(lerp(_pc.mira.x, m.mira[0], k), lerp(_pc.mira.y, m.mira[1], k), lerp(_pc.mira.z, m.mira[2], k))
     o.fov = lerp(fov, m.fov, k)
   }
 }
 function nivelDescensoCiudad(t: number): NivelId {
-  if (t < 0.3) return S
-  if (t < 0.55) return nivelDeAltura(alturaBajada(tramo(t, 0.3, 0.55)))
+  if (t < DC.tubo) return S
+  if (t < DC.negro) return nivelDeAltura(alturaBajada(tramo(t, DC.tubo, DC.negro)))
   return "ciudad"
+}
+/** Negro de la toma: sube al final del tubo, se queda en la roca y se abre sobre la ciudad. */
+function veloDescensoCiudad(t: number): number {
+  if (t < DC.negro - 0.03) return 0
+  if (t < DC.negro) return tramo(t, DC.negro - 0.03, DC.negro)
+  if (t < DC.ciudad) return 1
+  return 1 - suave(tramo(t, DC.ciudad, DC.ciudad + 0.05))
 }
 
 /** Centro de un lugar (para las tomas que lo usan), o un punto de respaldo. */
@@ -282,6 +298,7 @@ const TOMAS: Toma[] = [
     duracion: 16,
     ascensor: true,
     nivel: nivelDescensoCiudad,
+    velo: veloDescensoCiudad,
     pose(t, o) {
       poseDescensoCiudad(t, o)
       return true
@@ -339,8 +356,14 @@ export function poseAerea(out: Pose = nuevaPose()): Pose {
 }
 
 /** Una vista lista de la ciudad (escena/ciudad.ts) como pose. */
-function vistaCiudad(id: keyof typeof VISTAS_CIUDAD, out: Pose = nuevaPose()): Pose {
-  const v = VISTAS_CIUDAD[id]
+type Vista = { pos: [number, number, number]; mira: [number, number, number]; fov: number }
+/** Una vista de ciudad.ts por nombre; si ese nombre ya no existe (la ciudad cambió), la primera que haya. */
+function vistaDe(id: string): Vista {
+  const vistas = VISTAS_CIUDAD as Record<string, Vista>
+  return vistas[id] ?? vistas[Object.keys(vistas)[0]]
+}
+function vistaCiudad(id: string, out: Pose = nuevaPose()): Pose {
+  const v = vistaDe(id)
   out.pos.set(...v.pos)
   out.mira.set(...v.mira)
   out.fov = v.fov
@@ -352,12 +375,21 @@ function vistaCiudad(id: keyof typeof VISTAS_CIUDAD, out: Pose = nuevaPose()): P
  * sobre el horizonte (casa de muñecas). Ciudad: desde el Mirador, dentro de
  * la caverna (desde arriba de la bóveda se verían las estalactitas flotando).
  */
-function poseNivel(n: NivelId, out: Pose = nuevaPose()): Pose {
+function poseNivel(n: NivelId, out: Pose = nuevaPose(), aspecto = 1.6): Pose {
   if (n === "ciudad") return vistaCiudad("mirador", out)
   const y = ALTURA_NIVEL[n]
   const zona = HUELLAS.subsuelo
   const cx = (zona.x0 + zona.x1) / 2
   const cz = (zona.z0 + zona.z1) / 2
+  if (aspecto < 0.8) {
+    // Celular en vertical: desde el este, con el lado largo del subsuelo (180 m) a lo alto de la pantalla.
+    const elev = 60 * THREE.MathUtils.DEG2RAD
+    const d = 190
+    out.mira.set(cx, y, cz)
+    out.pos.set(cx + Math.cos(elev) * d, y + Math.sin(elev) * d, cz + 10)
+    out.fov = 45
+    return out
+  }
   const elev = 55 * THREE.MathUtils.DEG2RAD
   const d = 175
   out.mira.set(cx, y, cz)
@@ -367,11 +399,16 @@ function poseNivel(n: NivelId, out: Pose = nuevaPose()): Pose {
 }
 
 /** Lugares de la ciudad con una vista ya compuesta en ciudad.ts. */
-const VISTA_DE_LUGAR: Record<string, keyof typeof VISTAS_CIUDAD> = {
+const VISTA_DE_LUGAR: Record<string, string> = {
   "ciudad-mirador": "mirador",
   "ciudad-plaza": "plaza",
   "ciudad-avenida": "avenida",
   "ciudad-torres": "torres",
+  "ciudad-estacion": "anden",
+  "ciudad-club": "control",
+  "ciudad-mercado": "comedor",
+  "ciudad-parque": "jardin",
+  "ciudad-arena": "camara",
 }
 
 /**
@@ -382,12 +419,12 @@ const VISTA_DE_LUGAR: Record<string, keyof typeof VISTAS_CIUDAD> = {
 export function poseEnfoque(p: THREE.Vector3, distancia: number, n: NivelId, out: Pose = nuevaPose(), lugarId?: string): Pose {
   if (n === "ciudad") {
     const vista = lugarId ? VISTA_DE_LUGAR[lugarId] : undefined
-    if (vista) return vistaCiudad(vista, out)
+    if (vista && (VISTAS_CIUDAD as Record<string, Vista>)[vista]) return vistaCiudad(vista, out)
     const C = HUELLAS.ciudad
-    const dir = new THREE.Vector3((C.x0 + C.x1) / 2 - p.x, 0, (C.z0 + C.z1) / 2 + 20 - p.z)
-    if (dir.lengthSq() < 400) dir.set(0.3, 0, -1)
+    const dir = new THREE.Vector3((C.x0 + C.x1) / 2 - p.x, 0, (C.z0 + C.z1) / 2 - p.z)
+    if (dir.lengthSq() < 25) dir.set(0.3, 0, -1)
     dir.normalize()
-    const d = Math.min(150, distancia)
+    const d = Math.min(ANCHO_CIUDAD * 0.4, distancia)
     const elev = 24 * THREE.MathUtils.DEG2RAD
     out.mira.copy(p)
     out.pos.set(p.x + dir.x * Math.cos(elev) * d, p.y + Math.sin(elev) * d, p.z + dir.z * Math.cos(elev) * d)
@@ -404,17 +441,21 @@ export function poseEnfoque(p: THREE.Vector3, distancia: number, n: NivelId, out
   return out
 }
 
+/** El lado mayor de la ciudad subterránea (HUELLAS.ciudad): de ahí salen distancias y márgenes. */
+const ANCHO_CIUDAD = Math.max(HUELLAS.ciudad.x1 - HUELLAS.ciudad.x0, HUELLAS.ciudad.z1 - HUELLAS.ciudad.z0)
 type TipoLimite = "superficie" | "nivel" | "ciudad" | "seguir"
 const LIMITES: Record<TipoLimite, Partial<OrbitControls>> = {
   superficie: { minDistance: 4, maxDistance: 1100, minPolarAngle: 0.05, maxPolarAngle: 1.5, enablePan: true },
   nivel: { minDistance: 12, maxDistance: 300, minPolarAngle: 0.12, maxPolarAngle: 1.12, enablePan: true },
-  ciudad: { minDistance: 6, maxDistance: 240, minPolarAngle: 0.25, maxPolarAngle: 1.45, enablePan: true },
+  // Adentro de la ciudad se puede mirar hacia arriba (las vistas de ciudad.ts lo hacen): el piso lo cuida limitar().
+  ciudad: { minDistance: 4, maxDistance: Math.max(60, ANCHO_CIUDAD * 0.65), minPolarAngle: 0.1, maxPolarAngle: Math.PI - 0.15, enablePan: true },
   seguir: { minDistance: 2.5, maxDistance: 45, minPolarAngle: 0.2, maxPolarAngle: 1.45, enablePan: false },
 }
 const limiteDe = (n: NivelId): TipoLimite => (n === S ? "superficie" : n === "ciudad" ? "ciudad" : "nivel")
 
 interface Viaje {
   t: number
+  desde: NivelId
   /** Duración de cada tramo: acercarse al ascensor, el tubo y la salida. */
   dA: number
   dR: number
@@ -621,7 +662,7 @@ export class ControlCamara {
     this.controles.enabled = true
     this.controles.autoRotate = false
     this.aplicarLimites(limiteDe(n))
-    this.ponerPose(poseNivel(n, this.pose))
+    this.ponerPose(poseNivel(n, this.pose, this.camara.aspect))
   }
 
   /** ¿Puede la cámara hacer el viaje en ascensor ahora? (No en la intro, en cine ni siguiendo a alguien.) */
@@ -637,15 +678,17 @@ export class ControlCamara {
   viajar(hacia: NivelId, destino?: Pose) {
     const desde = this.viaje ? nivelDeAltura(this.camara.position.y) : this.deps.nivel()
     if (desde === S && !this.viaje) this.poseSuperficie = { pos: this.camara.position.clone(), mira: this.controles.target.clone(), fov: this.camara.fov }
-    const final = destino ?? (hacia === S ? (this.poseSuperficie ?? poseAerea()) : poseNivel(hacia))
-    const y0 = this.viaje ? this.camara.position.y : ALTURA_NIVEL[desde] + ALTO_TUBO[desde]
-    const y1 = ALTURA_NIVEL[hacia] + ALTO_TUBO[hacia]
+    const final = destino ?? (hacia === S ? (this.poseSuperficie ?? poseAerea()) : poseNivel(hacia, undefined, this.camara.aspect))
+    // La ciudad entra y sale con un fundido justo debajo de la losa del Subsuelo 3 (ver CORTE_CIUDAD).
+    const y0 = this.viaje ? this.camara.position.y : desde === "ciudad" ? CORTE_CIUDAD : ALTURA_NIVEL[desde] + ALTO_TUBO[desde]
+    const y1 = hacia === "ciudad" ? CORTE_CIUDAD : ALTURA_NIVEL[hacia] + ALTO_TUBO[hacia]
     this.enfoque = null
     this.controles.enabled = false
     this.controles.autoRotate = false
     this.viaje = {
       t: 0,
-      dA: this.viaje ? 0.25 : 0.75,
+      desde: this.viaje ? nivelDeAltura(this.camara.position.y) : desde,
+      dA: this.viaje ? 0.25 : desde === "ciudad" ? 0.45 : 0.75,
       dR: Math.min(2.1, Math.max(1.1, Math.abs(y1 - y0) / 26)),
       dX: 1.05,
       hacia,
@@ -685,30 +728,47 @@ export class ControlCamara {
     const p = this.pose
     const total = v.dA + v.dR + v.dX
     if (v.t < v.dA) {
-      // Al ascensor del nivel de partida.
       const k = muySuave(v.t / v.dA)
-      poseTubo(v.y0, _pt)
-      p.pos.lerpVectors(v.p0, _pt.pos, k)
-      p.mira.lerpVectors(v.m0, _pt.mira, k)
-      p.fov = lerp(v.fov0, _pt.fov, k)
-      this.velo = 0
+      if (v.desde === "ciudad") {
+        // Desde la ciudad: fundido a negro donde está la cámara.
+        p.pos.copy(v.p0)
+        p.mira.copy(v.m0)
+        p.fov = v.fov0
+        this.velo = k
+      } else {
+        // Al ascensor del nivel de partida.
+        poseTubo(v.y0, _pt)
+        p.pos.lerpVectors(v.p0, _pt.pos, k)
+        p.mira.lerpVectors(v.m0, _pt.mira, k)
+        p.fov = lerp(v.fov0, _pt.fov, k)
+        this.velo = 0
+      }
     } else if (v.t < v.dA + v.dR) {
       // Por el tubo: un nivel tras otro, con un parpadeo oscuro en cada losa.
-      const k = muySuave((v.t - v.dA) / v.dR)
-      const y = lerp(v.y0, v.y1, k)
+      const u = (v.t - v.dA) / v.dR
+      const y = lerp(v.y0, v.y1, muySuave(u))
       poseTubo(y, p)
       this.velo = veloCruce(y)
+      if (v.desde === "ciudad") this.velo = Math.max(this.velo, 1 - suave(Math.min(1, u * 4)))
+      if (v.hacia === "ciudad") this.velo = Math.max(this.velo, suave(Math.min(1, Math.max(0, (u - 0.75) * 4))))
       const n = nivelDeAltura(y)
       if (n !== this.deps.nivel()) this.deps.aplicarNivel(n)
     } else {
-      // Salida al nivel nuevo.
+      // Salida al nivel nuevo (a la ciudad: aparece desde el negro, ya en su lugar).
       const k = muySuave(Math.min(1, (v.t - v.dA - v.dR) / v.dX))
       if (this.deps.nivel() !== v.hacia) this.deps.aplicarNivel(v.hacia)
-      poseTubo(v.y1, _pt)
-      p.pos.lerpVectors(_pt.pos, v.destino.pos, k)
-      p.mira.lerpVectors(_pt.mira, v.destino.mira, k)
-      p.fov = lerp(_pt.fov, v.destino.fov, k)
-      this.velo = 0
+      if (v.hacia === "ciudad") {
+        p.pos.copy(v.destino.pos)
+        p.mira.copy(v.destino.mira)
+        p.fov = v.destino.fov
+        this.velo = 1 - k
+      } else {
+        poseTubo(v.y1, _pt)
+        p.pos.lerpVectors(_pt.pos, v.destino.pos, k)
+        p.mira.lerpVectors(_pt.mira, v.destino.mira, k)
+        p.fov = lerp(_pt.fov, v.destino.fov, k)
+        this.velo = 0
+      }
     }
     this.ponerPose(p)
     if (v.t >= total) {
@@ -876,7 +936,7 @@ export class ControlCamara {
       }
       if (!toma.pose(t, this.pose, this.ctxToma(), dt)) c.t = 1
       else this.ponerPose(this.pose)
-      this.velo = toma.ascensor ? veloCruce(this.pose.pos.y) : 0
+      this.velo = toma.ascensor ? Math.max(veloCruce(this.pose.pos.y), toma.velo?.(t) ?? 0) : 0
       if (c.t >= 1) {
         const sig = c.fija ? c.i : (c.i + 1) % TOMAS.length
         this.empezarToma(sig)
@@ -903,11 +963,13 @@ export class ControlCamara {
     // Dentro de un edificio no se ve: la cámara se queda afuera y encuadra el edificio.
     const caja = !info.visible && info.nivel === S ? edificioEn(info.pos.x, info.pos.z) : null
     if (caja) deseado.set((caja.x0 + caja.x1) / 2, caja.alto * 0.45, (caja.z0 + caja.z1) / 2)
+    // El edificio entero y su entorno: la órbita deja alejarse más que detrás de una persona.
+    this.controles.maxDistance = caja ? Math.max(60, (caja.x1 - caja.x0) * 1.45) + 25 : LIMITES.seguir.maxDistance ?? 45
     const t = this.controles.target
     if (!this.seguirListo) {
       // Al empezar: detrás del personaje, a 9 m y unos 25° por encima.
       const atras = _v2.set(-Math.sin(info.rumbo), 0, -Math.cos(info.rumbo))
-      const lejos = caja ? Math.max(42, (caja.x1 - caja.x0) * 0.9) : 8.2
+      const lejos = caja ? Math.max(60, (caja.x1 - caja.x0) * 1.45) : 8.2
       this.camara.position.copy(deseado).addScaledVector(atras, lejos).add(_v3.set(0, caja ? lejos * 0.45 : 3.8, 0))
       t.copy(deseado)
       this.seguirListo = true
@@ -918,7 +980,7 @@ export class ControlCamara {
     this.camara.position.add(delta)
     if (caja) {
       // Lejos del edificio, sin girar detrás de alguien que no se ve.
-      const min = Math.max(42, (caja.x1 - caja.x0) * 0.9)
+      const min = Math.max(60, (caja.x1 - caja.x0) * 1.45)
       const off = _v3.copy(this.camara.position).sub(t)
       if (off.length() < min) this.camara.position.copy(t).add(off.setLength(min))
       return
@@ -953,19 +1015,17 @@ export class ControlCamara {
       const dentro = edificioEn(p.x, p.z, 1.5)
       if (dentro && p.y < dentro.alto + 2) p.y = dentro.alto + 2
     } else if (this.modo === "nivel" && n === "ciudad") {
-      // Dentro de la caverna: el pivote en el piso, la cámara bajo la bóveda y lejos de la roca.
+      // Dentro de la ciudad: el pivote cerca del piso, la cámara bajo el techo y lejos de las paredes.
       const C = HUELLAS.ciudad
       const y = ALTURA_NIVEL.ciudad
-      t.x = Math.min(C.x1 - 20, Math.max(C.x0 + 20, t.x))
-      t.z = Math.min(C.z1 - 20, Math.max(C.z0 + 20, t.z))
+      const m = Math.min(20, ANCHO_CIUDAD * 0.08)
+      t.x = Math.min(C.x1 - m, Math.max(C.x0 + m, t.x))
+      t.z = Math.min(C.z1 - m, Math.max(C.z0 + m, t.z))
       t.y = Math.min(y + 12, Math.max(y, t.y))
       const p = this.camara.position
-      const borde = normaCaverna(p.x, p.z)
-      if (borde > 0.9) {
-        const k = 0.9 / borde
-        p.x = t.x + (p.x - t.x) * k
-        p.z = t.z + (p.z - t.z) * k
-      }
+      const mc = m * 0.5
+      p.x = Math.min(C.x1 - mc, Math.max(C.x0 + mc, p.x))
+      p.z = Math.min(C.z1 - mc, Math.max(C.z0 + mc, p.z))
       const techo = techoCiudad(p.x, p.z) - 2
       if (p.y > techo) p.y = techo
       if (p.y < y + 1.5) p.y = y + 1.5

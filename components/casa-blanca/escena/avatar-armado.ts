@@ -1,53 +1,187 @@
 // ──────────────────────────────────────────────────────────────
 // Arma un personaje: esqueleto, piel, ojos, ropa, pelo y accesorios, y le
 // da vida (avatar-anim.ts). Cumple el contrato Avatar de contrato.ts.
+//
+// Mallas por personaje (una por material, todas con el mismo esqueleto):
+// piel, ropa, pelo, ojos y, si hace falta, cristales de gafas, lo que lleva
+// en la mano y el balón; más la sombra de contacto y el anillo de selección.
+// Las IA (holograma) son una sola malla de luz con prepaso de profundidad.
 // ──────────────────────────────────────────────────────────────
 
 import * as THREE from "three"
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 import type { Avatar } from "./contrato"
 import type { EstadoCuerpo, Personaje } from "../tipos"
-import { Cuerpo, mallaPiel, type Cobertura } from "./avatar-cuerpo"
-import { matOjo, matPiel } from "./avatar-materiales"
+import { Cuerpo, mallaPiel } from "./avatar-cuerpo"
+import { vestir, holguraDe } from "./avatar-ropa"
+import { armarPelo } from "./avatar-pelo"
+import { Animador } from "./avatar-anim"
+import { hashTexto } from "./avatar-geo"
+import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra } from "./avatar-materiales"
+import { texBalon, texPunto, texSombra } from "./avatar-texturas"
+
+let matBalon: THREE.MeshStandardMaterial | null = null
+let geoBalon: THREE.SphereGeometry | null = null
+const sinRayos = () => {}
 
 export function crearAvatarReal(p: Personaje): Avatar {
   const ap = p.apariencia
-  const cu = new Cuerpo(p, 0)
+  const holo = ap.ropa.tipo === "holograma"
+  const cu = new Cuerpo(p, holguraDe(ap))
   const { huesos, esqueleto } = cu.esqueleto()
   const raiz = new THREE.Group()
   raiz.name = `avatar-${p.id}`
   raiz.userData.personajeId = p.id
   raiz.add(huesos[0])
-  const cub: Cobertura = { tronco: () => false, brazo: () => false, pierna: () => false, pie: false, manos: false }
-  const { lote, ojos } = mallaPiel(cu, cub, { sombraBarba: 0.15, barbaDias: false })
-  const gPiel = lote.geometria()
-  const mallas: THREE.SkinnedMesh[] = []
-  const piel = new THREE.SkinnedMesh(gPiel, matPiel(ap.piel))
-  const gOjos = ojos.geometria()
-  const mOjos = new THREE.SkinnedMesh(gOjos, matOjo(cu.rasgos.iris))
-  for (const m of [piel, mOjos]) {
-    m.castShadow = true
-    m.receiveShadow = true
-    raiz.add(m)
-    m.bind(esqueleto)
-    m.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, cu.H * 0.5, 0), cu.H * 0.8)
-    mallas.push(m)
+  const s = cu.s
+
+  const ropa = vestir(cu, p)
+  const { lote: lPiel, ojos: lOjos } = mallaPiel(cu, ropa.cobertura, { sombraBarba: ropa.sombraBarba })
+  const espalda = ap.ropa.tipo === "traje" || ap.ropa.tipo === "uniforme_militar" ? 0.02 : 0.026
+  const lPelo = armarPelo(cu, p, { holguraEspalda: espalda, bajoSombrero: !!ap.sombrero && ap.sombrero !== "laurel" && ap.sombrero !== "corona_egipcia", sombreroY: 0.07 })
+
+  const propias: Array<{ dispose(): void }> = [esqueleto]
+  const mallas: THREE.Mesh[] = []
+  let triangulos = 0
+  const esfera = new THREE.Sphere(new THREE.Vector3(0, cu.H * 0.5, 0), cu.H * 0.85)
+  const piel = (g: THREE.BufferGeometry, m: THREE.Material, sombra = true): THREE.SkinnedMesh => {
+    const malla = new THREE.SkinnedMesh(g, m)
+    malla.castShadow = sombra
+    malla.receiveShadow = !holo
+    raiz.add(malla)
+    malla.bind(esqueleto)
+    // Esfera fija: incluye todas las poses (el cálculo por defecto usa la pose del primer cuadro).
+    malla.boundingSphere = esfera
+    // Los clics los toma la caja invisible: no se recorren miles de triángulos con piel.
+    malla.raycast = sinRayos
+    malla.frustumCulled = true
+    propias.push(g)
+    mallas.push(malla)
+    triangulos += (g.index ? g.index.count : g.getAttribute("position").count) / 3
+    return malla
   }
+
+  let holoMats: { color: THREE.ShaderMaterial; prepaso: THREE.ShaderMaterial } | null = null
+  let particulas: THREE.Points | null = null
+  let utileria: THREE.SkinnedMesh | null = null
+  let balon: THREE.Mesh | null = null
+
+  if (holo) {
+    // Una sola figura de luz: piel, ropa, pelo y ojos fundidos.
+    const partes = [lPiel.geometria(), ropa.lote.geometria(), lPelo.geometria(), lOjos.geometria()]
+    for (const g of partes) g.deleteAttribute("uv1")
+    const g = mergeGeometries(partes, false)!
+    for (const x of partes) x.dispose()
+    holoMats = matHolograma(ap.ropa.color, ap.ropa.color2 ?? "#ffffff", cu.H)
+    propias.push(holoMats.color, holoMats.prepaso)
+    const pre = piel(g, holoMats.prepaso, false)
+    pre.renderOrder = 10
+    const col = new THREE.SkinnedMesh(g, holoMats.color)
+    col.renderOrder = 11
+    raiz.add(col)
+    col.bind(esqueleto)
+    col.boundingSphere = esfera
+    col.raycast = sinRayos
+    mallas.push(col)
+    // Partículas que suben alrededor del cuerpo.
+    const n = 70
+    const pos = new Float32Array(n * 3)
+    const rnd = (i: number, k: number) => ((Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1 + 1) % 1
+    for (let i = 0; i < n; i++) {
+      const a = rnd(i, 1) * Math.PI * 2
+      const r = (0.18 + rnd(i, 2) * 0.16) * s
+      pos[i * 3] = Math.cos(a) * r
+      pos[i * 3 + 1] = rnd(i, 3) * cu.H
+      pos[i * 3 + 2] = Math.sin(a) * r
+    }
+    const gP = new THREE.BufferGeometry()
+    gP.setAttribute("position", new THREE.BufferAttribute(pos, 3))
+    const mP = new THREE.PointsMaterial({ color: ap.ropa.color2 ?? ap.ropa.color, map: texPunto(), size: 0.03 * s, sizeAttenuation: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending })
+    propias.push(gP, mP)
+    particulas = new THREE.Points(gP, mP)
+    particulas.raycast = sinRayos
+    raiz.add(particulas)
+  } else {
+    piel(lPiel.geometria(), matPiel(ap.piel))
+    piel(ropa.lote.geometria(), matRopa(ropa.tejido, ropa.numero))
+    piel(lPelo.geometria(), matPelo(ap.pelo.color))
+    piel(lOjos.geometria(), matOjo(cu.rasgos.iris), false)
+    if (ropa.lentes) piel(ropa.lentes.lote.geometria(), matLente(ropa.lentes.sol), false)
+    if (ropa.utileria) utileria = piel(ropa.utileria.geometria(), matRopa(ropa.tejido, ropa.numero))
+    if (ap.accesorios.includes("balon")) {
+      matBalon ??= new THREE.MeshStandardMaterial({ map: texBalon(), roughness: 0.72, metalness: 0 })
+      geoBalon ??= new THREE.SphereGeometry(0.12, 24, 16)
+      balon = new THREE.Mesh(geoBalon, matBalon)
+      balon.castShadow = true
+      balon.raycast = sinRayos
+      raiz.add(balon)
+      triangulos += 24 * 16 * 2
+    }
+  }
+
+  // Caja invisible para los clics (el material no se dibuja).
+  const gCaja = new THREE.BoxGeometry(0.62 * s, cu.H, 0.42 * s)
+  gCaja.translate(0, cu.H / 2, 0)
+  const mCaja = new THREE.MeshBasicMaterial({ visible: false })
+  propias.push(gCaja, mCaja)
+  const caja = new THREE.Mesh(gCaja, mCaja)
+  raiz.add(caja)
+
+  // Sombra de contacto (ayuda a que no floten en la sombra) y anillo de selección.
+  const gSombra = new THREE.PlaneGeometry(0.85 * s, 0.85 * s)
+  gSombra.rotateX(-Math.PI / 2)
+  propias.push(gSombra)
+  const sombra = new THREE.Mesh(gSombra, matSombra(holo, texSombra()))
+  sombra.position.y = 0.012
+  sombra.renderOrder = -1
+  sombra.raycast = sinRayos
+  raiz.add(sombra)
+  const anilloMat = new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0.85, depthWrite: false })
+  const anilloGeo = new THREE.RingGeometry(0.42 * s, 0.5 * s, 48)
+  anilloGeo.rotateX(-Math.PI / 2)
+  propias.push(anilloMat, anilloGeo)
+  const anillo = new THREE.Mesh(anilloGeo, anilloMat)
+  anillo.position.y = 0.02
+  anillo.visible = false
+  anillo.raycast = sinRayos
+  raiz.add(anillo)
+
+  // Punto sobre la cabeza para etiquetas y burbujas.
   const cabeza = new THREE.Object3D()
-  cabeza.position.y = cu.H + 0.3
+  const sobre = ropa.altoSombrero + 0.25
+  cabeza.position.y = cu.H + sobre
   raiz.add(cabeza)
-  const tris = lote.triangulos + ojos.triangulos
-  raiz.userData.triangulos = tris
-  return {
-    raiz,
-    altura: cu.H,
-    cabeza,
-    animar(_e: EstadoCuerpo, _dt: number, _v: number) {},
-    resaltar() {},
-    dispose() {
-      raiz.removeFromParent()
-      gPiel.dispose()
-      gOjos.dispose()
-      esqueleto.dispose()
-    },
+
+  const anim = new Animador(cu, huesos, raiz, { balon, utileria, semilla: hashTexto(p.id) % 997 })
+  raiz.userData.triangulos = triangulos
+  raiz.userData.dibujos = mallas.length + (balon ? 1 : 0) + 1 + (particulas ? 1 : 0)
+
+  let tiempo = 0
+  function animar(estado: EstadoCuerpo, dt: number, velocidad: number) {
+    tiempo += Math.max(0, dt)
+    anim.actualizar(estado, dt, velocidad)
+    cabeza.position.y = anim.coronilla + sobre
+    if (holoMats) holoMats.color.uniforms.uTiempo.value = tiempo
+    if (particulas) {
+      const pos = particulas.geometry.getAttribute("position") as THREE.BufferAttribute
+      for (let i = 0; i < pos.count; i++) {
+        let y = pos.getY(i) + dt * 0.3
+        if (y > cu.H) y = 0
+        pos.setY(i, y)
+      }
+      pos.needsUpdate = true
+    }
   }
+
+  function resaltar(on: boolean) {
+    anillo.visible = on
+  }
+
+  function dispose() {
+    raiz.removeFromParent()
+    for (const x of propias) x.dispose()
+  }
+
+  animar("quieto", 0, 0)
+  return { raiz, altura: cu.H, cabeza, animar, resaltar, dispose }
 }

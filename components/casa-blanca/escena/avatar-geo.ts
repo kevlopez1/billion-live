@@ -20,62 +20,121 @@ export type Mat2 = [rugosidad: number, metal: number]
 const BLANCO: RGBA = [1, 1, 1, 1]
 const MAT_BASE: Mat2 = [0.6, 0]
 
+/** Arreglo de números que crece duplicando (sin miles de push en arrays de JS). */
+class Buf<T extends Float32Array | Uint16Array | Uint32Array> {
+  a: T
+  n = 0
+  private readonly C: { new (n: number): T }
+  constructor(C: { new (n: number): T }, cap: number) {
+    this.C = C
+    this.a = new C(cap)
+  }
+  reservar(k: number) {
+    if (this.n + k <= this.a.length) return
+    let cap = this.a.length * 2
+    while (cap < this.n + k) cap *= 2
+    const b = new this.C(cap)
+    b.set(this.a.subarray(0, this.n))
+    this.a = b
+  }
+  push2(x: number, y: number) {
+    this.reservar(2)
+    this.a[this.n++] = x
+    this.a[this.n++] = y
+  }
+  push3(x: number, y: number, z: number) {
+    this.reservar(3)
+    this.a[this.n++] = x
+    this.a[this.n++] = y
+    this.a[this.n++] = z
+  }
+  push4(x: number, y: number, z: number, w: number) {
+    this.reservar(4)
+    this.a[this.n++] = x
+    this.a[this.n++] = y
+    this.a[this.n++] = z
+    this.a[this.n++] = w
+  }
+  get(i: number): number {
+    return this.a[i]
+  }
+  set(i: number, v: number) {
+    this.a[i] = v
+  }
+  vista(): T {
+    return this.a.subarray(0, this.n) as T
+  }
+}
+
 export class Lote {
-  readonly pos: number[] = []
-  readonly uv: number[] = []
-  readonly uv1: number[] = []
-  readonly col: number[] = []
-  readonly mat: number[] = []
-  readonly si: number[] = []
-  readonly sw: number[] = []
-  readonly idx: number[] = []
+  // Capacidad inicial para ~4000 vértices: casi nunca hace falta crecer.
+  private readonly bPos = new Buf(Float32Array, 12288)
+  private readonly bUv = new Buf(Float32Array, 8192)
+  private readonly bUv1 = new Buf(Float32Array, 8192)
+  private readonly bCol = new Buf(Float32Array, 16384)
+  private readonly bMat = new Buf(Float32Array, 8192)
+  private readonly bSi = new Buf(Uint16Array, 16384)
+  private readonly bSw = new Buf(Float32Array, 16384)
+  private readonly bIdx = new Buf(Uint32Array, 24576)
   usaUv1 = false
   private piezas: Array<[number, number, number, number]> = []
   private v0 = 0
   private i0 = 0
 
+  /** Posiciones (lectura y escritura directa: x, y, z por vértice). */
+  get pos(): Float32Array {
+    return this.bPos.a
+  }
+  /** Índices de triángulos (arreglo crudo: válidos hasta `nIdx`). */
+  get indices(): Uint32Array {
+    return this.bIdx.a
+  }
+  get nIdx(): number {
+    return this.bIdx.n
+  }
+
   get nv(): number {
-    return this.pos.length / 3
+    return this.bPos.n / 3
   }
 
   /** Agrega un vértice y devuelve su índice. */
   v(x: number, y: number, z: number, u: number, w: number, c: RGBA = BLANCO, pesos: Pesos = [[0, 1]], m: Mat2 = MAT_BASE, uv1?: [number, number]): number {
-    this.pos.push(x, y, z)
-    this.uv.push(u, w)
-    this.col.push(c[0], c[1], c[2], c[3])
-    this.mat.push(m[0], m[1])
+    this.bPos.push3(x, y, z)
+    this.bUv.push2(u, w)
+    this.bCol.push4(c[0], c[1], c[2], c[3])
+    this.bMat.push2(m[0], m[1])
     if (uv1) {
       this.usaUv1 = true
-      this.uv1.push(uv1[0], uv1[1])
-    } else this.uv1.push(0.02, 0.98)
+      this.bUv1.push2(uv1[0], uv1[1])
+    } else this.bUv1.push2(0.02, 0.98)
     // Pesos: los 4 mayores, normalizados.
     let p = pesos
     if (p.length > 4) p = [...p].sort((a, b) => b[1] - a[1]).slice(0, 4)
     let s = 0
-    for (const [, k] of p) s += k
+    for (let k = 0; k < p.length; k++) s += p[k][1]
     s = s > 1e-9 ? 1 / s : 0
-    for (let k = 0; k < 4; k++) {
-      const e = p[k]
-      this.si.push(e ? e[0] : 0)
-      this.sw.push(e ? e[1] * s : 0)
-    }
+    const e0 = p[0], e1 = p[1], e2 = p[2], e3 = p[3]
+    this.bSi.push4(e0 ? e0[0] : 0, e1 ? e1[0] : 0, e2 ? e2[0] : 0, e3 ? e3[0] : 0)
+    this.bSw.push4(e0 ? e0[1] * s : 0, e1 ? e1[1] * s : 0, e2 ? e2[1] * s : 0, e3 ? e3[1] * s : 0)
     return this.nv - 1
   }
 
   t(a: number, b: number, c: number) {
-    this.idx.push(a, b, c)
+    this.bIdx.push3(a, b, c)
   }
 
   /** Cuadrilátero a-b-c-d (en orden de giro). */
   q(a: number, b: number, c: number, d: number) {
-    this.idx.push(a, b, c, a, c, d)
+    this.bIdx.push3(a, b, c)
+    this.bIdx.push3(a, c, d)
   }
 
   /** Cierra la pieza actual: sus normales se calculan aparte (sin suavizar con la vecina). */
   pieza() {
-    if (this.nv > this.v0 || this.idx.length > this.i0) this.piezas.push([this.v0, this.nv, this.i0, this.idx.length])
+    const ni = this.bIdx.n
+    if (this.nv > this.v0 || ni > this.i0) this.piezas.push([this.v0, this.nv, this.i0, ni])
     this.v0 = this.nv
-    this.i0 = this.idx.length
+    this.i0 = ni
   }
 
   /**
@@ -135,13 +194,14 @@ export class Lote {
   /** Normales suavizadas por pieza, soldando vértices en la misma posición. */
   private normales(): Float32Array {
     this.pieza()
-    const P = this.pos
-    const N = new Float32Array(P.length)
+    const P = this.bPos.a
+    const I = this.bIdx.a
+    const N = new Float32Array(this.bPos.n)
     for (const [v0, v1, i0, i1] of this.piezas) {
       for (let k = i0; k < i1; k += 3) {
-        const a = this.idx[k] * 3
-        const b = this.idx[k + 1] * 3
-        const c = this.idx[k + 2] * 3
+        const a = I[k] * 3
+        const b = I[k + 1] * 3
+        const c = I[k + 2] * 3
         const e1x = P[b] - P[a], e1y = P[b + 1] - P[a + 1], e1z = P[b + 2] - P[a + 2]
         const e2x = P[c] - P[a], e2y = P[c + 1] - P[a + 1], e2z = P[c + 2] - P[a + 2]
         const nx = e1y * e2z - e1z * e2y
@@ -190,21 +250,23 @@ export class Lote {
   /** La geometría lista para una SkinnedMesh (o una Mesh: los atributos de piel sobran). */
   geometria(): THREE.BufferGeometry {
     const g = new THREE.BufferGeometry()
-    g.setAttribute("position", new THREE.Float32BufferAttribute(this.pos, 3))
-    g.setAttribute("normal", new THREE.BufferAttribute(this.normales(), 3))
-    g.setAttribute("uv", new THREE.Float32BufferAttribute(this.uv, 2))
-    if (this.usaUv1) g.setAttribute("uv1", new THREE.Float32BufferAttribute(this.uv1, 2))
-    g.setAttribute("color", new THREE.Float32BufferAttribute(this.col, 4))
-    g.setAttribute("aMat", new THREE.Float32BufferAttribute(this.mat, 2))
-    g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(this.si, 4))
-    g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(this.sw, 4))
     const n = this.nv
-    g.setIndex(n > 65535 ? new THREE.Uint32BufferAttribute(this.idx, 1) : new THREE.Uint16BufferAttribute(this.idx, 1))
+    const normales = this.normales()
+    g.setAttribute("position", new THREE.BufferAttribute(this.bPos.vista().slice(), 3))
+    g.setAttribute("normal", new THREE.BufferAttribute(normales, 3))
+    g.setAttribute("uv", new THREE.BufferAttribute(this.bUv.vista().slice(), 2))
+    if (this.usaUv1) g.setAttribute("uv1", new THREE.BufferAttribute(this.bUv1.vista().slice(), 2))
+    g.setAttribute("color", new THREE.BufferAttribute(this.bCol.vista().slice(), 4))
+    g.setAttribute("aMat", new THREE.BufferAttribute(this.bMat.vista().slice(), 2))
+    g.setAttribute("skinIndex", new THREE.BufferAttribute(this.bSi.vista().slice(), 4))
+    g.setAttribute("skinWeight", new THREE.BufferAttribute(this.bSw.vista().slice(), 4))
+    const idx = this.bIdx.vista()
+    g.setIndex(n > 65535 ? new THREE.BufferAttribute(idx.slice(), 1) : new THREE.BufferAttribute(Uint16Array.from(idx), 1))
     return g
   }
 
   get triangulos(): number {
-    return this.idx.length / 3
+    return this.bIdx.n / 3
   }
 }
 

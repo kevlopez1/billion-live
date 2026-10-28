@@ -66,20 +66,22 @@ function tablaColor(t: TablaColor, e: number, out: THREE.Color): THREE.Color {
 
 // ── El look, por elevación del sol (grados) ──────────────────
 const T = {
-  turbidez: [[-10, 3.5], [0, 5], [10, 3.8], [25, 2.9], [60, 2.5]] as Tabla,
+  // Con el sol alto (mediodía), menos bruma, menos relleno y menos exposición:
+  // a las 13:00 el cuadro se veía lechoso. La hora dorada (sol a ~9°) no cambia.
+  turbidez: [[-10, 3.5], [0, 5], [10, 3.8], [25, 2.9], [60, 2.0]] as Tabla,
   rayleigh: [[-10, 1.4], [0, 2.6], [8, 1.9], [25, 1.3], [60, 1.1]] as Tabla,
   mie: [[0, 0.006], [10, 0.0042], [40, 0.003]] as Tabla,
   mieG: [[0, 0.9], [10, 0.86], [40, 0.8]] as Tabla,
   /** Escala del brillo del cielo para que conviva con las luces de la escena. */
-  escalaCielo: [[-10, 1], [0, 0.95], [8, 0.7], [25, 0.46], [60, 0.38]] as Tabla,
+  escalaCielo: [[-10, 1], [0, 0.95], [8, 0.7], [25, 0.46], [60, 0.33]] as Tabla,
   intensidadSol: [[-2, 0], [0, 0.4], [3, 3.0], [8, 5.3], [20, 6.0], [45, 6.4], [70, 6.6]] as Tabla,
   colorSol: [[0, "#ff5a1e"], [3, "#ff8236"], [8, "#ffa04f"], [14, "#ffbf7c"], [25, "#ffdcb0"], [45, "#fff0dc"], [70, "#fff6ea"]] as TablaColor,
   hemiCielo: [[-12, "#2a4378"], [-4, "#3e5590"], [2, "#6f86b8"], [8, "#86a5d8"], [25, "#a3c0ea"], [60, "#b3ccf0"]] as TablaColor,
   hemiSuelo: [[-12, "#0b0d12"], [0, "#2c261f"], [10, "#4b3d2b"], [40, "#5b5040"]] as TablaColor,
-  hemiIntensidad: [[-12, 0.62], [-4, 0.52], [2, 0.42], [8, 0.36], [30, 0.42], [60, 0.48]] as Tabla,
-  entorno: [[-12, 0.5], [0, 0.65], [8, 0.62], [30, 0.72], [60, 0.78]] as Tabla,
-  exposicion: [[-12, 1.85], [-6, 1.65], [0, 1.3], [6, 1.08], [15, 1.0], [40, 0.96]] as Tabla,
-  niebla: [[-12, 0.00048], [0, 0.00052], [10, 0.0004], [40, 0.00034]] as Tabla,
+  hemiIntensidad: [[-12, 0.62], [-4, 0.52], [2, 0.42], [8, 0.36], [30, 0.4], [60, 0.4]] as Tabla,
+  entorno: [[-12, 0.5], [0, 0.65], [8, 0.62], [30, 0.7], [60, 0.66]] as Tabla,
+  exposicion: [[-12, 1.85], [-6, 1.65], [0, 1.3], [6, 1.08], [15, 1.0], [40, 0.9], [60, 0.84]] as Tabla,
+  niebla: [[-12, 0.00048], [0, 0.00052], [10, 0.0004], [40, 0.00032], [60, 0.00026]] as Tabla,
   bloomFuerza: [[-12, 0.9], [-4, 0.75], [2, 0.42], [8, 0.3], [25, 0.2]] as Tabla,
   bloomUmbral: [[-12, 0.62], [0, 0.95], [8, 1.35], [25, 1.7]] as Tabla,
   bloomRadio: [[-12, 0.6], [8, 0.48], [25, 0.42]] as Tabla,

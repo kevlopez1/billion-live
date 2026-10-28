@@ -457,13 +457,12 @@ function construirCiudadLetreros(ctx: CtxEscena) {
   const letreros: Letrero[] = LUGARES.filter((l) => l.nivel === "ciudad").map((l, i) => {
     const x = (l.x0 + l.x1) / 2
     const z = (l.z0 + l.z1) / 2
-    // Bajo la bóveda y sobre lo construido (las torres son altas).
-    const alto = l.id === "ciudad-torres" ? 30 : l.id === "ciudad-arena" ? 18 : 12
-    const y = Math.min(techoCiudad(x, z) - 4, y0 + alto)
+    // Bajo el techo y por encima de la cabeza de la gente.
+    const y = Math.min(techoCiudad(x, z) - 3, y0 + 9)
     return { x, y, z, titulo: l.nombre.toUpperCase(), color: colores[i % colores.length], ancho: 11 }
   })
   const asc = ejeAscensor("ciudad")
-  letreros.push({ x: asc.x, y: Math.min(techoCiudad(asc.x, asc.z) - 6, y0 + 16), z: asc.z, titulo: "ASCENSOR", sub: "SUBSUELOS Y SUPERFICIE ↑", color: CIAN, ancho: 11 })
+  letreros.push({ x: asc.x, y: Math.min(techoCiudad(asc.x, asc.z) - 3, y0 + 11), z: asc.z, titulo: "ASCENSOR", sub: "SUBSUELOS Y SUPERFICIE ↑", color: CIAN, ancho: 11 })
   const m = mallaLetreros(letreros, { ref: 70, min: 0.7, max: 2.4, cerca: [10, 26], brillo: 1.2, nombre: "navegacion-ciudad-letreros" })
   if (m) grupo.add(m)
 }

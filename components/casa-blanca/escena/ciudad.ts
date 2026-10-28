@@ -1,148 +1,140 @@
 // ──────────────────────────────────────────────────────────────
-// LA CIUDAD SUBTERRÁNEA — debajo de la Casa Blanca (ficción)
+// LA INSTALACIÓN SUBTERRÁNEA — debajo de la Casa Blanca (ficción)
 //
-// Una caverna de 400 x 400 m (HUELLAS.ciudad) con el piso en y = -60 y una
-// bóveda de roca que sube hasta y = -28. En el centro de la bóveda, un cielo
-// artificial que sigue la hora de la superficie. Abajo: la Plaza Central con
-// la pantalla del reto, la Gran Avenida, el Distrito de las Torres, el
-// Mercado, el Parque con su lago, la Arena, el Club, el Mirador sobre el
-// canal y la cascada, la Estación y un monorriel en circuito cerrado.
+// Ya no es una ciudad bajo una bóveda: es un búnker compacto de 74 x 102 m
+// (HUELLAS.ciudad) con el piso en y = -60, todo techado y con luz artificial.
+// El gesto que se ve desde el ascensor es UNO: un pozo de 20 x 32 m que sube
+// hasta y = -28, con galerías de oficinas cada 8 m (un rascacielos al revés).
+// Alrededor del pozo: el andén del tren que llega desde la Residencia, la
+// sala de control con el contador real del reto, el corredor blanco con el
+// arco de escaneo, los laboratorios de vidrio, el comedor, el jardín
+// hidropónico y la cámara de pruebas de robots y drones.
 //
-// Presupuesto (< 200 llamadas de dibujo, < 1 M triángulos):
+// Presupuesto (< 80 llamadas de dibujo, < 300 mil triángulos):
 //   - Lo fijo va en "lotes": una malla fusionada por material. El lote "base"
-//     lleva color, rugosidad, metal y emisión por vértice, así casi todo lo
-//     construido es UNA llamada.
-//   - Las ventanas de las torres no son geometría: las dibuja un shader con la
-//     posición en metros de cada cara (encendidas y apagadas con variación).
-//   - Lo que se mueve (tren, cabina, drones, chorros, vapor, haces de luz) es
-//     una malla instanciada o un shader con reloj.
-//   - Luces reales: 6 PointLight. El resto es emisión + bloom, reflejos falsos
-//     en el piso mojado y "focos falsos" que la roca suma en su shader para
-//     que la ciudad la ilumine desde abajo.
+//     lleva color, rugosidad, metal, emisión y módulo de panel por vértice.
+//   - Las ventanas de las oficinas del pozo y las juntas de los paneles las
+//     dibuja el shader con la posición en metros: no hay geometría por ventana.
+//   - Lo que se mueve (tren, cabinas, puertas, escaneo, núcleo, robots) es una
+//     malla instanciada o un shader con reloj.
+//   - Luces reales: 5 PointLight. El resto es emisión + bloom moderado.
 //
-// La luz general (el sol del cielo artificial, el hemisferio, la niebla, la
-// exposición y el bloom) sale de `ambienteCiudad(hora)`: el motor la aplica
-// cuando el nivel "ciudad" está a la vista, igual que hace con el cielo real.
+// Vista de maqueta: los techos de las salas solo se ven desde abajo. Desde la
+// cámara libre (por encima de los techos) la instalación se lee en corte, como
+// los subsuelos. Por eso `techoCiudad` da el techo del pozo dentro del pozo y
+// una altura de maqueta en el resto.
+//
+// La luz general (la direccional del techo, el hemisferio, la niebla, la
+// exposición y el bloom) sale de `ambienteCiudad(hora)`: el turno de noche baja
+// los pasillos y los tiñe de azul. El motor la aplica con el nivel a la vista.
 // ──────────────────────────────────────────────────────────────
 
 import * as THREE from "three"
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 import { CHALLENGE_LAUNCH, CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
-import type { Calidad, TickEscena } from "../tipos"
-import { HUELLAS, LUGAR, NODO } from "../lugares"
+import type { TickEscena } from "../tipos"
+import { HUELLAS, LUGAR, LUGARES, NODO } from "../lugares"
 import type { CtxEscena } from "./contrato"
 
 // ═══════════════════════════════════════════════════════════════
-// 1. La caverna: forma y medidas
+// 1. Medidas
 // ═══════════════════════════════════════════════════════════════
 
 const CIU = HUELLAS.ciudad
 const Y0 = CIU.piso
-const ALTO = CIU.boveda - CIU.piso
-const CX = (CIU.x0 + CIU.x1) / 2
-const CZ = (CIU.z0 + CIU.z1) / 2
-const MEDIO = (CIU.x1 - CIU.x0) / 2
-/** Hasta dónde llega el cielo artificial, en la medida de `normaCaverna`. */
-const R_CIELO = 0.6
-/** Altura del riel del monorriel (cara superior de la viga). */
-const RIEL_Y = Y0 + 9
-
-/**
- * Distancia "de caverna" de un punto al centro: 0 en el centro, 1 en la pared.
- * La planta es un cuadrado redondeado (superelipse de grado 4): las esquinas
- * de roca se ven naturales y los 400 x 400 m se aprovechan casi enteros.
- */
-export function normaCaverna(x: number, z: number): number {
-  const u = Math.abs(x - CX) / MEDIO
-  const v = Math.abs(z - CZ) / MEDIO
-  return Math.pow(u * u * u * u + v * v * v * v, 0.25)
-}
-
-/** Perfil de la bóveda: casi plana en el centro y con paredes que caen a pique. */
-function perfil(r: number): number {
-  return ALTO * Math.sqrt(Math.max(0, 1 - Math.pow(Math.min(1, r), 5)))
-}
-
-/** Altura de la bóveda (sin el relieve de la roca) sobre un punto del piso. Sirve para limitar la cámara. */
-export function techoCiudad(x: number, z: number): number {
-  return Y0 + perfil(normaCaverna(x, z))
-}
+/** Techo del pozo (la boca, bajo la losa del Subsuelo 3). */
+const TOPE = CIU.boveda
+const ASC = NODO["ciudad-asc"]?.p ?? { x: 0, y: Y0, z: 22 }
 
 type Rect = { x0: number; x1: number; z0: number; z1: number }
+type Sala = Rect & { alto: number }
+const cx = (r: Rect) => (r.x0 + r.x1) / 2
+const cz = (r: Rect) => (r.z0 + r.z1) / 2
 /** El rectángulo de un lugar del mapa (el de respaldo solo si el mapa cambió). */
 function rectDe(id: string, respaldo: Rect): Rect {
   const l = LUGAR[id]
   return l ? { x0: l.x0, x1: l.x1, z0: l.z0, z1: l.z1 } : respaldo
 }
-const cx = (r: Rect) => (r.x0 + r.x1) / 2
-const cz = (r: Rect) => (r.z0 + r.z1) / 2
 
-const R_PLAZA = rectDe("ciudad-plaza", { x0: -30, x1: 30, z0: 30, z1: 85 })
-const R_AVENIDA = rectDe("ciudad-avenida", { x0: -12, x1: 12, z0: 85, z1: 230 })
-const R_TORRES = rectDe("ciudad-torres", { x0: -150, x1: -45, z0: 40, z1: 200 })
-const R_MERCADO = rectDe("ciudad-mercado", { x0: 30, x1: 90, z0: 40, z1: 90 })
-const R_PARQUE = rectDe("ciudad-parque", { x0: 30, x1: 140, z0: 100, z1: 220 })
-const R_ESTACION = rectDe("ciudad-estacion", { x0: -25, x1: 25, z0: 230, z1: 265 })
-const R_ARENA = rectDe("ciudad-arena", { x0: 50, x1: 150, z0: -40, z1: 30 })
-const R_CLUB = rectDe("ciudad-club", { x0: -130, x1: -50, z0: -40, z1: 25 })
-const R_MIRADOR = rectDe("ciudad-mirador", { x0: -30, x1: 30, z0: -40, z1: -10 })
-const ASC = NODO["ciudad-asc"]?.p ?? { x: 0, y: Y0, z: 22 }
+/** El pozo: planta baja de PB m y galerías a 8, 16 y 24 m sobre el piso. */
+const POZO: Rect = { x0: -10, x1: 10, z0: 12, z1: 44 }
+const PB = 7
+const GALERIAS = [8, 16, 24]
+/** Lo que queda libre en el centro del pozo (las galerías vuelan 2,5 m). */
+const VACIO: Rect = { x0: -7.5, x1: 7.5, z0: 14.5, z1: 41.5 }
+/** El foso bajo el piso de vidrio del Balcón: el pozo sigue 12 m más abajo. */
+const FOSO = { x0: -8, x1: 8, z0: 13.5, z1: 19.5, fondo: 12 }
+/** Ascensores: dos cajas de vidrio (como el núcleo del subsuelo), a x = ±2,2. */
+const ELEV = { dx: 2.2, medio: 1.3 }
 
-/** El canal que recibe la cascada, al norte del Mirador. */
-const CANAL = { x0: -100, x1: 100, z0: -112, z1: -50, radio: 22, agua: Y0 - 4.2, fondo: Y0 - 7 }
-/** El lago del parque, contra la pared este. */
-const LAGO = { x: 163, z: 160, rx: 22, rz: 50, agua: Y0 - 0.55 }
-/** La arena: elipse exterior. El acceso del mapa (c-arena) queda del lado abierto, al oeste. */
-const ARENA = { x: 92, z: 0, rx: 38, rz: 30, alto: 13 }
-/** La pantalla del reto: un pórtico sobre la entrada de la Gran Avenida, mirando a la plaza. */
-const PANTALLA = { z: R_PLAZA.z1 + 3, ancho: 25, alto: 9.4, base: Y0 + 9.5 }
+const ANDEN: Sala = { x0: -36, x1: -12, z0: 12, z1: 44, alto: 7 }
+/** La vía, hundida 1,2 m, del lado oeste del andén. */
+const VIA = { x: -30.4, x0: -36, x1: -28, hondo: 1.2, tope: 43.2 }
+const TUNEL = { x: -30.4, y: Y0 + 1.2, radio: 2.4, z0: 12, z1: -58 }
+const CONTROL: Sala = { x0: 10, x1: 36, z0: 12, z1: 40, alto: 7 }
+const CORREDOR: Sala = { x0: -3, x1: 3, z0: 46, z1: 96, alto: 4.2 }
+const LABS: Sala = { x0: -30, x1: -4, z0: 47, z1: 93, alto: 4.5 }
+/** El frente de vidrio de los cuatro módulos de laboratorio. */
+const FRENTE_LABS = -17
+const COMEDOR: Sala = { x0: 4, x1: 26, z0: 47, z1: 68, alto: 4.5 }
+const JARDIN: Sala = { x0: 4, x1: 26, z0: 69, z1: 93, alto: 4.5 }
+const CAMARA: Sala = { x0: -14, x1: 14, z0: 97, z1: 112, alto: 10 }
+/** La pantalla curva y el núcleo de IA de la sala de control. */
+const NUCLEO = { x: 22.5, z: 26 }
+const PANTALLA = { radio: 12.6, ang: 0.72, y0: Y0 + 1.5, y1: Y0 + 6.5 }
 
-const COLOR = {
-  cian: "#3fd6ff",
-  magenta: "#ff4fae",
-  dorado: "#ffc35a",
-  tibio: "#ffad62",
-  blancoFrio: "#d9ecff",
-  violeta: "#9a6bff",
+const R_PLAZA = rectDe("ciudad-plaza", { x0: -9, x1: 9, z0: 25, z1: 43 })
+const R_MIRADOR = rectDe("ciudad-mirador", { x0: -9, x1: 9, z0: 13, z1: 20 })
+const R_ESTACION = rectDe("ciudad-estacion", { x0: -27, x1: -13, z0: 14, z1: 43 })
+const R_CLUB = rectDe("ciudad-club", { x0: 13, x1: 20, z0: 14, z1: 39 })
+const R_AVENIDA = rectDe("ciudad-avenida", { x0: -3, x1: 3, z0: 46, z1: 96 })
+const R_TORRES = rectDe("ciudad-torres", { x0: -16, x1: -5, z0: 48, z1: 92 })
+const R_MERCADO = rectDe("ciudad-mercado", { x0: 5, x1: 16, z0: 48, z1: 67 })
+const R_PARQUE = rectDe("ciudad-parque", { x0: 5, x1: 16, z0: 70, z1: 92 })
+const R_ARENA = rectDe("ciudad-arena", { x0: -13, x1: 13, z0: 98, z1: 111 })
+
+const dentro = (r: Rect, x: number, z: number, m = 0) => x >= r.x0 - m && x <= r.x1 + m && z >= r.z0 - m && z <= r.z1 + m
+
+/**
+ * Hasta dónde puede subir algo (la cámara) sobre un punto. En el pozo, su
+ * techo; en el resto, la altura de la vista de maqueta (por encima de los
+ * techos de las salas, que desde arriba no se dibujan).
+ */
+export function techoCiudad(x: number, z: number): number {
+  if (dentro(POZO, x, z, 0.5)) return TOPE - 0.6
+  return Y0 + 16
+}
+
+// Paleta (del estudio de la película: blanco clínico, acero, grafito y acentos).
+const P = {
+  panel: "#e9eef2",
+  junta: "#b7c2cc",
+  acero: "#8c969f",
+  grafito: "#1b2228",
+  concreto: "#7a7d80",
+  epoxi: "#c9d0d6",
+  frio: "#eaf4ff",
+  cian: "#36d3ff",
+  azul: "#1e6bff",
+  ambar: "#ffb020",
+  amarillo: "#f2c21b",
+  negro: "#111316",
+  rojo: "#e5352b",
+  magenta: "#ff4fd1",
+  verde: "#4caf50",
+  niebla: "#0e141a",
+  corte: "#2b3138",
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 2. Ambiente: el cielo artificial y la luz que el motor aplica
+// 2. Ambiente: luz de interior que sigue la hora de la superficie
 // ═══════════════════════════════════════════════════════════════
-
-interface ClaveCielo {
-  h: number
-  cenit: string
-  horizonte: string
-  sol: string
-  brillo: number
-  noche: number
-}
-
-// La bóveda imita el día de la superficie: celeste suave de día, dorado al
-// atardecer y azul profundo con estrellas de noche.
-const CLAVES: ClaveCielo[] = [
-  { h: 0, cenit: "#030a1c", horizonte: "#0d1d40", sol: "#000000", brillo: 0.55, noche: 1 },
-  { h: 4.6, cenit: "#030a1c", horizonte: "#0d1d40", sol: "#000000", brillo: 0.55, noche: 1 },
-  { h: 5.6, cenit: "#0f1d3d", horizonte: "#4a3657", sol: "#ff8c5a", brillo: 0.65, noche: 0.8 },
-  { h: 6.6, cenit: "#3a5e95", horizonte: "#f2a36a", sol: "#ffc27a", brillo: 0.85, noche: 0.35 },
-  { h: 8, cenit: "#5c90d0", horizonte: "#c4dcef", sol: "#fff0d4", brillo: 1, noche: 0 },
-  { h: 12, cenit: "#5e9ade", horizonte: "#d2e6f6", sol: "#fffaf0", brillo: 1.08, noche: 0 },
-  { h: 16, cenit: "#5a8fd0", horizonte: "#d8e2ea", sol: "#fff0d8", brillo: 1.04, noche: 0 },
-  { h: 17.5, cenit: "#4a6dab", horizonte: "#f6b569", sol: "#ffcf86", brillo: 0.98, noche: 0.1 },
-  { h: 18.5, cenit: "#2c3f7a", horizonte: "#ea7a4c", sol: "#ff965c", brillo: 0.8, noche: 0.45 },
-  { h: 19.5, cenit: "#0f1a3c", horizonte: "#3b2c58", sol: "#7a3a46", brillo: 0.62, noche: 0.85 },
-  { h: 21, cenit: "#030a1c", horizonte: "#0d1d40", sol: "#000000", brillo: 0.55, noche: 1 },
-  { h: 24, cenit: "#030a1c", horizonte: "#0d1d40", sol: "#000000", brillo: 0.55, noche: 1 },
-]
 
 export interface AmbienteCiudad {
   hora: number
-  /** 0 = pleno día, 1 = noche cerrada (en la bóveda). */
+  /** 0 = turno de día, 1 = turno de noche. */
   noche: number
-  /** Colores lineales del cielo artificial. */
-  cielo: { cenit: THREE.Color; horizonte: THREE.Color; sol: THREE.Color; brillo: number; solPos: THREE.Vector2 }
-  /** La luz direccional que baja del cielo artificial (el motor usa su "sol"). `dir` apunta hacia la luz. */
+  /** La luz direccional del techo (el motor usa su "sol"). `dir` apunta hacia la luz. */
   sol: { color: THREE.Color; intensidad: number; dir: THREE.Vector3 }
   hemi: { cielo: THREE.Color; suelo: THREE.Color; intensidad: number }
   /** scene.environmentIntensity para el entorno de estudio del motor. */
@@ -153,152 +145,91 @@ export interface AmbienteCiudad {
   bloom: { fuerza: number; umbral: number; radio: number }
 }
 
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)))
+  return t * t * (3 - 2 * t)
+}
 const _ca = new THREE.Color()
 const _cb = new THREE.Color()
-const mezclaHex = (out: THREE.Color, a: string, b: string, t: number) => out.copy(_ca.set(a)).lerp(_cb.set(b), t)
+const mezcla = (out: THREE.Color, a: string, b: string, t: number) => out.copy(_ca.set(a)).lerp(_cb.set(b), t)
+const DIR_TECHO = new THREE.Vector3(0.32, 1, 0.22).normalize()
 
 /**
- * La luz de la ciudad a una hora. La usan el cielo artificial (aquí) y el
- * motor (sol, hemisferio, entorno, niebla, exposición y bloom del nivel).
+ * La luz de la instalación a una hora. De día (7 a 19 h): blanco neutro al
+ * 100 %. De noche: los pasillos bajan y se tiñen de azul de turno nocturno.
+ * Sin cielo: la hora solo cambia la temperatura y la intensidad.
  */
 export function ambienteCiudad(hora: number, out?: AmbienteCiudad): AmbienteCiudad {
   const a: AmbienteCiudad = out ?? {
     hora: 0,
     noche: 0,
-    cielo: { cenit: new THREE.Color(), horizonte: new THREE.Color(), sol: new THREE.Color(), brillo: 1, solPos: new THREE.Vector2() },
     sol: { color: new THREE.Color(), intensidad: 1, dir: new THREE.Vector3() },
-    hemi: { cielo: new THREE.Color(), suelo: new THREE.Color("#2a2420"), intensidad: 0.5 },
-    entorno: 0.3,
-    niebla: { color: new THREE.Color(), densidad: 0.003 },
+    hemi: { cielo: new THREE.Color(), suelo: new THREE.Color(), intensidad: 0.5 },
+    entorno: 0.5,
+    niebla: { color: new THREE.Color(P.niebla), densidad: 0.01 },
     exposicion: 1,
     bloom: { fuerza: 0.4, umbral: 0.9, radio: 0.5 },
   }
   const h = ((hora % 24) + 24) % 24
-  let i = 0
-  while (i < CLAVES.length - 2 && CLAVES[i + 1].h <= h) i++
-  const k0 = CLAVES[i]
-  const k1 = CLAVES[i + 1]
-  const t = THREE.MathUtils.smoothstep(h, k0.h, k1.h)
-  mezclaHex(a.cielo.cenit, k0.cenit, k1.cenit, t)
-  mezclaHex(a.cielo.horizonte, k0.horizonte, k1.horizonte, t)
-  mezclaHex(a.cielo.sol, k0.sol, k1.sol, t)
-  a.cielo.brillo = THREE.MathUtils.lerp(k0.brillo, k1.brillo, t)
-  const noche = THREE.MathUtils.lerp(k0.noche, k1.noche, t)
+  const noche = 1 - smooth(5.5, 7.5, h) * (1 - smooth(18.5, 20.5, h))
   a.hora = h
   a.noche = noche
-  const dia = 1 - noche
-
-  // El sol cruza el panel de este (+x) a oeste (-x), un poco hacia el sur
-  // para que se vea desde el Mirador. De noche, la luna hace el mismo arco.
-  const arco = h >= 6 && h <= 18 ? (h - 6) / 12 : ((h + 6) % 24) / 12
-  a.cielo.solPos.set(Math.cos(arco * Math.PI) * 0.92, 0.28 - Math.sin(arco * Math.PI) * 0.12)
-  if (h < 5.2 || h > 19.8) a.cielo.sol.setRGB(0.05, 0.07, 0.12) // la luna: un resplandor frío y tenue
-
-  // Luz direccional: sale del "sol" del panel. Alta al mediodía y rasante al
-  // atardecer: sombras largas, como en la superficie a la hora dorada.
-  const elev = THREE.MathUtils.degToRad(18 + 58 * Math.sin(arco * Math.PI))
-  const hx = a.cielo.solPos.x
-  const hz = a.cielo.solPos.y
-  const hl = Math.hypot(hx, hz) || 1
-  a.sol.dir.set((hx / hl) * Math.cos(elev), Math.sin(elev), (hz / hl) * Math.cos(elev)).normalize()
-  a.sol.color.copy(a.cielo.sol).lerp(a.cielo.horizonte, 0.35).lerp(_ca.setRGB(1, 1, 1), 0.3)
-  a.sol.intensidad = 0.12 + 1.55 * dia * a.cielo.brillo
-  a.hemi.cielo.copy(a.cielo.cenit).lerp(_ca.setRGB(0.75, 0.82, 0.95), 0.3)
-  a.hemi.suelo.set("#1d1814")
-  a.hemi.intensidad = 0.08 + 0.32 * dia
-  a.entorno = 0.12 + 0.2 * dia
-  // Niebla: bruma azul verdosa y oscura; de día toma algo del color del cielo.
-  a.niebla.color.copy(a.cielo.horizonte).lerp(_ca.set("#1b2733"), 0.72).multiplyScalar(0.42 * dia + 0.1)
-  a.niebla.densidad = 0.0036 + 0.0008 * noche
-  a.exposicion = 1.0 + 0.15 * noche
-  a.bloom.fuerza = 0.42 + 0.24 * noche
-  a.bloom.umbral = 0.9 - 0.18 * noche
-  a.bloom.radio = 0.52 + 0.08 * noche
+  mezcla(a.sol.color, "#fff3e4", "#c6d6ff", noche)
+  a.sol.intensidad = THREE.MathUtils.lerp(0.6, 0.38, noche)
+  a.sol.dir.copy(DIR_TECHO)
+  mezcla(a.hemi.cielo, "#e4edf5", "#a9bde4", noche)
+  mezcla(a.hemi.suelo, "#5a616b", "#363e4c", noche)
+  a.hemi.intensidad = THREE.MathUtils.lerp(0.36, 0.26, noche)
+  a.entorno = THREE.MathUtils.lerp(0.4, 0.3, noche)
+  a.niebla.color.set(P.niebla)
+  a.niebla.densidad = THREE.MathUtils.lerp(0.0095, 0.0115, noche)
+  a.exposicion = THREE.MathUtils.lerp(0.95, 1.0, noche)
+  a.bloom.fuerza = THREE.MathUtils.lerp(0.36, 0.48, noche)
+  a.bloom.umbral = THREE.MathUtils.lerp(0.93, 0.86, noche)
+  a.bloom.radio = 0.5
   return a
 }
 
 /**
- * Entorno de reflejos propio de la ciudad: un cubo pintado con el cielo
- * artificial arriba, roca oscura alrededor y las luces de la ciudad abajo.
- * Así el piso mojado y el vidrio reflejan la caverna, y no el estudio claro
- * que el motor usa en los subsuelos. Se repinta cuando cambia la hora.
+ * Entorno de reflejos propio: un cubo pintado una vez con el interior de la
+ * instalación (techo de paneles de luz, muros claros, piso gris). Así el
+ * epoxi y el acero reflejan un búnker y no el estudio del motor.
  */
-class EntornoCiudad {
-  readonly textura: THREE.CubeTexture
-  private readonly caras: HTMLCanvasElement[]
-  private readonly luces: Array<{ cara: number; x: number; y: number; r: number; color: string; a: number }> = []
-  private static readonly T = 128
-
-  constructor() {
-    const T = EntornoCiudad.T
-    this.caras = Array.from({ length: 6 }, () => {
-      const c = document.createElement("canvas")
-      c.width = T
-      c.height = T
-      return c
-    })
-    const rnd = semilla(77)
-    const colores = [COLOR.tibio, COLOR.tibio, "#ffd9a8", COLOR.cian, COLOR.magenta, "#ffffff", COLOR.dorado]
-    for (const cara of [0, 1, 4, 5])
-      for (let i = 0; i < 16; i++)
-        this.luces.push({ cara, x: rnd() * T, y: T * (0.55 + rnd() * 0.22), r: 8 + rnd() * 14, color: colores[Math.floor(rnd() * colores.length)], a: 0.25 + rnd() * 0.35 })
-    this.textura = new THREE.CubeTexture(this.caras)
-    this.textura.colorSpace = THREE.SRGBColorSpace
-  }
-
-  pintar(amb: AmbienteCiudad) {
-    const T = EntornoCiudad.T
-    const css = (c: THREE.Color, k: number) => _ca.copy(c).multiplyScalar(k).getStyle()
-    const b = amb.cielo.brillo
-    this.caras.forEach((lienzo, cara) => {
-      const g = lienzo.getContext("2d")!
-      g.globalCompositeOperation = "source-over"
-      g.fillStyle = "#0a0a0c"
+function entornoInstalacion(): THREE.CubeTexture {
+  const T = 64
+  const caras = Array.from({ length: 6 }, (_, cara) => {
+    const c = document.createElement("canvas")
+    c.width = T
+    c.height = T
+    const g = c.getContext("2d")!
+    if (cara === 2) {
+      g.fillStyle = "#3a434d"
       g.fillRect(0, 0, T, T)
-      if (cara === 2) {
-        // Arriba: el cielo artificial.
-        const r = g.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.72)
-        r.addColorStop(0, css(amb.cielo.cenit, 1.15 * b))
-        r.addColorStop(0.55, css(amb.cielo.cenit.clone().lerp(amb.cielo.horizonte, 0.6), 1.1 * b))
-        r.addColorStop(0.72, css(amb.cielo.horizonte, 0.8 * b))
-        r.addColorStop(0.8, "#0c0b0c")
-        g.fillStyle = r
-        g.fillRect(0, 0, T, T)
-        return
-      }
-      if (cara === 3) {
-        g.fillStyle = "#060607"
-        g.fillRect(0, 0, T, T)
-        return
-      }
-      // Costados: el borde del cielo arriba, roca, y las luces de la ciudad abajo.
+      g.fillStyle = "#f4f9ff"
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) g.fillRect(4 + i * 16, 4 + j * 16, 8, 8)
+    } else if (cara === 3) {
+      g.fillStyle = "#4b525a"
+      g.fillRect(0, 0, T, T)
+    } else {
       const v = g.createLinearGradient(0, 0, 0, T)
-      v.addColorStop(0, css(amb.cielo.horizonte, 0.75 * b))
-      v.addColorStop(0.22, css(amb.cielo.horizonte, 0.18 * b))
-      v.addColorStop(0.42, "#0d0c0d")
-      v.addColorStop(0.62, "#151316")
-      v.addColorStop(1, "#050506")
+      v.addColorStop(0, "#56606a")
+      v.addColorStop(0.12, "#e8f2ff")
+      v.addColorStop(0.18, "#8d98a3")
+      v.addColorStop(0.6, "#a7b0b8")
+      v.addColorStop(1, "#3c434a")
       g.fillStyle = v
       g.fillRect(0, 0, T, T)
-      g.globalCompositeOperation = "lighter"
-      for (const l of this.luces) {
-        if (l.cara !== cara) continue
-        const r = g.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r)
-        _ca.set(l.color)
-        r.addColorStop(0, `rgba(${Math.round(_ca.r * 255)},${Math.round(_ca.g * 255)},${Math.round(_ca.b * 255)},${l.a})`)
-        r.addColorStop(1, "rgba(0,0,0,0)")
-        g.fillStyle = r
-        g.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2)
-      }
-    })
-    // Tirar el PMREM viejo: three lo vuelve a generar con las caras nuevas.
-    this.textura.dispose()
-    this.textura.needsUpdate = true
-  }
+    }
+    return c
+  })
+  const t = new THREE.CubeTexture(caras)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.needsUpdate = true
+  return t
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 3. Utilidades: azar con semilla, ruido, lotes de geometría
+// 3. Utilidades: azar con semilla, lotes de geometría, piezas
 // ═══════════════════════════════════════════════════════════════
 
 function semilla(n: number): () => number {
@@ -312,52 +243,6 @@ function semilla(n: number): () => number {
   }
 }
 
-function hash3(x: number, y: number, z: number): number {
-  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(z | 0, 1274126177)) | 0
-  h = Math.imul(h ^ (h >>> 13), 1274126177)
-  h ^= h >>> 16
-  return (h >>> 0) / 4294967296
-}
-
-function ruido3(x: number, y: number, z: number): number {
-  const xi = Math.floor(x)
-  const yi = Math.floor(y)
-  const zi = Math.floor(z)
-  const fx = x - xi
-  const fy = y - yi
-  const fz = z - zi
-  const u = fx * fx * (3 - 2 * fx)
-  const v = fy * fy * (3 - 2 * fy)
-  const w = fz * fz * (3 - 2 * fz)
-  const l = (a: number, b: number, t: number) => a + (b - a) * t
-  const c = (dx: number, dy: number, dz: number) => hash3(xi + dx, yi + dy, zi + dz)
-  return l(
-    l(l(c(0, 0, 0), c(1, 0, 0), u), l(c(0, 1, 0), c(1, 1, 0), u), v),
-    l(l(c(0, 0, 1), c(1, 0, 1), u), l(c(0, 1, 1), c(1, 1, 1), u), v),
-    w,
-  )
-}
-
-function fbm3(x: number, y: number, z: number, octavas = 4): number {
-  let s = 0
-  let a = 0.5
-  let n = 0
-  for (let i = 0; i < octavas; i++) {
-    s += a * ruido3(x, y, z)
-    n += a
-    x = x * 2.03 + 17.1
-    y = y * 2.03 + 3.7
-    z = z * 2.03 + 9.2
-    a *= 0.5
-  }
-  return s / n
-}
-
-const smooth = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)))
-  return t * t * (3 - 2 * t)
-}
-
 /** Matriz de ubicación: posición, giro en y (y opcionalmente en x y z) y escala. */
 function M(x = 0, y = 0, z = 0, ry = 0, sx = 1, sy = 1, sz = 1, rx = 0, rz = 0): THREE.Matrix4 {
   return new THREE.Matrix4().compose(
@@ -369,10 +254,7 @@ function M(x = 0, y = 0, z = 0, ry = 0, sx = 1, sy = 1, sz = 1, rx = 0, rz = 0):
 
 type Valores = Record<string, readonly number[]>
 
-/**
- * Junta muchas piezas en una sola malla (una llamada de dibujo). Cada pieza
- * puede llevar atributos constantes propios (color, rugosidad, emisión…).
- */
+/** Junta muchas piezas en una sola malla (una llamada de dibujo), con atributos constantes por pieza. */
 class Lote {
   private partes: THREE.BufferGeometry[] = []
   constructor(private readonly extra: ReadonlyArray<readonly [string, number]> = []) {}
@@ -395,22 +277,37 @@ class Lote {
     this.partes.push(g)
   }
 
-  malla(material: THREE.Material, nombre: string): THREE.Mesh | null {
+  geometria(): THREE.BufferGeometry | null {
     if (!this.partes.length) return null
     const geo = mergeGeometries(this.partes, false)
     for (const p of this.partes) p.dispose()
     this.partes = []
+    if (geo) geo.computeBoundingSphere()
+    return geo
+  }
+
+  malla(material: THREE.Material, nombre: string): THREE.Mesh | null {
+    const geo = this.geometria()
     if (!geo) return null
-    geo.computeBoundingSphere()
     const mesh = new THREE.Mesh(geo, material)
     mesh.name = nombre
     return mesh
   }
 }
 
+const PBR = [
+  ["color", 3],
+  ["aRM", 2],
+  ["aEmis", 3],
+  ["aJunta", 1],
+] as const
+
 const _col = new THREE.Color()
-/** Acabado del lote "base": color, rugosidad, metal y (opcional) emisión en HDR. */
-function acabado(color: THREE.ColorRepresentation, rug = 0.6, metal = 0, emis?: THREE.ColorRepresentation, fuerza = 1): Valores {
+/**
+ * Acabado del lote "base": color, rugosidad, metal, emisión (HDR) y el
+ * módulo de los paneles en metros (0 = sin juntas).
+ */
+function acabado(color: THREE.ColorRepresentation, rug = 0.6, metal = 0, junta = 0, emis?: THREE.ColorRepresentation, fuerza = 1): Valores {
   _col.set(color)
   const c = [_col.r, _col.g, _col.b]
   let e = [0, 0, 0]
@@ -418,36 +315,40 @@ function acabado(color: THREE.ColorRepresentation, rug = 0.6, metal = 0, emis?: 
     _col.set(emis).multiplyScalar(fuerza)
     e = [_col.r, _col.g, _col.b]
   }
-  return { color: c, aRM: [rug, metal], aEmis: e }
+  return { color: c, aRM: [rug, metal], aEmis: e, aJunta: [junta] }
 }
-/** Color de una luz (lote "luz"): HDR, con un pulso opcional (radianes por segundo). */
-function luz(color: THREE.ColorRepresentation, fuerza: number, pulso = 0): Valores {
+/** Una luz (lote "luz"): color HDR, pulso (rad/s) y cuánto baja en el turno de noche (0..1). */
+function luz(color: THREE.ColorRepresentation, fuerza: number, turno = 1, pulso = 0): Valores {
   _col.set(color).multiplyScalar(fuerza)
-  return { color: [_col.r, _col.g, _col.b], aPulso: [pulso] }
+  return { color: [_col.r, _col.g, _col.b], aPulso: [pulso], aTurno: [turno] }
 }
 
-// ── Geometrías propias ──
+const A = {
+  panel: acabado(P.panel, 0.55, 0, 1.2),
+  muroCorte: acabado(P.corte, 0.9, 0),
+  concreto: acabado(P.concreto, 0.85, 0, 2.4),
+  concretoOsc: acabado("#4f5357", 0.9, 0),
+  grafito: acabado(P.grafito, 0.5, 0.1, 1.2),
+  grafitoPiso: acabado("#20272e", 0.32, 0.1, 1.2),
+  epoxi: acabado(P.epoxi, 0.2, 0, 2.4),
+  acero: acabado(P.acero, 0.35, 0.8),
+  aceroOsc: acabado("#4a525a", 0.4, 0.7),
+  blanco: acabado("#f2f5f7", 0.4, 0),
+  rejilla: acabado("#4a5056", 0.55, 0.6, 0.6),
+}
 
 type V2 = [number, number]
 
 /** Empuja un triángulo con la cara hacia `n` (corrige el orden si hace falta). */
-function tri(pos: number[], nor: number[], uv: number[], a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, n: THREE.Vector3, ua: V2, ub: V2, uc: V2, normales?: [THREE.Vector3, THREE.Vector3, THREE.Vector3]) {
-  const e1x = b.x - a.x
-  const e1y = b.y - a.y
-  const e1z = b.z - a.z
-  const e2x = c.x - a.x
-  const e2y = c.y - a.y
-  const e2z = c.z - a.z
-  const crx = e1y * e2z - e1z * e2y
-  const cry = e1z * e2x - e1x * e2z
-  const crz = e1x * e2y - e1y * e2x
-  const ok = crx * n.x + cry * n.y + crz * n.z >= 0
-  const P = ok ? [a, b, c] : [a, c, b]
+function tri(pos: number[], nor: number[], uv: number[], a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, n: THREE.Vector3, ua: V2, ub: V2, uc: V2) {
+  const e1 = new THREE.Vector3().subVectors(b, a)
+  const e2 = new THREE.Vector3().subVectors(c, a)
+  const ok = e1.cross(e2).dot(n) >= 0
+  const Pt = ok ? [a, b, c] : [a, c, b]
   const U = ok ? [ua, ub, uc] : [ua, uc, ub]
-  const N = normales ? (ok ? normales : [normales[0], normales[2], normales[1]]) : [n, n, n]
   for (let i = 0; i < 3; i++) {
-    pos.push(P[i].x, P[i].y, P[i].z)
-    nor.push(N[i].x, N[i].y, N[i].z)
+    pos.push(Pt[i].x, Pt[i].y, Pt[i].z)
+    nor.push(n.x, n.y, n.z)
     uv.push(U[i][0], U[i][1])
   }
 }
@@ -461,191 +362,69 @@ function geometria(pos: number[], nor: number[], uv: number[]): THREE.BufferGeom
 }
 
 /**
- * Prisma vertical sobre un polígono (en planta, coordenadas locales x, z).
- * UV en metros: u a lo largo del contorno (cada cara con un número entero de
- * módulos de ventana) y v = altura desde `vBase`. Lo usa el shader de ventanas.
+ * Cara vertical de (ax, az) a (bx, bz), entre y0 e y1, mirando hacia `n`.
+ * UV en metros: u a lo largo (desde `u0`) y v = altura sobre `vBase`.
  */
-function prisma(pol: V2[], y0: number, y1: number, opciones: { tapa?: boolean; piso?: boolean; vBase?: number; modulo?: number } = {}): THREE.BufferGeometry {
-  const { tapa = true, piso = false, vBase = y0, modulo = 1.9 } = opciones
+function cara(ax: number, az: number, bx: number, bz: number, y0: number, y1: number, n: THREE.Vector3, u0 = 0, vBase = y0): THREE.BufferGeometry {
   const pos: number[] = []
   const nor: number[] = []
   const uv: number[] = []
-  let gx = 0
-  let gz = 0
-  for (const [x, z] of pol) {
-    gx += x / pol.length
-    gz += z / pol.length
-  }
-  let u = 0
-  const a0 = new THREE.Vector3()
-  const b0 = new THREE.Vector3()
-  const a1 = new THREE.Vector3()
-  const b1 = new THREE.Vector3()
-  const n = new THREE.Vector3()
-  for (let i = 0; i < pol.length; i++) {
-    const [ax, az] = pol[i]
-    const [bx, bz] = pol[(i + 1) % pol.length]
-    const largo = Math.hypot(bx - ax, bz - az)
-    if (largo < 1e-4) continue
-    n.set(bz - az, 0, -(bx - ax)).normalize()
-    if (n.x * ((ax + bx) / 2 - gx) + n.z * ((az + bz) / 2 - gz) < 0) n.multiplyScalar(-1)
-    const du = Math.max(1, Math.round(largo / modulo)) * modulo
-    a0.set(ax, y0, az)
-    b0.set(bx, y0, bz)
-    a1.set(ax, y1, az)
-    b1.set(bx, y1, bz)
-    const v0 = y0 - vBase
-    const v1 = y1 - vBase
-    tri(pos, nor, uv, a0, b0, b1, n, [u, v0], [u + du, v0], [u + du, v1])
-    tri(pos, nor, uv, a0, b1, a1, n, [u, v0], [u + du, v1], [u, v1])
-    u += du
-  }
-  const tapas: Array<[number, THREE.Vector3]> = []
-  if (tapa) tapas.push([y1, new THREE.Vector3(0, 1, 0)])
-  if (piso) tapas.push([y0, new THREE.Vector3(0, -1, 0)])
-  if (tapas.length) {
-    const contorno = pol.map(([x, z]) => new THREE.Vector2(x, z))
-    const caras = THREE.ShapeUtils.triangulateShape(contorno, [])
-    for (const [y, nn] of tapas)
-      for (const [i, j, k] of caras) {
-        const p = (q: number) => new THREE.Vector3(pol[q][0], y, pol[q][1])
-        tri(pos, nor, uv, p(i), p(j), p(k), nn, [pol[i][0], pol[i][1]], [pol[j][0], pol[j][1]], [pol[k][0], pol[k][1]])
-      }
-  }
+  const largo = Math.hypot(bx - ax, bz - az)
+  const a0 = new THREE.Vector3(ax, y0, az)
+  const b0 = new THREE.Vector3(bx, y0, bz)
+  const a1 = new THREE.Vector3(ax, y1, az)
+  const b1 = new THREE.Vector3(bx, y1, bz)
+  const v0 = y0 - vBase
+  const v1 = y1 - vBase
+  tri(pos, nor, uv, a0, b0, b1, n, [u0, v0], [u0 + largo, v0], [u0 + largo, v1])
+  tri(pos, nor, uv, a0, b1, a1, n, [u0, v0], [u0 + largo, v1], [u0, v1])
   return geometria(pos, nor, uv)
 }
 
-/** Polígonos de planta (centrados en el origen). */
-const poligono = {
-  circulo(r: number, n = 20, giro = 0): V2[] {
-    return Array.from({ length: n }, (_, i) => {
-      const a = giro + (i / n) * Math.PI * 2
-      return [Math.cos(a) * r, Math.sin(a) * r] as V2
-    })
-  },
-  achaflanado(ax: number, az: number, c: number): V2[] {
-    return [
-      [-ax + c, -az],
-      [ax - c, -az],
-      [ax, -az + c],
-      [ax, az - c],
-      [ax - c, az],
-      [-ax + c, az],
-      [-ax, az - c],
-      [-ax, -az + c],
-    ]
-  },
-  rectRedondeado(x0: number, x1: number, z0: number, z1: number, r: number, seg = 6): V2[] {
-    const out: V2[] = []
-    const esquinas: Array<[number, number, number]> = [
-      [x1 - r, z1 - r, 0],
-      [x0 + r, z1 - r, Math.PI / 2],
-      [x0 + r, z0 + r, Math.PI],
-      [x1 - r, z0 + r, (3 * Math.PI) / 2],
-    ]
-    for (const [ex, ez, a0] of esquinas)
-      for (let i = 0; i <= seg; i++) {
-        const a = a0 + (i / seg) * (Math.PI / 2)
-        out.push([ex + Math.cos(a) * r, ez + Math.sin(a) * r])
-      }
-    return out
-  },
-  elipse(x: number, z: number, rx: number, rz: number, n = 48): V2[] {
-    return Array.from({ length: n }, (_, i) => {
-      const a = (i / n) * Math.PI * 2
-      return [x + Math.cos(a) * rx, z + Math.sin(a) * rz] as V2
-    })
-  },
-  /** El contorno de la caverna a una "norma" r (1 = la pared). */
-  caverna(r: number, n = 256): V2[] {
-    return Array.from({ length: n }, (_, i) => {
-      const a = (i / n) * Math.PI * 2
-      const c = Math.cos(a)
-      const s = Math.sin(a)
-      return [CX + Math.sign(c) * Math.sqrt(Math.abs(c)) * MEDIO * r, CZ + Math.sign(s) * Math.sqrt(Math.abs(s)) * MEDIO * r] as V2
-    })
-  },
-}
-
-/** Muro vertical que sigue un contorno cerrado (en coordenadas del mundo), con la cara hacia adentro o afuera. */
-function muroContorno(pts: V2[], y0: number, y1: number, haciaAdentro: boolean): THREE.BufferGeometry {
+/** Cara horizontal (piso si `abajo` es false, techo si es true). UV en metros. */
+function horizontal(r: Rect, y: number, abajo = false): THREE.BufferGeometry {
   const pos: number[] = []
   const nor: number[] = []
   const uv: number[] = []
-  let gx = 0
-  let gz = 0
-  for (const [x, z] of pts) {
-    gx += x / pts.length
-    gz += z / pts.length
-  }
-  let u = 0
-  const n = new THREE.Vector3()
-  for (let i = 0; i < pts.length; i++) {
-    const [ax, az] = pts[i]
-    const [bx, bz] = pts[(i + 1) % pts.length]
-    const largo = Math.hypot(bx - ax, bz - az)
-    if (largo < 1e-4) continue
-    n.set(bz - az, 0, -(bx - ax)).normalize()
-    const afuera = n.x * ((ax + bx) / 2 - gx) + n.z * ((az + bz) / 2 - gz) > 0
-    if (afuera === haciaAdentro) n.multiplyScalar(-1)
-    const A0 = new THREE.Vector3(ax, y0, az)
-    const B0 = new THREE.Vector3(bx, y0, bz)
-    const A1 = new THREE.Vector3(ax, y1, az)
-    const B1 = new THREE.Vector3(bx, y1, bz)
-    tri(pos, nor, uv, A0, B0, B1, n, [u, y0], [u + largo, y0], [u + largo, y1])
-    tri(pos, nor, uv, A0, B1, A1, n, [u, y0], [u + largo, y1], [u, y1])
-    u += largo
-  }
+  const n = new THREE.Vector3(0, abajo ? -1 : 1, 0)
+  const p = (x: number, z: number) => new THREE.Vector3(x, y, z)
+  tri(pos, nor, uv, p(r.x0, r.z0), p(r.x1, r.z0), p(r.x1, r.z1), n, [r.x0, r.z0], [r.x1, r.z0], [r.x1, r.z1])
+  tri(pos, nor, uv, p(r.x0, r.z0), p(r.x1, r.z1), p(r.x0, r.z1), n, [r.x0, r.z0], [r.x1, r.z1], [r.x0, r.z1])
   return geometria(pos, nor, uv)
 }
 
-/** Losa horizontal con forma de polígono (y agujeros), mirando hacia arriba o abajo. */
-function losa(contorno: V2[], y: number, agujeros: V2[][] = [], abajo = false): THREE.BufferGeometry {
-  const forma = new THREE.Shape(contorno.map(([x, z]) => new THREE.Vector2(x, -z)))
-  for (const h of agujeros) forma.holes.push(new THREE.Path(h.map(([x, z]) => new THREE.Vector2(x, -z))))
-  const g = new THREE.ShapeGeometry(forma, 1)
-  g.rotateX(-Math.PI / 2)
-  g.translate(0, y, 0)
-  if (abajo) {
-    // Mirando hacia abajo: se invierte el orden de los triángulos y la normal.
-    const idx = g.getIndex()
-    if (idx)
-      for (let i = 0; i < idx.count; i += 3) {
-        const t = idx.getX(i + 1)
-        idx.setX(i + 1, idx.getX(i + 2))
-        idx.setX(i + 2, t)
+/** Las cuatro caras interiores de una caja (para el pozo, el foso y la cámara de pruebas). */
+function carasInteriores(r: Rect, y0: number, y1: number, vBase = y0): THREE.BufferGeometry[] {
+  const X = new THREE.Vector3(1, 0, 0)
+  const Z = new THREE.Vector3(0, 0, 1)
+  const ax = r.x1 - r.x0
+  const az = r.z1 - r.z0
+  return [
+    cara(r.x0, r.z0, r.x1, r.z0, y0, y1, Z, 0, vBase),
+    cara(r.x1, r.z0, r.x1, r.z1, y0, y1, X.clone().negate(), ax, vBase),
+    cara(r.x1, r.z1, r.x0, r.z1, y0, y1, Z.clone().negate(), ax + az, vBase),
+    cara(r.x0, r.z1, r.x0, r.z0, y0, y1, X, 2 * ax + az, vBase),
+  ]
+}
+
+/** Da vuelta una geometría (caras hacia adentro): invierte el orden y las normales. */
+function invertir(geo: THREE.BufferGeometry): THREE.BufferGeometry {
+  const g = geo.index ? geo.toNonIndexed() : geo
+  const p = g.getAttribute("position") as THREE.BufferAttribute
+  const n = g.getAttribute("normal") as THREE.BufferAttribute
+  const u = g.getAttribute("uv") as THREE.BufferAttribute | undefined
+  for (let i = 0; i < p.count; i += 3) {
+    for (const at of [p, n, u]) {
+      if (!at) continue
+      for (let k = 0; k < at.itemSize; k++) {
+        const t = at.getComponent(i + 1, k)
+        at.setComponent(i + 1, k, at.getComponent(i + 2, k))
+        at.setComponent(i + 2, k, t)
       }
-    const n = g.getAttribute("normal") as THREE.BufferAttribute
-    for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, -1, 0)
+    }
   }
+  for (let i = 0; i < n.count; i++) n.setXYZ(i, -n.getX(i), -n.getY(i), -n.getZ(i))
   return g
-}
-
-/** Cinta a lo largo de una polilínea: dos bordes (a cada lado o arriba/abajo) y una normal por punto. */
-function cinta(puntos: THREE.Vector3[], borde: (i: number, lado: -1 | 1, out: THREE.Vector3) => void, normal: (i: number, out: THREE.Vector3) => void, cerrada: boolean): THREE.BufferGeometry {
-  const pos: number[] = []
-  const nor: number[] = []
-  const uv: number[] = []
-  const n = puntos.length
-  const A = Array.from({ length: n }, () => new THREE.Vector3())
-  const B = Array.from({ length: n }, () => new THREE.Vector3())
-  const N = Array.from({ length: n }, () => new THREE.Vector3())
-  for (let i = 0; i < n; i++) {
-    borde(i, -1, A[i])
-    borde(i, 1, B[i])
-    normal(i, N[i])
-  }
-  let u = 0
-  const tramos = cerrada ? n : n - 1
-  for (let i = 0; i < tramos; i++) {
-    const j = (i + 1) % n
-    const d = puntos[i].distanceTo(puntos[j])
-    const nm = N[i].clone().add(N[j]).normalize()
-    tri(pos, nor, uv, A[i], B[i], B[j], nm, [u, 0], [u, 1], [u + d, 1], [N[i], N[i], N[j]])
-    tri(pos, nor, uv, A[i], B[j], A[j], nm, [u, 0], [u + d, 1], [u + d, 0], [N[i], N[j], N[j]])
-    u += d
-  }
-  return geometria(pos, nor, uv)
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -661,7 +440,6 @@ float cbRuido(vec3 p) {
   return mix(mix(mix(cbHash(i), cbHash(i + vec3(1.0, 0.0, 0.0)), f.x), mix(cbHash(i + vec3(0.0, 1.0, 0.0)), cbHash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
              mix(mix(cbHash(i + vec3(0.0, 0.0, 1.0)), cbHash(i + vec3(1.0, 0.0, 1.0)), f.x), mix(cbHash(i + vec3(0.0, 1.0, 1.0)), cbHash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y), f.z);
 }
-float cbFbm(vec3 p) { float s = 0.0; float a = 0.5; for (int i = 0; i < 3; i++) { s += a * cbRuido(p); p = p * 2.03 + 17.1; a *= 0.5; } return s / 0.875; }
 `
 
 /** Posición y normal en el mundo para los shaders que se apoyan en MeshStandardMaterial (con o sin instancias). */
@@ -678,503 +456,289 @@ const GLSL_MUNDO_VERT = /* glsl */ `
   vNorM = normalize(mat3(modelMatrix) * nmC);
 }`
 
+/** Las coordenadas en metros sobre la cara (según hacia dónde mira): sirven para juntas y grillas. */
+const GLSL_PLANO = /* glsl */ `
+vec2 cbPlano(vec3 p, vec3 n) {
+  vec3 a = abs(n);
+  if (a.y > 0.5) return p.xz;
+  return a.x > a.z ? vec2(p.z, p.y) : vec2(p.x, p.y);
+}
+`
+
 interface MaterialesCiudad {
-  roca: THREE.MeshStandardMaterial
-  cielo: THREE.ShaderMaterial
   base: THREE.MeshStandardMaterial
-  torres: THREE.MeshStandardMaterial
+  oficinas: THREE.MeshStandardMaterial
   luz: THREE.MeshBasicMaterial
   vidrio: THREE.MeshStandardMaterial
-  piso: THREE.MeshStandardMaterial
+  esmerilado: THREE.MeshStandardMaterial
+  grilla: THREE.MeshStandardMaterial
+  chevron: THREE.MeshStandardMaterial
   follaje: THREE.MeshStandardMaterial
-  cascada: THREE.ShaderMaterial
-  chorros: THREE.ShaderMaterial
+  robot: THREE.MeshStandardMaterial
+  brillo: THREE.MeshBasicMaterial
   vapor: THREE.ShaderMaterial
   reflejos: THREE.ShaderMaterial
-  charcos: THREE.ShaderMaterial
-  haces: THREE.ShaderMaterial
-  pisoLed: THREE.ShaderMaterial
+  escaneo: THREE.ShaderMaterial
   senal: THREE.MeshBasicMaterial
   pantalla: THREE.MeshBasicMaterial
-  // Copias de los materiales de la casa, con el entorno de reflejos de la ciudad.
-  granito: THREE.MeshStandardMaterial
-  acero: THREE.MeshStandardMaterial
-  madera: THREE.MeshStandardMaterial
-  hierro: THREE.MeshStandardMaterial
-  agua: THREE.MeshStandardMaterial
-  pasto: THREE.MeshStandardMaterial
-  grava: THREE.MeshStandardMaterial
-  acera: THREE.MeshStandardMaterial
-  corteza: THREE.MeshStandardMaterial
-  /** Uniformes que se mueven cada cuadro. */
   u: {
     tiempo: THREE.IUniform<number>
     noche: THREE.IUniform<number>
-    cenit: THREE.IUniform<THREE.Color>
-    horizonte: THREE.IUniform<THREE.Color>
-    solCol: THREE.IUniform<THREE.Color>
-    solPos: THREE.IUniform<THREE.Vector2>
-    solDir: THREE.IUniform<THREE.Vector3>
-    brillo: THREE.IUniform<number>
-    bordeCielo: THREE.IUniform<THREE.Color>
     escalaPuntos: THREE.IUniform<number>
-    /** Los reflejos de las luces en el piso pesan menos de día. */
     reflejo: THREE.IUniform<number>
-    charco: THREE.IUniform<number>
   }
 }
 
-const N_FOCOS = 12
-interface Foco {
-  p: THREE.Vector3
-  radio: number
-  color: THREE.ColorRepresentation
-  fuerza: number
+function chevrones(): THREE.CanvasTexture {
+  const c = document.createElement("canvas")
+  c.width = 256
+  c.height = 256
+  const g = c.getContext("2d")!
+  // Acero cepillado con una franja de chevrones abajo y otra al medio.
+  const fondo = g.createLinearGradient(0, 0, 256, 0)
+  fondo.addColorStop(0, "#7d868f")
+  fondo.addColorStop(0.5, "#959ea7")
+  fondo.addColorStop(1, "#7d868f")
+  g.fillStyle = fondo
+  g.fillRect(0, 0, 256, 256)
+  g.globalAlpha = 0.08
+  for (let y = 0; y < 256; y += 2) {
+    g.fillStyle = y % 4 ? "#ffffff" : "#000000"
+    g.fillRect(0, y, 256, 1)
+  }
+  g.globalAlpha = 1
+  const franja = (y0: number, alto: number) => {
+    g.save()
+    g.beginPath()
+    g.rect(0, y0, 256, alto)
+    g.clip()
+    g.fillStyle = P.amarillo
+    g.fillRect(0, y0, 256, alto)
+    g.fillStyle = P.negro
+    for (let x = -alto; x < 256 + alto; x += 40) {
+      g.beginPath()
+      g.moveTo(x, y0 + alto)
+      g.lineTo(x + 20, y0 + alto)
+      g.lineTo(x + 20 + alto, y0)
+      g.lineTo(x + alto, y0)
+      g.closePath()
+      g.fill()
+    }
+    g.restore()
+  }
+  franja(206, 50)
+  franja(112, 26)
+  // Remaches.
+  g.fillStyle = "#5c646c"
+  for (let x = 12; x < 256; x += 32)
+    for (const y of [8, 100, 196]) {
+      g.beginPath()
+      g.arc(x, y, 3, 0, Math.PI * 2)
+      g.fill()
+    }
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 4
+  return t
 }
 
-function crearMaterialesCiudad(ctx: CtxEscena, focos: Foco[], atlas: THREE.Texture, pantalla: THREE.Texture, entorno: THREE.Texture): MaterialesCiudad {
-  const calidad: Calidad = ctx.calidad
+function crearMaterialesCiudad(entorno: THREE.Texture, atlas: THREE.Texture, pantalla: THREE.Texture): MaterialesCiudad {
   const u: MaterialesCiudad["u"] = {
     tiempo: { value: 0 },
     noche: { value: 0 },
-    cenit: { value: new THREE.Color() },
-    horizonte: { value: new THREE.Color() },
-    solCol: { value: new THREE.Color() },
-    solPos: { value: new THREE.Vector2() },
-    solDir: { value: new THREE.Vector3(0, 1, 0) },
-    brillo: { value: 1 },
-    bordeCielo: { value: new THREE.Color() },
     escalaPuntos: { value: 600 },
     reflejo: { value: 1 },
-    charco: { value: 0.2 },
   }
-  const defs = `#define CB_CX ${CX.toFixed(2)}\n#define CB_CZ ${CZ.toFixed(2)}\n#define CB_MEDIO ${MEDIO.toFixed(2)}\n#define CB_RCIELO ${R_CIELO.toFixed(3)}\n#define CB_Y0 ${Y0.toFixed(2)}\n`
 
-  // ── Roca: oscura y húmeda, con vetas, relieve fino y la ciudad reflejada en ella ──
-  const focoPos = Array.from({ length: N_FOCOS }, (_, i) => {
-    const f = focos[i]
-    return f ? new THREE.Vector4(f.p.x, f.p.y, f.p.z, f.radio) : new THREE.Vector4(0, -999, 0, 1)
-  })
-  const focoCol = Array.from({ length: N_FOCOS }, (_, i) => {
-    const f = focos[i]
-    return f ? new THREE.Color(f.color).multiplyScalar(f.fuerza) : new THREE.Color(0, 0, 0)
-  })
-  const roca = new THREE.MeshStandardMaterial({ name: "ciudad-roca", color: "#ffffff", roughness: 1, metalness: 0 })
-  const bump = calidad === "baja" ? 0 : calidad === "media" ? 0.6 : 1
-  roca.onBeforeCompile = (s) => {
-    s.uniforms.uFocos = { value: focoPos }
-    s.uniforms.uFocosCol = { value: focoCol }
-    s.uniforms.uBorde = u.bordeCielo
-    s.uniforms.uRebote = { value: new THREE.Color("#ffb070").multiplyScalar(0.55) }
-    s.vertexShader = s.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vPosM;\nvarying vec3 vNorM;")
-      .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\n" + GLSL_MUNDO_VERT)
-    s.fragmentShader = s.fragmentShader
-      .replace(
-        "#include <common>",
-        `#include <common>
-${defs}
-varying vec3 vPosM;
-varying vec3 vNorM;
-uniform vec4 uFocos[${N_FOCOS}];
-uniform vec3 uFocosCol[${N_FOCOS}];
-uniform vec3 uBorde;
-uniform vec3 uRebote;
-${GLSL_RUIDO}
-vec3 cbPerturbar(vec3 pos, vec3 n, float h, float k, float cara) {
-  vec3 sx = dFdx(pos); vec3 sy = dFdy(pos);
-  vec3 r1 = cross(sy, n); vec3 r2 = cross(n, sx);
-  float det = dot(sx, r1) * cara;
-  vec2 dh = vec2(dFdx(h), dFdy(h)) * k;
-  vec3 grad = sign(det) * (dh.x * r1 + dh.y * r2);
-  return normalize(abs(det) * n - grad);
-}`,
-      )
-      .replace(
-        "#include <color_fragment>",
-        `#include <color_fragment>
-vec3 pR = vPosM;
-float gran = cbFbm(pR * 0.035);
-float medio = cbFbm(pR * 0.23 + 3.7);
-vec3 albedo = mix(vec3(0.045, 0.042, 0.04), vec3(0.15, 0.125, 0.1), gran);
-albedo *= 0.62 + 0.76 * medio;
-// Estratos: capas horizontales, torcidas, que se leen de lejos.
-float estr = cbFbm(vec3(pR.x * 0.018, pR.y * 0.32 + cbFbm(pR * 0.025) * 3.5, pR.z * 0.018));
-albedo *= 0.6 + 0.8 * smoothstep(0.32, 0.68, estr);
-// Vetas: líneas finas de mineral claro que serpentean.
-float tuerce = cbFbm(pR * 0.045 + 11.0);
-float vv = abs(cbRuido(pR * 0.09 + tuerce * 3.0) - 0.5);
-float veta = (1.0 - smoothstep(0.0, 0.016, vv)) * smoothstep(0.5, 0.7, cbRuido(pR * 0.07 + 2.0));
-albedo *= 1.0 - veta * 0.55;
-// Humedad: el agua escurre en franjas verticales y oscurece la piedra.
-float hum = smoothstep(0.42, 0.7, cbFbm(vec3(pR.x * 0.32, pR.y * 0.022, pR.z * 0.32)));
-albedo *= mix(1.0, 0.55, hum);
-float rugRoca = mix(0.94, 0.32, hum);
-rugRoca = mix(rugRoca, 0.5, veta * 0.5);
-diffuseColor.rgb = albedo;`,
-      )
-      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = rugRoca;")
-      .replace(
-        "#include <normal_fragment_maps>",
-        `#include <normal_fragment_maps>
-{
-  float hB = cbFbm(vPosM * 0.4) + 0.3 * cbRuido(vPosM * 1.3);
-  float kB = ${bump.toFixed(2)} * 1.4 * clamp(1.0 - length(vViewPosition) / 130.0, 0.0, 1.0);
-  if (kB > 0.0) normal = cbPerturbar(-vViewPosition, normal, hB, kB, faceDirection);
-}`,
-      )
-      .replace(
-        "#include <lights_fragment_maps>",
-        `#include <lights_fragment_maps>
-radiance *= 0.35;
-iblIrradiance *= 0.6;`,
-      )
-      .replace(
-        "#include <lights_fragment_end>",
-        `#include <lights_fragment_end>
-reflectedLight.directDiffuse *= 0.4;
-reflectedLight.directSpecular *= 0.4;`,
-      )
-      .replace(
-        "#include <emissivemap_fragment>",
-        `#include <emissivemap_fragment>
-{
-  vec3 nW = normalize(vNorM);
-  vec3 luzF = vec3(0.0);
-  for (int i = 0; i < ${N_FOCOS}; i++) {
-    vec3 d = uFocos[i].xyz - vPosM;
-    float d2 = dot(d, d);
-    float r2 = uFocos[i].w * uFocos[i].w;
-    float at = r2 / (d2 + r2) * (1.0 - smoothstep(r2 * 3.0, r2 * 8.0, d2));
-    float ndl = clamp(dot(nW, d * inversesqrt(d2 + 1e-3)) * 0.7 + 0.3, 0.0, 1.0);
-    luzF += uFocosCol[i] * at * ndl;
-  }
-  // El cielo artificial ilumina la roca de alrededor (con su color de la hora).
-  float rN = pow(pow(abs(vPosM.x - CB_CX) / CB_MEDIO, 4.0) + pow(abs(vPosM.z - CB_CZ) / CB_MEDIO, 4.0), 0.25);
-  luzF += uBorde * exp(-max(rN - CB_RCIELO, 0.0) * 7.0) * step(CB_RCIELO - 0.04, rN);
-  // Rebote cálido de la ciudad en la base de las paredes, y su resplandor en el techo.
-  luzF += uRebote * (1.0 - smoothstep(0.0, 20.0, vPosM.y - CB_Y0));
-  luzF += uRebote * 0.3 * max(-nW.y, 0.0);
-  totalEmissiveRadiance += diffuseColor.rgb * luzF;
-}`,
-      )
-  }
-  roca.customProgramCacheKey = () => `ciudad-roca-${calidad}`
-
-  // ── Cielo artificial: degradé, sol o luna, nubes de día, estrellas de noche y paneles hexagonales ──
-  const cielo = new THREE.ShaderMaterial({
-    name: "ciudad-cielo",
-    fog: true,
-    uniforms: {
-      ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
-      uCenit: u.cenit,
-      uHorizonte: u.horizonte,
-      uSolCol: u.solCol,
-      uSolDir: u.solDir,
-      uBrillo: u.brillo,
-      uNoche: u.noche,
-      uTiempo: u.tiempo,
-    },
-    vertexShader: /* glsl */ `
-varying vec3 vPosM;
-#include <fog_pars_vertex>
-void main() {
-  vec4 mp = modelMatrix * vec4(position, 1.0);
-  vPosM = mp.xyz;
-  vec4 mvPosition = viewMatrix * mp;
-  gl_Position = projectionMatrix * mvPosition;
-  #include <fog_vertex>
-}`,
-    fragmentShader: /* glsl */ `
-${defs}
-uniform vec3 uCenit;
-uniform vec3 uHorizonte;
-uniform vec3 uSolCol;
-uniform vec3 uSolDir;
-uniform float uBrillo;
-uniform float uNoche;
-uniform float uTiempo;
-varying vec3 vPosM;
-#include <common>
-#include <fog_pars_fragment>
-${GLSL_RUIDO}
-vec4 cbHex(vec2 p) {
-  const vec2 s = vec2(1.0, 1.7320508);
-  vec4 c = floor(vec4(p, p - vec2(0.5, 1.0)) / s.xyxy) + 0.5;
-  vec4 h = vec4(p - c.xy * s, p - (c.zw + 0.5) * s);
-  return dot(h.xy, h.xy) < dot(h.zw, h.zw) ? vec4(h.xy, c.xy) : vec4(h.zw, c.zw + 9.73);
-}
-float cbHexDist(vec2 p) { p = abs(p); return max(dot(p, normalize(vec2(1.0, 1.7320508))), p.x); }
-void main() {
-  vec2 d = (vPosM.xz - vec2(CB_CX, CB_CZ)) / (CB_MEDIO * CB_RCIELO);
-  float rN = pow(pow(abs(d.x), 4.0) + pow(abs(d.y), 4.0), 0.25);
-  // El panel muestra un cielo "en el infinito": el color depende de hacia dónde
-  // se mira, no del punto del panel. Así, desde cualquier lugar de la ciudad,
-  // arriba es cenit, lo rasante es horizonte y el sol está donde cae su luz.
-  vec3 dir = normalize(vPosM - cameraPosition);
-  float e = clamp(dir.y, 0.0, 1.0);
-  // Mezcla en raíz (casi perceptual): del dorado al azul sin pasar por un gris lila.
-  float te = smoothstep(0.06, 0.5, e);
-  vec3 col = mix(sqrt(uHorizonte), sqrt(uCenit), te * te * (3.0 - 2.0 * te));
-  col *= col;
-  float ds = max(dot(dir, uSolDir), 0.0);
-  col += uSolCol * (pow(ds, 900.0) * 24.0 + pow(ds, 40.0) * 0.9 + pow(ds, 6.0) * 0.25 * (1.0 - e));
-  // Nubes en un plano lejano (con perspectiva), encendidas cerca del sol.
-  vec2 pn = dir.xz / max(dir.y, 0.06) * 0.55 + vec2(uTiempo * 0.006, uTiempo * 0.002);
-  float nub = cbFbm(vec3(pn * vec2(1.0, 1.8), 4.0)) * 0.7 + cbFbm(vec3(pn * 2.9, 9.0)) * 0.3;
-  nub = smoothstep(0.5, 0.8, nub) * smoothstep(0.05, 0.3, e);
-  vec3 colNub = mix(vec3(0.92, 0.94, 1.0) * mix(0.6, 1.0, e), uHorizonte * 1.2 + uSolCol * 0.6, pow(ds, 3.0) * 0.8 + (1.0 - e) * 0.3);
-  col = mix(col, colNub, nub * (1.0 - uNoche) * 0.55);
-  col *= uBrillo;
-  // Estrellas: puntos fijos en el cielo que titilan, solo de noche.
-  vec3 sd = dir * 140.0;
-  vec3 ce = floor(sd);
-  float he = cbHash(ce);
-  vec3 jit = vec3(cbHash(ce + 7.1), cbHash(ce + 3.3), cbHash(ce + 1.7)) * 0.6 + 0.2;
-  float est = step(0.985, he) * smoothstep(0.16, 0.0, length(fract(sd) - jit));
-  est *= 0.55 + 0.45 * sin(uTiempo * (0.8 + he * 3.0) + he * 40.0);
-  col += vec3(0.8, 0.88, 1.0) * est * smoothstep(0.35, 0.85, uNoche) * 2.6 * smoothstep(0.08, 0.3, e);
-  // Paneles hexagonales: de cerca se nota que el cielo está construido.
-  vec4 hx = cbHex(vPosM.xz / 8.0);
-  float borde = 0.5 - cbHexDist(hx.xy);
-  float fw = fwidth(vPosM.x / 8.0) * 1.5;
-  float junta = smoothstep(0.0, 0.005 + fw, borde);
-  junta = mix(junta, 0.97, clamp(fw * 7.0, 0.0, 1.0));
-  col *= mix(0.9, 1.0, junta) * (0.985 + 0.03 * cbHash2(hx.zw));
-  col *= smoothstep(1.0, 0.95, rN);
-  gl_FragColor = vec4(col, 1.0);
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
-  #include <fog_fragment>
-}`,
-  })
-
-  // ── Base: color, rugosidad, metal y emisión por vértice + un grano sutil ──
+  // ── Base: color, rugosidad, metal, emisión y juntas de panel por vértice ──
   const base = new THREE.MeshStandardMaterial({ name: "ciudad-base", vertexColors: true, roughness: 1, metalness: 1 })
   base.onBeforeCompile = (s) => {
     s.vertexShader = s.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute vec2 aRM;\nattribute vec3 aEmis;\nvarying vec2 vRM;\nvarying vec3 vEmis;\nvarying vec3 vPosM;\nvarying vec3 vNorM;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvRM = aRM;\nvEmis = aEmis;")
-      .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\n" + GLSL_MUNDO_VERT)
-    s.fragmentShader = s.fragmentShader
-      .replace("#include <common>", `#include <common>\nvarying vec2 vRM;\nvarying vec3 vEmis;\nvarying vec3 vPosM;\nvarying vec3 vNorM;\n${GLSL_RUIDO}`)
-      .replace("#include <color_fragment>", "#include <color_fragment>\nfloat granoB = cbRuido(vPosM * 1.9);\ndiffuseColor.rgb *= 0.9 + 0.2 * cbRuido(vPosM * 0.43 + 5.0);")
-      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = clamp(vRM.x + (granoB - 0.5) * 0.14, 0.03, 1.0);")
-      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = vRM.y;")
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vEmis;")
-  }
-  base.customProgramCacheKey = () => "ciudad-base"
-
-  // ── Torres: fachada con ventanas encendidas que cambian despacio ──
-  const torres = new THREE.MeshStandardMaterial({ name: "ciudad-torres", vertexColors: true, roughness: 1, metalness: 0 })
-  torres.onBeforeCompile = (s) => {
-    s.uniforms.uNoche = u.noche
-    s.uniforms.uTiempo = u.tiempo
-    s.vertexShader = s.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute float aSem;\nvarying float vSem;\nvarying vec2 vUvM;\nvarying vec3 vPosM;\nvarying vec3 vNorM;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSem = aSem;\nvUvM = uv;")
+      .replace(
+        "#include <common>",
+        "#include <common>\nattribute vec2 aRM;\nattribute vec3 aEmis;\nattribute float aJunta;\nvarying vec2 vRM;\nvarying vec3 vEmis;\nvarying float vJunta;\nvarying vec3 vPosM;\nvarying vec3 vNorM;",
+      )
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvRM = aRM;\nvEmis = aEmis;\nvJunta = aJunta;")
       .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\n" + GLSL_MUNDO_VERT)
     s.fragmentShader = s.fragmentShader
       .replace(
         "#include <common>",
-        `#include <common>\nuniform float uNoche;\nuniform float uTiempo;\nvarying float vSem;\nvarying vec2 vUvM;\nvarying vec3 vPosM;\nvarying vec3 vNorM;\n${GLSL_RUIDO}`,
+        `#include <common>\nvarying vec2 vRM;\nvarying vec3 vEmis;\nvarying float vJunta;\nvarying vec3 vPosM;\nvarying vec3 vNorM;\n${GLSL_RUIDO}\n${GLSL_PLANO}`,
       )
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-// La semilla llega interpolada: se redondea, porque un hash amplifica cualquier error mínimo.
-float semT = floor(vSem + 0.5);
-float esMuro = 1.0 - step(0.5, abs(vNorM.y));
-float lobby = (1.0 - step(4.4, vUvM.y)) * esMuro;
-// Pisos de 3,3 m con ventanas de 1,9 m; en la planta baja, vidrieras de 3,8 x 4,4 m.
-vec2 modulo = mix(vec2(1.6, 3.2), vec2(3.8, 4.4), lobby);
-vec2 q = vUvM / modulo;
+float granoB = cbRuido(vPosM * 2.3);
+diffuseColor.rgb *= 0.95 + 0.1 * cbRuido(vPosM * 0.37 + 5.0);
+// Juntas de panel: un módulo cuadrado en pisos y techos, de 1 x 2 en los muros.
+if (vJunta > 0.0) {
+  vec3 nJ = normalize(vNorM);
+  vec2 pl = cbPlano(vPosM, nJ);
+  vec2 mod2 = abs(nJ.y) > 0.5 ? vec2(vJunta) : vec2(vJunta, vJunta * 2.0);
+  vec2 f = fract(pl / mod2);
+  vec2 d = min(f, 1.0 - f) * mod2;
+  vec2 fw = fwidth(pl) * 1.2;
+  float dj = min(d.x, d.y);
+  float junta = 1.0 - smoothstep(0.006, 0.006 + max(fw.x, fw.y), dj);
+  junta *= 1.0 - clamp(max(fw.x, fw.y) * 6.0 - 0.3, 0.0, 1.0);
+  diffuseColor.rgb *= 1.0 - junta * 0.32;
+}`,
+      )
+      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = clamp(vRM.x + (granoB - 0.5) * 0.1, 0.03, 1.0);")
+      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = vRM.y;")
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vEmis;")
+  }
+  base.customProgramCacheKey = () => "ciudad-base-v2"
+
+  // ── Oficinas del pozo: ventanas de piso a techo, encendidas y apagadas ──
+  const oficinas = new THREE.MeshStandardMaterial({ name: "ciudad-oficinas", color: "#cfd6dc", roughness: 1, metalness: 0 })
+  oficinas.onBeforeCompile = (s) => {
+    s.uniforms.uNoche = u.noche
+    s.uniforms.uTiempo = u.tiempo
+    s.vertexShader = s.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec2 vUvM;\nvarying vec3 vPosM;\nvarying vec3 vNorM;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvUvM = uv;")
+      .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\n" + GLSL_MUNDO_VERT)
+    s.fragmentShader = s.fragmentShader
+      .replace("#include <common>", `#include <common>\nuniform float uNoche;\nuniform float uTiempo;\nvarying vec2 vUvM;\nvarying vec3 vPosM;\nvarying vec3 vNorM;\n${GLSL_RUIDO}`)
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+float semO = dot(floor(vNorM * 2.0 + 0.5), vec3(3.0, 7.0, 13.0)) + floor(vPosM.y / 200.0);
+// Pisos de 4 m con paños de vidrio de 2,4 m; cada 8 m, la losa de la galería.
+vec2 q = vUvM / vec2(2.4, 4.0);
 vec2 idV = floor(q);
 vec2 f = fract(q);
 vec2 fw = fwidth(q);
 float lejos = clamp((max(fw.x, fw.y) - 0.05) * 6.0, 0.0, 1.0);
-vec2 m0 = mix(vec2(0.1, 0.2), vec2(0.035, 0.05), lobby);
-vec2 m1 = mix(vec2(0.9, 0.88), vec2(0.965, 0.86), lobby);
-vec2 e0 = smoothstep(m0 - fw, m0 + fw, f);
-vec2 e1 = 1.0 - smoothstep(m1 - fw, m1 + fw, f);
-float parante = mix(smoothstep(0.0, 0.022 + fw.x, abs(f.x - 0.5)), 1.0, lobby);
-float vent = mix(e0.x * e0.y * e1.x * e1.y * parante, 0.58, lejos) * esMuro;
-vec3 colMarco = diffuseColor.rgb * (0.9 + 0.2 * cbRuido(vPosM * 0.5));
-// La losa entre pisos se marca un poco más clara.
-float losaF = (1.0 - smoothstep(0.0, 0.06 + fw.y, f.y)) * (1.0 - lobby) * (1.0 - lejos) * esMuro;
-colMarco *= 1.0 + losaF * 0.7;
-diffuseColor.rgb = mix(colMarco, vec3(0.012, 0.015, 0.02), vent);
-float rugT = mix(0.55, 0.16, vent);
-float metT = mix(0.35, 0.9, vent);
-// Ventanas encendidas: cada una cambia de estado cada uno o dos minutos, a su ritmo.
-float hId = cbHash2(idV + semT * 17.0);
-float periodo = 60.0 + 90.0 * cbHash2(idV.yx + semT);
+vec2 e0 = smoothstep(vec2(0.05, 0.16) - fw, vec2(0.05, 0.16) + fw, f);
+vec2 e1 = 1.0 - smoothstep(vec2(0.95, 0.93) - fw, vec2(0.95, 0.93) + fw, f);
+float parante = smoothstep(0.0, 0.012 + fw.x, abs(f.x - 0.5));
+float vent = mix(e0.x * e0.y * e1.x * e1.y * parante, 0.62, lejos);
+diffuseColor.rgb = mix(diffuseColor.rgb * (0.94 + 0.08 * cbRuido(vPosM * 0.6)), vec3(0.02, 0.026, 0.032), vent);
+float rugO = mix(0.5, 0.08, vent);
+float metO = mix(0.0, 0.85, vent);
+// Cada oficina cambia de estado cada uno o dos minutos, a su ritmo.
+float hId = cbHash2(idV + semO * 17.0);
+float periodo = 70.0 + 90.0 * cbHash2(idV.yx + semO);
 float fase = floor((uTiempo + hId * periodo) / periodo);
-float hOn = cbHash2(idV * 1.37 + fase * 3.1 + semT * 7.0);
-float frac = mix(mix(0.34, 0.6, uNoche), 0.7, lobby);
+float hOn = cbHash2(idV * 1.37 + fase * 3.1 + semO * 7.0);
+float frac = mix(0.78, 0.42, uNoche);
 float on = mix(step(1.0 - frac, hOn), frac, lejos);
-float tipo = cbHash2(idV + 31.0 + semT);
-vec3 colV = tipo < 0.62 ? vec3(1.0, 0.6, 0.28) : tipo < 0.86 ? vec3(1.0, 0.8, 0.55) : vec3(0.5, 0.74, 1.0);
-colV = mix(colV, vec3(0.62, 0.95, 0.9), step(0.93, tipo) * lobby);
-// Dentro: la luz del techo arriba y, en algunas, cortinas.
-float gradV = mix(0.5, 1.0, smoothstep(0.2, 0.85, f.y));
-float hc = cbHash2(idV + 13.0 + semT);
-float cortina = step(0.7, hc) * smoothstep(0.3 + hc * 0.4 - 0.04, 0.3 + hc * 0.4 + 0.04, f.y);
-float baseV = mix(0.42, 1.15, uNoche) * mix(1.0, 0.8, lobby);
-// Muebles: una franja oscura abajo en algunas ventanas.
-float muebles = 1.0 - 0.6 * (1.0 - smoothstep(0.3, 0.4, f.y)) * step(0.5, cbHash2(idV + 41.0)) * (1.0 - lobby);
-// En las vidrieras: la luz del techo arriba, el interior más oscuro abajo y parantes a tercios.
-float tercios = min(abs(f.x - 0.333), abs(f.x - 0.667));
-muebles *= mix(1.0, (0.22 + 0.78 * smoothstep(0.45, 0.92, f.y)) * smoothstep(0.0, 0.012 + fw.x, tercios), lobby);
-float inten = baseV * (0.4 + 0.75 * cbHash2(idV + 5.0)) * gradV * muebles * mix(1.0, 0.15, cortina);
-inten = mix(inten, baseV * 0.6, lejos);
-vec3 emiT = vent * on * colV * inten;`,
+float tipo = cbHash2(idV + 31.0 + semO);
+vec3 colV = tipo < 0.7 ? vec3(0.86, 0.93, 1.0) : tipo < 0.88 ? vec3(1.0, 0.86, 0.68) : vec3(0.3, 0.75, 1.0);
+colV = mix(colV, colV * vec3(0.7, 0.8, 1.15), uNoche);
+// Dentro: el panel del techo arriba, escritorios oscuros abajo.
+float gradV = mix(0.45, 1.0, smoothstep(0.25, 0.9, f.y));
+float muebles = 1.0 - 0.55 * (1.0 - smoothstep(0.28, 0.36, f.y)) * step(0.4, cbHash2(idV + 41.0));
+float inten = mix(1.15, 0.85, uNoche) * (0.45 + 0.6 * cbHash2(idV + 5.0)) * gradV * muebles;
+inten = mix(inten, 0.6, lejos);
+vec3 emiO = vent * on * colV * inten;`,
       )
-      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = rugT;")
-      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = metT;")
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += emiT;")
+      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = rugO;")
+      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = metO;")
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += emiO;")
   }
-  torres.customProgramCacheKey = () => "ciudad-torres"
+  oficinas.customProgramCacheKey = () => "ciudad-oficinas"
 
-  // ── Luces: neón, faroles, tiras. Color HDR por vértice, con pulso opcional ──
+  // ── Luces: tiras, paneles y balizas. Color HDR por vértice, pulso y turno ──
   const luzMat = new THREE.MeshBasicMaterial({ name: "ciudad-luz", vertexColors: true })
   luzMat.onBeforeCompile = (s) => {
     s.uniforms.uTiempo = u.tiempo
+    s.uniforms.uNoche = u.noche
     s.vertexShader = s.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute float aPulso;\nvarying float vPulso;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvPulso = aPulso;")
+      .replace("#include <common>", "#include <common>\nattribute float aPulso;\nattribute float aTurno;\nvarying float vPulso;\nvarying float vTurno;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvPulso = aPulso;\nvTurno = aTurno;")
     s.fragmentShader = s.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform float uTiempo;\nvarying float vPulso;")
-      .replace("#include <color_fragment>", "#include <color_fragment>\nif (vPulso > 0.0) diffuseColor.rgb *= 0.78 + 0.22 * sin(uTiempo * vPulso);")
+      .replace("#include <common>", "#include <common>\nuniform float uTiempo;\nuniform float uNoche;\nvarying float vPulso;\nvarying float vTurno;")
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+if (vPulso > 0.0) diffuseColor.rgb *= 0.7 + 0.3 * sin(uTiempo * vPulso);
+diffuseColor.rgb *= mix(vec3(1.0), vec3(0.5, 0.58, 0.82), uNoche * vTurno);`,
+      )
   }
-  luzMat.customProgramCacheKey = () => "ciudad-luz"
+  luzMat.customProgramCacheKey = () => "ciudad-luz-v2"
 
   const vidrio = new THREE.MeshStandardMaterial({
     name: "ciudad-vidrio",
-    color: "#9fc3d4",
-    metalness: 0.35,
-    roughness: 0.04,
+    color: "#a9d6e5",
+    metalness: 0.3,
+    roughness: 0.05,
     transparent: true,
-    opacity: 0.2,
+    opacity: 0.16,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+  const esmerilado = new THREE.MeshStandardMaterial({
+    name: "ciudad-esmerilado",
+    color: "#eef4f8",
+    roughness: 0.85,
+    metalness: 0,
+    transparent: true,
+    opacity: 0.62,
     depthWrite: false,
     side: THREE.DoubleSide,
   })
 
-  // Todo lo de la ciudad refleja la caverna (no el estudio del motor). Las
-  // copias de los materiales de la casa conservan su textura y su proyección,
-  // y dejan de estar en la lista de "reflejantes" que el motor reescribe.
-  const propio = <T extends THREE.MeshStandardMaterial>(m: T, intensidad: number, nombre?: string): T => {
-    m.envMap = entorno
-    m.envMapIntensity = intensidad
-    delete m.userData.reflejo
-    if (nombre) m.name = nombre
-    return m
-  }
-  const copia = (m: THREE.MeshStandardMaterial, intensidad: number, nombre: string) => propio(m.clone(), intensidad, nombre)
-  propio(roca, 1)
-  propio(base, 0.9)
-  propio(torres, 1)
-  propio(vidrio, 1.2)
-
-  // Piso: el concreto pulido de la casa, oscuro y mojado.
-  const piso = copia(ctx.materiales.concretoPulido, 1.25, "ciudad-piso")
-  piso.color.set("#3b3e43")
-  piso.roughness = Math.min(piso.roughness, 0.6) * 0.6
-
-  // Follaje: copas con huecos de sombra y un poco de luz que las atraviesa. El
-  // color de cada copa lo pone la instancia (verdes y tajibos en flor).
-  const follaje = propio(new THREE.MeshStandardMaterial({ name: "ciudad-follaje", color: "#ffffff", roughness: 0.85, metalness: 0 }), 0.35)
-  follaje.onBeforeCompile = (s) => {
+  // ── Cámara de pruebas: blanco con una grilla de luz que respira ──
+  const grilla = new THREE.MeshStandardMaterial({ name: "ciudad-grilla", color: "#e7edf2", roughness: 0.35, metalness: 0 })
+  grilla.onBeforeCompile = (s) => {
+    s.uniforms.uTiempo = u.tiempo
     s.vertexShader = s.vertexShader
       .replace("#include <common>", "#include <common>\nvarying vec3 vPosM;\nvarying vec3 vNorM;")
+      .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\n" + GLSL_MUNDO_VERT)
+    s.fragmentShader = s.fragmentShader
+      .replace("#include <common>", `#include <common>\nuniform float uTiempo;\nvarying vec3 vPosM;\nvarying vec3 vNorM;\n${GLSL_PLANO}`)
+      .replace(
+        "#include <emissivemap_fragment>",
+        `#include <emissivemap_fragment>
+{
+  vec2 pl = cbPlano(vPosM, normalize(vNorM));
+  vec2 fw = fwidth(pl);
+  vec2 g1 = abs(fract(pl + 0.5) - 0.5) / max(fw, 1e-4);
+  vec2 g4 = abs(fract(pl / 4.0 + 0.5) - 0.5) * 4.0 / max(fw, 1e-4);
+  float l1 = 1.0 - clamp(min(g1.x, g1.y) - 0.5, 0.0, 1.0);
+  float l4 = 1.0 - clamp(min(g4.x, g4.y) - 1.0, 0.0, 1.0);
+  float lejos = clamp(max(fw.x, fw.y) * 3.0, 0.0, 1.0);
+  float onda = 0.5 + 0.5 * sin(dot(pl, vec2(0.21, 0.13)) - uTiempo * 1.3);
+  vec3 cian = vec3(0.21, 0.83, 1.0);
+  totalEmissiveRadiance += cian * (l1 * 0.18 * (1.0 - lejos) + l4 * (0.8 + 1.4 * onda)) ;
+}`,
+      )
+  }
+  grilla.customProgramCacheKey = () => "ciudad-grilla"
+
+  const chevron = new THREE.MeshStandardMaterial({ name: "ciudad-compuerta", map: chevrones(), roughness: 0.42, metalness: 0.55 })
+
+  // Follaje del jardín: hojas con huecos de sombra, y la luz magenta que las atraviesa.
+  const follaje = new THREE.MeshStandardMaterial({ name: "ciudad-follaje", color: "#ffffff", roughness: 0.8, metalness: 0 })
+  follaje.onBeforeCompile = (s) => {
+    s.uniforms.uTiempo = u.tiempo
+    s.vertexShader = s.vertexShader
+      .replace("#include <common>", "#include <common>\nuniform float uTiempo;\nvarying vec3 vPosM;\nvarying vec3 vNorM;")
+      .replace(
+        "#include <begin_vertex>",
+        // Se mecen con la ventilación: más arriba, más movimiento.
+        "#include <begin_vertex>\ntransformed.x += sin(uTiempo * 1.7 + position.y * 3.0 + float(gl_InstanceID) * 1.3) * 0.06 * max(position.y, 0.0);",
+      )
       .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\n" + GLSL_MUNDO_VERT)
     s.fragmentShader = s.fragmentShader
       .replace("#include <common>", `#include <common>\nvarying vec3 vPosM;\nvarying vec3 vNorM;\n${GLSL_RUIDO}`)
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-float hojas = cbRuido(vPosM * 4.3) * 0.55 + cbRuido(vPosM * 9.7) * 0.45;
-float hueco = smoothstep(0.3, 0.6, hojas);
-diffuseColor.rgb *= mix(0.5, 1.06, hueco) * (0.72 + 0.4 * clamp(vNorM.y * 0.5 + 0.5, 0.0, 1.0));`,
+float hojas = cbRuido(vPosM * 9.0) * 0.55 + cbRuido(vPosM * 21.0) * 0.45;
+diffuseColor.rgb *= mix(0.55, 1.08, smoothstep(0.3, 0.6, hojas)) * (0.75 + 0.35 * clamp(vNorM.y * 0.5 + 0.5, 0.0, 1.0));`,
       )
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * 0.06;")
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * vec3(0.16, 0.05, 0.14);")
   }
-  follaje.customProgramCacheKey = () => "ciudad-follaje"
+  follaje.customProgramCacheKey = () => "ciudad-follaje-v2"
 
-  // ── Cascada: una lámina que cae, con franjas que bajan ──
-  const cascada = new THREE.ShaderMaterial({
-    name: "ciudad-cascada",
-    uniforms: { uTiempo: u.tiempo, uNoche: u.noche },
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    vertexShader: /* glsl */ `
-varying vec2 vUv;
-varying float vProf;
-void main() {
-  vUv = uv;
-  vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  vProf = -mv.z;
-  gl_Position = projectionMatrix * mv;
-}`,
-    fragmentShader: /* glsl */ `
-uniform float uTiempo;
-uniform float uNoche;
-varying vec2 vUv;
-varying float vProf;
-${GLSL_RUIDO}
-void main() {
-  float y = vUv.y;
-  float caida = uTiempo * 1.6;
-  float fino = cbRuido(vec3(vUv.x * 70.0, y * 4.0 + caida * 2.2, 0.0));
-  float grueso = cbRuido(vec3(vUv.x * 14.0, y * 1.2 + caida * 0.9, 3.0));
-  float a = smoothstep(0.25, 0.85, fino * 0.55 + grueso * 0.6);
-  a *= smoothstep(0.0, 0.04, vUv.x) * smoothstep(1.0, 0.96, vUv.x);
-  a *= 0.55 + 0.45 * smoothstep(0.0, 0.25, 1.0 - y);
-  a *= smoothstep(0.0, 0.07, y);
-  float espuma = smoothstep(0.82, 1.0, y);
-  vec3 col = mix(vec3(0.6, 0.82, 0.95), vec3(1.0), a * 0.6 + espuma * 0.5);
-  // De noche la iluminan focos cian desde el canal.
-  col *= mix(1.15, 1.4, uNoche) + espuma * 1.4;
-  col = mix(col, col * vec3(0.55, 1.0, 1.35), uNoche * espuma);
-  gl_FragColor = vec4(col, clamp(a * 0.85 + espuma * 0.4, 0.0, 0.92));
-}`,
-  })
+  const robot = new THREE.MeshStandardMaterial({ name: "ciudad-robot", color: "#f1f4f6", roughness: 0.38, metalness: 0.1 })
+  const brillo = new THREE.MeshBasicMaterial({ name: "ciudad-brillo", color: "#ffffff" })
 
-  // ── Chorros de la fuente: conos que suben y bajan, aditivos ──
-  const chorros = new THREE.ShaderMaterial({
-    name: "ciudad-chorros",
-    uniforms: { uTiempo: u.tiempo, uCol: { value: new THREE.Color(0.24, 0.38, 0.5) } },
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide,
-    vertexShader: /* glsl */ `
-attribute vec3 aPos;
-attribute float aAlto;
-attribute float aFase;
-uniform float uTiempo;
-varying float vV;
-void main() {
-  float alto = aAlto * (0.7 + 0.3 * sin(uTiempo * 1.6 + aFase));
-  vec3 p = position;
-  vV = p.y;
-  p.xz *= 1.0 + p.y * p.y * p.y * 7.0;
-  p.y *= alto;
-  gl_Position = projectionMatrix * viewMatrix * vec4(p + aPos, 1.0);
-}`,
-    fragmentShader: /* glsl */ `
-uniform float uTiempo;
-uniform vec3 uCol;
-varying float vV;
-void main() {
-  float flujo = 0.6 + 0.4 * sin(vV * 38.0 - uTiempo * 13.0);
-  float a = smoothstep(1.0, 0.65, vV) * (0.3 + 0.7 * flujo) * (0.25 + 0.75 * smoothstep(0.0, 0.2, vV)) * (0.55 + 0.45 * smoothstep(0.6, 1.0, vV));
-  gl_FragColor = vec4(uCol * a, 1.0);
-}`,
-  })
-
-  // ── Vapor y bruma: puntos suaves que suben y se desvanecen ──
+  // ── Bruma: puntos suaves que suben y se desvanecen ──
   const vapor = new THREE.ShaderMaterial({
     name: "ciudad-vapor",
     uniforms: { uTiempo: u.tiempo, uEscala: u.escalaPuntos },
@@ -1195,8 +759,8 @@ void main() {
   vec3 p = position + vec3(sin(t * 5.0 + aFase * 30.0), t * aAlto, cos(t * 4.0 + aFase * 20.0)) * vec3(aTam * 0.25, 1.0, aTam * 0.25);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = min(aTam * (0.6 + 0.8 * t) * uEscala / max(-mv.z, 0.5), 900.0);
-  vAlfa = sin(t * 3.14159) * smoothstep(1.5, 6.0, -mv.z) * exp(-max(-mv.z - 60.0, 0.0) * 0.006);
+  gl_PointSize = min(aTam * (0.6 + 0.8 * t) * uEscala / max(-mv.z, 0.5), 700.0);
+  vAlfa = sin(t * 3.14159) * smoothstep(1.0, 4.0, -mv.z);
   vCol = aCol;
 }`,
     fragmentShader: /* glsl */ `
@@ -1209,10 +773,10 @@ void main() {
 }`,
   })
 
-  // ── Reflejos en el piso mojado: una estela por cada luz, estirada hacia la cámara ──
+  // ── Reflejos falsos en el epoxi: una estela por cada luz, estirada hacia la cámara ──
   const reflejos = new THREE.ShaderMaterial({
     name: "ciudad-reflejos",
-    uniforms: { uY: { value: Y0 + 0.035 }, uFuerza: u.reflejo },
+    uniforms: { uY: { value: Y0 + 0.02 }, uFuerza: u.reflejo },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -1230,15 +794,13 @@ void main() {
   float dist = max(length(haciaCam), 0.001);
   vec2 dir = haciaCam / dist;
   float camH = max(cameraPosition.y - uY, 0.4);
-  // Donde aparece el reflejo de una luz a altura h vista desde la cámara.
   vec2 centro = base + dir * dist * h / (h + camH);
-  float largo = 0.7 * h + 0.06 * dist + 0.8;
+  float largo = 0.6 * h + 0.05 * dist + 0.6;
   float ancho = aAncho * (0.8 + 0.004 * dist);
   vec2 perp = vec2(-dir.y, dir.x);
   vec2 p = centro + perp * position.x * ancho + dir * position.y * largo;
   vQ = position.xy * 2.0;
-  float lejos = exp(-dist * 0.0045) * smoothstep(3.0, 14.0, dist) * 0.55;
-  vCol = aColor * lejos;
+  vCol = aColor * exp(-dist * 0.02) * smoothstep(2.0, 8.0, dist);
   gl_Position = projectionMatrix * viewMatrix * vec4(p.x, uY, p.y, 1.0);
 }`,
     fragmentShader: /* glsl */ `
@@ -1251,114 +813,31 @@ void main() {
 }`,
   })
 
-  // ── Charcos de luz bajo los faroles: discos aditivos que pesan más de noche ──
-  const charcos = new THREE.ShaderMaterial({
-    name: "ciudad-charcos",
-    uniforms: { uFuerza: u.charco },
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    vertexShader: /* glsl */ `
-attribute vec4 aCharco;
-attribute vec3 aColor;
-varying vec2 vQ;
-varying vec3 vCol;
-void main() {
-  vQ = position.xy * 2.0;
-  vCol = aColor;
-  // z = -y: así el cuadro mira hacia arriba (con +y quedaría de espaldas y no se dibuja).
-  vec3 p = vec3(aCharco.x + position.x * aCharco.w * 2.0, aCharco.y + 0.03, aCharco.z - position.y * aCharco.w * 2.0);
-  gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
-}`,
-    fragmentShader: /* glsl */ `
-uniform float uFuerza;
-varying vec2 vQ;
-varying vec3 vCol;
-void main() {
-  float d = length(vQ);
-  float a = (1.0 - smoothstep(0.0, 1.0, d));
-  gl_FragColor = vec4(vCol * a * a * uFuerza, 1.0);
-}`,
-  })
-
-  // ── Haces de luz: conos aditivos que barren (club, arena) ──
-  const haces = new THREE.ShaderMaterial({
-    name: "ciudad-haces",
-    uniforms: { uTiempo: u.tiempo },
+  // ── Arco de escaneo: un plano azul con grilla fina que recorre el corredor ──
+  const escaneo = new THREE.ShaderMaterial({
+    name: "ciudad-escaneo",
+    uniforms: { uTiempo: u.tiempo, uAlfa: { value: 0 } },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide,
     vertexShader: /* glsl */ `
-attribute vec3 aBase;
-attribute vec4 aAng;
-attribute vec3 aCol;
-attribute vec2 aDim;
-uniform float uTiempo;
-varying float vV;
-varying vec3 vCol;
-varying vec3 vNorV;
-varying vec3 vPosV;
-mat3 rotY(float a) { float c = cos(a), s = sin(a); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
-mat3 rotX(float a) { float c = cos(a), s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
-void main() {
-  float v = position.y + 0.5;
-  vec2 circ = normalize(position.xz + 1e-5);
-  float rad = mix(0.22, aDim.y, v);
-  vec3 local = vec3(circ.x * rad, v * aDim.x, circ.y * rad);
-  float az = aAng.x + sin(uTiempo * aAng.w + aAng.z * 7.0) * aAng.z;
-  float tilt = aAng.y + 0.12 * sin(uTiempo * aAng.w * 0.7 + aAng.x);
-  mat3 R = rotY(az) * rotX(tilt);
-  vec4 mv = viewMatrix * vec4(aBase + R * local, 1.0);
-  vNorV = normalize(mat3(viewMatrix) * (R * vec3(circ.x, 0.0, circ.y)));
-  vPosV = mv.xyz;
-  vV = v;
-  vCol = aCol;
-  gl_Position = projectionMatrix * mv;
-}`,
-    fragmentShader: /* glsl */ `
-varying float vV;
-varying vec3 vCol;
-varying vec3 vNorV;
-varying vec3 vPosV;
-void main() {
-  float f = abs(dot(normalize(vNorV), normalize(-vPosV)));
-  float a = f * f * (1.0 - vV) * (1.0 - vV) * smoothstep(0.0, 0.06, vV);
-  gl_FragColor = vec4(vCol * a, 1.0);
-}`,
-  })
-
-  // ── Piso LED del club: ondas de color que laten ──
-  const pisoLed = new THREE.ShaderMaterial({
-    name: "ciudad-piso-led",
-    uniforms: { uTiempo: u.tiempo },
-    vertexShader: /* glsl */ `
-varying vec3 vPosM;
-void main() {
-  vec4 mp = modelMatrix * vec4(position, 1.0);
-  vPosM = mp.xyz;
-  gl_Position = projectionMatrix * viewMatrix * mp;
-}`,
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
 uniform float uTiempo;
-varying vec3 vPosM;
-${GLSL_RUIDO}
+uniform float uAlfa;
+varying vec2 vUv;
 void main() {
-  vec2 p = vPosM.xz;
-  vec2 id = floor(p / 1.6);
-  vec2 f = fract(p / 1.6);
-  vec2 fwL = fwidth(p / 1.6);
-  vec2 jj = smoothstep(vec2(0.0), 0.05 + fwL, f) * smoothstep(vec2(1.0), 0.95 - fwL, f);
-  float junta = mix(jj.x * jj.y, 0.85, clamp(max(fwL.x, fwL.y) * 4.0 - 0.4, 0.0, 1.0));
-  float beat = pow(0.5 + 0.5 * sin(uTiempo * 6.283 * 2.0), 3.0);
-  float onda = 0.5 + 0.5 * sin(length(id - vec2(-66.0, -5.0)) * 0.7 - uTiempo * 3.2);
-  float h = cbHash2(id + floor(uTiempo * 2.0));
-  vec3 a = vec3(1.0, 0.24, 0.62);
-  vec3 b = vec3(0.25, 0.75, 1.0);
-  vec3 c = vec3(0.6, 0.35, 1.0);
-  vec3 col = mix(mix(a, c, onda), b, smoothstep(0.75, 1.0, onda) * 0.6);
-  float l = 0.06 + 0.55 * onda * onda * (0.45 + 0.55 * beat) + step(0.97, h) * 0.35;
-  gl_FragColor = vec4(col * l * junta * 1.25 + vec3(0.006), 1.0);
+  vec2 g = abs(fract(vUv * vec2(24.0, 17.0)) - 0.5);
+  vec2 fw = fwidth(vUv * vec2(24.0, 17.0));
+  float linea = 1.0 - clamp(min(g.x / fw.x, g.y / fw.y) - 0.5, 0.0, 1.0);
+  vec2 b = min(vUv, 1.0 - vUv);
+  float borde = 1.0 - smoothstep(0.0, 0.03, min(b.x, b.y * 1.4));
+  float barrido = 0.5 + 0.5 * sin(vUv.y * 40.0 - uTiempo * 6.0);
+  vec3 c = vec3(0.21, 0.83, 1.0);
+  float a = 0.05 + linea * 0.35 * (0.6 + 0.4 * barrido) + borde * 1.4;
+  gl_FragColor = vec4(c * a * uAlfa, 1.0);
 }`,
   })
 
@@ -1367,48 +846,17 @@ void main() {
     map: atlas,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    color: new THREE.Color(2.4, 2.4, 2.4),
+    color: new THREE.Color(1.6, 1.6, 1.6),
     side: THREE.DoubleSide,
   })
-  const pantallaMat = new THREE.MeshBasicMaterial({ name: "ciudad-pantalla", map: pantalla, color: new THREE.Color(1.5, 1.5, 1.5) })
+  const pantallaMat = new THREE.MeshBasicMaterial({ name: "ciudad-pantalla", map: pantalla, color: new THREE.Color(1.35, 1.35, 1.35) })
 
-  const C = ctx.materiales
-  const oscura = (m: THREE.MeshStandardMaterial, color: string) => {
-    m.color.set(color)
-    return m
+  // Todo refleja la instalación (no el estudio del motor).
+  for (const m of [base, oficinas, vidrio, esmerilado, grilla, chevron, robot]) {
+    m.envMap = entorno
+    m.envMapIntensity = m === vidrio ? 1.2 : 0.55
   }
-  const agua = copia(C.agua, 1.3, "ciudad-agua")
-  agua.color.set("#0f3340")
-  return {
-    charcos,
-    roca,
-    cielo,
-    base,
-    torres,
-    luz: luzMat,
-    vidrio,
-    piso,
-    follaje,
-    cascada,
-    chorros,
-    vapor,
-    reflejos,
-    haces,
-    pisoLed,
-    senal,
-    pantalla: pantallaMat,
-    granito: copia(C.granito, 0.8, "ciudad-granito"),
-    acero: copia(C.acero, 1.1, "ciudad-acero"),
-    madera: oscura(copia(C.madera, 0.5, "ciudad-madera"), "#8a6a4e"),
-    hierro: copia(C.hierroNegro, 0.9, "ciudad-hierro"),
-    agua,
-    pasto: copia(C.pasto, 0.25, "ciudad-pasto"),
-    grava: copia(C.grava, 0.4, "ciudad-grava"),
-    acera: copia(C.acera, 0.7, "ciudad-acera"),
-    corteza: copia(C.corteza, 0.3, "ciudad-corteza"),
-    u,
-  }
+  return { base, oficinas, luz: luzMat, vidrio, esmerilado, grilla, chevron, follaje, robot, brillo, vapor, reflejos, escaneo, senal, pantalla: pantallaMat, u }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1430,14 +878,15 @@ function diaDelReto(): number {
   return Math.max(1, Math.floor(ms / 86_400_000) + 1)
 }
 
-const PANT_W = 1024
-const PANT_H = 384
+const PANT_W = 1448
+const PANT_H = 400
 
 /**
- * La pantalla gigante: el contador REAL del reto (RECAUDADO de CHALLENGE_TARGET).
- * Alterna dos páginas y un brillo que la barre, como un LED de estadio.
+ * La pantalla curva de la sala de control: el contador REAL del reto
+ * (RECAUDADO de CHALLENGE_TARGET, de lib/contador.ts) y el plano de la
+ * instalación, dibujado con los lugares del mapa. Ningún otro número.
  */
-function dibujarPantalla(g: CanvasRenderingContext2D, pagina: number, reloj: string, barrido: number) {
+function dibujarPantalla(g: CanvasRenderingContext2D, reloj: string, barrido: number) {
   const W = PANT_W
   const H = PANT_H
   const monto = `$${miles(RECAUDADO)}`
@@ -1446,95 +895,103 @@ function dibujarPantalla(g: CanvasRenderingContext2D, pagina: number, reloj: str
   const pctTxt = `${(pct * 100).toFixed(1).replace(".", ",")} %`
 
   const fondo = g.createLinearGradient(0, 0, 0, H)
-  fondo.addColorStop(0, "#08204a")
-  fondo.addColorStop(1, "#020816")
+  fondo.addColorStop(0, "#071a33")
+  fondo.addColorStop(1, "#02070f")
   g.fillStyle = fondo
   g.fillRect(0, 0, W, H)
-  const halo = g.createRadialGradient(W * 0.5, H * 0.55, 10, W * 0.5, H * 0.55, W * 0.6)
-  halo.addColorStop(0, "rgba(60,140,255,0.22)")
-  halo.addColorStop(1, "rgba(60,140,255,0)")
+  const halo = g.createRadialGradient(W * 0.3, H * 0.55, 10, W * 0.3, H * 0.55, W * 0.45)
+  halo.addColorStop(0, "rgba(54,211,255,0.16)")
+  halo.addColorStop(1, "rgba(54,211,255,0)")
   g.fillStyle = halo
   g.fillRect(0, 0, W, H)
 
   g.textBaseline = "alphabetic"
-  // Cabecera: el nombre del proyecto y la hora del mundo.
   g.font = `800 26px ${FUENTE}`
-  g.fillStyle = "#9cc4ff"
+  g.fillStyle = "#8fd8ff"
   g.textAlign = "left"
-  g.fillText("LA CASA BLANCA PROJECT", 44, 52)
+  g.fillText("LA CASA BLANCA PROJECT · SALA DE CONTROL", 44, 50)
   g.textAlign = "right"
-  g.fillText(reloj, W - 44, 52)
-  g.fillStyle = "rgba(156,196,255,0.35)"
-  g.fillRect(44, 66, W - 88, 2)
+  g.fillText(reloj, W - 44, 50)
+  g.fillStyle = "rgba(143,216,255,0.35)"
+  g.fillRect(44, 64, W - 88, 2)
 
-  const barra = (y: number) => {
-    const x0 = 44
-    const x1 = W - 190
-    g.fillStyle = "rgba(255,255,255,0.12)"
-    g.beginPath()
-    g.roundRect(x0, y, x1 - x0, 26, 13)
-    g.fill()
-    const lleno = Math.max(26, (x1 - x0) * pct)
-    const gr = g.createLinearGradient(x0, 0, x0 + lleno, 0)
-    gr.addColorStop(0, "#3ddc84")
-    gr.addColorStop(1, "#7cf0b0")
-    g.fillStyle = gr
-    g.beginPath()
-    g.roundRect(x0, y, lleno, 26, 13)
-    g.fill()
-    g.font = `800 34px ${FUENTE}`
-    g.textAlign = "right"
-    g.fillStyle = "#ffffff"
-    g.fillText(pctTxt, W - 44, y + 26)
+  // A la izquierda: el contador.
+  const IZQ = 44
+  const ANCHO_IZQ = 820
+  g.textAlign = "left"
+  g.font = `800 36px ${FUENTE}`
+  g.fillStyle = "#ffffff"
+  g.fillText("DE $10 A UN MERCEDES", IZQ, 122)
+  g.font = `900 124px ${FUENTE}`
+  const wM = g.measureText(monto).width
+  g.lineJoin = "round"
+  g.lineWidth = 12
+  g.strokeStyle = "#0b2a12"
+  g.strokeText(monto, IZQ, 250)
+  g.fillStyle = "#6fe08a"
+  g.fillText(monto, IZQ, 250)
+  g.font = `800 56px ${FUENTE}`
+  g.fillStyle = "#e9f1ff"
+  g.fillText(` / ${meta}`, IZQ + wM, 250)
+  const by = 290
+  g.fillStyle = "rgba(255,255,255,0.12)"
+  g.beginPath()
+  g.roundRect(IZQ, by, ANCHO_IZQ - 170, 24, 12)
+  g.fill()
+  const gr = g.createLinearGradient(IZQ, 0, IZQ + ANCHO_IZQ, 0)
+  gr.addColorStop(0, "#3ddc84")
+  gr.addColorStop(1, "#7cf0b0")
+  g.fillStyle = gr
+  g.beginPath()
+  g.roundRect(IZQ, by, Math.max(24, (ANCHO_IZQ - 170) * pct), 24, 12)
+  g.fill()
+  g.font = `800 32px ${FUENTE}`
+  g.textAlign = "right"
+  g.fillStyle = "#ffffff"
+  g.fillText(pctTxt, IZQ + ANCHO_IZQ, by + 24)
+  g.textAlign = "left"
+  g.font = `700 28px ${FUENTE}`
+  g.fillStyle = "#9cc4ff"
+  g.fillText(`DÍA ${diaDelReto()} DEL RETO`, IZQ, 362)
+
+  // A la derecha: el plano de la instalación (los lugares del mapa, a escala).
+  const X0 = 920
+  const X1 = W - 44
+  const Z0 = 84
+  const Z1 = H - 28
+  g.strokeStyle = "rgba(143,216,255,0.3)"
+  g.lineWidth = 2
+  g.strokeRect(X0 - 12, Z0 - 8, X1 - X0 + 24, Z1 - Z0 + 16)
+  const esc = Math.min((X1 - X0) / (CIU.z1 - CIU.z0), (Z1 - Z0) / (CIU.x1 - CIU.x0))
+  // El plano va girado: el eje z del mundo corre a lo ancho de la pantalla.
+  const px = (z: number) => X0 + (z - CIU.z0) * esc
+  const py = (x: number) => Z0 + (x - CIU.x0) * esc
+  for (const l of LUGARES) {
+    if (l.nivel !== "ciudad") continue
+    const x = px(l.z0)
+    const y = py(l.x0)
+    const w = (l.z1 - l.z0) * esc
+    const h = (l.x1 - l.x0) * esc
+    g.fillStyle = "rgba(54,211,255,0.12)"
+    g.fillRect(x, y, w, h)
+    g.strokeStyle = "rgba(54,211,255,0.7)"
+    g.strokeRect(x, y, w, h)
   }
+  // El ascensor: un punto que late.
+  g.fillStyle = `rgba(255,176,32,${0.6 + 0.4 * Math.sin(barrido * Math.PI * 2)})`
+  g.beginPath()
+  g.arc(px(ASC.z), py(ASC.x), 6, 0, Math.PI * 2)
+  g.fill()
 
-  if (pagina === 0) {
-    g.textAlign = "center"
-    g.font = `800 44px ${FUENTE}`
-    g.fillStyle = "#ffffff"
-    g.fillText("DE $10 A UN MERCEDES", W / 2, 124)
-    // El monto, verde con contorno oscuro (como el dinero de GTA).
-    g.font = `900 132px ${FUENTE}`
-    const wM = g.measureText(monto).width
-    g.font = `800 62px ${FUENTE}`
-    const resto = ` / ${meta}`
-    const wR = g.measureText(resto).width
-    const x = (W - wM - wR) / 2
-    g.textAlign = "left"
-    g.font = `900 132px ${FUENTE}`
-    g.lineJoin = "round"
-    g.lineWidth = 12
-    g.strokeStyle = "#0b2a12"
-    g.strokeText(monto, x, 262)
-    g.fillStyle = "#6fe08a"
-    g.fillText(monto, x, 262)
-    g.font = `800 62px ${FUENTE}`
-    g.fillStyle = "#e9f1ff"
-    g.fillText(resto, x + wM, 262)
-    barra(304)
-  } else {
-    g.textAlign = "center"
-    g.font = `900 92px ${FUENTE}`
-    g.fillStyle = "#ffffff"
-    g.fillText("LA CASA BLANCA", W / 2, 168)
-    g.font = `800 56px ${FUENTE}`
-    g.fillStyle = "#9cc4ff"
-    g.fillText("PROJECT", W / 2, 228)
-    g.font = `700 30px ${FUENTE}`
-    g.fillStyle = "#e9f1ff"
-    g.fillText(`DÍA ${diaDelReto()} DEL RETO · ${monto} DE ${meta}`, W / 2, 278)
-    barra(304)
-  }
-
-  // Brillo que barre la pantalla y la retícula de los LED.
+  // Brillo que barre y retícula de los LED.
   const bx = -200 + barrido * (W + 400)
-  const brillo = g.createLinearGradient(bx - 120, 0, bx + 120, 0)
-  brillo.addColorStop(0, "rgba(255,255,255,0)")
-  brillo.addColorStop(0.5, "rgba(255,255,255,0.10)")
-  brillo.addColorStop(1, "rgba(255,255,255,0)")
-  g.fillStyle = brillo
+  const brilloG = g.createLinearGradient(bx - 120, 0, bx + 120, 0)
+  brilloG.addColorStop(0, "rgba(255,255,255,0)")
+  brilloG.addColorStop(0.5, "rgba(255,255,255,0.08)")
+  brilloG.addColorStop(1, "rgba(255,255,255,0)")
+  g.fillStyle = brilloG
   g.fillRect(0, 0, W, H)
-  g.fillStyle = "rgba(0,0,0,0.22)"
+  g.fillStyle = "rgba(0,0,0,0.2)"
   for (let y = 0; y < H; y += 4) g.fillRect(0, y, W, 1)
 }
 
@@ -1544,36 +1001,29 @@ interface Letrero {
   /** Tamaño de la letra en píxeles del atlas. */
   px: number
   color: string
-  estilo: "neon" | "panel"
   flecha?: "izq" | "der" | "arriba"
 }
 
-/** Los letreros: señalética de la ciudad, comercios y comida boliviana del mercado. Ninguna marca real. */
+/** Señalética propia: rótulos cortos, números de nivel y flechas. Sin logos. */
 const LETREROS: Letrero[] = [
-  { id: "club", texto: "CLUB", px: 150, color: "#ff4fae", estilo: "neon" },
-  { id: "arena", texto: "ARENA", px: 120, color: "#e8f4ff", estilo: "panel" },
-  { id: "estacion", texto: "ESTACIÓN", px: 96, color: "#e8f4ff", estilo: "panel" },
-  { id: "mercado", texto: "MERCADO", px: 96, color: "#ffc35a", estilo: "neon" },
-  { id: "plaza", texto: "PLAZA CENTRAL", px: 64, color: "#e8f4ff", estilo: "panel" },
-  { id: "avenida", texto: "GRAN AVENIDA", px: 64, color: "#e8f4ff", estilo: "panel" },
-  { id: "parque", texto: "PARQUE", px: 64, color: "#c9f7d8", estilo: "panel" },
-  { id: "mirador", texto: "MIRADOR", px: 64, color: "#e8f4ff", estilo: "panel" },
-  { id: "torres", texto: "DISTRITO DE LAS TORRES", px: 56, color: "#e8f4ff", estilo: "panel" },
-  { id: "circuito", texto: "CIRCUITO CIUDAD", px: 56, color: "#7fe6ff", estilo: "panel" },
-  { id: "abierto", texto: "ABIERTO", px: 56, color: "#ff79c6", estilo: "neon" },
-  { id: "f-mercado", texto: "MERCADO", px: 52, color: "#ffffff", estilo: "panel", flecha: "der" },
-  { id: "f-club", texto: "CLUB", px: 52, color: "#ffffff", estilo: "panel", flecha: "izq" },
-  { id: "f-arena", texto: "ARENA", px: 52, color: "#ffffff", estilo: "panel", flecha: "der" },
-  { id: "f-torres", texto: "TORRES", px: 52, color: "#ffffff", estilo: "panel", flecha: "izq" },
-  { id: "f-estacion", texto: "ESTACIÓN", px: 52, color: "#ffffff", estilo: "panel", flecha: "arriba" },
-  { id: "f-parque", texto: "PARQUE", px: 52, color: "#ffffff", estilo: "panel", flecha: "der" },
-  ...["CAFÉ", "LIBRERÍA", "FARMACIA", "PANADERÍA", "HOTEL", "GALERÍA", "BARBERÍA", "FLORERÍA", "RAMEN", "HELADOS"].map(
-    (t, i): Letrero => ({ id: `tienda-${i}`, texto: t, px: 60, color: [COLOR.tibio, "#7fe6ff", "#ffffff", COLOR.dorado, "#ff8fc8"][i % 5], estilo: "neon" }),
-  ),
-  ...["SALTEÑAS", "API Y PASTEL", "CUÑAPÉS", "ANTICUCHOS", "MOCOCHINCHI", "TUCUMANAS", "MASACO", "SOPA DE MANÍ", "PIQUE MACHO", "EMPANADAS", "JUGOS", "CAFÉ"].map(
-    (t, i): Letrero => ({ id: `comida-${i}`, texto: t, px: 46, color: "#fff4e0", estilo: "panel" }),
-  ),
-  ...Array.from({ length: 18 }, (_, i): Letrero => ({ id: `torre-${i}`, texto: `TORRE ${String(i + 1).padStart(2, "0")}`, px: 40, color: "#d9ecff", estilo: "panel" })),
+  { id: "anden", texto: "ANDÉN", px: 96, color: P.ambar },
+  { id: "control", texto: "SALA DE CONTROL", px: 64, color: "#8fd8ff" },
+  { id: "corredor", texto: "CORREDOR CENTRAL", px: 56, color: "#e9eef2" },
+  { id: "labs", texto: "LABORATORIOS", px: 64, color: "#7fb2ff" },
+  { id: "comedor", texto: "COMEDOR", px: 64, color: "#ffd9a8" },
+  { id: "jardin", texto: "JARDÍN HIDROPÓNICO", px: 56, color: "#9be7a6" },
+  { id: "camara", texto: "CÁMARA DE PRUEBAS", px: 56, color: "#e9eef2" },
+  { id: "balcon", texto: "BALCÓN", px: 56, color: "#e9eef2" },
+  { id: "ascensor", texto: "ASCENSOR", px: 48, color: "#e9eef2" },
+  { id: "salida", texto: "SALIDA", px: 44, color: "#ff6a5f" },
+  ...["-4", "-5", "-6", "-7"].map((t, i): Letrero => ({ id: `n${4 + i}`, texto: t, px: 180, color: "#e9eef2" })),
+  ...[1, 2, 3, 4].map((i): Letrero => ({ id: `lab-${i}`, texto: `LAB 0${i}`, px: 48, color: "#cfe2ff" })),
+  { id: "f-anden", texto: "ANDÉN", px: 52, color: P.ambar, flecha: "izq" },
+  { id: "f-control", texto: "CONTROL", px: 52, color: "#ffffff", flecha: "izq" },
+  { id: "f-labs", texto: "LABORATORIOS", px: 52, color: "#7fb2ff", flecha: "izq" },
+  { id: "f-jardin", texto: "JARDÍN", px: 52, color: "#9be7a6", flecha: "der" },
+  { id: "f-comedor", texto: "COMEDOR", px: 52, color: "#ffd9a8", flecha: "der" },
+  { id: "f-camara", texto: "PRUEBAS", px: 52, color: "#ffffff", flecha: "arriba" },
 ]
 
 interface Celda {
@@ -1585,7 +1035,7 @@ interface Celda {
   aspecto: number
 }
 
-const ATLAS_W = 2048
+const ATLAS_W = 1024
 const ATLAS_H = 1024
 
 function dibujarAtlas(g: CanvasRenderingContext2D): Record<string, Celda> {
@@ -1597,10 +1047,10 @@ function dibujarAtlas(g: CanvasRenderingContext2D): Record<string, Celda> {
   for (const l of LETREROS) {
     g.font = `800 ${l.px}px ${FUENTE}`
     const tw = g.measureText(l.texto).width
-    const pad = Math.round(l.px * 0.45)
+    const pad = Math.round(l.px * 0.4)
     const fw = l.flecha ? l.px * 1.1 : 0
     const w = Math.ceil(tw + pad * 2 + fw)
-    const h = Math.ceil(l.px * 1.5)
+    const h = Math.ceil(l.px * 1.45)
     if (x + w > ATLAS_W) {
       x = 0
       y += fila + 4
@@ -1610,26 +1060,12 @@ function dibujarAtlas(g: CanvasRenderingContext2D): Record<string, Celda> {
     const tx = l.flecha === "izq" ? x + pad + fw : x + pad
     g.textAlign = "left"
     g.textBaseline = "alphabetic"
-    if (l.estilo === "neon") {
-      g.shadowColor = l.color
-      g.shadowBlur = l.px * 0.35
-      g.lineWidth = Math.max(2, l.px * 0.07)
-      g.strokeStyle = l.color
-      g.strokeText(l.texto, tx, base)
-      g.shadowBlur = l.px * 0.12
-      g.fillStyle = "#ffffff"
-      g.globalAlpha = 0.85
-      g.fillText(l.texto, tx, base)
-      g.globalAlpha = 1
-    } else {
-      g.shadowColor = l.color
-      g.shadowBlur = l.px * 0.08
-      g.fillStyle = l.color
-      g.fillText(l.texto, tx, base)
-    }
+    g.shadowColor = l.color
+    g.shadowBlur = l.px * 0.08
+    g.fillStyle = l.color
+    g.fillText(l.texto, tx, base)
     g.shadowBlur = 0
     if (l.flecha) {
-      // La flecha se dibuja a mano: no todas las fuentes traen el glifo.
       const s = l.px * 0.42
       const fx = l.flecha === "izq" ? x + pad + s : x + pad + tw + l.px * 0.25 + s
       const fy = y + h * 0.5
@@ -1660,14 +1096,6 @@ function dibujarAtlas(g: CanvasRenderingContext2D): Record<string, Celda> {
 // 6. Construcción
 // ═══════════════════════════════════════════════════════════════
 
-interface Arbol {
-  x: number
-  z: number
-  y?: number
-  alto: number
-  copa: number
-  color: string
-}
 interface Reflejo {
   x: number
   z: number
@@ -1681,8 +1109,9 @@ interface Vapor {
   x: number
   y: number
   z: number
-  /** Radio de dispersión del emisor. */
-  r: number
+  /** Medio lado del emisor en x y en z. */
+  rx: number
+  rz: number
   n: number
   tam: number
   alto: number
@@ -1690,1610 +1119,862 @@ interface Vapor {
   color: THREE.ColorRepresentation
   fuerza: number
 }
-interface Haz {
+interface Planta {
   x: number
   y: number
   z: number
-  az: number
-  incl: number
-  barrido: number
-  vel: number
-  largo: number
-  abre: number
-  color: THREE.ColorRepresentation
-  fuerza: number
+  s: number
+  color: string
+}
+/** Una compuerta blindada: dos hojas que se corren a lo largo de `eje`. */
+interface Compuerta {
+  x: number
+  z: number
+  eje: "x" | "z"
+  ancho: number
+  alto: number
+  /** Espesor del muro donde va (las hojas se esconden dentro). */
+  grosor: number
+  abierta: number
 }
 
 /** Todo lo que los constructores van llenando. */
 interface Kit {
   base: Lote
-  torres: Lote
+  techo: Lote
+  oficinas: Lote
   luz: Lote
   vidrio: Lote
-  roca: Lote
-  granito: Lote
-  acero: Lote
-  madera: Lote
-  hierro: Lote
-  agua: Lote
-  pasto: Lote
-  grava: Lote
-  acera: Lote
+  esmerilado: Lote
+  grilla: Lote
+  chevron: Lote
   senal: Lote
   pantalla: Lote
-  pisoLed: Lote
-  arboles: Arbol[]
   reflejos: Reflejo[]
-  /** Charcos de luz: el círculo que un farol deja en el piso (x, y del suelo, z, radio, color). */
-  charcos: Array<{ x: number; y: number; z: number; r: number; color: string }>
   vapores: Vapor[]
-  haces: Haz[]
+  plantas: Planta[]
+  compuertas: Compuerta[]
+  balizas: THREE.Vector3[]
   celdas: Record<string, Celda>
-  rnd: () => number
-  /** Puntos del monorriel (para no poner torres encima). */
-  riel: THREE.Vector3[]
 }
 
-// Piezas reutilizables (se crean una vez por construcción).
 interface Piezas {
   caja: THREE.BufferGeometry
   cil8: THREE.BufferGeometry
   cil16: THREE.BufferGeometry
   cil24: THREE.BufferGeometry
   esfera: THREE.BufferGeometry
-  cono: THREE.BufferGeometry
   plano: THREE.BufferGeometry
-  rocas: THREE.BufferGeometry[]
-  /** Copa de árbol: varias bolas deformadas, fusionadas (una instancia por árbol). */
-  copa: THREE.BufferGeometry
+  /** Una mata: bolitas deformadas, fusionadas (una instancia por planta). */
+  mata: THREE.BufferGeometry
 }
 
 function crearPiezas(): Piezas {
-  const rocas = [0, 1, 2, 3].map((k) => {
-    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 2).deleteAttribute("uv").deleteAttribute("normal"))
+  const rnd = semilla(5)
+  const partes = Array.from({ length: 5 }, (_, i) => {
+    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 0).deleteAttribute("uv").deleteAttribute("normal"))
     const p = g.getAttribute("position") as THREE.BufferAttribute
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i)
-      const y = p.getY(i)
-      const z = p.getZ(i)
-      const d = 0.72 + 0.5 * fbm3(x * 1.3 + k * 7, y * 1.3, z * 1.3, 3)
-      p.setXYZ(i, x * d, y * d * 0.8, z * d)
-    }
+    const a = (i / 5) * Math.PI * 2
+    const ox = Math.cos(a) * 0.5
+    const oz = Math.sin(a) * 0.5
+    const r = 0.45 + rnd() * 0.2
+    for (let j = 0; j < p.count; j++) p.setXYZ(j, ox + p.getX(j) * r, 0.35 + p.getY(j) * r * 0.8 + rnd() * 0.1, oz + p.getZ(j) * r)
     g.computeVertexNormals()
     return g
   })
-  const bolas: Array<[number, number, number, number]> = [
-    [0, 0, 0, 1],
-    [0.62, -0.16, 0.16, 0.68],
-    [-0.6, -0.1, 0.26, 0.66],
-    [0.1, -0.2, -0.64, 0.64],
-    [0.05, 0.48, 0.06, 0.62],
-    [-0.32, -0.36, -0.3, 0.56],
-    [0.36, 0.22, 0.46, 0.52],
-  ]
-  const partes = bolas.map(([x, y, z, r], i) => {
-    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 1).deleteAttribute("uv").deleteAttribute("normal"))
-    const p = g.getAttribute("position") as THREE.BufferAttribute
-    for (let j = 0; j < p.count; j++) {
-      const vx = p.getX(j)
-      const vy = p.getY(j)
-      const vz = p.getZ(j)
-      const d = 0.82 + 0.36 * ruido3(vx * 1.7 + i * 5, vy * 1.7, vz * 1.7)
-      p.setXYZ(j, x + vx * d * r, y + vy * d * r, z + vz * d * r)
-    }
-    g.computeVertexNormals()
-    return g
-  })
-  const copa = mergeGeometries(partes, false)!
+  const mata = mergeGeometries(partes, false)!
   for (const g of partes) g.dispose()
   return {
-    copa,
+    mata,
     caja: new THREE.BoxGeometry(1, 1, 1),
     cil8: new THREE.CylinderGeometry(1, 1, 1, 8),
     cil16: new THREE.CylinderGeometry(1, 1, 1, 16),
     cil24: new THREE.CylinderGeometry(1, 1, 1, 24),
     esfera: new THREE.SphereGeometry(1, 12, 8),
-    cono: new THREE.ConeGeometry(1, 1, 7),
     plano: new THREE.PlaneGeometry(1, 1),
-    rocas,
   }
 }
 
-/** Un letrero del atlas: un cuadro de alto `alto` mirando hacia `giro` (0 = +z). */
-function letrero(k: Kit, pz: Piezas, id: string, x: number, y: number, z: number, giro: number, alto: number) {
+/** Caja alineada a los ejes, por sus bordes. */
+function caja(l: Lote, pz: Piezas, x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, v: Valores = {}) {
+  l.agregar(pz.caja, M((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, 0, x1 - x0, y1 - y0, z1 - z0), v)
+}
+
+/** Tubo recto entre dos puntos (para cañerías y barandas). */
+function tubo(l: Lote, pz: Piezas, a: THREE.Vector3, b: THREE.Vector3, r: number, v: Valores = {}) {
+  const d = new THREE.Vector3().subVectors(b, a)
+  const largo = d.length()
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize())
+  const m = new THREE.Matrix4().compose(new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5), q, new THREE.Vector3(r, largo, r))
+  l.agregar(pz.cil8, m, v)
+}
+
+/** Un letrero del atlas sobre una placa de grafito, mirando hacia `giro` (0 = +z). */
+function letrero(k: Kit, pz: Piezas, id: string, x: number, y: number, z: number, giro: number, alto: number, placa = true) {
   const c = k.celdas[id]
   if (!c) return
   const g = pz.plano.clone()
   const uv = g.getAttribute("uv") as THREE.BufferAttribute
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) < 0.5 ? c.u0 : c.u1, uv.getY(i) < 0.5 ? c.v0 : c.v1)
-  k.senal.agregar(g, M(x, y, z, giro, alto * c.aspecto, alto, 1))
+  const nx = Math.sin(giro)
+  const nz = Math.cos(giro)
+  k.senal.agregar(g, M(x + nx * 0.07, y, z + nz * 0.07, giro, alto * c.aspecto, alto, 1))
   g.dispose()
+  if (placa) k.base.agregar(pz.caja, M(x + nx * 0.02, y, z + nz * 0.02, giro, alto * c.aspecto + 0.16, alto + 0.12, 0.06), acabado(P.grafito, 0.5, 0.2))
 }
 
-// ── 6.1 La caverna: bóveda, piso, rocas, estalactitas y el cielo artificial ──
-
-/**
- * Cuánto se aparta la roca de la forma ideal (m, hacia adentro de la roca),
- * en un punto de la bóveda de "norma" r a la altura h sobre el piso.
- */
-function relieveRoca(x: number, y: number, z: number, r: number, h: number): number {
-  // Grandes bultos y detalle; en el cielo artificial la roca solo se retira.
-  const n1 = fbm3(x * 0.028, y * 0.04, z * 0.028, 3) - 0.5
-  const n2 = fbm3(x * 0.11 + 40, y * 0.13, z * 0.11, 3) - 0.5
-  const amp = 2 + 5.5 * smooth(0.55, 0.97, r)
-  let d = n1 * 2 * amp + n2 * 2.2
-  const kc = smooth(R_CIELO - 0.01, R_CIELO + 0.07, r)
-  d = d * kc + (1 - kc) * (1.1 + Math.abs(n2) * 2)
-  // Boca de la cascada: un hueco en la pared norte.
-  if (z < CZ - 120) {
-    const bx = x / 17
-    const by = (y - (Y0 + 18)) / 6
-    d += 7 * Math.exp(-(bx * bx + by * by))
-  }
-  // Bajo el piso casi no hay relieve (el borde inferior queda oculto).
-  if (h < 0.5) d *= 0.4
-  return d
+interface Hueco {
+  /** Desde y hasta, a lo largo del muro. */
+  a: number
+  b: number
+  alto: number
 }
 
 /**
- * Un punto sobre la pared de roca: en el ángulo `ang` (alrededor del centro)
- * y a `h` metros sobre el piso, ya con el relieve. `dentro` lo adelanta hacia
- * la caverna. Devuelve también hacia dónde mira la pared (en planta).
+ * Muro (caja) a lo largo de `eje`, de `a0` a `a1`, con espesor `e0..e1` en el
+ * otro eje, entre y0 e y1. Los huecos son puertas: dintel arriba y umbral de
+ * acero abajo. Arriba lleva la "tapa de corte" oscura que se ve en la maqueta.
  */
-function puntoEnPared(ang: number, h: number, dentro: number): { p: THREE.Vector3; giro: number } {
-  const r = Math.pow(Math.max(0, 1 - (h / ALTO) ** 2), 0.2)
-  const c = Math.cos(ang)
-  const sn = Math.sin(ang)
-  const du = Math.sign(c) * Math.sqrt(Math.abs(c))
-  const dv = Math.sign(sn) * Math.sqrt(Math.abs(sn))
-  let gx = du * du * du
-  let gz = dv * dv * dv
-  const gl = Math.hypot(gx, gz) || 1
-  gx /= gl
-  gz /= gl
-  // Normal del perfil (hacia la roca): (-dH/dr, MEDIO), normalizada.
-  const dHdr = (ALTO * -5 * r ** 4) / (2 * Math.sqrt(Math.max(1e-4, 1 - r ** 5)))
-  const l = Math.hypot(dHdr, MEDIO)
-  const nr = -dHdr / l
-  const nh = MEDIO / l
-  const x = CX + du * MEDIO * r
-  const z = CZ + dv * MEDIO * r
-  const y = Y0 + h
-  const d = relieveRoca(x, y, z, r, h) - dentro
-  return { p: new THREE.Vector3(x + gx * nr * d, y + nh * d, z + gz * nr * d), giro: Math.atan2(-gx, -gz) }
+function muro(k: Kit, pz: Piezas, eje: "x" | "z", a0: number, a1: number, e0: number, e1: number, y0: number, y1: number, huecos: Hueco[] = [], acab: Valores = A.panel) {
+  const pon = (pa: number, pb: number, ya: number, yb: number, v: Valores) => {
+    if (pb - pa < 1e-3 || yb - ya < 1e-3) return
+    if (eje === "x") caja(k.base, pz, pa, pb, ya, yb, e0, e1, v)
+    else caja(k.base, pz, e0, e1, ya, yb, pa, pb, v)
+  }
+  let cursor = a0
+  for (const h of [...huecos].sort((p, q) => p.a - q.a)) {
+    pon(cursor, h.a, y0, y1, acab)
+    pon(h.a, h.b, y0 + h.alto, y1, acab)
+    // Umbral de acero en el piso del hueco.
+    pon(h.a, h.b, Y0 - 0.02, Y0 + 0.012, A.acero)
+    cursor = h.b
+  }
+  pon(cursor, a1, y0, y1, acab)
+  pon(a0, a1, y1, y1 + 0.02, A.muroCorte)
 }
 
-/** Casas excavadas en la roca: racimos de ventanas encendidas que dan escala a las paredes. */
-function construirCasasEnRoca(k: Kit, pz: Piezas, rnd: () => number) {
-  const racimos = 24
-  for (let c = 0; c < racimos; c++) {
-    const a0 = (c / racimos) * Math.PI * 2 + rnd() * 0.25
-    // Sin casas sobre la cascada (pared norte, centro).
-    const pn = puntoEnPared(a0, 8, 0).p
-    if (pn.z < CZ - 150 && Math.abs(pn.x) < 45) continue
-    const pisos = 3 + Math.floor(rnd() * 5)
-    const altoPiso = 2.4 + rnd() * 0.6
-    const ancho = 0.05 + rnd() * 0.05
-    for (let f = 0; f < pisos; f++) {
-      const h = 3 + f * altoPiso + rnd() * 0.4
-      const n = 4 + Math.floor(rnd() * 7)
-      for (let i = 0; i < n; i++) {
-        if (rnd() < 0.25) continue
-        const a = a0 + (i / n - 0.5) * ancho * (1 - f * 0.08)
-        const { p, giro } = puntoEnPared(a, h, 0.7)
-        const w = 0.6 + rnd() * 0.8
-        const alto = 0.8 + rnd() * 0.6
-        const tibia = rnd() < 0.8
-        k.base.agregar(pz.caja, M(p.x, p.y, p.z, giro, w + 0.5, alto + 0.5, 0.3), acabado("#100e0d", 0.8, 0))
-        k.luz.agregar(pz.plano, M(p.x + Math.sin(giro) * 0.16, p.y, p.z + Math.cos(giro) * 0.16, giro, w, alto, 1), luz(tibia ? (rnd() < 0.5 ? "#ffa860" : "#ffcf94") : "#9fd8ff", 0.9 + rnd() * 1.2))
-        if (rnd() < 0.3) k.base.agregar(pz.caja, M(p.x + Math.sin(giro) * 0.7, p.y - alto / 2 - 0.25, p.z + Math.cos(giro) * 0.7, giro, w + 1.2, 0.12, 1.1), acabado("#2a2522", 0.7, 0.2))
-      }
-    }
-  }
+/** Vidrio plano de piso a techo, a lo largo de `eje` en la coordenada `fijo`. */
+function vidrioPlano(k: Kit, pz: Piezas, eje: "x" | "z", fijo: number, a0: number, a1: number, y0: number, y1: number, lote: Lote = k.vidrio) {
+  const largo = a1 - a0
+  const m = eje === "x" ? M((a0 + a1) / 2, (y0 + y1) / 2, fijo, 0, largo, y1 - y0, 1) : M(fijo, (y0 + y1) / 2, (a0 + a1) / 2, Math.PI / 2, largo, y1 - y0, 1)
+  lote.agregar(pz.plano, m)
 }
 
-function construirCaverna(k: Kit, pz: Piezas, mats: MaterialesCiudad, grupo: THREE.Group, ctx: CtxEscena) {
-  const N_ANG = ctx.calidad === "baja" ? 160 : 224
-  const N_ANILLOS = ctx.calidad === "baja" ? 46 : 64
-
-  // Perfil denso y remuestreado por largo: más anillos donde la pared cae a pique.
-  const denso: Array<[number, number]> = []
-  for (let i = 0; i <= 1500; i++) {
-    const r = i / 1500
-    denso.push([r, perfil(r)])
+/**
+ * Tabique de vidrio con parantes de acero cada ~2,4 m, una franja esmerilada a
+ * 1,4 m y puertas abiertas en los huecos.
+ */
+function tabiqueVidrio(k: Kit, pz: Piezas, eje: "x" | "z", fijo: number, a0: number, a1: number, alto: number, huecos: Array<[number, number]> = []) {
+  const tramos: Array<[number, number]> = []
+  let c = a0
+  for (const [a, b] of [...huecos].sort((p, q) => p[0] - q[0])) {
+    tramos.push([c, a])
+    c = b
   }
-  denso.push([1.0, -1.6])
-  const largos = [0]
-  for (let i = 1; i < denso.length; i++) {
-    const dr = (denso[i][0] - denso[i - 1][0]) * MEDIO
-    const dh = denso[i][1] - denso[i - 1][1]
-    largos.push(largos[i - 1] + Math.hypot(dr, dh))
+  tramos.push([c, a1])
+  const parante = (a: number) => {
+    if (eje === "x") caja(k.base, pz, a - 0.05, a + 0.05, Y0, Y0 + alto, fijo - 0.06, fijo + 0.06, A.acero)
+    else caja(k.base, pz, fijo - 0.06, fijo + 0.06, Y0, Y0 + alto, a - 0.05, a + 0.05, A.acero)
   }
-  const total = largos[largos.length - 1]
-  const anillos: Array<{ r: number; h: number; nr: number; nh: number }> = []
-  let j = 0
-  for (let a = 0; a <= N_ANILLOS; a++) {
-    const u = a / N_ANILLOS
-    const L = total * (1 - Math.pow(1 - u, 1.55))
-    while (j < largos.length - 2 && largos[j + 1] < L) j++
-    const t = (L - largos[j]) / Math.max(1e-6, largos[j + 1] - largos[j])
-    const r = denso[j][0] + (denso[j + 1][0] - denso[j][0]) * t
-    const h = denso[j][1] + (denso[j + 1][1] - denso[j][1]) * t
-    // Normal del perfil hacia la roca: (-dH, dR).
-    const dR = (denso[j + 1][0] - denso[j][0]) * MEDIO
-    const dH = denso[j + 1][1] - denso[j][1]
-    const l = Math.hypot(dR, dH) || 1
-    anillos.push({ r, h, nr: dH === 0 && dR === 0 ? 0 : -dH / l, nh: dR / l })
-  }
-  // Hacia la roca: en el centro la normal apunta arriba (nh > 0); en la pared, hacia afuera.
-  for (const a of anillos) {
-    if (a.nh < 0) {
-      a.nh = -a.nh
-      a.nr = -a.nr
+  for (const [a, b] of tramos) {
+    if (b - a < 0.05) continue
+    vidrioPlano(k, pz, eje, fijo, a, b, Y0 + 0.08, Y0 + alto)
+    vidrioPlano(k, pz, eje, fijo, a, b, Y0 + 1.25, Y0 + 1.55, k.esmerilado)
+    const n = Math.max(1, Math.round((b - a) / 2.4))
+    for (let i = 0; i <= n; i++) parante(a + ((b - a) * i) / n)
+    // Zócalo y cabezal.
+    if (eje === "x") {
+      caja(k.base, pz, a, b, Y0, Y0 + 0.08, fijo - 0.07, fijo + 0.07, A.acero)
+      caja(k.base, pz, a, b, Y0 + alto - 0.08, Y0 + alto, fijo - 0.07, fijo + 0.07, A.acero)
+    } else {
+      caja(k.base, pz, fijo - 0.07, fijo + 0.07, Y0, Y0 + 0.08, a, b, A.acero)
+      caja(k.base, pz, fijo - 0.07, fijo + 0.07, Y0 + alto - 0.08, Y0 + alto, a, b, A.acero)
     }
-    if (a.nr < 0) a.nr = -a.nr
-  }
-
-  const pos = new Float32Array((N_ANILLOS + 1) * (N_ANG + 1) * 3)
-  const uvs = new Float32Array((N_ANILLOS + 1) * (N_ANG + 1) * 2)
-  for (let a = 0; a <= N_ANILLOS; a++) {
-    const an = anillos[a]
-    for (let s = 0; s <= N_ANG; s++) {
-      const ang = (s / N_ANG) * Math.PI * 2
-      const c = Math.cos(ang)
-      const sn = Math.sin(ang)
-      const du = Math.sign(c) * Math.sqrt(Math.abs(c))
-      const dv = Math.sign(sn) * Math.sqrt(Math.abs(sn))
-      // Normal horizontal de la superelipse (gradiente de u⁴ + v⁴).
-      let gx = du * du * du
-      let gz = dv * dv * dv
-      const gl = Math.hypot(gx, gz) || 1
-      gx /= gl
-      gz /= gl
-      let x = CX + du * MEDIO * an.r
-      let z = CZ + dv * MEDIO * an.r
-      let y = Y0 + an.h
-      const d = relieveRoca(x, y, z, an.r, an.h)
-      x += (gx * an.nr) * d
-      z += (gz * an.nr) * d
-      y += an.nh * d
-      const i = a * (N_ANG + 1) + s
-      pos[i * 3] = x
-      pos[i * 3 + 1] = y
-      pos[i * 3 + 2] = z
-      uvs[i * 2] = s / N_ANG
-      uvs[i * 2 + 1] = a / N_ANILLOS
-    }
-  }
-  const idx: number[] = []
-  for (let a = 0; a < N_ANILLOS; a++)
-    for (let s = 0; s < N_ANG; s++) {
-      const i0 = a * (N_ANG + 1) + s
-      const i1 = i0 + 1
-      const i2 = i0 + N_ANG + 1
-      const i3 = i2 + 1
-      // Caras hacia adentro de la caverna (desde afuera no se ven: vista de maqueta).
-      idx.push(i0, i1, i2, i1, i3, i2)
-    }
-  const boveda = new THREE.BufferGeometry()
-  boveda.setAttribute("position", new THREE.BufferAttribute(pos, 3))
-  boveda.setAttribute("uv", new THREE.BufferAttribute(uvs, 2))
-  boveda.setIndex(idx)
-  boveda.computeVertexNormals()
-  // La costura en el ángulo 0 deja normales partidas: se promedian.
-  const nor = boveda.getAttribute("normal") as THREE.BufferAttribute
-  for (let a = 0; a <= N_ANILLOS; a++) {
-    const i0 = a * (N_ANG + 1)
-    const i1 = i0 + N_ANG
-    const nx = nor.getX(i0) + nor.getX(i1)
-    const ny = nor.getY(i0) + nor.getY(i1)
-    const nz = nor.getZ(i0) + nor.getZ(i1)
-    const l = Math.hypot(nx, ny, nz) || 1
-    nor.setXYZ(i0, nx / l, ny / l, nz / l)
-    nor.setXYZ(i1, nx / l, ny / l, nz / l)
-  }
-  // ¿Las caras miran hacia adentro? Se comprueba en el centro de la bóveda (la normal debe bajar).
-  if (nor.getY(5 * (N_ANG + 1) + Math.floor(N_ANG / 2)) > 0) {
-    for (let i = 0; i < idx.length; i += 3) {
-      const t = idx[i + 1]
-      idx[i + 1] = idx[i + 2]
-      idx[i + 2] = t
-    }
-    boveda.setIndex(idx)
-    boveda.computeVertexNormals()
-  }
-  k.roca.agregar(boveda)
-  boveda.dispose()
-
-  // ── Cielo artificial: los anillos interiores, sin relieve ──
-  {
-    const NA = 28
-    const NS = N_ANG
-    const p = new Float32Array((NA + 1) * (NS + 1) * 3)
-    for (let a = 0; a <= NA; a++) {
-      const r = (a / NA) * R_CIELO
-      for (let s = 0; s <= NS; s++) {
-        const ang = (s / NS) * Math.PI * 2
-        const c = Math.cos(ang)
-        const sn = Math.sin(ang)
-        const i = a * (NS + 1) + s
-        const x = CX + Math.sign(c) * Math.sqrt(Math.abs(c)) * MEDIO * r
-        const z = CZ + Math.sign(sn) * Math.sqrt(Math.abs(sn)) * MEDIO * r
-        p[i * 3] = x
-        p[i * 3 + 1] = Y0 + perfil(r) - 0.15
-        p[i * 3 + 2] = z
-      }
-    }
-    const ix: number[] = []
-    for (let a = 0; a < NA; a++)
-      for (let s = 0; s < NS; s++) {
-        const i0 = a * (NS + 1) + s
-        const i1 = i0 + 1
-        const i2 = i0 + NS + 1
-        const i3 = i2 + 1
-        ix.push(i0, i2, i1, i1, i2, i3)
-      }
-    const g = new THREE.BufferGeometry()
-    g.setAttribute("position", new THREE.BufferAttribute(p, 3))
-    g.setIndex(ix)
-    g.computeVertexNormals()
-    const n = g.getAttribute("normal") as THREE.BufferAttribute
-    if (n.getY(3 * (NS + 1) + Math.floor(NS / 2)) > 0) {
-      for (let i = 0; i < ix.length; i += 3) {
-        const t = ix[i + 1]
-        ix[i + 1] = ix[i + 2]
-        ix[i + 2] = t
-      }
-      g.setIndex(ix)
-    }
-    const cieloMalla = new THREE.Mesh(g, mats.cielo)
-    cieloMalla.name = "ciudad-cielo"
-    grupo.add(cieloMalla)
-
-    // Marco del cielo: un aro de acero oscuro con una línea de luz (la "cornisa").
-    const marco: THREE.Vector3[] = []
-    const NM = 256
-    for (let s = 0; s < NM; s++) {
-      const ang = (s / NM) * Math.PI * 2
-      const c = Math.cos(ang)
-      const sn = Math.sin(ang)
-      marco.push(new THREE.Vector3(Math.sign(c) * Math.sqrt(Math.abs(c)), 0, Math.sign(sn) * Math.sqrt(Math.abs(sn))))
-    }
-    const enR = (d: THREE.Vector3, r: number, baja: number, out: THREE.Vector3) => out.set(CX + d.x * MEDIO * r, Y0 + perfil(r) - baja, CZ + d.z * MEDIO * r)
-    const aro = cinta(
-      marco,
-      (i, lado, out) => enR(marco[i], lado < 0 ? R_CIELO - 0.006 : R_CIELO + 0.016, lado < 0 ? 0.35 : 0.1, out),
-      (_i, out) => out.set(0, -1, 0),
-      true,
-    )
-    k.base.agregar(aro, null, acabado("#1b1e23", 0.45, 0.8))
-    const linea = cinta(
-      marco,
-      (i, lado, out) => enR(marco[i], lado < 0 ? R_CIELO - 0.0045 : R_CIELO - 0.0005, 0.42, out),
-      (_i, out) => out.set(0, -1, 0),
-      true,
-    )
-    k.luz.agregar(linea, null, luz("#fff1d8", 0.7))
-    aro.dispose()
-    linea.dispose()
-  }
-
-  // ── Piso: el contorno de la caverna con agujeros para el canal y el lago ──
-  const contorno = poligono.caverna(1.004, 256)
-  const canal = poligono.rectRedondeado(CANAL.x0, CANAL.x1, CANAL.z0, CANAL.z1, CANAL.radio, 8)
-  const lago = poligono.elipse(LAGO.x, LAGO.z, LAGO.rx, LAGO.rz, 56)
-  const piso = losa(contorno, Y0, [canal, lago])
-  const pisoMalla = new THREE.Mesh(piso, mats.piso)
-  pisoMalla.name = "ciudad-piso"
-  pisoMalla.receiveShadow = ctx.sombras
-  grupo.add(pisoMalla)
-
-  // ── Rocas al pie de las paredes y estalactitas en la bóveda ──
-  const rnd = semilla(907)
-  const nRocas = ctx.calidad === "baja" ? 110 : 220
-  for (let i = 0; i < nRocas; i++) {
-    const ang = rnd() * Math.PI * 2
-    const r = 0.955 + rnd() * 0.05
-    const c = Math.cos(ang)
-    const sn = Math.sin(ang)
-    const x = CX + Math.sign(c) * Math.sqrt(Math.abs(c)) * MEDIO * r
-    const z = CZ + Math.sign(sn) * Math.sqrt(Math.abs(sn)) * MEDIO * r
-    if (x > CANAL.x0 + 8 && x < CANAL.x1 - 8 && z > CANAL.z0 + 3 && z < CANAL.z1) continue
-    const t = 1.2 + Math.pow(rnd(), 2) * 4.5
-    k.roca.agregar(pz.rocas[i % 4], M(x, Y0 + t * 0.15, z, rnd() * 6, t * (1 + rnd() * 0.6), t * (0.6 + rnd() * 0.6), t))
-  }
-  const nEst = ctx.calidad === "baja" ? 90 : 190
-  for (let i = 0; i < nEst; i++) {
-    const ang = rnd() * Math.PI * 2
-    const r = R_CIELO + 0.05 + rnd() * 0.33
-    const c = Math.cos(ang)
-    const sn = Math.sin(ang)
-    const x = CX + Math.sign(c) * Math.sqrt(Math.abs(c)) * MEDIO * r
-    const z = CZ + Math.sign(sn) * Math.sqrt(Math.abs(sn)) * MEDIO * r
-    const largo = 1.2 + Math.pow(rnd(), 1.6) * 6
-    const ancho = 0.35 + rnd() * 0.9
-    const techo = Y0 + perfil(r) + 1.2
-    k.roca.agregar(pz.cono, M(x, techo - largo / 2, z, rnd() * 6, ancho, largo, ancho * (0.7 + rnd() * 0.5), Math.PI))
-  }
-  // Rocas que asoman en el agua al pie de la cascada.
-  for (let i = 0; i < 9; i++) {
-    const t = 1.5 + rnd() * 2.8
-    k.roca.agregar(pz.rocas[i % 4], M(-24 + i * 6 + rnd() * 3, CANAL.agua - 0.4, -104 + rnd() * 5, rnd() * 6, t * 1.3, t * 0.7, t))
   }
 }
 
-// ── 6.2 Canal, cascada y Mirador ──
+/** Techo de una sala (solo se ve desde abajo) con paneles de luz de 60 x 60 en grilla. */
+function techoSala(k: Kit, pz: Piezas, s: Sala, acab: Valores, paso = 2.4, colorLuz: string = P.frio, fuerza = 3.2, turno = 1) {
+  const y = Y0 + s.alto
+  k.techo.agregar(horizontal(s, y, true), null, acab)
+  for (let x = s.x0 + paso / 2; x < s.x1; x += paso)
+    for (let z = s.z0 + paso / 2; z < s.z1; z += paso) k.luz.agregar(pz.plano, M(x, y - 0.015, z, 0, 0.6, 0.6, 1, Math.PI / 2), luz(colorLuz, fuerza, turno))
+}
 
-function construirCanal(k: Kit, pz: Piezas, mats: MaterialesCiudad, grupo: THREE.Group) {
-  const contorno = poligono.rectRedondeado(CANAL.x0, CANAL.x1, CANAL.z0, CANAL.z1, CANAL.radio, 8)
-  k.granito.agregar(muroContorno(contorno, CANAL.fondo, Y0, true))
-  k.base.agregar(losa(contorno, CANAL.fondo + 0.01), null, acabado("#0d1418", 0.3, 0))
-  k.agua.agregar(losa(contorno, CANAL.agua))
-  // Parapeto bajo de piedra (salvo frente al Mirador, donde va la baranda de vidrio).
-  const parapeto: V2[] = poligono.rectRedondeado(CANAL.x0 - 0.6, CANAL.x1 + 0.6, CANAL.z0 - 0.6, CANAL.z1 + 0.6, CANAL.radio + 0.6, 8)
-  for (let i = 0; i < parapeto.length; i++) {
-    const [ax, az] = parapeto[i]
-    const [bx, bz] = parapeto[(i + 1) % parapeto.length]
-    const mx = (ax + bx) / 2
-    const mz = (az + bz) / 2
-    if (mz > CANAL.z1 - 2 && Math.abs(mx) < R_MIRADOR.x1 + 3) continue
+/** Línea de color en el piso (tira plana a 1 cm, con un leve brillo). */
+function lineaPiso(k: Kit, pz: Piezas, puntos: V2[], color: string) {
+  for (let i = 0; i + 1 < puntos.length; i++) {
+    const [ax, az] = puntos[i]
+    const [bx, bz] = puntos[i + 1]
     const largo = Math.hypot(bx - ax, bz - az)
-    k.granito.agregar(pz.caja, M(mx, Y0 + 0.45, mz, Math.atan2(-(bz - az), bx - ax), largo + 0.05, 0.9, 0.6))
+    k.base.agregar(pz.caja, M((ax + bx) / 2, Y0 + 0.006, (az + bz) / 2, Math.atan2(bx - ax, bz - az), 0.14, 0.012, largo + 0.14), acabado(color, 0.4, 0, 0, color, 0.35))
   }
-  // Línea de luz cian sobre el agua: se refleja y marca el borde de noche.
-  const borde = muroContorno(poligono.rectRedondeado(CANAL.x0 + 0.02, CANAL.x1 - 0.02, CANAL.z0 + 0.02, CANAL.z1 - 0.02, CANAL.radio, 8), CANAL.agua + 0.35, CANAL.agua + 0.5, true)
-  k.luz.agregar(borde, null, luz("#5fe3ff", 1.8))
-  for (let x = CANAL.x0 + 16; x <= CANAL.x1 - 16; x += 24) k.reflejos.push({ x, z: CANAL.z1 - 1.5, h: 0.6, color: "#5fe3ff", fuerza: 0.18, ancho: 2.5 })
+}
 
-  // ── La cascada: una lámina curva que sale de la roca y cae 20 m al canal ──
-  const ancho = 36
-  const arriba = Y0 + 17.5
-  const zSale = CZ - 189.5
-  const caida = arriba - CANAL.agua
-  const seg = 40
-  const pos: number[] = []
-  const uv: number[] = []
-  const idx: number[] = []
-  for (let j = 0; j <= seg; j++) {
-    const v = j / seg
-    const y = arriba - v * caida
-    // Trayectoria de tiro: el agua sale con ~2,4 m/s y se separa de la roca.
-    const sale = 2.4 * Math.sqrt((2 * (v * caida)) / 9.8)
-    for (let i = 0; i <= 24; i++) {
-      const u = i / 24
-      const x = (u - 0.5) * ancho
-      const curva = 1.5 * Math.cos((u - 0.5) * Math.PI) - 1.5
-      pos.push(x, y, zSale + sale - curva * 0.8 + Math.sin(u * 9) * 0.25)
-      uv.push(u, v)
+// ── 6.1 El pozo: planta baja, galerías, oficinas, foso, balcón y ascensores ──
+
+function construirPozo(k: Kit, pz: Piezas) {
+  const X = new THREE.Vector3(1, 0, 0)
+  const Zv = new THREE.Vector3(0, 0, 1)
+  // Piso de epoxi alrededor del foso, y el foso con piso de vidrio.
+  for (const r of [
+    { x0: POZO.x0, x1: POZO.x1, z0: FOSO.z1, z1: POZO.z1 },
+    { x0: POZO.x0, x1: FOSO.x0, z0: POZO.z0, z1: FOSO.z1 },
+    { x0: FOSO.x1, x1: POZO.x1, z0: POZO.z0, z1: FOSO.z1 },
+    { x0: FOSO.x0, x1: FOSO.x1, z0: POZO.z0, z1: FOSO.z0 },
+  ])
+    k.base.agregar(horizontal(r, Y0), null, A.epoxi)
+  k.vidrio.agregar(horizontal(FOSO, Y0 + 0.01))
+  for (const z of [15.5, 17.5]) caja(k.base, pz, FOSO.x0, FOSO.x1, Y0 - 0.22, Y0 - 0.01, z - 0.06, z + 0.06, A.acero)
+  for (const x of [-4, 0, 4]) caja(k.base, pz, x - 0.06, x + 0.06, Y0 - 0.22, Y0 - 0.01, FOSO.z0, FOSO.z1, A.acero)
+  // El foso: las oficinas siguen dos pisos más abajo, con su propia luz.
+  for (const g of carasInteriores(FOSO, Y0 - FOSO.fondo, Y0, Y0 - FOSO.fondo)) k.oficinas.agregar(g)
+  k.base.agregar(horizontal(FOSO, Y0 - FOSO.fondo), null, A.grafitoPiso)
+  k.luz.agregar(pz.caja, M(0, Y0 - FOSO.fondo + 0.02, cz(FOSO), 0, 12, 0.02, 0.12), luz(P.cian, 3, 0))
+  for (let y = Y0 - 4; y > Y0 - FOSO.fondo; y -= 4)
+    for (const [a, b, c2, d] of [
+      [FOSO.x0, FOSO.z0, FOSO.x1, FOSO.z0],
+      [FOSO.x0, FOSO.z1, FOSO.x1, FOSO.z1],
+    ])
+      k.luz.agregar(pz.caja, M((a + c2) / 2, y, (b + d) / 2, 0, c2 - a, 0.05, 0.08), luz(P.frio, 2.2))
+  k.vapores.push({ x: 0, y: Y0 - FOSO.fondo + 0.5, z: cz(FOSO), rx: 6, rz: 2, n: 18, tam: 3, alto: 6, vel: 0.05, color: "#bfe8ff", fuerza: 0.1 })
+
+  // Muros de la planta baja (los del andén, la sala de control y el corredor los ponen ellos).
+  const yPB = Y0 + PB
+  // Las cuatro caras de oficinas, de la primera galería a la boca del pozo.
+  for (const g of carasInteriores(POZO, yPB, Y0 + GALERIAS[0], Y0)) k.base.agregar(g, null, A.panel)
+  for (const g of carasInteriores(POZO, Y0 + GALERIAS[0], TOPE, Y0)) k.oficinas.agregar(g)
+  // Franja de luz al pie de las oficinas y en la boca.
+  for (const y of [yPB + 0.1, TOPE - 0.4]) {
+    k.luz.agregar(cara(POZO.x0, POZO.z0 + 0.03, POZO.x1, POZO.z0 + 0.03, y, y + 0.12, Zv), null, luz(P.frio, 2.6))
+    k.luz.agregar(cara(POZO.x0, POZO.z1 - 0.03, POZO.x1, POZO.z1 - 0.03, y, y + 0.12, Zv.clone().negate()), null, luz(P.frio, 2.6))
+    k.luz.agregar(cara(POZO.x0 + 0.03, POZO.z0, POZO.x0 + 0.03, POZO.z1, y, y + 0.12, X), null, luz(P.frio, 2.6))
+    k.luz.agregar(cara(POZO.x1 - 0.03, POZO.z0, POZO.x1 - 0.03, POZO.z1, y, y + 0.12, X.clone().negate()), null, luz(P.frio, 2.6))
+  }
+
+  // Galerías: losas de 2,5 m alrededor del vacío, baranda de vidrio y luz en el canto.
+  const anillo: Rect[] = [
+    { x0: POZO.x0, x1: POZO.x1, z0: POZO.z0, z1: VACIO.z0 },
+    { x0: POZO.x0, x1: POZO.x1, z0: VACIO.z1, z1: POZO.z1 },
+    { x0: POZO.x0, x1: VACIO.x0, z0: VACIO.z0, z1: VACIO.z1 },
+    { x0: VACIO.x1, x1: POZO.x1, z0: VACIO.z0, z1: VACIO.z1 },
+  ]
+  const nombres = ["n6", "n5", "n4"]
+  GALERIAS.forEach((h, i) => {
+    const y = Y0 + h
+    for (const r of anillo) {
+      caja(k.base, pz, r.x0, r.x1, y - 0.4, y, r.z0, r.z1, acabado("#dfe5ea", 0.5, 0, 1.2))
+      k.base.agregar(horizontal(r, y + 0.003), null, A.epoxi)
     }
-  }
-  for (let j = 0; j < seg; j++)
-    for (let i = 0; i < 24; i++) {
-      const a = j * 25 + i
-      idx.push(a, a + 1, a + 25, a + 1, a + 26, a + 25)
+    // Canto de luz bajo la losa, del lado del vacío.
+    const borde: Array<[number, number, number, number]> = [
+      [VACIO.x0, VACIO.z0, VACIO.x1, VACIO.z0],
+      [VACIO.x0, VACIO.z1, VACIO.x1, VACIO.z1],
+      [VACIO.x0, VACIO.z0, VACIO.x0, VACIO.z1],
+      [VACIO.x1, VACIO.z0, VACIO.x1, VACIO.z1],
+    ]
+    for (const [ax, az, bx, bz] of borde) {
+      const largo = Math.hypot(bx - ax, bz - az)
+      const giro = ax === bx ? Math.PI / 2 : 0
+      k.luz.agregar(pz.caja, M((ax + bx) / 2, y - 0.42, (az + bz) / 2, giro, largo, 0.04, 0.12), luz(P.frio, 3.4))
+      // Baranda: vidrio y pasamanos (con paso libre hacia los puentes del ascensor en la galería norte).
+      const tramos: Array<[number, number]> = az === bz && az === VACIO.z0 ? [[ax, -ELEV.dx - ELEV.medio], [-ELEV.dx + ELEV.medio, ELEV.dx - ELEV.medio], [ELEV.dx + ELEV.medio, bx]] : [[ax === bx ? az : ax, ax === bx ? bz : bx]]
+      for (const [a, b] of tramos) {
+        if (b - a < 0.1) continue
+        if (ax === bx) {
+          vidrioPlano(k, pz, "z", ax, a, b, y, y + 1.05)
+          tubo(k.base, pz, new THREE.Vector3(ax, y + 1.08, a), new THREE.Vector3(ax, y + 1.08, b), 0.03, A.acero)
+        } else {
+          vidrioPlano(k, pz, "x", az, a, b, y, y + 1.05)
+          tubo(k.base, pz, new THREE.Vector3(a, y + 1.08, az), new THREE.Vector3(b, y + 1.08, az), 0.03, A.acero)
+        }
+      }
     }
-  const lamina = new THREE.BufferGeometry()
-  lamina.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3))
-  lamina.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2))
-  lamina.setIndex(idx)
-  const cascada = new THREE.Mesh(lamina, mats.cascada)
-  cascada.name = "ciudad-cascada"
-  cascada.renderOrder = 2
-  grupo.add(cascada)
-  // El labio de roca de donde sale el agua.
-  const rl = semilla(5)
-  for (let i = 0; i < 11; i++) {
-    const t = 1.6 + rl() * 2.2
-    k.roca.agregar(pz.rocas[i % 4], M(-ancho / 2 + (i / 10) * ancho + (rl() - 0.5) * 2, arriba + 0.6 + rl() * 0.8, zSale - 1.2 - rl() * 1.5, rl() * 6, t * 1.4, t * 0.6, t))
+    // Puentes de la galería norte a cada ascensor.
+    for (const s of [-1, 1]) {
+      const x = s * ELEV.dx
+      caja(k.base, pz, x - ELEV.medio + 0.1, x + ELEV.medio - 0.1, y - 0.3, y, VACIO.z0, ASC.z - ELEV.medio, acabado("#dfe5ea", 0.5, 0, 1.2))
+      for (const sx of [-1, 1]) vidrioPlano(k, pz, "z", x + sx * (ELEV.medio - 0.12), VACIO.z0, ASC.z - ELEV.medio, y, y + 1.05)
+    }
+    // El número del nivel en el muro, sobre la galería, en las caras norte y sur.
+    letrero(k, pz, nombres[i], -6.5, y + 2.6, POZO.z1 - 0.05, Math.PI, 1.3)
+    letrero(k, pz, nombres[i], 6.5, y + 2.6, POZO.z0 + 0.05, 0, 1.3)
+  })
+  letrero(k, pz, "n7", -6.5, Y0 + 4.9, POZO.z1 - 0.05, Math.PI, 1.3)
+
+  // La boca del pozo: un cielo raso oscuro con paneles de luz y cañerías.
+  k.techo.agregar(horizontal(POZO, TOPE, true), null, A.grafito)
+  for (let x = POZO.x0 + 2; x < POZO.x1; x += 4)
+    for (let z = POZO.z0 + 2; z < POZO.z1; z += 4) k.luz.agregar(pz.plano, M(x, TOPE - 0.02, z, 0, 1.2, 1.2, 1, Math.PI / 2), luz(P.frio, 3.2))
+  for (const z of [16, 28, 40]) tubo(k.base, pz, new THREE.Vector3(POZO.x0, TOPE - 0.7, z), new THREE.Vector3(POZO.x1, TOPE - 0.7, z), 0.3, A.aceroOsc)
+  for (const x of [-8.6, 8.6]) caja(k.base, pz, x - 0.4, x + 0.4, TOPE - 1.3, TOPE - 1.2, POZO.z0, POZO.z1, A.acero)
+
+  // Muros de la planta baja: norte (detrás del balcón).
+  muro(k, pz, "x", POZO.x0, POZO.x1, POZO.z0 - 1, POZO.z0, Y0, yPB)
+  k.luz.agregar(pz.caja, M(0, Y0 + 3.4, POZO.z0 + 0.03, 0, 16, 0.08, 0.04), luz(P.frio, 2.4))
+  letrero(k, pz, "balcon", 0, Y0 + 4.4, POZO.z0 + 0.05, 0, 0.6)
+  // Sur: la compuerta al corredor (el muro es más alto que el corredor: cierra el pozo).
+  muro(k, pz, "x", POZO.x0, POZO.x1, POZO.z1, CORREDOR.z0, Y0, yPB, [{ a: -2.1, b: 2.1, alto: 4.2 }])
+  k.compuertas.push({ x: 0, z: POZO.z1 + 1, eje: "x", ancho: 4.2, alto: 4.2, grosor: 2, abierta: 0 })
+  letrero(k, pz, "corredor", 0, Y0 + 5.1, POZO.z1 - 0.05, Math.PI, 0.5)
+  // Las tiras de color que salen del ascensor hacia cada puerta.
+  lineaPiso(k, pz, [[-1.2, 26], [-1.2, 32], [-12.5, 32]], P.ambar)
+  lineaPiso(k, pz, [[1.2, 26], [1.2, 30.3], [12, 30.3]], "#e9eef2")
+  lineaPiso(k, pz, [[-0.6, 26], [-0.6, 56.4], [-6, 56.4]], P.azul)
+  lineaPiso(k, pz, [[0.6, 26], [0.6, 76.2], [7, 76.2]], P.verde)
+  // Bancos de acero contra los muros, fuera del paso.
+  for (const z of [27, 39]) {
+    caja(k.base, pz, POZO.x0 + 0.2, POZO.x0 + 0.7, Y0 + 0.42, Y0 + 0.47, z - 1.5, z + 1.5, A.blanco)
+    caja(k.base, pz, POZO.x0 + 0.25, POZO.x0 + 0.65, Y0, Y0 + 0.42, z - 1.3, z + 1.3, A.aceroOsc)
   }
-  // Bruma al pie, focos cian bajo el agua y el resplandor en el agua.
-  k.vapores.push({ x: 0, y: CANAL.agua - 0.5, z: zSale + 6, r: ancho * 0.55, n: 150, tam: 9, alto: 9, vel: 0.05, color: "#cfe9f5", fuerza: 0.32 })
-  k.vapores.push({ x: 0, y: CANAL.agua - 0.2, z: -80, r: 70, n: 40, tam: 10, alto: 3, vel: 0.02, color: "#9fc8dc", fuerza: 0.14 })
-  for (let i = -2; i <= 2; i++) k.reflejos.push({ x: i * 7, z: zSale + 4, h: 4, color: "#9fe8ff", fuerza: 0.35, ancho: 5 })
-  k.luz.agregar(pz.caja, M(0, CANAL.agua + 0.06, zSale + 5, 0, ancho * 0.95, 0.04, 3.5), luz("#6fe6ff", 2.2))
-
-  // ── El Mirador: un balcón con baranda de vidrio que vuela sobre el canal ──
-  const m = R_MIRADOR
-  const zBalcon = CANAL.z1 - 2.5
-  // Deck de madera (y la parte que vuela sobre el agua).
-  k.madera.agregar(pz.caja, M(cx(m), Y0 + 0.06, (zBalcon + m.z1) / 2, 0, m.x1 - m.x0 + 4, 0.12, m.z1 - zBalcon))
-  k.base.agregar(pz.caja, M(cx(m), Y0 - 0.45, zBalcon + 1.5, 0, m.x1 - m.x0 + 4, 0.9, 3.2), acabado("#22262c", 0.5, 0.4))
-  const xb0 = m.x0 - 2
-  const xb1 = m.x1 + 2
-  // Baranda: paneles de vidrio, pasamanos de acero y una línea de luz en el borde.
-  const panel = (x0: number, z0: number, x1: number, z1: number) => {
-    const largo = Math.hypot(x1 - x0, z1 - z0)
-    const giro = Math.atan2(-(z1 - z0), x1 - x0)
-    const mx = (x0 + x1) / 2
-    const mz = (z0 + z1) / 2
-    k.vidrio.agregar(pz.caja, M(mx, Y0 + 0.7, mz, giro, largo, 1.1, 0.03))
-    k.acero.agregar(pz.caja, M(mx, Y0 + 1.28, mz, giro, largo, 0.07, 0.1))
-    k.luz.agregar(pz.caja, M(mx, Y0 + 0.14, mz, giro, largo, 0.04, 0.06), luz("#ffcf8a", 2.4))
-  }
-  panel(xb0, zBalcon, xb1, zBalcon)
-  panel(xb0, zBalcon, xb0, zBalcon + 6)
-  panel(xb1, zBalcon, xb1, zBalcon + 6)
-  // Visores y bancos mirando a la cascada.
-  for (const x of [-18, 0, 18]) {
-    k.base.agregar(pz.cil8, M(x, Y0 + 0.55, zBalcon + 1.6, 0, 0.09, 1.1, 0.09), acabado("#20444c", 0.35, 0.8))
-    k.base.agregar(pz.caja, M(x, Y0 + 1.2, zBalcon + 1.6, 0, 0.55, 0.32, 0.38, -0.25), acabado("#2a5c66", 0.3, 0.85))
-  }
-  for (const x of [-24, -9, 9, 24]) banco(k, pz, x, zBalcon + 9, Math.PI)
-  for (const x of [m.x0 + 1, m.x1 - 1]) for (const z of [zBalcon + 4, m.z1 - 4]) farol(k, pz, x, z, 4.2, "#ffd29a")
-  letrero(k, pz, "mirador", cx(m) - 14, Y0 + 2.6, m.z1 - 0.58, 0, 0.8)
-  k.base.agregar(pz.caja, M(cx(m) - 14, Y0 + 1.4, m.z1 - 0.75, 0, 7, 2.8, 0.3), acabado("#15181d", 0.4, 0.6))
+  k.reflejos.push({ x: 0, z: POZO.z0 + 0.2, h: 3.4, color: P.frio, fuerza: 0.5, ancho: 6 })
 }
 
-// ── Mobiliario común ──
-
-/** Un aro de luz horizontal. */
-function aro(k: Kit, x: number, y: number, z: number, r: number, grosor: number, color: string, fuerza: number) {
-  const g = new THREE.TorusGeometry(r, grosor, 5, Math.max(16, Math.round(r * 10)))
-  g.rotateX(Math.PI / 2)
-  k.luz.agregar(g, M(x, y, z), luz(color, fuerza))
-  g.dispose()
-}
-
-function farol(k: Kit, pz: Piezas, x: number, z: number, alto = 5, color: string = COLOR.tibio, fuerza = 4.5, suelo: number = Y0) {
-  k.charcos.push({ x, y: suelo, z, r: alto * 1.35, color })
-  k.hierro.agregar(pz.cil8, M(x, Y0 + alto / 2, z, 0, 0.09, alto, 0.09))
-  k.hierro.agregar(pz.cil8, M(x, Y0 + 0.25, z, 0, 0.22, 0.5, 0.22))
-  k.hierro.agregar(pz.cil8, M(x, Y0 + alto + 0.05, z, 0, 0.28, 0.1, 0.28))
-  k.luz.agregar(pz.esfera, M(x, Y0 + alto + 0.38, z, 0, 0.3, 0.36, 0.3), luz(color, fuerza))
-  k.reflejos.push({ x, z, h: alto + 0.4, color, fuerza: 0.5, ancho: 0.9 })
-}
-
-function banco(k: Kit, pz: Piezas, x: number, z: number, giro: number) {
-  k.madera.agregar(pz.caja, M(x, Y0 + 0.46, z, giro, 2.2, 0.08, 0.55))
-  // Respaldo: detrás del asiento (el frente del banco mira hacia +z local).
-  k.madera.agregar(pz.caja, M(x - Math.sin(giro) * 0.27, Y0 + 0.78, z - Math.cos(giro) * 0.27, giro, 2.2, 0.4, 0.06, -0.12))
-  const dx = Math.cos(giro) * 0.9
-  const dz = -Math.sin(giro) * 0.9
-  for (const s of [-1, 1]) k.hierro.agregar(pz.caja, M(x + dx * s, Y0 + 0.22, z + dz * s, giro, 0.08, 0.44, 0.5))
-}
-
-function maceta(k: Kit, pz: Piezas, x: number, z: number, lado: number, color: string, alto = 3) {
-  k.granito.agregar(pz.caja, M(x, Y0 + 0.4, z, 0, lado, 0.8, lado))
-  k.base.agregar(pz.caja, M(x, Y0 + 0.81, z, 0, lado - 0.25, 0.04, lado - 0.25), acabado("#2a1d14", 0.95, 0))
-  k.luz.agregar(pz.caja, M(x, Y0 + 0.06, z, 0, lado + 0.04, 0.04, lado + 0.04), luz("#ffcf8a", 0.9))
-  k.arboles.push({ x, z, y: Y0 + 0.8, alto, copa: 0.95 + lado * 0.13, color })
-}
-
-// ── 6.3 El ascensor de vidrio ──
-
-interface Cabina {
-  grupo: THREE.Group
+interface Cabinas {
+  cuerpo: THREE.InstancedMesh
+  vidrio: THREE.InstancedMesh
   arriba: number
 }
 
-function construirAscensor(k: Kit, pz: Piezas, mats: MaterialesCiudad, ctx: CtxEscena): Cabina {
-  const { x, z } = ASC
-  const techo = techoCiudad(x, z) - 0.2
-  const r = 2.8
-  const alto = techo - Y0
-  // Podio con anillo de luz y el tubo de vidrio.
-  k.granito.agregar(pz.cil24, M(x, Y0 + 0.15, z, 0, 5.6, 0.3, 5.6))
-  aro(k, x, Y0 + 0.31, z, 5.5, 0.05, "#5fe3ff", 2.2)
-  k.base.agregar(pz.cil24, M(x, Y0 + 0.32, z, 0, 5.3, 0.03, 5.3), acabado("#14181d", 0.25, 0.6))
-  const tubo = new THREE.CylinderGeometry(r, r, alto - 0.3, 32, 1, true)
-  k.vidrio.agregar(tubo, M(x, Y0 + 0.3 + (alto - 0.3) / 2, z))
-  tubo.dispose()
-  // Parantes, aros de acero cada 3,5 m y aros de luz cada 7 m.
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2
-    k.acero.agregar(pz.caja, M(x + Math.cos(a) * (r + 0.05), Y0 + alto / 2, z + Math.sin(a) * (r + 0.05), -a, 0.14, alto, 0.14))
+function construirAscensores(k: Kit, pz: Piezas, mats: MaterialesCiudad, sombras: boolean): Cabinas {
+  const m = ELEV.medio
+  for (const s of [-1, 1]) {
+    const x = ASC.x + s * ELEV.dx
+    const z = ASC.z
+    // Caja de vidrio de punta a punta del pozo, aristas de acero y marcos en cada galería.
+    vidrioPlano(k, pz, "x", z - m, x - m, x + m, Y0, TOPE)
+    vidrioPlano(k, pz, "x", z + m, x - m, x + m, Y0 + 2.6, TOPE)
+    vidrioPlano(k, pz, "z", x - m, z - m, z + m, Y0, TOPE)
+    vidrioPlano(k, pz, "z", x + m, z - m, z + m, Y0, TOPE)
+    for (const [ex, ez] of [
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ])
+      caja(k.base, pz, x + ex * m - 0.07, x + ex * m + 0.07, Y0, TOPE, z + ez * m - 0.07, z + ez * m + 0.07, A.acero)
+    for (const h of [0, 2.6, ...GALERIAS, TOPE - Y0 - 0.2]) {
+      const y = Y0 + h
+      caja(k.base, pz, x - m - 0.06, x + m + 0.06, y - 0.08, y + 0.08, z - m - 0.06, z - m + 0.06, A.acero)
+      caja(k.base, pz, x - m - 0.06, x + m + 0.06, y - 0.08, y + 0.08, z + m - 0.06, z + m + 0.06, A.acero)
+      caja(k.base, pz, x - m - 0.06, x - m + 0.06, y - 0.08, y + 0.08, z - m, z + m, A.acero)
+      caja(k.base, pz, x + m - 0.06, x + m + 0.06, y - 0.08, y + 0.08, z - m, z + m, A.acero)
+    }
+    // Puerta de abajo (lado sur, hacia el atrio) y su luz.
+    k.luz.agregar(pz.caja, M(x, Y0 + 2.75, z + m + 0.05, 0, 2.2, 0.05, 0.05), luz(P.cian, 3, 0))
+    // Rieles de la cabina.
+    for (const sx of [-1, 1]) caja(k.base, pz, x + sx * (m - 0.12) - 0.04, x + sx * (m - 0.12) + 0.04, Y0, TOPE, z - m + 0.05, z - m + 0.2, A.acero)
+    k.reflejos.push({ x, z: z + m + 0.2, h: 2.6, color: P.cian, fuerza: 0.6, ancho: 2 })
   }
-  for (let y = Y0 + 3.5; y < techo - 1; y += 3.5) {
-    const toro = new THREE.TorusGeometry(r + 0.06, 0.07, 6, 40)
-    toro.rotateX(Math.PI / 2)
-    const esLuz = Math.round((y - Y0) / 3.5) % 2 === 0
-    if (esLuz) k.luz.agregar(toro, M(x, y, z), luz("#bfefff", 2.4))
-    else k.acero.agregar(toro, M(x, y, z))
-    toro.dispose()
-  }
-  // Collar donde el tubo entra en el cielo.
-  k.base.agregar(pz.cil24, M(x, techo - 0.4, z, 0, r + 2.2, 0.8, r + 2.2), acabado("#1b1f25", 0.4, 0.8))
-  aro(k, x, techo - 0.82, z, r + 1.9, 0.07, "#d9f4ff", 3)
-  aro(k, x, techo - 0.82, z, r + 0.6, 0.05, "#d9f4ff", 2.4)
-  // Rieles de la cabina.
-  for (const s of [-1, 1]) k.acero.agregar(pz.caja, M(x + s * (r - 0.25), Y0 + alto / 2, z, 0, 0.12, alto, 0.2))
-  k.reflejos.push({ x, z, h: 3.5, color: "#7fe6ff", fuerza: 0.7, ancho: 3.5 })
-  k.vapores.push({ x, y: Y0 + 0.2, z, r: 4, n: 10, tam: 3, alto: 2, vel: 0.06, color: "#bfe8ff", fuerza: 0.12 })
+  letrero(k, pz, "ascensor", ASC.x, Y0 + 3.3, ASC.z + m + 0.12, 0, 0.42)
 
-  // La cabina: piso, techo con luz cálida y vidrio. Sube y baja (alActualizar).
-  const cab = new Lote([
-    ["color", 3],
-    ["aRM", 2],
-    ["aEmis", 3],
+  // La cabina: piso y techo de acero con un panel de luz, y vidrio alrededor.
+  const cab = new Lote(PBR)
+  const ci = m - 0.2
+  cab.agregar(pz.caja, M(0, 0.06, 0, 0, ci * 2, 0.12, ci * 2), A.acero)
+  cab.agregar(pz.caja, M(0, 2.54, 0, 0, ci * 2, 0.12, ci * 2), A.acero)
+  cab.agregar(pz.caja, M(0, 2.47, 0, 0, ci * 1.6, 0.02, ci * 1.6), acabado("#ffffff", 0.5, 0, 0, P.frio, 3.5))
+  cab.agregar(pz.caja, M(0, 1.0, -ci + 0.05, 0, ci * 1.6, 0.05, 0.08), A.acero)
+  const geoCab = cab.geometria()!
+  const vid = new Lote()
+  for (const [a, b, c2, d] of [
+    [-ci, -ci, ci, -ci],
+    [-ci, ci, ci, ci],
+    [-ci, -ci, -ci, ci],
+    [ci, -ci, ci, ci],
   ])
-  const rc = r - 0.4
-  cab.agregar(pz.cil24, M(0, 0.1, 0, 0, rc, 0.2, rc), acabado("#d7dade", 0.35, 0.7))
-  cab.agregar(pz.cil24, M(0, 3.1, 0, 0, rc, 0.2, rc), acabado("#d7dade", 0.35, 0.7))
-  cab.agregar(pz.cil24, M(0, 2.98, 0, 0, rc - 0.4, 0.04, rc - 0.4), acabado("#fff3dc", 0.5, 0, "#ffe2b0", 3.2))
-  cab.agregar(pz.caja, M(0, 1.05, -rc + 0.15, 0, 1.6, 0.06, 0.25), acabado("#b6bcc4", 0.3, 0.9))
-  const cabVid = new Lote()
-  const pared = new THREE.CylinderGeometry(rc, rc, 2.8, 24, 1, true)
-  cabVid.agregar(pared, M(0, 1.6, 0))
-  pared.dispose()
-  const g = new THREE.Group()
-  g.name = "ciudad-cabina"
-  const m1 = cab.malla(mats.base, "ciudad-cabina-base")
-  const m2 = cabVid.malla(mats.vidrio, "ciudad-cabina-vidrio")
-  if (m1) {
-    m1.castShadow = ctx.sombras
-    g.add(m1)
-  }
-  if (m2) g.add(m2)
-  g.position.set(x, Y0 + 0.35, z)
-  return { grupo: g, arriba: techo - 3.6 }
+    vid.agregar(cara(a, b, c2, d, 0.12, 2.48, new THREE.Vector3(b === d ? 0 : 1, 0, b === d ? 1 : 0)))
+  const geoVid = vid.geometria()!
+  const cuerpo = new THREE.InstancedMesh(geoCab, mats.base, 2)
+  cuerpo.name = "ciudad-cabinas"
+  cuerpo.castShadow = sombras
+  const vidrio = new THREE.InstancedMesh(geoVid, mats.vidrio, 2)
+  vidrio.name = "ciudad-cabinas-vidrio"
+  vidrio.renderOrder = 3
+  for (const im of [cuerpo, vidrio]) im.frustumCulled = false
+  return { cuerpo, vidrio, arriba: TOPE - 3.2 }
 }
 
-// ── 6.4 La Plaza Central: fuente a ras de piso y la pantalla del reto ──
+// ── 6.2 El andén del tren ──
 
-interface Chorro {
-  x: number
-  y: number
-  z: number
-  alto: number
-  fase: number
-}
+function construirAnden(k: Kit, pz: Piezas) {
+  const S = ANDEN
+  const yT = Y0 + S.alto
+  const lecho = Y0 - VIA.hondo
+  // Piso del andén, el lecho de la vía y el borde de seguridad.
+  k.base.agregar(horizontal({ x0: VIA.x1, x1: S.x1, z0: S.z0, z1: S.z1 }, Y0), null, A.concreto)
+  k.base.agregar(cara(VIA.x1, S.z0, VIA.x1, S.z1, lecho, Y0, new THREE.Vector3(-1, 0, 0)), null, A.concreto)
+  k.base.agregar(horizontal({ x0: S.x0, x1: VIA.x1, z0: S.z0, z1: S.z1 }, lecho), null, A.concretoOsc)
+  caja(k.base, pz, VIA.x1, VIA.x1 + 0.55, Y0, Y0 + 0.012, S.z0, S.z1, acabado(P.amarillo, 0.6, 0))
+  // Rieles y durmientes, también dentro del túnel.
+  for (const s of [-1, 1]) caja(k.base, pz, VIA.x + s * 0.72 - 0.04, VIA.x + s * 0.72 + 0.04, lecho + 0.16, lecho + 0.3, TUNEL.z1, VIA.tope, A.acero)
+  for (let z = TUNEL.z1 + 0.4; z < VIA.tope; z += 0.9) caja(k.base, pz, VIA.x - 1.2, VIA.x + 1.2, lecho, lecho + 0.16, z - 0.12, z + 0.12, acabado("#3b3f44", 0.9, 0))
+  // Tope al final de la vía, con chevrones y luces rojas.
+  caja(k.chevron, pz, VIA.x - 1.4, VIA.x + 1.4, lecho, lecho + 1.6, VIA.tope, VIA.tope + 0.6)
+  for (const s of [-1, 1]) k.luz.agregar(pz.esfera, M(VIA.x + s * 0.9, lecho + 1.75, VIA.tope + 0.1, 0, 0.09, 0.09, 0.09), luz(P.rojo, 6, 0, 2.5))
+  k.balizas.push(new THREE.Vector3(VIA.x, lecho + 1.9, VIA.tope + 0.3))
 
-function construirPlaza(k: Kit, pz: Piezas, chorros: Chorro[]) {
-  const P = R_PLAZA
-  const fx = cx(P)
-  const fz = cz(P)
-  // Rosa de los vientos en el piso: anillos de granito y líneas de luz que salen de la fuente.
-  const anillo = (r0: number, r1: number) => losa(poligono.elipse(fx, fz, r1, r1, 72), Y0 + 0.012, [poligono.elipse(fx, fz, r0, r0, 72)])
-  k.granito.agregar(anillo(9.2, 11))
-  k.granito.agregar(anillo(21.5, 23))
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2
-    const largo = i % 2 === 0 ? 10 : 6
-    const r = 11.5 + largo / 2
-    k.luz.agregar(pz.caja, M(fx + Math.cos(a) * r, Y0 + 0.02, fz + Math.sin(a) * r, -a, largo, 0.02, i % 2 === 0 ? 0.14 : 0.08), luz("#cfe9ff", i % 2 === 0 ? 1.6 : 0.9))
+  // Muros: norte (con la boca del túnel), oeste y sur. El del este lo comparte con el pozo.
+  const N0 = POZO.z0 - 1
+  // Norte: de x0 a x1 de toda la instalación (también cierra la sala de control).
+  const hx0 = TUNEL.x - TUNEL.radio - 0.25
+  const hx1 = TUNEL.x + TUNEL.radio + 0.25
+  const hy0 = TUNEL.y - TUNEL.radio - 0.25
+  const hy1 = TUNEL.y + TUNEL.radio + 0.25
+  muro(k, pz, "x", S.x0, hx0, N0, POZO.z0, lecho, yT, [], A.concreto)
+  muro(k, pz, "x", hx0, hx1, N0, POZO.z0, hy1, yT, [], A.concreto)
+  muro(k, pz, "x", hx1, POZO.x0, N0, POZO.z0, lecho, yT, [], A.concreto)
+  // Las esquinas de la boca: un marco con agujero redondo.
+  {
+    const forma = new THREE.Shape()
+    forma.moveTo(hx0, hy0)
+    forma.lineTo(hx1, hy0)
+    forma.lineTo(hx1, hy1)
+    forma.lineTo(hx0, hy1)
+    forma.closePath()
+    const agujero = new THREE.Path()
+    agujero.absarc(TUNEL.x, TUNEL.y, TUNEL.radio - 0.05, 0, Math.PI * 2, false)
+    forma.holes.push(agujero)
+    const g = new THREE.ShapeGeometry(forma, 24)
+    g.translate(0, 0, POZO.z0 + 0.01)
+    k.base.agregar(g, null, A.concreto)
+    g.dispose()
+    const marco = new THREE.TorusGeometry(TUNEL.radio, 0.18, 6, 40)
+    k.base.agregar(marco, M(TUNEL.x, TUNEL.y, POZO.z0 + 0.1), A.aceroOsc)
+    marco.dispose()
   }
-  // La fuente: un espejo de agua oscuro a ras de piso con chorros que bailan (se puede caminar por encima).
-  k.base.agregar(losa(poligono.elipse(fx, fz, 9.2, 9.2, 64), Y0 + 0.015), null, acabado("#0c1116", 0.08, 0.2))
-  k.agua.agregar(losa(poligono.elipse(fx, fz, 8.6, 8.6, 64), Y0 + 0.03))
-  k.luz.agregar(muroContorno(poligono.elipse(fx, fz, 9.1, 9.1, 64), Y0 + 0.02, Y0 + 0.06, false), null, luz("#6fe6ff", 2))
-  chorros.push({ x: fx, y: Y0, z: fz, alto: 7.5, fase: 0 })
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2
-    chorros.push({ x: fx + Math.cos(a) * 4.6, y: Y0, z: fz + Math.sin(a) * 4.6, alto: 3, fase: i * 0.52 })
-    chorros.push({ x: fx + Math.cos(a + 0.26) * 7.4, y: Y0, z: fz + Math.sin(a + 0.26) * 7.4, alto: 1.5, fase: i * 0.52 + Math.PI })
-    k.luz.agregar(pz.cil8, M(fx + Math.cos(a) * 4.6, Y0 + 0.04, fz + Math.sin(a) * 4.6, 0, 0.22, 0.02, 0.22), luz("#bff4ff", 4))
-  }
-  k.vapores.push({ x: fx, y: Y0 + 0.5, z: fz, r: 5, n: 26, tam: 4, alto: 6, vel: 0.07, color: "#e3f6ff", fuerza: 0.16 })
-  k.reflejos.push({ x: fx, z: fz, h: 5, color: "#9fe8ff", fuerza: 0.5, ancho: 3 })
+  muro(k, pz, "z", N0, POZO.z1 + 2, CIU.x0, S.x0, lecho, yT, [], A.concreto)
+  muro(k, pz, "x", S.x0, POZO.x0, POZO.z1, POZO.z1 + 2, Y0, yT, [], A.concreto)
+  // Este: el muro grueso entre el andén y el pozo, con la compuerta.
+  muro(k, pz, "z", POZO.z0, POZO.z1, S.x1, POZO.x0, Y0, yT, [{ a: 30, b: 34, alto: 4.2 }], A.concreto)
+  k.compuertas.push({ x: (S.x1 + POZO.x0) / 2, z: 32, eje: "z", ancho: 4, alto: 4.2, grosor: 2, abierta: 0 })
+  letrero(k, pz, "f-anden", POZO.x0 + 0.05, Y0 + 5.0, 32, Math.PI / 2, 0.5)
+  letrero(k, pz, "anden", S.x1 - 0.05, Y0 + 5.2, 22, -Math.PI / 2, 0.9)
 
-  // Bancos mirando a la fuente, macetas con tajibos y faroles.
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + Math.PI / 8
-    banco(k, pz, fx + Math.cos(a) * 15.5, fz + Math.sin(a) * 15.5, Math.PI / 2 - a + Math.PI)
+  // El túnel: un tubo que se pierde en la niebla, con anillos de luz cada 6 m.
+  {
+    const largo = TUNEL.z0 - TUNEL.z1
+    const g = invertir(new THREE.CylinderGeometry(TUNEL.radio, TUNEL.radio, largo, 28, 1, true))
+    k.base.agregar(g, M(TUNEL.x, TUNEL.y, (TUNEL.z0 + TUNEL.z1) / 2, 0, 1, 1, 1, Math.PI / 2), A.concreto)
+    g.dispose()
+    const aro = new THREE.TorusGeometry(TUNEL.radio - 0.08, 0.05, 4, 32)
+    for (let z = TUNEL.z0 - 3; z > TUNEL.z1; z -= 6) k.luz.agregar(aro, M(TUNEL.x, TUNEL.y, z), luz(P.frio, 3.6, 0.6))
+    aro.dispose()
   }
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + Math.PI / 4
-    maceta(k, pz, fx + Math.cos(a) * 19, fz + Math.sin(a) * 19, 3, i % 2 === 0 ? "#f08cbc" : "#f3d24c", 3.4)
-  }
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2
-    farol(k, pz, fx + Math.cos(a) * 25.5, fz + Math.sin(a) * 25.5, 5.5, "#ffd7a0")
-  }
-  // Tótems de señalética.
-  totem(k, pz, P.x1 - 3, P.z0 + 4, -Math.PI / 2, ["f-mercado", "f-arena", "f-parque"])
-  totem(k, pz, P.x0 + 3, P.z0 + 4, Math.PI / 2, ["f-club", "f-torres", "f-estacion"])
-  // El cartel de la plaza, a un costado (el centro es el camino del ascensor).
-  letrero(k, pz, "plaza", fx - 16, Y0 + 3.2, P.z0 - 0.47, Math.PI, 0.85)
-  k.base.agregar(pz.caja, M(fx - 16, Y0 + 1.75, P.z0 - 0.25, 0, 10.5, 3.5, 0.4), acabado("#14181d", 0.35, 0.7))
-  k.luz.agregar(pz.caja, M(fx - 16, Y0 + 3.52, P.z0 - 0.25, 0, 10.5, 0.06, 0.42), luz("#7fe6ff", 2))
 
-  // Vestíbulo del ascensor: anillos de piedra y de agua a ras de piso, árboles, bancos y faroles.
-  const ax = ASC.x
-  const az = ASC.z
-  k.granito.agregar(losa(poligono.elipse(ax, az, 15, 15, 72), Y0 + 0.011, [poligono.elipse(ax, az, 9.5, 9.5, 72)]))
-  k.agua.agregar(losa(poligono.elipse(ax, az, 8.8, 8.8, 72), Y0 + 0.025, [poligono.elipse(ax, az, 6.2, 6.2, 72)]))
-  k.base.agregar(losa(poligono.elipse(ax, az, 9.5, 9.5, 72), Y0 + 0.008, [poligono.elipse(ax, az, 5.6, 5.6, 72)]), null, acabado("#0b0f13", 0.1, 0.2))
-  aro(k, ax, Y0 + 0.03, az, 9.05, 0.04, "#7fe6ff", 1.6)
-  aro(k, ax, Y0 + 0.03, az, 15.1, 0.04, "#ffd9a8", 1.2)
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + Math.PI / 4
-    maceta(k, pz, ax + Math.cos(a) * 12.2, az + Math.sin(a) * 12.2, 2.6, i % 2 ? "#f08cbc" : "#4f8d3c", 3)
-    banco(k, pz, ax + Math.cos(a + 0.42) * 12, az + Math.sin(a + 0.42) * 12, Math.PI / 2 - (a + 0.42) + Math.PI)
-    banco(k, pz, ax + Math.cos(a - 0.42) * 12, az + Math.sin(a - 0.42) * 12, Math.PI / 2 - (a - 0.42) + Math.PI)
+  // Techo de concreto con vigas, bandejas de cables y cañerías.
+  k.techo.agregar(horizontal(S, yT, true), null, A.concreto)
+  for (let z = S.z0 + 2; z < S.z1; z += 4) caja(k.techo, pz, S.x0, S.x1, yT - 0.55, yT, z - 0.25, z + 0.25, A.concreto)
+  for (const x of [-30.5, -14.2]) {
+    caja(k.base, pz, x - 0.3, x + 0.3, yT - 0.95, yT - 0.88, S.z0, S.z1, A.acero)
+    caja(k.base, pz, x - 0.3, x - 0.27, yT - 0.95, yT - 0.8, S.z0, S.z1, A.acero)
+    caja(k.base, pz, x + 0.27, x + 0.3, yT - 0.95, yT - 0.8, S.z0, S.z1, A.acero)
   }
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + Math.PI / 8
-    farol(k, pz, ax + Math.cos(a) * 16.5, az + Math.sin(a) * 16.5, 5, "#ffd7a0")
-  }
-  // Líneas de luz en el piso que llevan a la plaza y al Mirador.
-  for (const s of [-1, 1]) {
-    k.luz.agregar(pz.caja, M(ASC.x + s * 3.4, Y0 + 0.02, (ASC.z + P.z0) / 2 + 2, 0, 0.1, 0.02, P.z0 - ASC.z), luz("#cfe9ff", 1.4))
-    k.luz.agregar(pz.caja, M(ASC.x + s * 3.4, Y0 + 0.02, (ASC.z + R_MIRADOR.z1) / 2 - 2, 0, 0.1, 0.02, ASC.z - R_MIRADOR.z1), luz("#cfe9ff", 1.4))
-  }
-}
-
-function totem(k: Kit, pz: Piezas, x: number, z: number, giro: number, ids: string[]) {
-  k.base.agregar(pz.caja, M(x, Y0 + 1.6, z, giro, 1.6, 3.2, 0.35), acabado("#14181d", 0.3, 0.7))
-  k.luz.agregar(pz.caja, M(x, Y0 + 3.24, z, giro, 1.6, 0.06, 0.36), luz("#7fe6ff", 2.2))
-  const nx = Math.sin(giro) * 0.19
-  const nz = Math.cos(giro) * 0.19
-  ids.forEach((id, i) => {
-    letrero(k, pz, id, x + nx, Y0 + 2.6 - i * 0.62, z + nz, giro, 0.48)
-    letrero(k, pz, id, x - nx, Y0 + 2.6 - i * 0.62, z - nz, giro + Math.PI, 0.48)
-  })
-}
-
-/** La pantalla del reto: pórtico de dos pilonos con la pantalla arriba, que se ve de los dos lados. */
-function construirPantalla(k: Kit, pz: Piezas) {
-  const z = PANTALLA.z
-  const w = PANTALLA.ancho
-  const h = PANTALLA.alto
-  const yb = PANTALLA.base
-  const ym = yb + h / 2
-  const xp = w / 2 + 1.6
-  for (const s of [-1, 1]) {
-    k.base.agregar(pz.caja, M(s * xp, Y0 + (yb + h + 1.5 - Y0) / 2, z, 0, 2.4, yb + h + 1.5 - Y0, 2.4), acabado("#1a1d22", 0.35, 0.75))
-    k.luz.agregar(pz.caja, M(s * (xp - 1.21), Y0 + (yb + h + 1.5 - Y0) / 2, z, 0, 0.05, yb + h + 1.5 - Y0, 0.3), luz("#7fe6ff", 2.4))
-    k.luz.agregar(pz.caja, M(s * (xp + 1.21), Y0 + (yb + h + 1.5 - Y0) / 2, z, 0, 0.05, yb + h + 1.5 - Y0, 0.3), luz("#7fe6ff", 1.4))
-    k.reflejos.push({ x: s * xp, z, h: 9, color: "#7fe6ff", fuerza: 0.35, ancho: 1.2 })
-  }
-  // Marco y viga superior.
-  k.base.agregar(pz.caja, M(0, ym, z, 0, w + 1.2, h + 1.2, 1.1), acabado("#0f1216", 0.4, 0.7))
-  k.base.agregar(pz.caja, M(0, yb + h + 1.1, z, 0, w + 5.6, 0.8, 1.6), acabado("#1a1d22", 0.35, 0.75))
-  k.luz.agregar(pz.caja, M(0, yb - 0.62, z, 0, w + 1.2, 0.06, 1.12), luz("#d9f4ff", 2.6))
-  // Las dos caras: hacia la plaza (norte) y hacia la avenida (sur).
-  const cara = pz.plano.clone()
-  k.pantalla.agregar(cara, M(0, ym, z - 0.56, Math.PI, w, h, 1))
-  k.pantalla.agregar(cara, M(0, ym, z + 0.56, 0, w, h, 1))
-  cara.dispose()
-  // La luz de la pantalla en el piso mojado.
-  for (let i = -3; i <= 3; i++) {
-    k.reflejos.push({ x: i * 3.4, z: z - 0.6, h: ym - Y0, color: i % 2 === 0 ? "#79e39a" : "#8fb8ff", fuerza: 0.22, ancho: 3 })
-    k.reflejos.push({ x: i * 3.4, z: z + 0.6, h: ym - Y0, color: i % 2 === 0 ? "#79e39a" : "#8fb8ff", fuerza: 0.16, ancho: 3 })
-  }
-}
-
-// ── 6.5 La Gran Avenida ──
-
-function construirAvenida(k: Kit, pz: Piezas, rnd: () => number) {
-  const A = R_AVENIDA
-  const largo = A.z1 - A.z0
-  // Aceras de piedra, bordillos y líneas de luz embutidas en el piso.
-  for (const s of [-1, 1]) {
-    k.acera.agregar(pz.caja, M(s * (A.x1 + 2.2), Y0 + 0.06, cz(A), 0, 4.4, 0.12, largo))
-    k.granito.agregar(pz.caja, M(s * (A.x1 + 0.1), Y0 + 0.08, cz(A), 0, 0.3, 0.16, largo))
-    k.luz.agregar(pz.caja, M(s * 4.6, Y0 + 0.015, cz(A) + 2, 0, 0.12, 0.02, largo - 4), luz("#d9ecff", 1.2))
-  }
-  // Faroles, macetas con tajibos rosados y bancos, alternados.
-  for (let z = A.z0 + 8; z <= A.z1 - 4; z += 15) {
-    for (const s of [-1, 1]) {
-      farol(k, pz, s * 10.3, z, 6, "#ffcf94", 5)
-      if (z + 7.5 < A.z1 - 3) maceta(k, pz, s * 7.2, z + 7.5, 2.4, rnd() < 0.75 ? "#f28cbf" : "#f5d34e", 3.2)
-    }
-    if (rnd() < 0.6) banco(k, pz, 7.2, z + 2.5, -Math.PI / 2)
-    if (rnd() < 0.6) banco(k, pz, -7.2, z + 2.5, Math.PI / 2)
-  }
-  // Rejillas de las que sale vapor (la ciudad respira).
-  for (const [x, z] of [
-    [-3, 112],
-    [2.5, 141],
-    [-1.5, 176],
-    [3, 203],
-  ] as const) {
-    k.base.agregar(pz.caja, M(x, Y0 + 0.01, z, 0, 1.6, 0.02, 1.0), acabado("#0e1013", 0.6, 0.8))
-    k.vapores.push({ x, y: Y0 + 0.1, z, r: 0.7, n: 16, tam: 2.4, alto: 5, vel: 0.09, color: "#e9eef5", fuerza: 0.22 })
-  }
-  // Edificios a los dos lados: planta baja de comercio y pisos con ventanas.
-  const tramos: Array<[number, number]> = [
-    [A.z0 + 7, A.z0 + 31],
-    [A.z0 + 36, A.z0 + 60],
-    [A.z0 + 65, A.z0 + 89],
-    [A.z0 + 94, A.z0 + 118],
-    [A.z0 + 123, A.z1 - 3],
+  const tuberias: Array<[number, number, number, string]> = [
+    [S.x0 + 0.5, yT - 1.5, 0.32, "#6f7880"],
+    [S.x0 + 1.3, yT - 1.4, 0.2, "#8c969f"],
+    [S.x1 - 0.5, yT - 1.6, 0.26, "#6f7880"],
+    [S.x1 - 1.2, yT - 1.45, 0.16, "#b7834a"],
   ]
-  let tienda = 0
-  tramos.forEach(([z0, z1], i) => {
-    for (const s of [-1, 1]) {
-      const prof = s < 0 ? 14 : 12
-      const xin = A.x1 + 4.4
-      const x0 = s < 0 ? -(xin + prof) : xin
-      const x1 = s < 0 ? -xin : xin + prof
-      const alto = [12, 17, 14, 19, 11][(i + (s > 0 ? 2 : 0)) % 5]
-      const pol: V2[] = [
-        [x0, z0],
-        [x1, z0],
-        [x1, z1],
-        [x0, z1],
-      ]
-      const estilo = (i * 2 + (s > 0 ? 1 : 0)) % 5
-      const tono = ["#2a2f36", "#3a342e", "#24292f", "#423b33", "#2f343c"][estilo]
-      k.torres.agregar(prisma(pol, Y0, Y0 + alto), null, { color: hexA(tono), aSem: [i * 7 + (s > 0 ? 3 : 0) + 1] })
-      const fx = s < 0 ? x1 : x0
-      if (estilo % 2 === 0) {
-        // Balcones corridos con baranda de vidrio y una luz bajo cada losa.
-        for (let y = Y0 + 7.6; y < Y0 + alto - 1; y += 3.2) {
-          k.base.agregar(pz.caja, M(fx - s * 0.55, y, (z0 + z1) / 2, 0, 1.1, 0.2, z1 - z0 - 1), acabado("#c9c6bf", 0.55, 0.1))
-          k.vidrio.agregar(pz.caja, M(fx - s * 1.08, y + 0.55, (z0 + z1) / 2, 0, 0.03, 0.9, z1 - z0 - 1))
-          k.luz.agregar(pz.caja, M(fx - s * 1.0, y - 0.11, (z0 + z1) / 2, 0, 0.05, 0.02, z1 - z0 - 1.2), luz("#ffd9a8", 0.9))
-        }
-      } else {
-        // Aletas verticales de metal oscuro, a ritmo de ventana.
-        for (let z = z0 + 0.8; z < z1 - 0.5; z += 3.2) k.base.agregar(pz.caja, M(fx - s * 0.3, Y0 + 4.4 + (alto - 4.4) / 2, z, 0, 0.6, alto - 4.4, 0.14), acabado("#14171b", 0.4, 0.7))
-      }
-      // Cornisa con luz y marquesina sobre la vidriera.
-      const fachada = s < 0 ? x1 : x0
-      k.base.agregar(pz.caja, M((x0 + x1) / 2, Y0 + alto + 0.3, (z0 + z1) / 2, 0, prof + 0.4, 0.6, z1 - z0 + 0.4), acabado("#1b1f24", 0.4, 0.6))
-      k.luz.agregar(pz.caja, M(fachada - s * 0.02, Y0 + alto - 0.05, (z0 + z1) / 2, 0, 0.06, 0.1, z1 - z0), luz(i % 2 ? COLOR.tibio : "#cfe9ff", 2))
-      k.base.agregar(pz.caja, M(fachada - s * 0.9, Y0 + 4.5, (z0 + z1) / 2, 0, 1.8, 0.18, z1 - z0 - 2), acabado("#15181c", 0.4, 0.6))
-      k.luz.agregar(pz.caja, M(fachada - s * 0.9, Y0 + 4.39, (z0 + z1) / 2, 0, 1.6, 0.03, z1 - z0 - 2.4), luz("#ffd9a8", 1.6))
-      // Letrero de la tienda sobre la marquesina.
-      const id = `tienda-${tienda++ % 10}`
-      letrero(k, pz, id, fachada - s * 0.06, Y0 + 5.6, (z0 + z1) / 2, s < 0 ? Math.PI / 2 : -Math.PI / 2, 1.05)
-      k.reflejos.push({ x: fachada - s * 1.5, z: (z0 + z1) / 2, h: 2.2, color: "#ffc98a", fuerza: 0.3, ancho: 7 })
-      k.reflejos.push({ x: fachada - s * 0.5, z: (z0 + z1) / 2, h: 5.6, color: ["#ffad62", "#7fe6ff", "#ffffff", "#ffc35a", "#ff8fc8"][(tienda - 1) % 5], fuerza: 0.35, ancho: 2.5 })
-    }
-  })
-  // Pórtico de entrada de la avenida (letrero colgante bajo la pantalla).
-  k.base.agregar(pz.caja, M(0, PANTALLA.base - 1.25, PANTALLA.z, 0, 10, 1.1, 0.4), acabado("#14181d", 0.35, 0.7))
-  letrero(k, pz, "avenida", 0, PANTALLA.base - 1.25, PANTALLA.z + 0.22, 0, 0.8)
-  letrero(k, pz, "avenida", 0, PANTALLA.base - 1.25, PANTALLA.z - 0.22, Math.PI, 0.8)
-}
-
-/** "#rrggbb" → color lineal [r, g, b] para atributos. */
-function hexA(hex: string): number[] {
-  _col.set(hex)
-  return [_col.r, _col.g, _col.b]
-}
-
-// ── 6.6 El Distrito de las Torres ──
-
-function construirTorres(k: Kit, pz: Piezas, rnd: () => number) {
-  const R = R_TORRES
-  const libres = [
-    { x: NODO["c-torres-n"]?.p.x ?? -60, z: NODO["c-torres-n"]?.p.z ?? 70, r: 13 },
-    { x: NODO["c-torres-s"]?.p.x ?? -60, z: NODO["c-torres-s"]?.p.z ?? 170, r: 13 },
-    { x: cx(R), z: cz(R), r: 15 },
-  ]
-  const xCamino = libres[0].x
-  const torres: Array<{ x: number; z: number; ancho: number; alto: number; tipo: number; acento: string | null; giro: number }> = []
-  const lejosDelRiel = (x: number, z: number, d: number) => k.riel.every((p) => (p.x - x) ** 2 + (p.z - z) ** 2 > d * d)
-  for (let intento = 0; intento < 5000 && torres.length < 17; intento++) {
-    const x = R.x0 + 7 + rnd() * (R.x1 - R.x0 - 14)
-    const z = R.z0 + 7 + rnd() * (R.z1 - R.z0 - 14)
-    const ancho = 7 + rnd() * 4
-    if (libres.some((l) => Math.hypot(x - l.x, z - l.z) < l.r + ancho / 2)) continue
-    if (Math.abs(x - xCamino) < 6 + ancho / 2 && z > libres[0].z - 4 && z < libres[1].z + 4) continue
-    if (torres.some((t) => Math.hypot(x - t.x, z - t.z) < (t.ancho + ancho) / 2 + 8)) continue
-    if (!lejosDelRiel(x, z, 7 + ancho / 2)) continue
-    if (normaCaverna(x, z) > 0.86) continue
-    const techo = techoCiudad(x, z) - Y0
-    const alto = rnd() < 0.72 ? techo - 1.2 - rnd() * 2.6 : techo * (0.5 + rnd() * 0.28)
-    const acento = rnd() < 0.42 ? [COLOR.cian, COLOR.magenta, COLOR.dorado][Math.floor(rnd() * 3)] : null
-    torres.push({ x, z, ancho, alto, tipo: Math.floor(rnd() * 4), acento, giro: rnd() * Math.PI })
+  for (const [x, y, r, c] of tuberias) {
+    tubo(k.base, pz, new THREE.Vector3(x, y, S.z0), new THREE.Vector3(x, y, S.z1), r, acabado(c, 0.4, 0.7))
+    for (let z = S.z0 + 3; z < S.z1; z += 6) caja(k.base, pz, x - r - 0.05, x + r + 0.05, y + r, yT - 0.55, z - 0.04, z + 0.04, A.aceroOsc)
   }
-  torres.forEach((t, i) => {
-    const sem = [100 + i * 7]
-    const tonos = ["#262b33", "#1d232a", "#36322d", "#2a313b", "#7d7b77"]
-    const tono = hexA(tonos[i % 5])
-    const a = t.ancho / 2
-    // Podio de dos pisos con el vestíbulo iluminado.
-    const podio = poligono.achaflanado(a + 1.6, a + 1.6, 1.4).map(([x, z]) => [t.x + x, t.z + z] as V2)
-    k.torres.agregar(prisma(podio, Y0, Y0 + 4.2), null, { color: hexA("#1d2126"), aSem: sem })
-    k.luz.agregar(muroContorno(podio, Y0 + 4.2, Y0 + 4.32, false), null, luz("#ffd9a8", 1.6))
-    // Cuerpo: según el tipo, prisma achaflanado, cilindro, hexágono o escalonada.
-    const cuerpo = (ancho: number, y0: number, y1: number): V2[] => {
-      const h = ancho / 2
-      const pol =
-        t.tipo === 1
-          ? poligono.circulo(h, 22, t.giro)
-          : t.tipo === 2
-            ? poligono.circulo(h * 1.08, 6, t.giro)
-            : poligono.achaflanado(h, h * (t.tipo === 3 ? 0.8 : 1), h * 0.22)
-      const g = t.tipo === 3 || t.tipo === 0 ? t.giro : 0
-      const c = Math.cos(g)
-      const s = Math.sin(g)
-      const mundo = pol.map(([x, z]) => [t.x + x * c - z * s, t.z + x * s + z * c] as V2)
-      k.torres.agregar(prisma(mundo, y0, y1, { vBase: Y0 }), null, { color: tono, aSem: sem })
-      return mundo
-    }
-    const yTop = Y0 + t.alto
-    let ultimo: V2[]
-    if (t.tipo === 3 || t.alto > 24) {
-      const y1 = Y0 + t.alto * 0.55
-      const y2 = Y0 + t.alto * 0.82
-      cuerpo(t.ancho, Y0 + 4.2, y1)
-      const m = cuerpo(t.ancho * 0.84, y1, y2)
-      k.luz.agregar(muroContorno(m, y1 + 0.02, y1 + 0.14, false), null, luz(t.acento ?? "#ffd9a8", 1.4))
-      ultimo = cuerpo(t.ancho * 0.66, y2, yTop)
-      k.luz.agregar(muroContorno(ultimo, y2 + 0.02, y2 + 0.14, false), null, luz(t.acento ?? "#ffd9a8", 1.4))
-    } else {
-      ultimo = cuerpo(t.ancho, Y0 + 4.2, yTop)
-    }
-    // Losas salientes cada piso en las torres de planta cuadrada: dan ritmo y escala.
-    if (t.tipo === 0) {
-      const sale = ultimo.map(([x, z]) => [t.x + (x - t.x) * 1.06, t.z + (z - t.z) * 1.06] as V2)
-      for (let y = Y0 + 7.4; y < yTop - 1.5; y += 3.2) k.base.agregar(prisma(sale, y, y + 0.18, { piso: true }), null, acabado("#b9b6b0", 0.5, 0.2))
-    }
-    // Corona de luz y aguja con su luz en la punta.
-    k.luz.agregar(muroContorno(ultimo, yTop - 0.5, yTop - 0.15, false), null, luz(t.acento ?? "#e9f3ff", t.acento ? 2.6 : 1.6))
-    const techo = techoCiudad(t.x, t.z)
-    if (techo - yTop > 2.4) {
-      k.acero.agregar(pz.cil8, M(t.x, (yTop + techo - 1.2) / 2, t.z, 0, 0.12, techo - 1.2 - yTop, 0.12))
-      k.luz.agregar(pz.esfera, M(t.x, techo - 1.15, t.z, 0, 0.18, 0.18, 0.18), luz(i % 3 === 0 ? "#ff5a4f" : "#ffffff", 6, i % 3 === 0 ? 2.4 : 0))
-    }
-    // Acentos de neón verticales en dos aristas (con moderación).
-    if (t.acento) {
-      for (const q of [0, Math.floor(ultimo.length / 2)]) {
-        const [px, pzz] = ultimo[q]
-        const dx = px - t.x
-        const dz = pzz - t.z
-        const l = Math.hypot(dx, dz) || 1
-        k.luz.agregar(pz.caja, M(px + (dx / l) * 0.06, (Y0 + 4.4 + yTop) / 2, pzz + (dz / l) * 0.06, 0, 0.16, yTop - Y0 - 4.6, 0.16), luz(t.acento, 2.2, 0.7 + (i % 3) * 0.3))
-      }
-      k.reflejos.push({ x: t.x, z: t.z, h: 10, color: t.acento, fuerza: 0.12, ancho: 2 })
-    }
-    letrero(k, pz, `torre-${i}`, t.x, Y0 + 3.3, t.z - a - 1.62, Math.PI, 0.5)
-    k.reflejos.push({ x: t.x, z: t.z - a - 2, h: 2.2, color: "#ffd2a0", fuerza: 0.3, ancho: t.ancho })
-  })
-  // Pasarelas de vidrio entre torres vecinas.
-  let pasarelas = 0
-  for (let i = 0; i < torres.length && pasarelas < 8; i++)
-    for (let j = i + 1; j < torres.length && pasarelas < 8; j++) {
-      const A = torres[i]
-      const B = torres[j]
-      const d = Math.hypot(B.x - A.x, B.z - A.z)
-      if (d > 30) continue
-      const y = Y0 + Math.min(A.alto, B.alto) * (0.35 + 0.3 * ((i + j) % 3) * 0.5)
-      if (y < Y0 + 7) continue
-      const giro = Math.atan2(-(B.z - A.z), B.x - A.x)
-      const mx = (A.x + B.x) / 2
-      const mz = (A.z + B.z) / 2
-      const l = d - (A.ancho + B.ancho) * 0.35
-      k.base.agregar(pz.caja, M(mx, y, mz, giro, l, 0.35, 3.2), acabado("#d8dbe0", 0.4, 0.5))
-      k.base.agregar(pz.caja, M(mx, y + 3, mz, giro, l, 0.25, 3.2), acabado("#d8dbe0", 0.4, 0.5))
-      for (const s of [-1, 1]) {
-        const ox = Math.sin(giro) * 1.55 * s
-        const oz = Math.cos(giro) * 1.55 * s
-        k.vidrio.agregar(pz.caja, M(mx + ox, y + 1.5, mz + oz, giro, l, 2.7, 0.04))
-        k.luz.agregar(pz.caja, M(mx + ox, y - 0.2, mz + oz, giro, l, 0.06, 0.08), luz(COLOR.cian, 2))
-      }
-      k.luz.agregar(pz.caja, M(mx, y + 2.84, mz, giro, l - 1, 0.04, 0.5), luz("#fff0d8", 2.2))
-      pasarelas++
-    }
-  // Plazuela central del distrito: un círculo de piedra con un árbol grande y bancos.
-  const pc = libres[2]
-  k.granito.agregar(losa(poligono.elipse(pc.x, pc.z, 11, 11, 48), Y0 + 0.012))
-  k.luz.agregar(muroContorno(poligono.elipse(pc.x, pc.z, 11, 11, 48), Y0 + 0.012, Y0 + 0.04, false), null, luz("#7fe6ff", 1.4))
-  maceta(k, pz, pc.x, pc.z, 3.6, "#3f7f3c", 4.2)
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2
-    banco(k, pz, pc.x + Math.cos(a) * 6.5, pc.z + Math.sin(a) * 6.5, Math.PI / 2 - a + Math.PI)
-    farol(k, pz, pc.x + Math.cos(a + 0.5) * 10, pc.z + Math.sin(a + 0.5) * 10, 4.5, "#ffd7a0", 4)
+  // Luminarias lineales sobre el andén y la vía.
+  for (const x of [-24, -18]) {
+    k.luz.agregar(pz.caja, M(x, yT - 0.62, cz(S), 0, 0.18, 0.04, S.z1 - S.z0 - 4), luz(P.frio, 3.2))
+    for (let z = S.z0 + 5; z < S.z1; z += 7) k.reflejos.push({ x, z, h: S.alto - 0.6, color: P.frio, fuerza: 0.35, ancho: 1.2 })
   }
-  // Camino entre los dos accesos, con faroles.
-  for (let z = libres[0].z + 12; z < libres[1].z - 10; z += 14) {
-    farol(k, pz, xCamino - 4.5, z, 4.8, "#ffd7a0")
-    farol(k, pz, xCamino + 4.5, z + 7, 4.8, "#ffd7a0")
+  k.luz.agregar(pz.caja, M(VIA.x, yT - 0.62, cz(S), 0, 0.18, 0.04, S.z1 - S.z0 - 4), luz(P.frio, 2))
+  // Bancos contra el muro del pozo y una franja roja de salida, baja.
+  for (const z of [18, 26, 38]) {
+    caja(k.base, pz, S.x1 - 0.65, S.x1 - 0.15, Y0 + 0.42, Y0 + 0.47, z - 1.4, z + 1.4, acabado(P.acero, 0.4, 0.7))
+    caja(k.base, pz, S.x1 - 0.6, S.x1 - 0.2, Y0, Y0 + 0.42, z - 1.2, z + 1.2, A.aceroOsc)
   }
-  letrero(k, pz, "torres", xCamino, Y0 + 3, libres[0].z - 9, Math.PI, 0.75)
-  k.base.agregar(pz.caja, M(xCamino, Y0 + 1.6, libres[0].z - 9.2, 0, 10.5, 3.2, 0.3), acabado("#14181d", 0.3, 0.7))
-}
-
-// ── 6.7 El Mercado ──
-
-function construirMercado(k: Kit, pz: Piezas, rnd: () => number) {
-  const R = R_MERCADO
-  const toldos = ["#b8452f", "#1f7a74", "#d8a032", "#e9dcc4", "#7d2b3a", "#2f5f8f"]
-  let comida = 0
-  const puesto = (x: number, z: number, giro: number, i: number) => {
-    const t = (dx: number, dy: number, dz: number) => {
-      const c = Math.cos(giro)
-      const s = Math.sin(giro)
-      return [x + dx * c + dz * s, Y0 + dy, z - dx * s + dz * c] as const
-    }
-    const m = (dx: number, dy: number, dz: number, sx: number, sy: number, sz: number, rx = 0) => {
-      const [px, py, pzz] = t(dx, dy, dz)
-      return M(px, py, pzz, giro, sx, sy, sz, rx)
-    }
-    k.madera.agregar(pz.caja, m(0, 0.5, 0.6, 4.4, 1.0, 0.9))
-    k.base.agregar(pz.caja, m(0, 1.02, 0.6, 4.5, 0.06, 1.0), acabado("#e8e2d6", 0.4, 0))
-    k.base.agregar(pz.caja, m(0, 1.3, -1.2, 4.4, 2.6, 0.12), acabado("#3a2c22", 0.7, 0))
-    for (const sx of [-2.15, 2.15]) for (const sz of [-1.2, 1.1]) k.hierro.agregar(pz.caja, m(sx, 1.4, sz, 0.08, 2.8, 0.08))
-    k.base.agregar(pz.caja, m(0, 2.95, 0.15, 4.9, 0.08, 3.2, 0.2), acabado(toldos[i % toldos.length], 0.85, 0))
-    k.luz.agregar(pz.caja, m(0, 2.68, 0.1, 3.6, 0.04, 0.25), luz("#ffd39a", 3.2))
-    const [lx, , lz] = t(0, 0, 1.3)
-    k.reflejos.push({ x: lx, z: lz, h: 2.6, color: "#ffc27a", fuerza: 0.35, ancho: 3.2 })
-    const [sx2, sy2, sz2] = t(0, 3.45, 1.72)
-    letrero(k, pz, `comida-${comida++ % 12}`, sx2, sy2, sz2, giro, 0.55)
-    if (rnd() < 0.5) {
-      const [vx, , vz] = t(rnd() * 2 - 1, 0, -0.2)
-      k.vapores.push({ x: vx, y: Y0 + 1.2, z: vz, r: 0.4, n: 6, tam: 1.4, alto: 2.4, vel: 0.12, color: "#f5ece0", fuerza: 0.2 })
-    }
-  }
-  let i = 0
-  for (let x = R.x0 + 6; x <= R.x1 - 4; x += 6.2) {
-    puesto(x, R.z0 + 1.5, 0, i++)
-    puesto(x, R.z1 - 1.5, Math.PI, i++)
-  }
-  for (let z = R.z0 + 13; z <= R.z1 - 12; z += 6.2) puesto(R.x1 - 1.5, z, -Math.PI / 2, i++)
-  // Mesas largas en el medio.
-  for (let j = 0; j < 4; j++) {
-    const z = R.z0 + 15 + j * 7
-    k.madera.agregar(pz.caja, M(cx(R) - 4, Y0 + 0.75, z, 0, 14, 0.08, 1.2))
-    for (const s of [-1, 1]) k.madera.agregar(pz.caja, M(cx(R) - 4, Y0 + 0.45, z + s * 1.05, 0, 14, 0.06, 0.4))
-    for (const s of [-6, 6]) k.hierro.agregar(pz.caja, M(cx(R) - 4 + s, Y0 + 0.37, z, 0, 0.1, 0.74, 1.0))
-  }
-  // Guirnaldas: cables con focos entre postes, de norte a sur.
-  for (let x = R.x0 + 8; x <= R.x1 - 6; x += 9) {
-    for (const z of [R.z0 + 4.5, R.z1 - 4.5]) k.hierro.agregar(pz.cil8, M(x, Y0 + 3, z, 0, 0.07, 6, 0.07))
-    const n = 22
-    const z0 = R.z0 + 4.5
-    const z1 = R.z1 - 4.5
-    for (let q = 0; q <= n; q++) {
-      const t = q / n
-      const z = z0 + (z1 - z0) * t
-      const y = Y0 + 5.9 - Math.sin(t * Math.PI) * 1.3
-      k.luz.agregar(pz.esfera, M(x, y - 0.12, z, 0, 0.09, 0.11, 0.09), luz(q % 5 === 0 ? "#ffe8b8" : "#ffc77a", 6))
-      if (q < n) {
-        const z2 = z0 + (z1 - z0) * ((q + 1) / n)
-        const y2 = Y0 + 5.9 - Math.sin(((q + 1) / n) * Math.PI) * 1.3
-        const l = Math.hypot(z2 - z, y2 - y)
-        k.hierro.agregar(pz.caja, M(x, (y + y2) / 2, (z + z2) / 2, 0, 0.02, 0.02, l, Math.atan2(-(y2 - y), z2 - z)))
-      }
-      if (q % 4 === 2) k.reflejos.push({ x, z, h: y - Y0, color: "#ffc77a", fuerza: 0.12, ancho: 0.7 })
-    }
-  }
-  // Arco de entrada desde la plaza.
-  const xa = R.x0 + 1
-  const za = cz(R)
-  for (const s of [-1, 1]) k.base.agregar(pz.caja, M(xa, Y0 + 2.6, za + s * 6, 0, 0.5, 5.2, 0.5), acabado("#2a2018", 0.6, 0.2))
-  k.base.agregar(pz.caja, M(xa, Y0 + 5.5, za, 0, 0.6, 1.4, 13), acabado("#2a2018", 0.6, 0.2))
-  letrero(k, pz, "mercado", xa - 0.34, Y0 + 5.5, za, -Math.PI / 2, 1.1)
-  letrero(k, pz, "mercado", xa + 0.34, Y0 + 5.5, za, Math.PI / 2, 1.1)
-}
-
-// ── 6.8 El Parque bajo la bóveda y el lago ──
-
-function construirParque(k: Kit, pz: Piezas, rnd: () => number) {
-  const R = R_PARQUE
-  const cesped = poligono.rectRedondeado(R.x0 + 3, R.x1 - 1, R.z0 + 3, R.z1 - 3, 14, 8)
-  k.pasto.agregar(losa(cesped, Y0 + 0.14))
-  k.granito.agregar(muroContorno(cesped, Y0, Y0 + 0.14, false))
-  // Caminos de grava: un anillo y dos diagonales.
-  const pcx = cx(R)
-  const pcz = cz(R)
-  k.grava.agregar(losa(poligono.elipse(pcx, pcz, 40, 44, 72), Y0 + 0.16, [poligono.elipse(pcx, pcz, 37, 41, 72)]))
-  const camino = (x0: number, z0: number, x1: number, z1: number) => {
-    const l = Math.hypot(x1 - x0, z1 - z0)
-    k.grava.agregar(pz.caja, M((x0 + x1) / 2, Y0 + 0.155, (z0 + z1) / 2, Math.atan2(-(z1 - z0), x1 - x0), l, 0.02, 3))
-  }
-  const acc = NODO["c-parque"]?.p ?? { x: 45, z: 130 }
-  camino(acc.x - 6, acc.z, pcx, pcz)
-  camino(pcx, pcz, R.x1 - 4, R.z1 - 10)
-  camino(pcx - 30, R.z1 - 6, pcx, pcz)
-  // Kiosco en el centro (el punto de reunión): piso de piedra, columnas y techo con luz.
-  k.granito.agregar(pz.cil24, M(pcx, Y0 + 0.2, pcz, 0, 6.5, 0.12, 6.5))
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2
-    k.base.agregar(pz.cil8, M(pcx + Math.cos(a) * 6, Y0 + 2.2, pcz + Math.sin(a) * 6, 0, 0.14, 4, 0.14), acabado("#ece8de", 0.5, 0))
-  }
-  const techo = new THREE.ConeGeometry(7.6, 2.2, 8, 1)
-  k.base.agregar(techo, M(pcx, Y0 + 5.3, pcz, Math.PI / 8), acabado("#2e4a42", 0.5, 0.3))
-  techo.dispose()
-  aro(k, pcx, Y0 + 4.15, pcz, 6.1, 0.06, "#ffd9a0", 2.6)
-  k.reflejos.push({ x: pcx, z: pcz, h: 4.2, color: "#ffd9a0", fuerza: 0.3, ancho: 6 })
-  // Árboles: verdes de varios tonos y algunos tajibos amarillos y rosados.
-  const verdes = ["#3f7a3a", "#4f8d3c", "#2f6a3a", "#5d9445", "#3b6e44"]
-  let puestos = 0
-  for (let intento = 0; intento < 900 && puestos < 46; intento++) {
-    const x = R.x0 + 6 + rnd() * (R.x1 - R.x0 - 10)
-    const z = R.z0 + 6 + rnd() * (R.z1 - R.z0 - 12)
-    const rr = Math.hypot((x - pcx) / 38.5, (z - pcz) / 42.5)
-    if (Math.abs(rr - 1) < 0.1) continue
-    if (Math.hypot(x - pcx, z - pcz) < 12) continue
-    if (Math.hypot(x - acc.x, z - acc.z) < 9) continue
-    if (k.arboles.some((a) => Math.hypot(a.x - x, a.z - z) < 6.5)) continue
-    const tajibo = rnd() < 0.16
-    k.arboles.push({ x, z, y: Y0 + 0.14, alto: 2.6 + rnd() * 2.2, copa: 1.8 + rnd() * 1.3, color: tajibo ? (rnd() < 0.5 ? "#f3d24c" : "#f08cbc") : verdes[Math.floor(rnd() * verdes.length)] })
-    puestos++
-  }
-  // Arbustos bajos en los bordes del césped.
-  for (let i = 0; i < 40; i++) {
-    const t = i / 40
-    const [x, z] = cesped[Math.floor(t * cesped.length)]
-    const dx = pcx - x
-    const dz = pcz - z
-    const l = Math.hypot(dx, dz) || 1
-    k.arboles.push({ x: x + (dx / l) * 2, z: z + (dz / l) * 2, y: Y0 + 0.14, alto: 0.1, copa: 1.1 + rnd() * 0.5, color: "#284f2a" })
-  }
-  // Faroles de globo a lo largo del anillo y bancos.
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2
-    farol(k, pz, pcx + Math.cos(a) * 42, pcz + Math.sin(a) * 46, 4.2, "#fff0c8", 4, Y0 + 0.17)
-    if (i % 2 === 0) banco(k, pz, pcx + Math.cos(a + 0.2) * 35.5, pcz + Math.sin(a + 0.2) * 39.5, Math.PI / 2 - (a + 0.2) + Math.PI)
-  }
-  // Luciérnagas sobre el pasto (puntos de luz que flotan: ver drones).
-  // El lago: borde de piedra, agua, muelle y farolillos flotantes.
-  const borde = poligono.elipse(LAGO.x, LAGO.z, LAGO.rx, LAGO.rz, 56)
-  k.granito.agregar(muroContorno(borde, Y0 - 1.6, Y0 + 0.25, true))
-  k.granito.agregar(losa(poligono.elipse(LAGO.x, LAGO.z, LAGO.rx + 1.4, LAGO.rz + 1.4, 56), Y0 + 0.25, [borde]))
-  k.agua.agregar(losa(borde, LAGO.agua))
-  k.base.agregar(losa(borde, Y0 - 1.55), null, acabado("#0b1310", 0.4, 0))
-  const xm = LAGO.x - LAGO.rx - 1
-  k.madera.agregar(pz.caja, M(xm + 6, Y0 + 0.3, LAGO.z - 8, 0, 14, 0.15, 3))
-  for (let q = 0; q < 4; q++) for (const s of [-1, 1]) k.madera.agregar(pz.cil8, M(xm + 1 + q * 4, Y0 - 0.5, LAGO.z - 8 + s * 1.3, 0, 0.12, 1.8, 0.12))
-  farol(k, pz, xm + 12.5, LAGO.z - 9.3, 3.2, "#ffe0a8", 4)
-  for (let q = 0; q < 22; q++) {
-    const a = rnd() * Math.PI * 2
-    const r = Math.sqrt(rnd()) * 0.82
-    const x = LAGO.x + Math.cos(a) * LAGO.rx * r
-    const z = LAGO.z + Math.sin(a) * LAGO.rz * r
-    k.luz.agregar(pz.esfera, M(x, LAGO.agua + 0.1, z, 0, 0.22, 0.14, 0.22), luz("#ffb860", 5))
-    k.reflejos.push({ x, z, h: 0.6, color: "#ffb860", fuerza: 0.25, ancho: 0.6 })
-  }
-  k.vapores.push({ x: LAGO.x, y: LAGO.agua, z: LAGO.z, r: 26, n: 26, tam: 8, alto: 2, vel: 0.02, color: "#cfdde8", fuerza: 0.1 })
-  letrero(k, pz, "parque", acc.x + 5.5, Y0 + 2.4, acc.z - 4, -Math.PI / 2, 0.7)
-  k.base.agregar(pz.caja, M(acc.x + 5.75, Y0 + 1.2, acc.z - 4, 0, 0.3, 2.4, 6), acabado("#20302a", 0.4, 0.4))
-}
-
-// ── 6.9 El monorriel y la Estación ──
-
-function curvaMonorriel(): THREE.CatmullRomCurve3 {
-  const e = cz(R_ESTACION) + 4.5
-  const P: Array<[number, number]> = [
-    [-30, e],
-    [0, e],
-    [30, e],
-    [75, e + 9],
-    [140, 240],
-    [178, 190],
-    [182, 110],
-    [178, 40],
-    [160, -55],
-    [90, -86],
-    [0, -80],
-    [-90, -86],
-    [-160, -55],
-    [-181, 30],
-    [-172, 100],
-    [-128, 148],
-    [-98, 204],
-    [-60, e + 2],
-  ]
-  return new THREE.CatmullRomCurve3(
-    P.map(([x, z]) => new THREE.Vector3(x, RIEL_Y, z)),
-    true,
-    "centripetal",
-  )
+  k.luz.agregar(pz.caja, M(S.x1 - 0.03, Y0 + 0.25, 41.5, 0, 0.04, 0.05, 3), luz(P.rojo, 2.4, 0))
+  letrero(k, pz, "salida", S.x1 - 0.05, Y0 + 2.6, 41.5, -Math.PI / 2, 0.3)
 }
 
 interface Tren {
-  malla: THREE.InstancedMesh
-  curva: THREE.CatmullRomCurve3
+  coches: THREE.InstancedMesh
+  puertas: THREE.InstancedMesh
+  /** Largo de un coche y separación entre coches. */
   largo: number
-  /** Arco (m) donde el tren se detiene, centrado en la estación. */
-  sEstacion: number
+  paso: number
 }
 
-function construirMonorriel(k: Kit, pz: Piezas, mats: MaterialesCiudad, ctx: CtxEscena, curva: THREE.CatmullRomCurve3): Tren {
-  const N = 720
-  const pts = curva.getSpacedPoints(N).slice(0, N)
-  const largo = curva.getLength()
-  const tan = pts.map((_, i) => pts[(i + 1) % N].clone().sub(pts[(i - 1 + N) % N]).setY(0).normalize())
-  const lado = tan.map((t) => new THREE.Vector3(-t.z, 0, t.x))
-  const w = 0.55
-  const top = RIEL_Y
-  const bot = RIEL_Y - 1.4
-  const caraViga = (a: (i: number, out: THREE.Vector3) => void, b: (i: number, out: THREE.Vector3) => void, n: (i: number, out: THREE.Vector3) => void) =>
-    cinta(pts, (i, l, out) => (l < 0 ? a(i, out) : b(i, out)), n, true)
-  const P = (i: number, s: number, y: number, out: THREE.Vector3) => out.copy(pts[i]).addScaledVector(lado[i], s).setY(y)
-  const vigaAc = acabado("#55585d", 0.4, 0.45)
-  k.base.agregar(caraViga((i, o) => P(i, -w, top, o), (i, o) => P(i, w, top, o), (_i, o) => o.set(0, 1, 0)), null, vigaAc)
-  k.base.agregar(caraViga((i, o) => P(i, w, bot, o), (i, o) => P(i, -w, bot, o), (_i, o) => o.set(0, -1, 0)), null, vigaAc)
-  k.base.agregar(caraViga((i, o) => P(i, w, top, o), (i, o) => P(i, w, bot, o), (i, o) => o.copy(lado[i])), null, vigaAc)
-  k.base.agregar(caraViga((i, o) => P(i, -w, bot, o), (i, o) => P(i, -w, top, o), (i, o) => o.copy(lado[i]).negate()), null, vigaAc)
-  // La línea de luz bajo la viga: el trazo cian que cruza la ciudad.
-  k.luz.agregar(caraViga((i, o) => P(i, 0.16, bot - 0.01, o), (i, o) => P(i, -0.16, bot - 0.01, o), (_i, o) => o.set(0, -1, 0)), null, luz("#5fe3ff", 2.4))
-  // Columnas cada ~26 m (más largas dentro del canal y del lago).
-  const paso = Math.round((26 / largo) * N)
-  for (let i = 0; i < N; i += paso) {
-    const p = pts[i]
-    if (p.x > R_ESTACION.x0 - 4 && p.x < R_ESTACION.x1 + 4 && Math.abs(p.z - cz(R_ESTACION)) < 20) continue
-    const enCanal = p.x > CANAL.x0 && p.x < CANAL.x1 && p.z > CANAL.z0 && p.z < CANAL.z1
-    const enLago = ((p.x - LAGO.x) / LAGO.rx) ** 2 + ((p.z - LAGO.z) / LAGO.rz) ** 2 < 1
-    const pie = enCanal ? CANAL.fondo : enLago ? Y0 - 1.6 : Y0
-    const alto = bot - pie - 0.5
-    const giro = Math.atan2(-tan[i].z, tan[i].x)
-    k.base.agregar(pz.cil16, M(p.x, pie + alto / 2, p.z, 0, 0.6, alto, 0.6), acabado("#6b6d70", 0.55, 0.2))
-    k.base.agregar(pz.caja, M(p.x, bot - 0.3, p.z, giro, 1.4, 0.6, 2.2), acabado("#6b6d70", 0.55, 0.2))
-    if (!enCanal && !enLago) {
-      k.base.agregar(pz.cil16, M(p.x, Y0 + 0.2, p.z, 0, 1.0, 0.4, 1.0), acabado("#8f8c86", 0.7, 0))
-      aro(k, p.x, Y0 + 0.41, p.z, 0.82, 0.035, "#5fe3ff", 1.8)
+function construirTren(mats: MaterialesCiudad, pz: Piezas, sombras: boolean): Tren {
+  const largo = 10.6
+  const r = 1.35
+  const cuerpo = new Lote(PBR)
+  // Aluminio cepillado, nariz redondeada, franja de ventanas con luz blanca azulada.
+  const cap = new THREE.CapsuleGeometry(r, largo - 2 * r, 6, 16)
+  cap.rotateX(Math.PI / 2)
+  cuerpo.agregar(cap, M(0, 0, 0, 0, 1, 1.1, 1), acabado("#c5ccd2", 0.3, 0.85))
+  cap.dispose()
+  for (const s of [-1, 1]) {
+    cuerpo.agregar(pz.caja, M(s * (r - 0.02), 0.45, 0, 0, 0.08, 0.7, largo - 3.4), acabado("#0d1216", 0.1, 0.4, 0, "#dbe9ff", 1.6))
+    cuerpo.agregar(pz.caja, M(s * (r - 0.05), -0.35, 0, 0, 0.06, 0.08, largo - 3), acabado(P.cian, 0.3, 0, 0, P.cian, 2.5))
+  }
+  cuerpo.agregar(pz.caja, M(0, -1.35, 0, 0, 2.0, 0.3, largo - 2.6), A.aceroOsc)
+  // Parabrisas delante y detrás.
+  for (const s of [-1, 1]) cuerpo.agregar(pz.esfera, M(0, 0.5, s * (largo / 2 - 0.55), 0, 0.85, 0.42, 0.5), acabado("#0d1216", 0.08, 0.5, 0, "#9fc3ff", 0.6))
+  const coches = new THREE.InstancedMesh(cuerpo.geometria()!, mats.base, 2)
+  coches.name = "ciudad-tren"
+  coches.castShadow = sombras
+  coches.frustumCulled = false
+  const hoja = new Lote(PBR)
+  hoja.agregar(pz.caja, M(0, 0, 0, 0, 0.06, 2.1, 0.75), acabado("#d3d9de", 0.3, 0.85))
+  hoja.agregar(pz.caja, M(0.02, 0.35, 0, 0, 0.04, 0.9, 0.5), acabado("#0d1216", 0.1, 0.4, 0, "#dbe9ff", 1.4))
+  const puertas = new THREE.InstancedMesh(hoja.geometria()!, mats.base, 8)
+  puertas.name = "ciudad-tren-puertas"
+  puertas.frustumCulled = false
+  return { coches, puertas, largo, paso: largo + 0.7 }
+}
+
+// ── 6.3 La sala de control: pantalla curva y núcleo de IA ──
+
+function construirControl(k: Kit, pz: Piezas) {
+  const S = CONTROL
+  const yT = Y0 + S.alto
+  k.base.agregar(horizontal(S, Y0), null, A.grafitoPiso)
+  // Pared de vidrio hacia el atrio (con la puerta) y los muros de grafito.
+  tabiqueVidrio(k, pz, "z", S.x0, S.z0, S.z1, S.alto, [[28.3, 32.3]])
+  muro(k, pz, "x", S.x0, CIU.x1, S.z0 - 1, S.z0, Y0, yT, [], A.grafito)
+  muro(k, pz, "z", S.z0 - 1, S.z1 + 1, S.x1, CIU.x1, Y0, yT, [], A.grafito)
+  muro(k, pz, "x", POZO.x1 + 0.6, S.x1, S.z1, S.z1 + 1, Y0, yT, [], A.grafito)
+  // El tramo del pozo entre la sala y el corredor.
+  muro(k, pz, "z", S.z1, POZO.z1 + 2, POZO.x1, POZO.x1 + 0.6, Y0, Y0 + PB)
+  letrero(k, pz, "f-control", POZO.x1 - 0.05, Y0 + 4.6, 42.2, -Math.PI / 2, 0.42)
+  letrero(k, pz, "control", S.x0 + 0.1, Y0 + 5.6, 21, -Math.PI / 2, 0.55)
+  // Techo de grafito con tiras azules.
+  k.techo.agregar(horizontal(S, yT, true), null, A.grafito)
+  for (let z = S.z0 + 2; z < S.z1; z += 3) k.luz.agregar(pz.caja, M(cx(S), yT - 0.03, z, 0, S.x1 - S.x0 - 3, 0.03, 0.08), luz(P.azul, 2.6, 0))
+
+  // La pantalla: un tramo de cilindro, cóncavo hacia el núcleo.
+  {
+    const pos: number[] = []
+    const nor: number[] = []
+    const uv: number[] = []
+    const N = 32
+    for (let i = 0; i < N; i++) {
+      const t0 = i / N
+      const t1 = (i + 1) / N
+      const a0 = THREE.MathUtils.lerp(-PANTALLA.ang, PANTALLA.ang, t0)
+      const a1 = THREE.MathUtils.lerp(-PANTALLA.ang, PANTALLA.ang, t1)
+      const p = (a: number, y: number) => new THREE.Vector3(NUCLEO.x + Math.cos(a) * PANTALLA.radio, y, NUCLEO.z + Math.sin(a) * PANTALLA.radio)
+      const n = new THREE.Vector3(-Math.cos((a0 + a1) / 2), 0, -Math.sin((a0 + a1) / 2))
+      tri(pos, nor, uv, p(a0, PANTALLA.y0), p(a1, PANTALLA.y0), p(a1, PANTALLA.y1), n, [t0, 0], [t1, 0], [t1, 1])
+      tri(pos, nor, uv, p(a0, PANTALLA.y0), p(a1, PANTALLA.y1), p(a0, PANTALLA.y1), n, [t0, 0], [t1, 1], [t0, 1])
+    }
+    k.pantalla.agregar(geometria(pos, nor, uv))
+    // Marco y la luz que la pantalla deja en el piso.
+    for (const y of [PANTALLA.y0 - 0.12, PANTALLA.y1 + 0.12]) {
+      const arco = new THREE.TorusGeometry(PANTALLA.radio + 0.05, 0.1, 4, 40, PANTALLA.ang * 2)
+      arco.rotateX(Math.PI / 2)
+      arco.rotateY(PANTALLA.ang)
+      k.base.agregar(arco, M(NUCLEO.x, y, NUCLEO.z), A.aceroOsc)
+      arco.dispose()
+    }
+    for (let a = -0.6; a <= 0.61; a += 0.3) k.reflejos.push({ x: NUCLEO.x + Math.cos(a) * (PANTALLA.radio - 0.3), z: NUCLEO.z + Math.sin(a) * (PANTALLA.radio - 0.3), h: 4, color: "#4aa8ff", fuerza: 0.35, ancho: 3 })
+  }
+
+  // Escritorios en gradas: dos arcos frente a la pantalla, de espaldas al núcleo.
+  const arcos: Array<[number, number, number]> = [
+    [6.2, 0, 7],
+    [9.2, 0.45, 9],
+  ]
+  for (const [r, sube, n] of arcos) {
+    for (let i = 0; i < n; i++) {
+      const a = THREE.MathUtils.lerp(-0.62, 0.62, n === 1 ? 0.5 : i / (n - 1))
+      const x = NUCLEO.x + Math.cos(a) * r
+      const z = NUCLEO.z + Math.sin(a) * r
+      const giro = Math.PI / 2 - a
+      const y = Y0 + sube
+      if (sube > 0) k.base.agregar(pz.caja, M(x - Math.cos(a) * 0.4, Y0 + sube / 2, z - Math.sin(a) * 0.4, giro, 1.9, sube, 2.3), A.grafito)
+      k.base.agregar(pz.caja, M(x, y + 0.74, z, giro, 1.7, 0.05, 0.75), acabado("#2a333b", 0.35, 0.3))
+      k.base.agregar(pz.caja, M(x, y + 0.37, z + 0, giro, 1.6, 0.72, 0.6), A.grafito)
+      // Dos monitores que miran al operador (hacia el núcleo).
+      for (const s of [-0.42, 0.42]) {
+        const mx = x + Math.cos(a) * 0.22 + Math.sin(a) * s
+        const mz = z + Math.sin(a) * 0.22 - Math.cos(a) * s
+        k.base.agregar(pz.caja, M(mx, y + 1.05, mz, giro, 0.62, 0.38, 0.03), acabado("#0b1015", 0.2, 0.3, 0, i % 3 ? P.cian : P.azul, 0.9))
+      }
+      // La silla, del lado del núcleo.
+      const sx = x - Math.cos(a) * 0.75
+      const sz = z - Math.sin(a) * 0.75
+      k.base.agregar(pz.cil8, M(sx, y + 0.46, sz, 0, 0.26, 0.08, 0.26), A.grafito)
+      k.base.agregar(pz.caja, M(sx - Math.cos(a) * 0.24, y + 0.8, sz - Math.sin(a) * 0.24, giro, 0.48, 0.6, 0.06), A.grafito)
+      k.base.agregar(pz.cil8, M(sx, y + 0.22, sz, 0, 0.04, 0.44, 0.04), A.acero)
     }
   }
-  for (let i = 0; i < N; i += Math.round(paso / 2)) k.reflejos.push({ x: pts[i].x, z: pts[i].z, h: bot - Y0, color: "#5fe3ff", fuerza: 0.1, ancho: 0.8 })
+  // El núcleo de IA: un cilindro de vidrio con una columna de luz (los anillos se animan aparte).
+  k.base.agregar(pz.cil24, M(NUCLEO.x, Y0 + 0.15, NUCLEO.z, 0, 1.6, 0.3, 1.6), A.grafito)
+  k.luz.agregar(new THREE.TorusGeometry(1.55, 0.03, 4, 40).rotateX(Math.PI / 2), M(NUCLEO.x, Y0 + 0.31, NUCLEO.z), luz(P.cian, 3, 0))
+  k.luz.agregar(pz.cil16, M(NUCLEO.x, Y0 + 3.3, NUCLEO.z, 0, 0.12, 5.8, 0.12), luz(P.cian, 4, 0, 1.3))
+  {
+    const g = new THREE.CylinderGeometry(0.8, 0.8, 6, 32, 1, true)
+    k.vidrio.agregar(g, M(NUCLEO.x, Y0 + 3.3, NUCLEO.z))
+    g.dispose()
+  }
+  k.base.agregar(pz.cil24, M(NUCLEO.x, Y0 + 6.45, NUCLEO.z, 0, 1.1, 0.3, 1.1), A.grafito)
+  k.reflejos.push({ x: NUCLEO.x, z: NUCLEO.z, h: 3, color: P.cian, fuerza: 0.6, ancho: 1.5 })
+}
 
-  // ── La Estación: hall de vidrio abajo, andén y techo curvo arriba ──
-  const E = R_ESTACION
-  const ze = cz(E) + 4.5
-  const yAnden = RIEL_Y - 0.35
-  const hall: V2[] = [
-    [E.x0 - 2, E.z0 + 6],
-    [E.x1 + 2, E.z0 + 6],
-    [E.x1 + 2, E.z1 + 2],
-    [E.x0 - 2, E.z1 + 2],
-  ]
-  k.vidrio.agregar(muroContorno(hall, Y0, yAnden - 0.6, false))
-  k.base.agregar(pz.caja, M(0, yAnden - 0.75, (E.z0 + 6 + E.z1 + 2) / 2, 0, E.x1 - E.x0 + 4, 0.3, E.z1 + 2 - (E.z0 + 6)), acabado("#1c2026", 0.4, 0.5))
-  for (let x = E.x0; x <= E.x1; x += 6) {
-    k.base.agregar(pz.caja, M(x, (Y0 + yAnden) / 2, E.z0 + 6.2, 0, 0.5, yAnden - Y0, 0.5), acabado("#d4d6da", 0.4, 0.4))
-    k.luz.agregar(pz.caja, M(x + 3, yAnden - 0.66, (E.z0 + E.z1) / 2 + 4, 0, 0.3, 0.04, E.z1 - E.z0 - 6), luz("#fff3df", 2.8))
-  }
-  k.reflejos.push({ x: 0, z: E.z0 + 6, h: 4, color: "#ffe9c8", fuerza: 0.45, ancho: 30 })
-  k.base.agregar(losa(hall, Y0 + 0.02), null, acabado("#c9c4bb", 0.25, 0))
-  // Andenes a los dos lados de la viga.
-  for (const s of [-1, 1]) {
-    k.base.agregar(pz.caja, M(0, yAnden - 0.3, ze + s * 3.6, 0, E.x1 - E.x0 + 4, 0.6, 4.4), acabado("#d9d6cf", 0.45, 0.1))
-    k.luz.agregar(pz.caja, M(0, yAnden + 0.01, ze + s * 1.5, 0, E.x1 - E.x0 + 4, 0.02, 0.14), luz("#ffd36a", 2.4))
-    k.vidrio.agregar(pz.caja, M(0, yAnden + 0.6, ze + s * 5.75, 0, E.x1 - E.x0 + 4, 1.2, 0.04))
-  }
-  // Techo curvo: costillas de acero y vidrio.
-  const arco = (y0: number, r: number) => {
-    const g = new THREE.CylinderGeometry(r, r, E.x1 - E.x0 + 8, 24, 1, true, Math.PI / 2 - 1.1, 2.2)
-    g.rotateZ(Math.PI / 2)
-    g.translate(0, y0, ze)
-    return g
-  }
-  const vid = arco(yAnden + 1.2, 7.5)
-  k.vidrio.agregar(vid)
-  vid.dispose()
-  for (let x = E.x0 - 3; x <= E.x1 + 3; x += 5) {
-    const t = new THREE.TorusGeometry(7.55, 0.12, 6, 24, 2.2)
-    t.rotateZ(Math.PI / 2 - 1.1)
-    t.rotateY(Math.PI / 2)
-    k.acero.agregar(t, M(x, yAnden + 1.2, ze))
-    t.dispose()
-  }
-  // Escaleras (bloques) del hall al andén.
-  for (let q = 0; q < 12; q++) k.base.agregar(pz.caja, M(-14, Y0 + (q + 0.5) * ((yAnden - Y0) / 12), E.z0 + 8 + q * 0.6, 0, 3, (yAnden - Y0) / 12, 0.6), acabado("#cfcac2", 0.5, 0))
-  letrero(k, pz, "estacion", 0, yAnden - 2.6, E.z0 + 5.7, Math.PI, 1.6)
-  letrero(k, pz, "circuito", 0, yAnden + 3.4, ze - 7.5, Math.PI, 0.7)
-  k.base.agregar(pz.caja, M(0, yAnden - 2.6, E.z0 + 5.85, 0, 16, 2.4, 0.2), acabado("#121519", 0.35, 0.7))
+// ── 6.4 El corredor blanco con el arco de escaneo ──
 
-  // ── El tren: tres coches, una malla instanciada (las ventanas y la franja brillan solas) ──
-  const coche = new Lote([
-    ["color", 3],
-    ["aRM", 2],
-    ["aEmis", 3],
+function construirCorredor(k: Kit, pz: Piezas) {
+  const S = CORREDOR
+  const yT = Y0 + S.alto
+  k.base.agregar(horizontal(S, Y0), null, A.epoxi)
+  k.base.agregar(horizontal({ x0: S.x0 - 1, x1: S.x0, z0: LABS.z0, z1: LABS.z1 }, Y0), null, A.epoxi)
+  // Oeste: vidrio hacia los laboratorios, con dos puertas.
+  tabiqueVidrio(k, pz, "z", S.x0 - 0.5, LABS.z0, LABS.z1, 3.0, [
+    [54, 58],
+    [86, 90],
   ])
-  const cuerpo = new THREE.CapsuleGeometry(1.42, 8.4, 6, 16)
-  cuerpo.rotateZ(Math.PI / 2)
-  coche.agregar(cuerpo, M(0, 1.25, 0, 0, 1, 1.12, 1.05), acabado("#eef0f2", 0.22, 0.35))
-  cuerpo.dispose()
-  coche.agregar(pz.caja, M(0, 1.72, 0, 0, 8.6, 0.78, 3.02), acabado("#0b0f14", 0.06, 0.6, "#ffcf98", 1.7))
-  coche.agregar(pz.caja, M(0, 0.32, 0, 0, 9.2, 0.12, 3.0), acabado("#0b0f14", 0.2, 0.5, "#5fe3ff", 2.6))
-  coche.agregar(pz.esfera, M(5.62, 1.4, 0, 0, 0.12, 0.22, 0.7), acabado("#ffffff", 0.2, 0, "#ffffff", 6))
-  coche.agregar(pz.esfera, M(-5.62, 1.4, 0, 0, 0.12, 0.18, 0.6), acabado("#ff3030", 0.2, 0, "#ff3a30", 4))
-  coche.agregar(pz.caja, M(0, -0.25, 0, 0, 8, 0.9, 1.5), acabado("#2a2e33", 0.5, 0.6))
-  const geo = coche.malla(mats.base, "tmp")
-  const malla = new THREE.InstancedMesh(geo ? geo.geometry : new THREE.BufferGeometry(), mats.base, 3)
-  malla.name = "ciudad-tren"
-  malla.castShadow = ctx.sombras
-  malla.frustumCulled = false
-  // El arco más cercano a la estación.
-  let sEst = 0
-  let mejor = Infinity
-  for (let i = 0; i < N; i++) {
-    const d = (pts[i].x - 0) ** 2 + (pts[i].z - ze) ** 2
-    if (d < mejor) {
-      mejor = d
-      sEst = (i / N) * largo
-    }
+  caja(k.base, pz, S.x0 - 1, S.x0, Y0 + 3.0, Y0 + LABS.alto, LABS.z0, LABS.z1, A.panel)
+  caja(k.base, pz, S.x0 - 1, S.x0, Y0 + LABS.alto, Y0 + LABS.alto + 0.02, LABS.z0, LABS.z1, A.muroCorte)
+  muro(k, pz, "z", S.z0, LABS.z0, S.x0 - 1, S.x0, Y0, Y0 + LABS.alto)
+  muro(k, pz, "z", LABS.z1, S.z1, S.x0 - 1, S.x0, Y0, Y0 + LABS.alto)
+  // Este: paneles blancos con las puertas del comedor y del jardín.
+  muro(k, pz, "z", S.z0, S.z1, S.x1, S.x1 + 1, Y0, Y0 + COMEDOR.alto, [
+    { a: 54.5, b: 58.5, alto: 3.2 },
+    { a: 74, b: 78, alto: 3.2 },
+  ])
+  letrero(k, pz, "f-comedor", S.x1 - 0.02, Y0 + 3.6, 56.5, -Math.PI / 2, 0.38)
+  letrero(k, pz, "f-jardin", S.x1 - 0.02, Y0 + 3.6, 76, -Math.PI / 2, 0.38)
+  letrero(k, pz, "f-labs", S.x0 - 0.5, Y0 + 3.6, 56, Math.PI / 2, 0.38)
+  // Zócalo de acero al pie del muro blanco.
+  caja(k.base, pz, S.x1 - 0.03, S.x1, Y0, Y0 + 0.15, S.z0, S.z1, A.acero)
+  // Techo con dos tiras de luz lineal empotradas.
+  k.techo.agregar(horizontal(S, yT, true), null, acabado(P.panel, 0.55, 0, 1.2))
+  for (const x of [-1.25, 1.25]) {
+    k.luz.agregar(pz.caja, M(x, yT - 0.01, cz(S), 0, 0.16, 0.02, S.z1 - S.z0 - 1), luz(P.frio, 4))
+    for (let z = S.z0 + 4; z < S.z1; z += 6) k.reflejos.push({ x, z, h: S.alto, color: P.frio, fuerza: 0.45, ancho: 0.6 })
   }
-  return { malla, curva, largo, sEstacion: sEst }
-}
-
-// ── 6.10 La Arena ──
-
-function construirArena(k: Kit, pz: Piezas) {
-  const { x: ax, z: az, rx, rz, alto } = ARENA
-  // Lado abierto hacia el oeste (la entrada del mapa queda ahí).
-  const abre = 0.75
-  const enAbierto = (a: number) => Math.abs(Math.atan2(Math.sin(a - Math.PI), Math.cos(a - Math.PI))) < abre
-  // Muro exterior: anillo elíptico con el hueco de la entrada vidriada.
-  const NS = 96
-  const pos: number[] = []
-  const nor: number[] = []
-  const uv: number[] = []
-  const vid: number[] = []
-  const vnor: number[] = []
-  const vuv: number[] = []
-  for (let i = 0; i < NS; i++) {
-    const a0 = (i / NS) * Math.PI * 2
-    const a1 = ((i + 1) / NS) * Math.PI * 2
-    const am = (a0 + a1) / 2
-    const p0 = new THREE.Vector3(ax + Math.cos(a0) * rx, 0, az + Math.sin(a0) * rz)
-    const p1 = new THREE.Vector3(ax + Math.cos(a1) * rx, 0, az + Math.sin(a1) * rz)
-    const n = new THREE.Vector3(Math.cos(am) / rx, 0, Math.sin(am) / rz).normalize()
-    const quad = (P: number[], Nn: number[], U: number[], y0: number, y1: number) => {
-      const A0 = p0.clone().setY(y0)
-      const B0 = p1.clone().setY(y0)
-      const A1 = p0.clone().setY(y1)
-      const B1 = p1.clone().setY(y1)
-      tri(P, Nn, U, A0, B0, B1, n, [0, 0], [1, 0], [1, 1])
-      tri(P, Nn, U, A0, B1, A1, n, [0, 0], [1, 1], [0, 1])
-    }
-    if (enAbierto(am)) {
-      quad(vid, vnor, vuv, Y0, Y0 + 8)
-      quad(pos, nor, uv, Y0 + 8, Y0 + alto)
-    } else quad(pos, nor, uv, Y0, Y0 + alto)
-  }
-  k.base.agregar(geometria(pos, nor, uv), null, acabado("#7f878f", 0.3, 0.7))
-  k.vidrio.agregar(geometria(vid, vnor, vuv))
-  // Bandas de LED alrededor del muro (blanca fría y una línea dorada fina).
-  const banda = (y0: number, y1: number, col: string, f: number, crece = 0.05) =>
-    k.luz.agregar(muroContorno(poligono.elipse(ax, az, rx + crece, rz + crece, NS), Y0 + y0, Y0 + y1, false), null, luz(col, f))
-  banda(9.4, 10.0, "#d9f4ff", 1.5)
-  banda(11.7, 11.82, COLOR.dorado, 2)
-  banda(8.0, 8.06, "#7fe6ff", 1.6)
-  // Techo: anillo sólido y óvalo central de vidrio con costillas.
-  const NR = 64
-  const anillo = (rx0: number, rz0: number, y0: number, rx1: number, rz1: number, y1: number) => {
-    const P: number[] = []
-    const Nn: number[] = []
-    const U: number[] = []
-    for (let i = 0; i < NR; i++) {
-      const a0 = (i / NR) * Math.PI * 2
-      const a1 = ((i + 1) / NR) * Math.PI * 2
-      const A = new THREE.Vector3(ax + Math.cos(a0) * rx0, y0, az + Math.sin(a0) * rz0)
-      const B = new THREE.Vector3(ax + Math.cos(a1) * rx0, y0, az + Math.sin(a1) * rz0)
-      const C = new THREE.Vector3(ax + Math.cos(a1) * rx1, y1, az + Math.sin(a1) * rz1)
-      const D = new THREE.Vector3(ax + Math.cos(a0) * rx1, y1, az + Math.sin(a0) * rz1)
-      const n = new THREE.Vector3(0, 1, 0)
-      tri(P, Nn, U, A, B, C, n, [0, 0], [1, 0], [1, 1])
-      tri(P, Nn, U, A, C, D, n, [0, 0], [1, 1], [0, 1])
-    }
-    const g = geometria(P, Nn, U)
-    g.computeVertexNormals()
-    return g
-  }
-  k.base.agregar(anillo(rx + 1.5, rz + 1.5, Y0 + alto, rx - 12, rz - 10, Y0 + alto + 3.6), null, acabado("#a7adb4", 0.3, 0.6))
-  k.base.agregar(anillo(rx + 1.5, rz + 1.5, Y0 + alto - 0.4, rx + 1.5, rz + 1.5, Y0 + alto), null, acabado("#5d646b", 0.35, 0.7))
-  k.vidrio.agregar(anillo(rx - 12, rz - 10, Y0 + alto + 3.6, 0.5, 0.5, Y0 + alto + 5.4))
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2
-    const x0 = ax + Math.cos(a) * (rx - 12)
-    const z0 = az + Math.sin(a) * (rz - 10)
-    const l = Math.hypot(x0 - ax, z0 - az)
-    k.acero.agregar(pz.caja, M((x0 + ax) / 2, Y0 + alto + 4.6, (z0 + az) / 2, Math.atan2(-(z0 - az), x0 - ax), l, 0.3, 0.3, 0, Math.atan2(1.8, l) * 0.6))
-  }
-  k.luz.agregar(muroContorno(poligono.elipse(ax, az, rx - 12, rz - 10, 64), Y0 + alto + 3.55, Y0 + alto + 3.75, false), null, luz("#d9f4ff", 2.4))
-  // La cancha (28 x 15) con sus líneas, y los aros.
-  const cx0 = ax
-  k.madera.agregar(pz.caja, M(cx0, Y0 + 0.05, az, 0, 32, 0.1, 19))
-  const linea = (x: number, z: number, w: number, d: number) => k.base.agregar(pz.caja, M(x, Y0 + 0.105, z, 0, w, 0.01, d), acabado("#f4f1ea", 0.5, 0))
-  linea(cx0, az - 7.5, 28, 0.08)
-  linea(cx0, az + 7.5, 28, 0.08)
-  linea(cx0 - 14, az, 0.08, 15)
-  linea(cx0 + 14, az, 0.08, 15)
-  linea(cx0, az, 0.08, 15)
-  const circ = muroContorno(poligono.elipse(cx0, az, 1.8, 1.8, 32), Y0 + 0.1, Y0 + 0.11, false)
-  k.base.agregar(losa(poligono.elipse(cx0, az, 1.8, 1.8, 32), Y0 + 0.106, [poligono.elipse(cx0, az, 1.72, 1.72, 32)]), null, acabado("#f4f1ea", 0.5, 0))
-  circ.dispose()
+  // El pórtico del escáner a la entrada: acero y tiras cian.
+  const zP = S.z0 + 1.6
   for (const s of [-1, 1]) {
-    k.base.agregar(losa(poligono.elipse(cx0 + s * 13.2, az, 5.8, 4.9, 32).filter(([x]) => s * (x - (cx0 + s * 13.2)) <= 0.01), Y0 + 0.104), null, acabado("#2e5aa8", 0.5, 0))
-    k.base.agregar(pz.caja, M(cx0 + s * 15.2, Y0 + 1.6, az, 0, 0.2, 3.2, 0.2), acabado("#1b1e22", 0.4, 0.7))
-    k.base.agregar(pz.caja, M(cx0 + s * 14.7, Y0 + 3.4, az, 0, 0.08, 1.05, 1.8), acabado("#f4f6f8", 0.2, 0, "#ffffff", 0.4))
-    k.luz.agregar(muroContorno(poligono.elipse(cx0 + s * 14.2, az, 0.23, 0.23, 16), Y0 + 3.05, Y0 + 3.08, false), null, luz("#ff6a2a", 2))
+    caja(k.base, pz, s * S.x1 - 0.18 * s - 0.18, s * S.x1 - 0.18 * s + 0.18, Y0, yT, zP - 0.25, zP + 0.25, A.acero)
+    k.luz.agregar(pz.caja, M(s * (S.x1 - 0.4), Y0 + S.alto / 2, zP, 0, 0.03, S.alto - 0.4, 0.1), luz(P.cian, 3, 0))
   }
-  // Gradas en forma de U (abiertas al oeste): 10 escalones.
-  const N_G = 84
-  for (let e = 0; e < 10; e++) {
-    const rx0 = 19.5 + e * 1.55
-    const rz0 = 12.5 + e * 1.3
-    const y = Y0 + 0.55 * (e + 1)
-    const P: number[] = []
-    const Nn: number[] = []
-    const U: number[] = []
-    for (let i = 0; i < N_G; i++) {
-      const a0 = (i / N_G) * Math.PI * 2
-      const a1 = ((i + 1) / N_G) * Math.PI * 2
-      if (enAbierto((a0 + a1) / 2) || enAbierto(a0) || enAbierto(a1)) continue
-      const q = (a: number, r: number, rr: number, yy: number) => new THREE.Vector3(ax + Math.cos(a) * r, yy, az + Math.sin(a) * rr)
-      const up = new THREE.Vector3(0, 1, 0)
-      tri(P, Nn, U, q(a0, rx0, rz0, y), q(a1, rx0, rz0, y), q(a1, rx0 + 1.55, rz0 + 1.3, y), up, [0, 0], [1, 0], [1, 1])
-      tri(P, Nn, U, q(a0, rx0, rz0, y), q(a1, rx0 + 1.55, rz0 + 1.3, y), q(a0, rx0 + 1.55, rz0 + 1.3, y), up, [0, 0], [1, 1], [0, 1])
-      const nn = new THREE.Vector3(-Math.cos((a0 + a1) / 2) / rx0, 0, -Math.sin((a0 + a1) / 2) / rz0).normalize()
-      tri(P, Nn, U, q(a0, rx0, rz0, y - 0.55), q(a1, rx0, rz0, y - 0.55), q(a1, rx0, rz0, y), nn, [0, 0], [1, 0], [1, 1])
-      tri(P, Nn, U, q(a0, rx0, rz0, y - 0.55), q(a1, rx0, rz0, y), q(a0, rx0, rz0, y), nn, [0, 0], [1, 1], [0, 1])
-    }
-    const col = e === 4 ? "#c9963a" : e % 2 ? "#1d3550" : "#173048"
-    k.base.agregar(geometria(P, Nn, U), null, acabado(col, 0.55, 0.1))
-  }
-  // Marcador colgante sobre la cancha (las cuatro caras muestran el contador del reto).
-  const ym = Y0 + 11
-  k.base.agregar(pz.caja, M(cx0, ym, az, 0, 6.6, 3.6, 6.6), acabado("#0f1216", 0.4, 0.7))
-  const cara = pz.plano.clone()
-  for (let i = 0; i < 4; i++) {
-    const g = (i * Math.PI) / 2
-    k.pantalla.agregar(cara, M(cx0 + Math.sin(g) * 3.32, ym, az + Math.cos(g) * 3.32, g, 6.2, 2.3, 1))
-  }
-  cara.dispose()
-  k.luz.agregar(pz.caja, M(cx0, ym - 1.85, az, 0, 6.7, 0.08, 6.7), luz("#d9f4ff", 3))
-  k.acero.agregar(pz.cil8, M(cx0, (ym + Y0 + alto + 4) / 2, az, 0, 0.1, Y0 + alto + 4 - ym, 0.1))
-  // Letreros y luces de la entrada.
-  letrero(k, pz, "arena", ax - rx - 0.4, Y0 + 9.7, az, -Math.PI / 2, 2.2)
-  for (const s of [-1, 1]) k.reflejos.push({ x: ax - rx + 2, z: az + s * 8, h: 4, color: "#d9f4ff", fuerza: 0.22, ancho: 3.5 })
-  k.reflejos.push({ x: ax - rx - 1, z: az, h: 9.7, color: "#ffffff", fuerza: 0.3, ancho: 4 })
-  k.haces.push({ x: ax - 12, y: Y0 + alto + 3.8, z: az - 14, az: 0.4, incl: 0.32, barrido: 0.5, vel: 0.35, largo: 16, abre: 1.6, color: "#bfe6ff", fuerza: 0.1 })
-  k.haces.push({ x: ax + 12, y: Y0 + alto + 3.8, z: az + 14, az: 3.5, incl: 0.32, barrido: 0.5, vel: 0.3, largo: 16, abre: 1.6, color: "#bfe6ff", fuerza: 0.1 })
+  caja(k.base, pz, S.x0, S.x1, yT - 0.35, yT, zP - 0.25, zP + 0.25, A.acero)
+  // La puerta del fondo (a la cámara de pruebas) y su letrero.
+  letrero(k, pz, "f-camara", 0, Y0 + 3.8, S.z1 - 0.02, Math.PI, 0.38)
+  // Rojo de salida, bajo y poco.
+  k.luz.agregar(pz.caja, M(S.x1 - 0.02, Y0 + 0.25, 66, 0, 0.03, 0.05, 2.5), luz(P.rojo, 2.4, 0))
 }
 
-// ── 6.11 El Club ──
+// ── 6.5 Los laboratorios de vidrio ──
 
-function construirClub(k: Kit, pz: Piezas) {
-  const R = R_CLUB
-  const xf = R.x0 + 26
-  const zc = cz(R)
-  const z0 = zc - 21
-  const z1 = zc + 21
-  const alto = 15
-  // El edificio: negro brillante, con la fachada hacia la terraza (al este).
-  const pol: V2[] = [
-    [R.x0 + 2, z0],
-    [xf, z0],
-    [xf, z1],
-    [R.x0 + 2, z1],
-  ]
-  k.base.agregar(prisma(pol, Y0, Y0 + alto), null, acabado("#0b0c10", 0.16, 0.75))
-  k.base.agregar(pz.caja, M(xf - 0.4, Y0 + alto + 0.3, zc, 0, 1.6, 0.6, z1 - z0 + 1), acabado("#16181d", 0.3, 0.8))
-  // Neón de la fachada: un marco magenta y barras de "ecualizador" que laten con la música.
-  const xn = xf + 0.06
-  const tubo = (y: number, z: number, w: number, h: number, col: string, f: number, pulso = 0) => k.luz.agregar(pz.caja, M(xn, y, z, 0, 0.08, h, w), luz(col, f, pulso))
-  tubo(Y0 + alto - 0.35, zc, z1 - z0 - 0.6, 0.12, COLOR.magenta, 3.2)
-  tubo(Y0 + 0.35, zc, z1 - z0 - 0.6, 0.1, COLOR.magenta, 2.4)
-  for (const s of [-1, 1]) tubo(Y0 + alto / 2, zc + s * ((z1 - z0) / 2 - 0.3), 0.12, alto - 0.7, COLOR.magenta, 3.2)
-  const rb = semilla(19)
-  for (const s of [-1, 1])
-    for (let i = 0; i < 8; i++) {
-      const z = zc + s * (5.5 + i * 1.9)
-      const h = 2.2 + Math.abs(Math.sin(i * 1.7 + (s > 0 ? 0.6 : 0))) * 6.5 + rb() * 1.2
-      tubo(Y0 + 1.2 + h / 2, z, 0.22, h, i % 3 === 0 ? COLOR.violeta : COLOR.cian, 2.4, 2.2 + i * 0.41 + (s > 0 ? 0.3 : 0))
+function construirLabs(k: Kit, pz: Piezas, rnd: () => number) {
+  const S = LABS
+  const yT = Y0 + S.alto
+  k.base.agregar(horizontal(S, Y0), null, A.epoxi)
+  muro(k, pz, "x", CIU.x0, S.x1, S.z0 - 1, S.z0, Y0, yT)
+  muro(k, pz, "x", S.x0 - 1, S.x1, S.z1, S.z1 + 1, Y0, yT)
+  muro(k, pz, "z", S.z0, S.z1, S.x0 - 1, S.x0, Y0, yT)
+  // Macizo de roca y concreto al oeste (la instalación está excavada).
+  caja(k.base, pz, CIU.x0, S.x0 - 1, Y0, yT, S.z0, S.z1 + 1, A.concretoOsc)
+  caja(k.base, pz, CIU.x0, S.x0 - 1, yT, yT + 0.02, S.z0, S.z1 + 1, A.muroCorte)
+  techoSala(k, pz, S, A.panel)
+  // Cuatro módulos iguales, con frente de vidrio hacia el pasillo.
+  const n = 4
+  const paso = (S.z1 - S.z0) / n
+  for (let i = 0; i < n; i++) {
+    const z0 = S.z0 + i * paso
+    const z1 = z0 + paso
+    const zc = (z0 + z1) / 2
+    if (i > 0) muro(k, pz, "x", S.x0, FRENTE_LABS, z0 - 0.1, z0 + 0.1, Y0, yT)
+    tabiqueVidrio(k, pz, "z", FRENTE_LABS, z0 + 0.1, z1 - 0.1, S.alto, [[zc - 0.9, zc + 0.9]])
+    letrero(k, pz, `lab-${i + 1}`, FRENTE_LABS + 0.08, Y0 + 3.2, zc - 2.6, Math.PI / 2, 0.36, false)
+    // Mesadas blancas con gabinetes, una campana extractora y un rack de muestras.
+    for (const dz of [-2.4, 2.4]) {
+      caja(k.base, pz, S.x0 + 2.5, FRENTE_LABS - 2.2, Y0, Y0 + 0.86, zc + dz - 0.45, zc + dz + 0.45, acabado("#dfe5ea", 0.5, 0))
+      caja(k.base, pz, S.x0 + 2.4, FRENTE_LABS - 2.1, Y0 + 0.86, Y0 + 0.92, zc + dz - 0.52, zc + dz + 0.52, A.blanco)
+      // Pantallas pequeñas sobre la mesada.
+      for (let j = 0; j < 3; j++) {
+        const x = S.x0 + 4 + j * 3.2
+        caja(k.base, pz, x - 0.3, x + 0.3, Y0 + 1.0, Y0 + 1.36, zc + dz - 0.03, zc + dz + 0.03, acabado("#0b1015", 0.2, 0.3, 0, j === 1 ? P.cian : "#7fb2ff", 0.8))
+        caja(k.base, pz, x - 0.03, x + 0.03, Y0 + 0.92, Y0 + 1.0, zc + dz - 0.03, zc + dz + 0.03, A.acero)
+      }
     }
-  // El letrero: grande, arriba al centro, y "ABIERTO" bajo él.
-  letrero(k, pz, "club", xn + 0.05, Y0 + 11.4, zc, Math.PI / 2, 5.2)
-  letrero(k, pz, "abierto", xn + 0.05, Y0 + 7.9, zc, Math.PI / 2, 0.9)
-  // Entrada: un portal de luz con puerta de vidrio y marquesina.
-  k.luz.agregar(pz.caja, M(xn + 0.02, Y0 + 3.2, zc - 2.6, 0, 0.1, 6.4, 0.16), luz("#ff6fc0", 3))
-  k.luz.agregar(pz.caja, M(xn + 0.02, Y0 + 3.2, zc + 2.6, 0, 0.1, 6.4, 0.16), luz("#ff6fc0", 3))
-  k.luz.agregar(pz.caja, M(xn + 0.02, Y0 + 6.4, zc, 0, 0.1, 0.16, 5.36), luz("#ff6fc0", 3))
-  k.base.agregar(pz.caja, M(xn + 0.04, Y0 + 3.1, zc, 0, 0.1, 6.2, 5), acabado("#120812", 0.1, 0.4, "#ff4fae", 0.35))
-  k.base.agregar(pz.caja, M(xf + 2.5, Y0 + 6.9, zc, 0, 5, 0.3, 8), acabado("#0b0c10", 0.2, 0.7))
-  k.luz.agregar(pz.caja, M(xf + 2.5, Y0 + 6.74, zc, 0, 4.6, 0.03, 7.6), luz("#ffb3df", 1.8))
-  k.reflejos.push({ x: xf + 1, z: zc, h: 11.4, color: COLOR.magenta, fuerza: 0.55, ancho: 10 })
-  k.reflejos.push({ x: xf + 1, z: zc, h: 3.2, color: "#ff6fc0", fuerza: 0.45, ancho: 5 })
-  for (const s of [-1, 1]) for (const d of [8, 15]) k.reflejos.push({ x: xf + 0.5, z: zc + s * d, h: 5, color: d === 8 ? COLOR.cian : COLOR.violeta, fuerza: 0.2, ancho: 1.6 })
-  const tz0 = z0
-  const tz1 = z1
-  // La terraza: piso LED, cabina del DJ, barra, sillones y una estructura con luces.
-  const tx0 = xf + 6
-  const tx1 = R.x1 - 4
-  k.pisoLed.agregar(losa(poligono.rectRedondeado(tx0 + 3, tx1 - 8, tz0 + 6, tz1 - 8, 2, 3), Y0 + 0.03))
-  k.base.agregar(pz.caja, M(xf + 3.2, Y0 + 0.6, zc, 0, 2.4, 1.2, 7), acabado("#101216", 0.25, 0.7))
-  k.luz.agregar(pz.caja, M(xf + 4.42, Y0 + 0.6, zc, 0, 0.04, 0.12, 6.6), luz(COLOR.cian, 3))
-  k.base.agregar(pz.caja, M((tx0 + tx1) / 2, Y0 + 0.55, tz1 - 1, 0, tx1 - tx0 - 6, 1.1, 1.4), acabado("#14161b", 0.15, 0.8))
-  k.luz.agregar(pz.caja, M((tx0 + tx1) / 2, Y0 + 0.2, tz1 - 1.72, 0, tx1 - tx0 - 6.2, 0.06, 0.04), luz(COLOR.dorado, 2.6))
-  for (let i = 0; i < 6; i++) {
-    const x = tx0 + 3 + i * ((tx1 - tx0 - 6) / 5)
-    k.base.agregar(pz.caja, M(x, Y0 + 0.35, tz0 + 1.2, 0, 3.2, 0.7, 1.4), acabado("#4a1638", 0.8, 0))
-    k.base.agregar(pz.caja, M(x, Y0 + 0.8, tz0 + 0.65, 0, 3.2, 0.9, 0.3), acabado("#4a1638", 0.8, 0))
+    // Campana extractora contra el muro del fondo.
+    caja(k.base, pz, S.x0, S.x0 + 1.0, Y0, Y0 + 0.9, zc - 1.2, zc + 1.2, acabado("#dfe5ea", 0.5, 0))
+    caja(k.base, pz, S.x0, S.x0 + 1.0, Y0 + 2.0, Y0 + 2.6, zc - 1.2, zc + 1.2, acabado("#dfe5ea", 0.5, 0))
+    for (const s of [-1, 1]) caja(k.base, pz, S.x0, S.x0 + 1.0, Y0 + 0.9, Y0 + 2.0, zc + s * 1.2 - 0.05, zc + s * 1.2 + 0.05, A.blanco)
+    vidrioPlano(k, pz, "z", S.x0 + 1.0, zc - 1.15, zc + 1.15, Y0 + 0.9, Y0 + 2.0)
+    k.luz.agregar(pz.caja, M(S.x0 + 0.5, Y0 + 1.96, zc, 0, 0.6, 0.02, 2.2), luz(P.frio, 3.5))
+    // Rack de muestras con luz verde suave, en la esquina.
+    const rz = z0 + 0.6
+    caja(k.base, pz, S.x0 + 1.5, S.x0 + 3.3, Y0, Y0 + 2.2, rz - 0.3, rz + 0.3, acabado("#cfd6dc", 0.4, 0.3))
+    for (let h = 0.5; h < 2.2; h += 0.5) k.luz.agregar(pz.caja, M(S.x0 + 2.4, Y0 + h, rz + 0.31, 0, 1.6, 0.04, 0.02), luz("#7dffb0", 2.2, 0.4))
+    // Un brazo robótico de laboratorio sobre la mesada sur.
+    const bx = S.x0 + 8 + rnd() * 2
+    const bz = zc + 2.4
+    k.base.agregar(pz.cil16, M(bx, Y0 + 1.0, bz, 0, 0.18, 0.16, 0.18), A.blanco)
+    const hombro = new THREE.Vector3(bx, Y0 + 1.2, bz)
+    const codo = new THREE.Vector3(bx + 0.25, Y0 + 1.75, bz - 0.1)
+    const pinza = new THREE.Vector3(bx + 0.65, Y0 + 1.35, bz - 0.15)
+    tubo(k.base, pz, hombro, codo, 0.07, A.blanco)
+    tubo(k.base, pz, codo, pinza, 0.055, A.blanco)
+    k.luz.agregar(pz.esfera, M(codo.x, codo.y, codo.z, 0, 0.06, 0.06, 0.06), luz(P.cian, 4, 0))
   }
-  // Estructura de luces sobre la pista.
-  const yt = Y0 + 8.5
-  const fx0 = tx0 + 2
-  const fx1 = tx1 - 6
-  const fz0 = tz0 + 4
-  const fz1 = tz1 - 6
-  for (const [x, z] of [
-    [fx0, fz0],
-    [fx1, fz0],
-    [fx0, fz1],
-    [fx1, fz1],
-  ] as const)
-    k.acero.agregar(pz.caja, M(x, (Y0 + yt) / 2, z, 0, 0.35, yt - Y0, 0.35))
-  for (let x = fx0; x <= fx1 + 0.1; x += (fx1 - fx0) / 4) k.acero.agregar(pz.caja, M(x, yt, (fz0 + fz1) / 2, 0, 0.3, 0.3, fz1 - fz0))
-  for (const z of [fz0, fz1]) k.acero.agregar(pz.caja, M((fx0 + fx1) / 2, yt, z, 0, fx1 - fx0, 0.3, 0.3))
-  const colores = [COLOR.magenta, COLOR.cian, "#ffffff", COLOR.violeta]
-  let q = 0
-  for (let x = fx0; x <= fx1 + 0.1; x += (fx1 - fx0) / 4)
-    for (let z = fz0 + 3; z < fz1; z += 5) {
-      k.luz.agregar(pz.esfera, M(x, yt - 0.35, z, 0, 0.22, 0.22, 0.22), luz(colores[q % 4], 7, 3 + (q % 5)))
-      q++
-    }
-  for (let i = 0; i < 4; i++)
-    k.haces.push({
-      x: fx0 + (fx1 - fx0) * (i % 2 ? 0.75 : 0.25),
-      y: yt - 0.2,
-      z: fz0 + (fz1 - fz0) * (i < 2 ? 0.3 : 0.7),
-      az: i * 1.7,
-      incl: 2.7,
-      barrido: 0.9,
-      vel: 0.6 + i * 0.13,
-      largo: 9,
-      abre: 2.2,
-      color: colores[i],
-      fuerza: 0.22,
-    })
-  for (let i = 0; i < 2; i++)
-    k.haces.push({ x: xf + 1, y: Y0 + alto, z: zc + (i ? 14 : -14), az: i ? 2 : -1, incl: 0.25, barrido: 0.7, vel: 0.4 + i * 0.1, largo: 18, abre: 1.5, color: i ? COLOR.cian : COLOR.magenta, fuerza: 0.12 })
-  k.vapores.push({ x: (fx0 + fx1) / 2, y: Y0 + 0.2, z: (fz0 + fz1) / 2, r: 10, n: 30, tam: 6, alto: 1.2, vel: 0.03, color: "#c87ad8", fuerza: 0.16 })
-  for (const s of [-1, 1]) farol(k, pz, R.x1 - 2, zc + s * 12, 4, "#ffb3df", 3)
+  // Una línea azul guía por el pasillo de los laboratorios.
+  lineaPiso(k, pz, [[-6, 56.4], [-10.6, 56.4], [-10.6, 88]], P.azul)
+  letrero(k, pz, "labs", CORREDOR.x0 - 1, Y0 + 3.85, 70, -Math.PI / 2, 0.42)
 }
 
-// ── 6.12 Lo que llena: bloques bajos entre zonas ──
+// ── 6.6 El comedor ──
 
-function construirRelleno(k: Kit, rnd: () => number) {
-  const bloques: Array<[number, number, number, number, number]> = [
-    // x0, x1, z0, z1, alto
-    [-52, -34, 224, 240, 6],
-    [32, 56, 224, 242, 6],
-    [62, 86, 226, 244, 7],
-  ]
-  bloques.forEach(([x0, x1, z0, z1, alto], i) => {
-    const pol: V2[] = [
-      [x0, z0],
-      [x1, z0],
-      [x1, z1],
-      [x0, z1],
-    ]
-    k.torres.agregar(prisma(pol, Y0, Y0 + alto + rnd() * 2), null, { color: hexA(["#2c3138", "#3a352f", "#262b31"][i % 3]), aSem: [300 + i * 5] })
-  })
+function construirComedor(k: Kit, pz: Piezas) {
+  const S = COMEDOR
+  const yT = Y0 + S.alto
+  k.base.agregar(horizontal(S, Y0), null, acabado("#b9aa98", 0.35, 0, 1.2))
+  muro(k, pz, "x", S.x0, S.x1, S.z0 - 1, S.z0, Y0, yT)
+  muro(k, pz, "x", S.x0, S.x1, S.z1, JARDIN.z0, Y0, yT, [{ a: 11, b: 15, alto: 3.2 }])
+  muro(k, pz, "z", S.z0 - 1, JARDIN.z1 + 1, S.x1, S.x1 + 1, Y0, yT)
+  // Macizo al este.
+  caja(k.base, pz, S.x1 + 1, CIU.x1, Y0, yT, S.z0 - 1, JARDIN.z1 + 1, A.concretoOsc)
+  caja(k.base, pz, S.x1 + 1, CIU.x1, yT, yT + 0.02, S.z0 - 1, JARDIN.z1 + 1, A.muroCorte)
+  // Entre la sala de control y el comedor.
+  caja(k.base, pz, POZO.x1 + 0.6, CIU.x1, Y0, Y0 + 4.5, CONTROL.z1 + 1, S.z0 - 1, A.concretoOsc)
+  caja(k.base, pz, POZO.x1 + 0.6, CIU.x1, Y0 + 4.5, Y0 + 4.52, CONTROL.z1 + 1, S.z0 - 1, A.muroCorte)
+  techoSala(k, pz, S, A.panel, 3, "#fff1dc", 2.6, 0.3)
+  letrero(k, pz, "comedor", S.x0 + 0.05, Y0 + 3.5, 62, Math.PI / 2, 0.45)
+  // Barra de café contra el muro norte.
+  caja(k.base, pz, 17, 25.6, Y0, Y0 + 1.05, S.z0 + 0.1, S.z0 + 0.9, acabado("#8a6a4e", 0.5, 0))
+  caja(k.base, pz, 16.9, 25.7, Y0 + 1.05, Y0 + 1.1, S.z0 + 0.05, S.z0 + 1.0, A.blanco)
+  k.luz.agregar(pz.caja, M(21.3, Y0 + 1.0, S.z0 + 0.92, 0, 8.5, 0.03, 0.02), luz("#ffcf8a", 2.6, 0.2))
+  for (const x of [18.5, 21, 23.5]) caja(k.base, pz, x - 0.3, x + 0.3, Y0 + 1.1, Y0 + 1.55, S.z0 + 0.3, S.z0 + 0.7, A.acero)
+  // Dos mesas largas con bancas y lámparas tibias encima.
+  for (const x of [19, 23]) {
+    caja(k.base, pz, x - 0.6, x + 0.6, Y0 + 0.72, Y0 + 0.78, 51, 65, acabado("#a07850", 0.45, 0))
+    for (const z of [52, 58, 64]) caja(k.base, pz, x - 0.06, x + 0.06, Y0, Y0 + 0.72, z - 0.06, z + 0.06, A.aceroOsc)
+    for (const s of [-1, 1]) caja(k.base, pz, x + s * 1.0 - 0.18, x + s * 1.0 + 0.18, Y0 + 0.42, Y0 + 0.47, 51.2, 64.8, acabado("#a07850", 0.5, 0))
+    for (let z = 52.5; z < 65; z += 3) {
+      k.base.agregar(pz.cil8, M(x, yT - 0.6, z, 0, 0.012, 1.2, 0.012), A.aceroOsc)
+      k.luz.agregar(pz.esfera, M(x, yT - 1.25, z, 0, 0.16, 0.16, 0.16), luz("#ffcf8a", 5, 0.2))
+      k.reflejos.push({ x, z, h: S.alto - 1.25, color: "#ffcf8a", fuerza: 0.3, ancho: 0.8 })
+    }
+  }
+}
+
+// ── 6.7 El jardín hidropónico ──
+
+function construirJardin(k: Kit, pz: Piezas, rnd: () => number) {
+  const S = JARDIN
+  const yT = Y0 + S.alto
+  k.base.agregar(horizontal({ x0: S.x0, x1: 16.5, z0: S.z0, z1: S.z1 }, Y0), null, A.rejilla)
+  k.base.agregar(horizontal({ x0: 16.5, x1: S.x1, z0: S.z0, z1: S.z1 }, Y0), null, A.epoxi)
+  muro(k, pz, "x", S.x0, S.x1, S.z1, S.z1 + 1, Y0, yT)
+  techoSala(k, pz, S, A.panel, 3, "#f3e9ff", 1.6, 0.6)
+  letrero(k, pz, "jardin", S.x0 + 0.05, Y0 + 3.6, 85, Math.PI / 2, 0.42)
+  // Racks de cuatro niveles con luces de cultivo magenta debajo de cada estante.
+  const verdes = ["#4caf50", "#5fbf5a", "#3f9b48", "#7ccf6a", "#2f8a43"]
+  for (const z of [71.4, 75.2, 79, 82.8, 86.6, 90.4]) {
+    for (const x of [17, 25]) caja(k.base, pz, x - 0.04, x + 0.04, Y0, Y0 + 2.6, z - 0.45, z + 0.45, A.acero)
+    for (const h of [0.35, 0.95, 1.55, 2.15]) {
+      caja(k.base, pz, 17, 25, Y0 + h - 0.04, Y0 + h, z - 0.45, z + 0.45, acabado("#e4e9ec", 0.45, 0.2))
+      k.luz.agregar(pz.caja, M(21, Y0 + h + 0.5, z, 0, 7.6, 0.025, 0.1), luz(P.magenta, 4.2, 0.2))
+      for (let x = 17.35; x < 24.8; x += 0.62) k.plantas.push({ x: x + (rnd() - 0.5) * 0.1, y: Y0 + h, z: z + (rnd() - 0.5) * 0.25, s: 0.17 + rnd() * 0.09, color: verdes[Math.floor(rnd() * verdes.length)] })
+    }
+  }
+  k.vapores.push({ x: 21, y: Y0 + 0.4, z: cz(S), rx: 4, rz: 10, n: 40, tam: 2.4, alto: 2.4, vel: 0.04, color: "#ffc7f1", fuerza: 0.06 })
+  for (let z = 72; z < 92; z += 5) k.reflejos.push({ x: 16.6, z, h: 1.4, color: P.magenta, fuerza: 0.25, ancho: 1.2 })
+}
+
+// ── 6.8 La cámara de pruebas ──
+
+function construirCamara(k: Kit, pz: Piezas) {
+  const S = CAMARA
+  const yT = Y0 + S.alto
+  // Muros: el norte (con la puerta desde el corredor), los lados y el fondo.
+  muro(k, pz, "x", S.x0 - 1, S.x1 + 1, CORREDOR.z1, S.z0, Y0, yT, [{ a: -2.1, b: 2.1, alto: 3.4 }])
+  k.compuertas.push({ x: 0, z: (CORREDOR.z1 + S.z0) / 2, eje: "x", ancho: 4.2, alto: 3.4, grosor: 1, abierta: 0 })
+  muro(k, pz, "z", S.z0, S.z1, S.x0 - 1, S.x0, Y0, yT)
+  muro(k, pz, "z", S.z0, S.z1, S.x1, S.x1 + 1, Y0, yT)
+  muro(k, pz, "x", S.x0 - 1, S.x1 + 1, S.z1, S.z1 + 1, Y0, yT)
+  // Macizos a los costados (entre el corredor y la cámara).
+  for (const [a, b] of [
+    [CIU.x0, S.x0 - 1],
+    [S.x1 + 1, CIU.x1],
+  ]) {
+    caja(k.base, pz, a, b, Y0, Y0 + 4.5, LABS.z1 + 1, CIU.z1, A.concretoOsc)
+    caja(k.base, pz, a, b, Y0 + 4.5, Y0 + 4.52, LABS.z1 + 1, CIU.z1, A.muroCorte)
+  }
+  for (const [a, b] of [
+    [S.x0 - 1, CORREDOR.x0 - 1],
+    [CORREDOR.x1 + 1, S.x1 + 1],
+  ]) {
+    caja(k.base, pz, a, b, Y0, Y0 + 4.5, LABS.z1 + 1, CORREDOR.z1, A.concretoOsc)
+    caja(k.base, pz, a, b, Y0 + 4.5, Y0 + 4.52, LABS.z1 + 1, CORREDOR.z1, A.muroCorte)
+  }
+  // El interior: un cubo blanco con la grilla de luz.
+  k.grilla.agregar(horizontal(S, Y0 + 0.004))
+  k.grilla.agregar(horizontal(S, yT - 0.004, true))
+  for (const g of carasInteriores({ x0: S.x0 + 0.004, x1: S.x1 - 0.004, z0: S.z0 + 0.004, z1: S.z1 - 0.004 }, Y0, yT)) k.grilla.agregar(g)
+  letrero(k, pz, "camara", 0, Y0 + 5.2, S.z0 + 0.02, 0, 0.5)
 }
 
 // ═══════════════════════════════════════════════════════════════
 // 7. El nivel entero
 // ═══════════════════════════════════════════════════════════════
 
-/** Vistas listas para grabar la ciudad (cámara y punto al que mira). */
-export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea" | "torres", { pos: [number, number, number]; mira: [number, number, number]; fov: number }> = {
-  mirador: { pos: [15, Y0 + 8.5, R_MIRADOR.z1 - 6], mira: [-12, Y0 + 4, 150], fov: 56 },
-  plaza: { pos: [-21, Y0 + 1.7, cz(R_PLAZA) - 8], mira: [0, PANTALLA.base + 3, PANTALLA.z], fov: 52 },
-  avenida: { pos: [2.4, Y0 + 1.6, R_AVENIDA.z1 - 6], mira: [0, Y0 + 5.5, 40], fov: 50 },
-  aerea: { pos: [118, Y0 + 23, 200], mira: [-40, Y0 + 1, 40], fov: 56 },
-  torres: { pos: [-112, Y0 + 20, 214], mira: [20, Y0 + 2, 10], fov: 56 },
+type Vista = { pos: [number, number, number]; mira: [number, number, number]; fov: number }
+
+/**
+ * Vistas listas para grabar la instalación (cámara y punto al que mira). La
+ * primera, "mirador", es la de llegada. Todas respetan los límites de la
+ * cámara libre: dentro de HUELLAS.ciudad, el punto mirado a 12 m o menos del
+ * piso y mirando un poco hacia abajo (la órbita no pasa de 83° desde arriba).
+ */
+export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea" | "torres" | "anden" | "control" | "comedor" | "jardin" | "camara", Vista> = {
+  mirador: { pos: [-6.5, Y0 + 5.5, 15.6], mira: [4, Y0 + 0.5, 40], fov: 64 },
+  plaza: { pos: [7, Y0 + 5, 42], mira: [-2, Y0 + 1.5, 22], fov: 64 },
+  avenida: { pos: [1.6, Y0 + 3.8, 94.5], mira: [-0.2, Y0 + 0.4, 72], fov: 58 },
+  aerea: { pos: [31, Y0 + 13.5, 107.5], mira: [-4, Y0, 52], fov: 55 },
+  torres: { pos: [-5.6, Y0 + 3.6, 91], mira: [-18, Y0 + 0.5, 74], fov: 62 },
+  anden: { pos: [-13.2, Y0 + 4.6, 42.8], mira: [-27, Y0 + 0.5, 22], fov: 62 },
+  control: { pos: [11.2, Y0 + 4.6, 38.6], mira: [26, Y0 + 1.5, 25], fov: 64 },
+  comedor: { pos: [5.5, Y0 + 3.6, 66.8], mira: [19, Y0 + 0.6, 54], fov: 62 },
+  jardin: { pos: [5.4, Y0 + 3.6, 92], mira: [18, Y0 + 0.6, 76], fov: 62 },
+  camara: { pos: [-12.6, Y0 + 7, 110.6], mira: [4, Y0 + 1.5, 101], fov: 64 },
 }
 
 /**
- * La toma "Descenso a la ciudad" (0 ≤ t ≤ 1): baja con el ascensor desde la
- * bóveda, gira para descubrir la plaza y la pantalla, y se abre sobre la
- * avenida. Devuelve el campo de visión.
+ * La toma "Descenso a la ciudad" (0 ≤ t ≤ 1): baja por el eje del pozo desde
+ * la boca hasta el atrio, girando un cuarto de vuelta mientras las galerías
+ * suben por los costados, y termina mirando el ascensor. Devuelve el campo de
+ * visión.
  */
 export function tomaDescensoCiudad(t: number, pos: THREE.Vector3, mira: THREE.Vector3): number {
   const k = t * t * (3 - 2 * t)
-  // Espiral por fuera del tubo (del lado de la plaza): no se mira a través de los parantes.
-  const a = THREE.MathUtils.lerp(-1.1, 0.35, k)
-  const r = THREE.MathUtils.lerp(7, 15, k)
-  const y = THREE.MathUtils.lerp(techoCiudad(ASC.x, ASC.z) - 3, Y0 + 5.5, Math.pow(k, 0.85))
-  pos.set(ASC.x + Math.sin(a) * r, y, ASC.z + Math.cos(a) * r)
-  mira.set(0, THREE.MathUtils.lerp(Y0 + 1, PANTALLA.base + 3, k), THREE.MathUtils.lerp(cz(R_PLAZA) - 8, PANTALLA.z + 30, k))
-  return THREE.MathUtils.lerp(60, 50, k)
+  const ang = THREE.MathUtils.lerp(-0.9, 0.5, k)
+  const r = THREE.MathUtils.lerp(4.2, 6.0, k)
+  const y = THREE.MathUtils.lerp(TOPE - 1.6, Y0 + 3.2, Math.pow(k, 0.9))
+  pos.set(Math.sin(ang) * r, y, 30 + Math.cos(ang) * r)
+  const km = Math.pow(k, 1.6)
+  mira.set(THREE.MathUtils.lerp(0, -1, km), THREE.MathUtils.lerp(TOPE - 18, Y0 + 8.5, km), THREE.MathUtils.lerp(26, 16, km))
+  return THREE.MathUtils.lerp(66, 58, k)
 }
 
 export function construirCiudad(ctx: CtxEscena): void {
   const grupo = ctx.niveles.ciudad
   if (!grupo) {
-    console.warn("[casa-blanca] no hay grupo para el nivel ciudad: la ciudad no se construye")
+    console.warn("[casa-blanca] no hay grupo para el nivel ciudad: la instalación no se construye")
     return
   }
-  const calidad = ctx.calidad
-  const factor = calidad === "alta" ? 1 : calidad === "media" ? 0.7 : 0.45
+  const factor = ctx.calidad === "alta" ? 1 : ctx.calidad === "media" ? 0.7 : 0.45
+  const sombra = ctx.sombras
 
   // ── Texturas dibujadas ──
   const lienzoP = document.createElement("canvas")
   lienzoP.width = PANT_W
   lienzoP.height = PANT_H
   const gP = lienzoP.getContext("2d")!
-  dibujarPantalla(gP, 0, "17:30", 0)
+  dibujarPantalla(gP, "12:00", 0)
   const texP = new THREE.CanvasTexture(lienzoP)
   texP.colorSpace = THREE.SRGBColorSpace
   texP.anisotropy = 4
@@ -3311,86 +1992,64 @@ export function construirCiudad(ctx: CtxEscena): void {
     texA.needsUpdate = true
   })
 
-  // ── Focos falsos: dónde brilla la ciudad (la roca los suma en su shader) ──
-  const focos: Foco[] = [
-    { p: new THREE.Vector3(0, PANTALLA.base + 4, PANTALLA.z), radio: 32, color: "#9fc4ff", fuerza: 0.9 },
-    { p: new THREE.Vector3(cx(R_CLUB) - 5, Y0 + 6, cz(R_CLUB)), radio: 30, color: COLOR.magenta, fuerza: 1.0 },
-    { p: new THREE.Vector3(ARENA.x, Y0 + 12, ARENA.z), radio: 38, color: "#cfe9ff", fuerza: 0.7 },
-    { p: new THREE.Vector3(cx(R_MERCADO), Y0 + 5, cz(R_MERCADO)), radio: 30, color: COLOR.tibio, fuerza: 0.9 },
-    { p: new THREE.Vector3(cx(R_TORRES), Y0 + 22, cz(R_TORRES)), radio: 45, color: "#ffc58a", fuerza: 0.7 },
-    { p: new THREE.Vector3(cx(R_TORRES) - 20, Y0 + 14, cz(R_TORRES) + 50), radio: 35, color: COLOR.cian, fuerza: 0.45 },
-    { p: new THREE.Vector3(0, Y0 + 6, cz(R_ESTACION)), radio: 32, color: "#ffe2b8", fuerza: 0.8 },
-    { p: new THREE.Vector3(0, CANAL.agua + 2, CZ - 186), radio: 30, color: "#6fe6ff", fuerza: 1.1 },
-    { p: new THREE.Vector3(LAGO.x, Y0 + 2, LAGO.z), radio: 34, color: "#ffb860", fuerza: 0.7 },
-    { p: new THREE.Vector3(0, Y0 + 6, cz(R_AVENIDA)), radio: 40, color: "#ffcf94", fuerza: 0.7 },
-    { p: new THREE.Vector3(-180, RIEL_Y, 30), radio: 26, color: "#5fe3ff", fuerza: 0.6 },
-    { p: new THREE.Vector3(180, RIEL_Y, 110), radio: 26, color: "#5fe3ff", fuerza: 0.6 },
-  ]
-  const entorno = new EntornoCiudad()
-  entorno.pintar(ambienteCiudad(17.5))
-  const mats = crearMaterialesCiudad(ctx, focos, texA, texP, entorno.textura)
+  const entorno = entornoInstalacion()
+  const mats = crearMaterialesCiudad(entorno, texA, texP)
   const pz = crearPiezas()
   const rnd = semilla(1792)
-  const PBR = [
-    ["color", 3],
-    ["aRM", 2],
-    ["aEmis", 3],
-  ] as const
-  const curva = curvaMonorriel()
   const k: Kit = {
     base: new Lote(PBR),
-    torres: new Lote([
-      ["color", 3],
-      ["aSem", 1],
-    ]),
+    techo: new Lote(PBR),
+    oficinas: new Lote(),
     luz: new Lote([
       ["color", 3],
       ["aPulso", 1],
+      ["aTurno", 1],
     ]),
     vidrio: new Lote(),
-    roca: new Lote(),
-    granito: new Lote(),
-    acero: new Lote(),
-    madera: new Lote(),
-    hierro: new Lote(),
-    agua: new Lote(),
-    pasto: new Lote(),
-    grava: new Lote(),
-    acera: new Lote(),
+    esmerilado: new Lote(),
+    grilla: new Lote(),
+    chevron: new Lote(),
     senal: new Lote(),
     pantalla: new Lote(),
-    pisoLed: new Lote(),
-    arboles: [],
     reflejos: [],
-    charcos: [],
     vapores: [],
-    haces: [],
+    plantas: [],
+    compuertas: [],
+    balizas: [],
     celdas,
-    rnd,
-    riel: curva.getSpacedPoints(300),
   }
 
   // ── Construcción ──
-  construirCaverna(k, pz, mats, grupo, ctx)
-  construirCasasEnRoca(k, pz, rnd)
-  construirCanal(k, pz, mats, grupo)
-  const cabina = construirAscensor(k, pz, mats, ctx)
-  grupo.add(cabina.grupo)
-  const chorros: Chorro[] = []
-  construirPlaza(k, pz, chorros)
-  construirPantalla(k, pz)
-  construirAvenida(k, pz, rnd)
-  construirTorres(k, pz, rnd)
-  construirMercado(k, pz, rnd)
-  construirParque(k, pz, rnd)
-  const tren = construirMonorriel(k, pz, mats, ctx, curva)
-  grupo.add(tren.malla)
-  construirArena(k, pz)
-  construirClub(k, pz)
-  construirRelleno(k, rnd)
+  construirPozo(k, pz)
+  const cabinas = construirAscensores(k, pz, mats, sombra)
+  grupo.add(cabinas.cuerpo, cabinas.vidrio)
+  construirAnden(k, pz)
+  const tren = construirTren(mats, pz, sombra)
+  grupo.add(tren.coches, tren.puertas)
+  construirControl(k, pz)
+  construirCorredor(k, pz)
+  construirLabs(k, pz, rnd)
+  construirComedor(k, pz)
+  construirJardin(k, pz, rnd)
+  construirCamara(k, pz)
+
+  // Marcos de las compuertas (acero atornillado) y una baliza encima de cada una.
+  for (const c of k.compuertas) {
+    const w = c.ancho / 2 + 0.35
+    const zx = c.eje === "x"
+    for (const s of [-1, 1]) {
+      const a = s * (c.ancho / 2 + 0.17)
+      const g = c.grosor / 2
+      if (zx) for (const lado of [-1, 1]) caja(k.chevron, pz, c.x + a - 0.17, c.x + a + 0.17, Y0, Y0 + c.alto, c.z + lado * g - 0.08, c.z + lado * g + 0.08)
+      else for (const lado of [-1, 1]) caja(k.chevron, pz, c.x + lado * g - 0.08, c.x + lado * g + 0.08, Y0, Y0 + c.alto, c.z + a - 0.17, c.z + a + 0.17)
+    }
+    const g = c.grosor / 2
+    if (zx) for (const lado of [-1, 1]) caja(k.base, pz, c.x - w, c.x + w, Y0 + c.alto, Y0 + c.alto + 0.4, c.z + lado * g - 0.1, c.z + lado * g + 0.1, A.aceroOsc)
+    else for (const lado of [-1, 1]) caja(k.base, pz, c.x + lado * g - 0.1, c.x + lado * g + 0.1, Y0 + c.alto, Y0 + c.alto + 0.4, c.z - w, c.z + w, A.aceroOsc)
+    for (const lado of [-1, 1]) k.balizas.push(zx ? new THREE.Vector3(c.x + w - 0.3, Y0 + c.alto + 0.6, c.z + lado * (g + 0.1)) : new THREE.Vector3(c.x + lado * (g + 0.1), Y0 + c.alto + 0.6, c.z + w - 0.3))
+  }
 
   // ── Mallas fusionadas ──
-  const sombra = ctx.sombras
   const poner = (lote: Lote, mat: THREE.Material, nombre: string, op: { proyecta?: boolean; recibe?: boolean; orden?: number } = {}) => {
     const m = lote.malla(mat, nombre)
     if (!m) return null
@@ -3400,74 +2059,97 @@ export function construirCiudad(ctx: CtxEscena): void {
     grupo.add(m)
     return m
   }
-  poner(k.roca, mats.roca, "ciudad-roca", { recibe: true })
   poner(k.base, mats.base, "ciudad-base", { proyecta: true, recibe: true })
-  poner(k.torres, mats.torres, "ciudad-torres", { proyecta: true, recibe: true })
-  poner(k.granito, mats.granito, "ciudad-granito", { recibe: true })
-  poner(k.acero, mats.acero, "ciudad-acero", { proyecta: true })
-  poner(k.madera, mats.madera, "ciudad-madera", { proyecta: true, recibe: true })
-  poner(k.hierro, mats.hierro, "ciudad-hierro", { proyecta: true })
-  poner(k.agua, mats.agua, "ciudad-agua", { recibe: true })
-  poner(k.pasto, mats.pasto, "ciudad-pasto", { recibe: true })
-  poner(k.grava, mats.grava, "ciudad-grava", { recibe: true })
-  poner(k.acera, mats.acera, "ciudad-acera", { recibe: true })
-  poner(k.pisoLed, mats.pisoLed, "ciudad-piso-led")
+  poner(k.techo, mats.base, "ciudad-techos")
+  poner(k.oficinas, mats.oficinas, "ciudad-oficinas", { recibe: true })
+  poner(k.grilla, mats.grilla, "ciudad-camara", { recibe: true })
+  poner(k.chevron, mats.chevron, "ciudad-chevrones", { proyecta: true, recibe: true })
   poner(k.luz, mats.luz, "ciudad-luces")
   poner(k.pantalla, mats.pantalla, "ciudad-pantalla")
   poner(k.vidrio, mats.vidrio, "ciudad-vidrio", { orden: 3 })
+  poner(k.esmerilado, mats.esmerilado, "ciudad-esmerilado", { orden: 3 })
   poner(k.senal, mats.senal, "ciudad-senales", { orden: 4 })
 
-  // ── Árboles: troncos y copas instanciados (cada copa toma el color de su árbol) ──
+  // ── Compuertas: las hojas se corren cuando alguien se acerca ──
+  const hojas = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mats.chevron, Math.max(1, k.compuertas.length * 2))
+  hojas.name = "ciudad-compuertas"
+  hojas.castShadow = sombra
+  hojas.frustumCulled = false
+  grupo.add(hojas)
+
+  // ── Balizas ámbar que giran (un cono emisivo cada una) ──
+  const geoBaliza = new THREE.ConeGeometry(0.16, 0.5, 10)
+  geoBaliza.rotateZ(-Math.PI / 2)
+  geoBaliza.translate(0.25, 0, 0)
+  const balizas = new THREE.InstancedMesh(geoBaliza, new THREE.MeshBasicMaterial({ name: "ciudad-balizas", color: new THREE.Color(P.ambar).multiplyScalar(5) }), Math.max(1, k.balizas.length))
+  balizas.name = "ciudad-balizas"
+  balizas.frustumCulled = false
+  grupo.add(balizas)
+
+  // ── Plantas del jardín (se mecen en el shader) ──
   {
-    const copas: Array<{ m: THREE.Matrix4; c: THREE.Color }> = []
-    const troncos: THREE.Matrix4[] = []
+    const im = new THREE.InstancedMesh(pz.mata, mats.follaje, Math.max(1, k.plantas.length))
     const r2 = semilla(33)
-    for (const a of k.arboles) {
-      const y = a.y ?? Y0
-      const s = a.copa
-      if (a.alto > 0.5) troncos.push(M(a.x, y + a.alto / 2 + s * 0.2, a.z, r2() * 6, 0.16 + s * 0.035, a.alto + s * 0.4, 0.16 + s * 0.035))
-      const c = new THREE.Color(a.color).offsetHSL((r2() - 0.5) * 0.03, 0, (r2() - 0.5) * 0.08)
-      const alta = a.alto > 0.5
-      copas.push({ m: M(a.x, y + (alta ? a.alto + s * 0.55 : s * 0.35), a.z, r2() * 6, s * (0.9 + r2() * 0.2), s * (alta ? 0.82 : 0.55), s * (0.9 + r2() * 0.2)), c })
-    }
-    const geoT = new THREE.CylinderGeometry(0.7, 1, 1, 7)
-    const it = new THREE.InstancedMesh(geoT, mats.corteza, Math.max(1, troncos.length))
-    troncos.forEach((m, i) => it.setMatrixAt(i, m))
-    it.count = troncos.length
-    it.name = "ciudad-troncos"
-    it.castShadow = sombra
-    grupo.add(it)
-    const ic = new THREE.InstancedMesh(pz.copa, mats.follaje, Math.max(1, copas.length))
-    copas.forEach((c, i) => {
-      ic.setMatrixAt(i, c.m)
-      ic.setColorAt(i, c.c)
+    k.plantas.forEach((p, i) => {
+      im.setMatrixAt(i, M(p.x, p.y, p.z, r2() * 6, p.s, p.s * (0.9 + r2() * 0.4), p.s))
+      im.setColorAt(i, _col.set(p.color))
     })
-    ic.count = copas.length
-    ic.name = "ciudad-copas"
-    ic.castShadow = sombra
-    ic.receiveShadow = sombra
-    grupo.add(ic)
+    im.count = k.plantas.length
+    im.name = "ciudad-plantas"
+    im.receiveShadow = sombra
+    grupo.add(im)
   }
 
-  // ── Chorros de la fuente ──
-  {
-    const cil = new THREE.CylinderGeometry(0.03, 0.1, 1, 8, 6, true)
-    cil.translate(0, 0.5, 0)
-    const g = new THREE.InstancedBufferGeometry()
-    g.index = cil.index
-    g.setAttribute("position", cil.getAttribute("position"))
-    g.setAttribute("aPos", new THREE.InstancedBufferAttribute(new Float32Array(chorros.flatMap((c) => [c.x, c.y, c.z])), 3))
-    g.setAttribute("aAlto", new THREE.InstancedBufferAttribute(new Float32Array(chorros.map((c) => c.alto)), 1))
-    g.setAttribute("aFase", new THREE.InstancedBufferAttribute(new Float32Array(chorros.map((c) => c.fase)), 1))
-    g.instanceCount = chorros.length
-    const m = new THREE.Mesh(g, mats.chorros)
-    m.name = "ciudad-chorros"
-    m.frustumCulled = false
-    m.renderOrder = 5
-    grupo.add(m)
-  }
+  // ── Arco de escaneo del corredor ──
+  const escaneo = new THREE.Mesh(new THREE.PlaneGeometry(CORREDOR.x1 - CORREDOR.x0 - 0.1, CORREDOR.alto - 0.05), mats.escaneo)
+  escaneo.name = "ciudad-escaneo"
+  escaneo.renderOrder = 6
+  escaneo.position.set(0, Y0 + CORREDOR.alto / 2, CORREDOR.z0 + 2)
+  grupo.add(escaneo)
 
-  // ── Reflejos en el piso mojado ──
+  // ── Núcleo de IA: anillos de luz apilados que pulsan en cian ──
+  const N_ANILLOS = 12
+  const anillos = new THREE.InstancedMesh(new THREE.TorusGeometry(0.95, 0.035, 6, 40).rotateX(Math.PI / 2), mats.brillo, N_ANILLOS)
+  anillos.name = "ciudad-nucleo"
+  anillos.frustumCulled = false
+  for (let i = 0; i < N_ANILLOS; i++) {
+    anillos.setMatrixAt(i, M(NUCLEO.x, Y0 + 0.9 + i * 0.44, NUCLEO.z))
+    anillos.setColorAt(i, _col.set(P.cian).multiplyScalar(2))
+  }
+  grupo.add(anillos)
+
+  // ── Robots de servicio (corredor y cámara) y drones de prueba ──
+  const N_ROBOTS = 3 + 3
+  const N_DRONES = Math.max(3, Math.round(6 * factor))
+  const geoCuerpo = (() => {
+    const l = new Lote()
+    l.agregar(new THREE.CapsuleGeometry(0.28, 0.32, 4, 12), M(0, 0.48, 0))
+    l.agregar(pz.cil16, M(0, 0.06, 0, 0, 0.3, 0.12, 0.3))
+    return l.geometria()!
+  })()
+  const robots = new THREE.InstancedMesh(geoCuerpo, mats.robot, N_ROBOTS + N_DRONES)
+  robots.name = "ciudad-robots"
+  robots.castShadow = sombra
+  robots.frustumCulled = false
+  grupo.add(robots)
+  const ojos = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), mats.brillo, N_ROBOTS + N_DRONES * 2)
+  ojos.name = "ciudad-ojos"
+  ojos.frustumCulled = false
+  for (let i = 0; i < N_ROBOTS; i++) ojos.setColorAt(i, _col.set(P.cian).multiplyScalar(5))
+  for (let i = 0; i < N_DRONES; i++) {
+    ojos.setColorAt(N_ROBOTS + i * 2, _col.set("#ffffff").multiplyScalar(5))
+    ojos.setColorAt(N_ROBOTS + i * 2 + 1, _col.set(i % 2 ? P.cian : P.ambar).multiplyScalar(5))
+  }
+  grupo.add(ojos)
+  const rd = semilla(2040)
+  const datosRobot = Array.from({ length: N_ROBOTS }, (_, i) =>
+    i < 3
+      ? { corredor: true, x: i === 1 ? 2.25 : -2.25, z0: CORREDOR.z0 + 4 + i * 12, z1: CORREDOR.z1 - 3 - i * 6, vel: 0.5 + rd() * 0.2, fase: rd() * 100 }
+      : { corredor: false, x: cx(CAMARA) + (i - 4) * 7, z0: cz(CAMARA), z1: 3.5 + rd() * 1.5, vel: 0.25 + rd() * 0.15, fase: rd() * 100 },
+  )
+  const datosDron = Array.from({ length: N_DRONES }, () => ({ x: (rd() - 0.5) * 18, z: cz(CAMARA) + (rd() - 0.5) * 8, y: Y0 + 3.5 + rd() * 4.5, r: 1.5 + rd() * 3, vel: 0.3 + rd() * 0.4, fase: rd() * 100 }))
+
+  // ── Reflejos falsos en el epoxi ──
   {
     const lista = k.reflejos
     const g = new THREE.InstancedBufferGeometry()
@@ -3494,67 +2176,8 @@ export function construirCiudad(ctx: CtxEscena): void {
     grupo.add(m)
   }
 
-  // ── Charcos de luz ──
+  // ── Bruma (jardín y foso), en una sola emisión ──
   {
-    const lista = k.charcos
-    const q = new THREE.PlaneGeometry(1, 1)
-    const g = new THREE.InstancedBufferGeometry()
-    g.index = q.index
-    g.setAttribute("position", q.getAttribute("position"))
-    g.setAttribute("aCharco", new THREE.InstancedBufferAttribute(new Float32Array(lista.flatMap((c) => [c.x, c.y, c.z, c.r])), 4))
-    g.setAttribute(
-      "aColor",
-      new THREE.InstancedBufferAttribute(
-        new Float32Array(
-          lista.flatMap((c) => {
-            _col.set(c.color)
-            return [_col.r, _col.g, _col.b]
-          }),
-        ),
-        3,
-      ),
-    )
-    g.instanceCount = lista.length
-    const m = new THREE.Mesh(g, mats.charcos)
-    m.name = "ciudad-charcos"
-    m.frustumCulled = false
-    m.renderOrder = 1
-    grupo.add(m)
-  }
-
-  // ── Haces de luz ──
-  {
-    const lista = k.haces
-    const cono = new THREE.CylinderGeometry(1, 1, 1, 20, 1, true)
-    const g = new THREE.InstancedBufferGeometry()
-    g.index = cono.index
-    g.setAttribute("position", cono.getAttribute("position"))
-    g.setAttribute("aBase", new THREE.InstancedBufferAttribute(new Float32Array(lista.flatMap((h) => [h.x, h.y, h.z])), 3))
-    g.setAttribute("aAng", new THREE.InstancedBufferAttribute(new Float32Array(lista.flatMap((h) => [h.az, h.incl, h.barrido, h.vel])), 4))
-    g.setAttribute(
-      "aCol",
-      new THREE.InstancedBufferAttribute(
-        new Float32Array(
-          lista.flatMap((h) => {
-            _col.set(h.color).multiplyScalar(h.fuerza)
-            return [_col.r, _col.g, _col.b]
-          }),
-        ),
-        3,
-      ),
-    )
-    g.setAttribute("aDim", new THREE.InstancedBufferAttribute(new Float32Array(lista.flatMap((h) => [h.largo, h.abre])), 2))
-    g.instanceCount = lista.length
-    const m = new THREE.Mesh(g, mats.haces)
-    m.name = "ciudad-haces"
-    m.frustumCulled = false
-    m.renderOrder = 6
-    grupo.add(m)
-  }
-
-  // ── Vapor y bruma ──
-  {
-    const lista = k.vapores
     const r3 = semilla(71)
     const pos: number[] = []
     const fase: number[] = []
@@ -3562,13 +2185,11 @@ export function construirCiudad(ctx: CtxEscena): void {
     const tam: number[] = []
     const alto: number[] = []
     const col: number[] = []
-    for (const v of lista) {
+    for (const v of k.vapores) {
       const n = Math.max(2, Math.round(v.n * factor))
       _col.set(v.color).multiplyScalar(v.fuerza)
       for (let i = 0; i < n; i++) {
-        const a = r3() * Math.PI * 2
-        const r = Math.sqrt(r3()) * v.r
-        pos.push(v.x + Math.cos(a) * r, v.y, v.z + Math.sin(a) * r * (v.r > 20 ? 0.4 : 1))
+        pos.push(v.x + (r3() - 0.5) * 2 * v.rx, v.y, v.z + (r3() - 0.5) * 2 * v.rz)
         fase.push(r3())
         vel.push(v.vel * (0.7 + r3() * 0.6))
         tam.push(v.tam * (0.6 + r3() * 0.8))
@@ -3596,182 +2217,243 @@ export function construirCiudad(ctx: CtxEscena): void {
     grupo.add(p)
   }
 
-  // ── Drones de luz y luciérnagas ──
-  const N_DRONES = Math.round(26 * factor)
-  const N_LUCES = Math.round(50 * factor)
-  const drones = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ name: "ciudad-drones" }), N_DRONES + N_LUCES)
-  drones.name = "ciudad-drones"
-  drones.frustumCulled = false
-  const rd = semilla(2040)
-  const datosDron = Array.from({ length: N_DRONES + N_LUCES }, (_, i) => {
-    const luciernaga = i >= N_DRONES
-    const zona = luciernaga
-      ? { x: cx(R_PARQUE) + (rd() - 0.5) * 90, z: cz(R_PARQUE) + (rd() - 0.5) * 100, y: Y0 + 0.6 + rd() * 2.2 }
-      : { x: (rd() - 0.5) * 300, z: CZ + (rd() - 0.5) * 300, y: Y0 + 11 + rd() * 12 }
-    const colores = ["#7fe6ff", "#ffffff", "#ffcf8a", "#7fe6ff"]
-    const c = new THREE.Color(luciernaga ? "#ffe27a" : colores[i % 4]).multiplyScalar(luciernaga ? 7 : 6)
-    drones.setColorAt(i, c)
-    return { ...zona, r: luciernaga ? 1.5 + rd() * 2 : 12 + rd() * 30, vel: luciernaga ? 0.2 + rd() * 0.3 : 0.05 + rd() * 0.08, fase: rd() * 100, s: luciernaga ? 0.05 : 0.2, luciernaga }
-  })
-  grupo.add(drones)
-
-  // ── Luces reales: seis, donde más se ven en el piso mojado ──
-  const luces: Array<{ l: THREE.PointLight; base: number; pulso: number }> = []
-  const poneLuz = (x: number, y: number, z: number, color: string, intensidad: number, distancia: number, pulso = 0) => {
+  // ── Luces reales: cinco, una por espacio grande ──
+  const luces: Array<{ l: THREE.PointLight; base: number; turno: number }> = []
+  const poneLuz = (x: number, y: number, z: number, color: string, intensidad: number, distancia: number, turno: number) => {
     const l = new THREE.PointLight(color, intensidad, distancia, 2)
     l.position.set(x, y, z)
     l.castShadow = false
     grupo.add(l)
-    luces.push({ l, base: intensidad, pulso })
+    luces.push({ l, base: intensidad, turno })
   }
-  poneLuz(0, PANTALLA.base + 2, PANTALLA.z - 8, "#a9c8ff", 220, 70)
-  poneLuz(cx(R_PLAZA), Y0 + 2.5, cz(R_PLAZA), "#7fe6ff", 45, 26)
-  poneLuz(0, Y0 + 12, cz(R_AVENIDA) + 10, "#ffc98a", 150, 90)
-  poneLuz(cx(R_CLUB) - 6, Y0 + 5, cz(R_CLUB) - 4, "#ff4fae", 260, 55, 1)
-  poneLuz(cx(R_MERCADO), Y0 + 4.5, cz(R_MERCADO), "#ffb066", 180, 45)
-  poneLuz(cx(R_TORRES), Y0 + 7, cz(R_TORRES), "#9fdcff", 200, 60)
+  poneLuz(0, Y0 + 5, 33, "#eaf4ff", 90, 30, 0.4)
+  poneLuz(NUCLEO.x - 3, Y0 + 4.5, NUCLEO.z, "#56c8ff", 70, 24, -0.3)
+  poneLuz(-22, Y0 + 5.5, 28, "#eef3ff", 80, 30, 0.4)
+  poneLuz(0, Y0 + 8, cz(CAMARA), "#e6f7ff", 90, 26, 0.3)
+  poneLuz(20, Y0 + 3.4, cz(JARDIN), P.magenta, 45, 18, 0)
 
   // ── Lugares que se pueden tocar: cajas invisibles (no dibujan) sobre cada lugar ──
   const invisible = new THREE.MeshBasicMaterial({ visible: false })
   const tocable: Array<[string, Rect, number]> = [
-    ["ciudad-plaza", R_PLAZA, 3],
-    ["ciudad-avenida", R_AVENIDA, 3],
-    ["ciudad-torres", R_TORRES, 26],
-    ["ciudad-mercado", R_MERCADO, 6],
-    ["ciudad-parque", R_PARQUE, 5],
-    ["ciudad-estacion", R_ESTACION, 14],
-    ["ciudad-arena", R_ARENA, 18],
-    ["ciudad-club", R_CLUB, 14],
+    ["ciudad-plaza", R_PLAZA, 4],
     ["ciudad-mirador", R_MIRADOR, 3],
+    ["ciudad-estacion", R_ESTACION, 5],
+    ["ciudad-club", R_CLUB, 5],
+    ["ciudad-avenida", R_AVENIDA, 3],
+    ["ciudad-torres", R_TORRES, 3],
+    ["ciudad-mercado", R_MERCADO, 3],
+    ["ciudad-parque", R_PARQUE, 3],
+    ["ciudad-arena", R_ARENA, 6],
   ]
   for (const [id, r, h] of tocable) {
     if (!LUGAR[id]) continue
-    const caja = new THREE.Mesh(pz.caja, invisible)
-    caja.position.set(cx(r), Y0 + h / 2, cz(r))
-    caja.scale.set(r.x1 - r.x0, h, r.z1 - r.z0)
-    caja.name = `tocable-${id}`
-    grupo.add(caja)
-    ctx.seleccionable(caja, id)
+    const c = new THREE.Mesh(pz.caja, invisible)
+    c.position.set(cx(r), Y0 + h / 2, cz(r))
+    c.scale.set(r.x1 - r.x0, h, r.z1 - r.z0)
+    c.name = `tocable-${id}`
+    grupo.add(c)
+    ctx.seleccionable(c, id)
   }
 
   // ── Animación ──
-  const amb = ambienteCiudad(17.5)
+  const amb = ambienteCiudad(12)
   const _q = new THREE.Quaternion()
   const _p = new THREE.Vector3()
   const _s = new THREE.Vector3()
   const _m = new THREE.Matrix4()
   const _e = new THREE.Euler()
-  const _tan = new THREE.Vector3()
+  const _c = new THREE.Color()
   let ultimaPantalla = -99
-  let horaEntorno = 17.5
-  let pagina = 0
-  let tiempoTren = 0
-  const ACEL = 1.1
-  const VMAX = 15
-  const PARADA = 9
-  const tAcel = VMAX / ACEL
-  const dAcel = 0.5 * ACEL * tAcel * tAcel
-  const tCorre = (tren.largo - 2 * dAcel) / VMAX + 2 * tAcel
-  const arcoTren = (tau: number) => {
-    if (tau < tAcel) return 0.5 * ACEL * tau * tau
-    if (tau < tCorre - tAcel) return dAcel + VMAX * (tau - tAcel)
-    const r = tCorre - tau
-    return tren.largo - 0.5 * ACEL * r * r
+  // Los personajes que están en la instalación (para abrir las compuertas a su paso).
+  let avatares: THREE.Object3D | null = null
+  const buscarAvatares = () => {
+    for (const o of ctx.scene.children) if (o.children.some((h) => h.userData?.personajeId)) return o
+    return null
   }
-  const ponerCoche = (i: number, s: number) => {
-    const L = tren.largo
-    const u = (((s % L) + L) % L) / L
-    tren.curva.getPointAt(u, _p)
-    tren.curva.getTangentAt(u, _tan)
-    _e.set(0, Math.atan2(-_tan.z, _tan.x), 0)
-    _q.setFromEuler(_e)
-    _p.y = RIEL_Y - 0.55
-    _m.compose(_p, _q, _s.set(1, 1, 1))
-    tren.malla.setMatrixAt(i, _m)
+  const alguienCerca = (x: number, z: number, r: number) => {
+    if (!avatares) return false
+    for (const a of avatares.children) {
+      if (!a.visible || a.position.y > Y0 + 6) continue
+      const dx = a.position.x - x
+      const dz = a.position.z - z
+      if (dx * dx + dz * dz < r * r) return true
+    }
+    return false
   }
 
-  const ciclo = (tick: TickEscena) => {
-    if (!grupo.visible) return
+  // El tren: entra desde el túnel, frena, abre las puertas, espera 12 s y sale.
+  const PARADA = VIA.tope - 1.2
+  const RECORRIDO = PARADA - (TUNEL.z1 + 8)
+  const T_ENTRA = 10
+  const T_PUERTA = 1
+  const T_ESPERA = 12
+  const T_SALE = 10
+  const T_FUERA = 9
+  const CICLO_TREN = T_ENTRA + 2 * T_PUERTA + T_ESPERA + T_SALE + T_FUERA
+  const frenteTren = (c: number): { z: number; puerta: number } => {
+    if (c < T_ENTRA) {
+      const s = c / T_ENTRA
+      return { z: PARADA - RECORRIDO * (1 - s) * (1 - s), puerta: 0 }
+    }
+    c -= T_ENTRA
+    if (c < T_PUERTA) return { z: PARADA, puerta: smooth(0, 1, c / T_PUERTA) }
+    c -= T_PUERTA
+    if (c < T_ESPERA) return { z: PARADA, puerta: 1 }
+    c -= T_ESPERA
+    if (c < T_PUERTA) return { z: PARADA, puerta: 1 - smooth(0, 1, c / T_PUERTA) }
+    c -= T_PUERTA
+    if (c < T_SALE) {
+      const s = c / T_SALE
+      return { z: PARADA - RECORRIDO * s * s, puerta: 0 }
+    }
+    return { z: PARADA - RECORRIDO, puerta: 0 }
+  }
+
+  const actualizar = (tick: TickEscena) => {
     const t = tick.tiempo
     ambienteCiudad(tick.hora, amb)
-    const noche = Math.max(amb.noche, tick.noche * 0.85)
+    const noche = amb.noche
     const u = mats.u
     u.tiempo.value = t
     u.noche.value = noche
-    u.reflejo.value = 0.45 + 0.55 * noche
-    u.charco.value = 0.08 + 0.75 * noche
-    u.cenit.value.copy(amb.cielo.cenit).multiplyScalar(1.1)
-    u.horizonte.value.copy(amb.cielo.horizonte).multiplyScalar(0.95)
-    u.solCol.value.copy(amb.cielo.sol)
-    u.solPos.value.copy(amb.cielo.solPos)
-    u.solDir.value.copy(amb.sol.dir)
-    u.brillo.value = amb.cielo.brillo
-    u.bordeCielo.value.copy(amb.cielo.horizonte).lerp(amb.cielo.cenit, 0.4).multiplyScalar(0.55 * amb.cielo.brillo)
+    u.reflejo.value = 0.7 + 0.3 * noche
 
-    // El entorno de reflejos sigue al cielo (se repinta cada ~15 min del mundo).
-    if (Math.abs(tick.hora - horaEntorno) > 0.25) {
-      horaEntorno = tick.hora
-      entorno.pintar(amb)
-    }
-
-    // La pantalla del reto se redibuja cada 2 s (y cambia de página cada 6 s).
-    if (t - ultimaPantalla > 2) {
+    // La pantalla se redibuja cada 2 s (la hora y el brillo que la barre).
+    if (t - ultimaPantalla > 2 || ultimaPantalla < 0) {
       ultimaPantalla = t
-      pagina = Math.floor(t / 6) % 3 === 2 ? 1 : 0
       const hh = Math.floor(tick.hora)
       const mm = Math.floor((tick.hora - hh) * 60)
-      dibujarPantalla(gP, pagina, `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`, (t % 6) / 6)
+      dibujarPantalla(gP, `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`, (t % 8) / 8)
       texP.needsUpdate = true
     }
 
-    // El tren: arranca, recorre el circuito y se detiene en la estación.
-    tiempoTren = (tiempoTren + tick.dt) % (tCorre + PARADA)
-    const s = tren.sEstacion + (tiempoTren < PARADA ? 0 : arcoTren(tiempoTren - PARADA)) + 12.4
-    for (let i = 0; i < 3; i++) ponerCoche(i, s - i * 12.4)
-    tren.malla.instanceMatrix.needsUpdate = true
+    // Ascensores: uno sube mientras el otro baja, con esperas en las puntas.
+    for (let i = 0; i < 2; i++) {
+      const T = 34
+      const c = (t + i * T * 0.5) % T
+      const k2 = smooth(6, 15, c) - smooth(23, 32, c)
+      const y = Y0 + 0.02 + (cabinas.arriba - Y0) * k2
+      _m.compose(_p.set(ASC.x + (i ? 1 : -1) * ELEV.dx, y, ASC.z), _q.identity(), _s.set(1, 1, 1))
+      cabinas.cuerpo.setMatrixAt(i, _m)
+      cabinas.vidrio.setMatrixAt(i, _m)
+    }
+    cabinas.cuerpo.instanceMatrix.needsUpdate = true
+    cabinas.vidrio.instanceMatrix.needsUpdate = true
 
-    // La cabina del ascensor: espera abajo, sube hasta la bóveda y vuelve.
-    const T = 28
-    const c = t % T
-    const sube = THREE.MathUtils.smoothstep(c, 8, 15)
-    const baja = THREE.MathUtils.smoothstep(c, 19, 26)
-    cabina.grupo.position.y = Y0 + 0.35 + (cabina.arriba - Y0 - 0.35) * (sube - baja)
+    // El tren (dos coches) y sus puertas del lado del andén.
+    {
+      const f = frenteTren(t % CICLO_TREN)
+      const visible = f.z > TUNEL.z1 + 4 + tren.paso * 2
+      tren.coches.visible = visible
+      tren.puertas.visible = visible
+      const yC = Y0 + 0.6
+      for (let i = 0; i < 2; i++) {
+        const zc = f.z - tren.largo / 2 - i * tren.paso
+        _m.compose(_p.set(VIA.x, yC, zc), _q.identity(), _s.set(1, 1, 1))
+        tren.coches.setMatrixAt(i, _m)
+        for (let d = 0; d < 2; d++) {
+          const zd = zc + (d ? 2.4 : -2.4)
+          for (let h = 0; h < 2; h++) {
+            const s = h ? 1 : -1
+            _m.compose(_p.set(VIA.x + 1.33, yC - 0.1, zd + s * (0.38 + 0.8 * f.puerta)), _q.identity(), _s.set(1, 1, 1))
+            tren.puertas.setMatrixAt(i * 4 + d * 2 + h, _m)
+          }
+        }
+      }
+      tren.coches.instanceMatrix.needsUpdate = true
+      tren.puertas.instanceMatrix.needsUpdate = true
+    }
 
-    // Drones (vuelan en óvalos lentos) y luciérnagas (titilan sobre el pasto).
-    for (let i = 0; i < datosDron.length; i++) {
+    // Compuertas: se abren (0,6 s) cuando alguien pasa cerca, y se cierran solas.
+    if (!avatares || !avatares.parent) avatares = buscarAvatares()
+    k.compuertas.forEach((c, i) => {
+      const objetivo = alguienCerca(c.x, c.z, 5) ? 1 : 0
+      const paso = Math.min(tick.dt, 0.1) / 0.6
+      c.abierta = Math.min(1, Math.max(0, c.abierta + Math.max(-paso, Math.min(paso, objetivo - c.abierta))))
+      const a = smooth(0, 1, c.abierta)
+      const medio = c.ancho / 2
+      for (let h = 0; h < 2; h++) {
+        const s = h ? 1 : -1
+        const corr = s * (medio / 2 + a * medio)
+        if (c.eje === "x") _m.compose(_p.set(c.x + corr, Y0 + c.alto / 2, c.z), _q.identity(), _s.set(medio, c.alto, 0.6))
+        else _m.compose(_p.set(c.x, Y0 + c.alto / 2, c.z + corr), _q.identity(), _s.set(0.6, c.alto, medio))
+        hojas.setMatrixAt(i * 2 + h, _m)
+      }
+    })
+    hojas.instanceMatrix.needsUpdate = true
+
+    // Balizas: giran siempre (la instalación está en marcha).
+    k.balizas.forEach((b, i) => {
+      _e.set(0, t * 4 + i * 1.7, 0)
+      _m.compose(b, _q.setFromEuler(_e), _s.set(1, 1, 1))
+      balizas.setMatrixAt(i, _m)
+    })
+    balizas.instanceMatrix.needsUpdate = true
+
+    // El arco de escaneo recorre el corredor despacio cada 14 s.
+    {
+      const c = t % 14
+      const s = smooth(0, 11, c)
+      escaneo.position.z = THREE.MathUtils.lerp(CORREDOR.z0 + 2, CORREDOR.z1 - 0.5, s)
+      ;(mats.escaneo.uniforms.uAlfa as THREE.IUniform<number>).value = smooth(0, 0.8, c) * (1 - smooth(10.2, 11.2, c))
+    }
+
+    // Núcleo: una onda de luz sube por los anillos.
+    for (let i = 0; i < N_ANILLOS; i++) {
+      const w = 0.5 + 0.5 * Math.sin(t * 2.2 - i * 0.55)
+      anillos.setColorAt(i, _c.set(P.cian).multiplyScalar(1.2 + 5 * w * w))
+    }
+    if (anillos.instanceColor) anillos.instanceColor.needsUpdate = true
+
+    // Robots: van y vuelven por el corredor o dan vueltas en la cámara; drones en óvalos.
+    for (let i = 0; i < N_ROBOTS; i++) {
+      const d = datosRobot[i]
+      let x: number
+      let z: number
+      let rumbo: number
+      if (d.corredor) {
+        const largo = d.z1 - d.z0
+        const s = ((t * d.vel + d.fase) % (2 * largo)) / largo
+        const ida = s < 1
+        z = d.z0 + (ida ? s : 2 - s) * largo
+        x = d.x
+        rumbo = ida ? 0 : Math.PI
+      } else {
+        const a = t * d.vel + d.fase
+        x = d.x + Math.cos(a) * d.z1
+        z = d.z0 + Math.sin(a) * d.z1 * 0.6
+        rumbo = Math.atan2(-Math.sin(a), Math.cos(a) * 0.6)
+      }
+      _m.compose(_p.set(x, Y0, z), _q.setFromEuler(_e.set(0, rumbo, 0)), _s.set(1, 1, 1))
+      robots.setMatrixAt(i, _m)
+      _m.compose(_p.set(x + Math.sin(rumbo) * 0.26, Y0 + 0.62, z + Math.cos(rumbo) * 0.26), _q.identity(), _s.setScalar(0.05))
+      ojos.setMatrixAt(i, _m)
+    }
+    for (let i = 0; i < N_DRONES; i++) {
       const d = datosDron[i]
       const a = t * d.vel + d.fase
-      let x: number
-      let y: number
-      let z: number
-      let esc = d.s
-      if (d.luciernaga) {
-        x = d.x + Math.sin(a * 1.3) * d.r + Math.sin(a * 3.1) * 0.4
-        z = d.z + Math.cos(a * 0.9) * d.r
-        y = d.y + Math.sin(a * 2.3) * 0.5
-        esc *= 0.4 + 0.6 * Math.max(0, Math.sin(a * 4 + d.fase))
-      } else {
-        x = d.x + Math.cos(a) * d.r
-        z = d.z + Math.sin(a * 1.3) * d.r * 0.7
-        y = d.y + Math.sin(a * 2.1) * 1.5
-        y = Math.min(y, techoCiudad(x, z) - 3)
-      }
-      _m.compose(_p.set(x, y, z), _q.identity(), _s.setScalar(esc))
-      drones.setMatrixAt(i, _m)
+      const x = Math.max(CAMARA.x0 + 1, Math.min(CAMARA.x1 - 1, d.x + Math.cos(a) * d.r))
+      const z = Math.max(CAMARA.z0 + 1, Math.min(CAMARA.z1 - 1, d.z + Math.sin(a * 1.3) * d.r * 0.6))
+      const y = d.y + Math.sin(a * 2.1) * 0.6
+      _m.compose(_p.set(x, y, z), _q.setFromEuler(_e.set(0, a, 0)), _s.set(1.1, 0.22, 1.1))
+      robots.setMatrixAt(N_ROBOTS + i, _m)
+      _m.compose(_p.set(x, y + 0.18, z), _q.identity(), _s.setScalar(0.06))
+      ojos.setMatrixAt(N_ROBOTS + i * 2, _m)
+      _m.compose(_p.set(x, y - 0.02, z), _q.identity(), _s.setScalar(0.035 + 0.03 * (Math.sin(t * 9 + i) > 0 ? 1 : 0)))
+      ojos.setMatrixAt(N_ROBOTS + i * 2 + 1, _m)
     }
-    drones.instanceMatrix.needsUpdate = true
+    robots.instanceMatrix.needsUpdate = true
+    ojos.instanceMatrix.needsUpdate = true
 
-    // El club late; las demás luces son fijas.
-    for (const l of luces) l.l.intensity = l.base * (l.pulso ? 0.75 + 0.25 * Math.pow(0.5 + 0.5 * Math.sin(t * 6.283 * 2), 3) : 1) * (0.85 + 0.15 * noche)
+    // Turno de noche: los pasillos bajan y la sala de control sube un poco.
+    for (const l of luces) l.l.intensity = l.base * (1 - 0.4 * noche * l.turno)
   }
-  ctx.alActualizar(ciclo)
+  ctx.alActualizar((tick) => {
+    if (grupo.visible) actualizar(tick)
+  })
   // Primer cuadro: deja todo en su lugar antes de que el motor dibuje.
-  ciclo({ dt: 0, tiempo: 0, hora: 17.5, noche: 0 })
+  actualizar({ dt: 0, tiempo: 0, hora: 12, noche: 0 })
 
-  // ── Limpieza de piezas temporales ──
-  for (const g of [pz.caja, pz.cil8, pz.cil16, pz.cil24, pz.esfera, pz.cono, pz.plano, ...pz.rocas]) {
-    // La copa la usan las instancias de árboles: queda.
-    // La caja la usan los tocables: no se libera.
-    if (g !== pz.caja) g.dispose()
-  }
+  // ── Limpieza de piezas temporales (la caja la usan los tocables; la mata, las plantas) ──
+  for (const g of [pz.cil8, pz.cil16, pz.cil24, pz.esfera, pz.plano]) g.dispose()
 }

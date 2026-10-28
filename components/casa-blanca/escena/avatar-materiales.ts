@@ -69,7 +69,7 @@ export function matPiel(color: string): THREE.MeshPhysicalMaterial {
     metalness: 0,
     map: det,
     normalMap: nor,
-    normalScale: new THREE.Vector2(0.32, 0.32),
+    normalScale: new THREE.Vector2(0.45, 0.45),
     sheen: 0.28,
     sheenRoughness: 0.5,
     sheenColor: new THREE.Color().setHSL(hsl.h, Math.min(1, hsl.s * 0.8), Math.min(0.9, hsl.l * 0.9 + 0.1)).multiplyScalar(0.55),
@@ -115,7 +115,7 @@ export function matRopa(tejido: Tejido, numero?: { texto: string; relleno: strin
 }
 
 const pelos = new Map<string, THREE.MeshPhysicalMaterial>()
-/** Pelo, barba y cejas de un color: hebras con alfa recortado y brillo anisotrópico. */
+/** Pelo, barba y cejas: hebras con alfa recortado y brillo anisotrópico (teñido por `color`). */
 export function matPelo(color: string): THREE.MeshPhysicalMaterial {
   let m = pelos.get(color)
   if (m) return m
@@ -123,16 +123,16 @@ export function matPelo(color: string): THREE.MeshPhysicalMaterial {
   const hsl = { h: 0, s: 0, l: 0 }
   c.getHSL(hsl)
   const t = texPelo()
+  // El color de cada hebra va en el vértice (pelo, barba y cejas en un solo material);
+  // el tono del pelo solo tiñe el brillo.
   m = new THREE.MeshPhysicalMaterial({
-    color: c,
+    color: "#ffffff",
     map: t,
     vertexColors: true,
     alphaTest: 0.42,
     side: THREE.DoubleSide,
     roughness: 0.52,
     metalness: 0,
-    anisotropy: 0.75,
-    anisotropyRotation: 0,
     sheen: 0.35,
     sheenRoughness: 0.45,
     sheenColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.25).multiplyScalar(0.5),
@@ -196,11 +196,13 @@ export function matSombra(holo: boolean, tex: THREE.Texture): THREE.MeshBasicMat
 
 const HOLO_VERT = /* glsl */ `
 #include <common>
+#include <color_pars_vertex>
 #include <skinning_pars_vertex>
 varying vec3 vN;
 varying vec3 vV;
 varying float vY;
 void main() {
+	#include <color_vertex>
 	#include <skinbase_vertex>
 	#include <begin_vertex>
 	#include <beginnormal_vertex>
@@ -214,6 +216,7 @@ void main() {
 }`
 
 const HOLO_FRAG = /* glsl */ `
+#include <color_pars_fragment>
 uniform vec3 uColor;
 uniform vec3 uColor2;
 uniform float uTiempo;
@@ -223,17 +226,21 @@ varying vec3 vV;
 varying float vY;
 float hash( float n ) { return fract( sin( n ) * 43758.5453 ); }
 void main() {
+	#ifdef USE_COLOR_ALPHA
+		if ( vColor.a < 0.45 ) discard;
+	#endif
 	vec3 n = normalize( vN );
 	vec3 v = normalize( vV );
 	float fr = pow( 1.0 - abs( dot( n, v ) ), 2.2 );
 	// Líneas de escaneo finas que suben y una banda ancha que barre el cuerpo.
-	float lineas = 0.55 + 0.45 * smoothstep( 0.35, 0.5, abs( fract( vY * 55.0 - uTiempo * 1.2 ) - 0.5 ) * 2.0 );
+	// Líneas finas (130 por metro) y suaves: a 1080p se leen como textura, no como rayas.
+	float lineas = 0.78 + 0.22 * smoothstep( 0.2, 0.8, abs( fract( vY * 130.0 - uTiempo * 0.9 ) - 0.5 ) * 2.0 );
 	float barrido = smoothstep( 0.12, 0.0, abs( fract( uTiempo * 0.18 ) * ( uAlto + 0.6 ) - 0.3 - vY ) );
 	float parpadeo = 0.92 + 0.08 * sin( uTiempo * 31.0 ) * sin( uTiempo * 7.3 );
 	float falla = step( 0.985, hash( floor( uTiempo * 9.0 ) ) ) * step( abs( fract( vY * 3.0 + uTiempo ) - 0.5 ), 0.06 );
 	vec3 col = mix( uColor, uColor2, fr * 0.8 + barrido * 0.5 );
-	float brillo = ( 0.32 + 1.9 * fr + 0.9 * barrido ) * lineas * parpadeo + falla * 1.5;
-	float a = clamp( 0.16 + 0.75 * fr + 0.25 * barrido + falla * 0.4, 0.0, 1.0 ) * lineas;
+	float brillo = ( 0.85 + 3.2 * fr + 1.2 * barrido ) * lineas * parpadeo + falla * 1.5;
+	float a = clamp( 0.34 + 0.6 * fr + 0.2 * barrido + falla * 0.3, 0.0, 1.0 ) * ( 0.85 + 0.15 * lineas );
 	gl_FragColor = vec4( col * brillo, a );
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
@@ -252,6 +259,7 @@ export function matHolograma(color: string, color2: string, alto: number): { col
     vertexShader: HOLO_VERT,
     fragmentShader: HOLO_FRAG,
     transparent: true,
+    vertexColors: true,
     depthWrite: false,
     depthFunc: THREE.LessEqualDepth,
     blending: THREE.NormalBlending,
@@ -260,7 +268,8 @@ export function matHolograma(color: string, color2: string, alto: number): { col
   const pre = new THREE.ShaderMaterial({
     uniforms,
     vertexShader: HOLO_VERT,
-    fragmentShader: "void main() { gl_FragColor = vec4( 0.0 ); }",
+    fragmentShader: "#include <common>\n#include <color_pars_fragment>\nvoid main() {\n#ifdef USE_COLOR_ALPHA\nif ( vColor.a < 0.45 ) discard;\n#endif\ngl_FragColor = vec4( 0.0 );\n}",
+    vertexColors: true,
     transparent: true,
     colorWrite: false,
     depthWrite: true,

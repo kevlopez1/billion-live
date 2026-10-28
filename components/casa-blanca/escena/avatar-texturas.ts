@@ -141,8 +141,8 @@ export function texPelo(): THREE.Texture {
     const brillo = new Float32Array(n)
     const alfa = new Float32Array(n)
     for (let x = 0; x < n; x++) {
-      brillo[x] = 0.55 + rnd() * 0.45
-      alfa[x] = 0.25 + rnd() * 0.75
+      brillo[x] = 0.72 + rnd() * 0.28
+      alfa[x] = 0.55 + rnd() * 0.45
     }
     const largo = fbm(n, 64, 3, 3, 101)
     const px = new Uint8ClampedArray(n * n * 4)
@@ -152,7 +152,7 @@ export function texPelo(): THREE.Texture {
         // Hebra que ondula un poco a lo largo.
         const xo = (x + Math.round(Math.sin((y / n) * Math.PI * 4 + x * 0.3) * 1.5) + n) % n
         const b = brillo[xo] * (0.75 + 0.25 * largo[i])
-        const a = alfa[xo] * (0.6 + 0.4 * largo[i])
+        const a = alfa[xo] * (0.85 + 0.15 * largo[i])
         const o = i * 4
         px[o] = px[o + 1] = px[o + 2] = Math.min(255, b * 255)
         px[o + 3] = Math.min(255, a * 255)
@@ -296,5 +296,22 @@ export function texSombra(): THREE.Texture {
     g.fillRect(0, 0, n, n)
     const t = new THREE.CanvasTexture(c)
     return t
+  })
+}
+
+/** Punto de luz redondo y suave (partículas de los hologramas). */
+export function texPunto(): THREE.Texture {
+  return una("punto", () => {
+    const n = 32
+    const c = document.createElement("canvas")
+    c.width = c.height = n
+    const g = c.getContext("2d")!
+    const gr = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2)
+    gr.addColorStop(0, "rgba(255,255,255,1)")
+    gr.addColorStop(0.35, "rgba(255,255,255,0.55)")
+    gr.addColorStop(1, "rgba(255,255,255,0)")
+    g.fillStyle = gr
+    g.fillRect(0, 0, n, n)
+    return new THREE.CanvasTexture(c)
   })
 }
