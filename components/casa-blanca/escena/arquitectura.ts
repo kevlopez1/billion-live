@@ -425,7 +425,6 @@ class Pieza {
       this.grupo.add(im)
       if (e.umbralNoche !== undefined) K.deNoche(im, e.umbralNoche)
       else mallas.push(im)
-      if (e.umbralNoche === undefined) mallas.push(im)
     }
     if (this.lugarId) for (const m of mallas) K.ctx.seleccionable(m, this.lugarId)
     K.ctx.niveles.superficie.add(this.grupo)
@@ -1570,7 +1569,7 @@ function arcoSalonAzul(K: Constructor, P: Pieza): void {
       }
     }
     P.lote.add(M.fachada, g, f.base)
-    if (!conVentana || true) K.rustico(P, f, -L / 2, L / 2, 0, Y.principalSur - 0.05, huecos.filter((h) => h.v0 < 3), 8)
+    K.rustico(P, f, -L / 2, L / 2, 0, Y.principalSur - 0.05, huecos.filter((h) => h.v0 < 3), 8)
   }
   // Molduras corridas sobre el arco.
   const arco = puntosArco(PS.cx, PS.cz, R_BOW, 0, Math.PI, 7)
@@ -1857,9 +1856,7 @@ function construirAlaOeste(K: Constructor): void {
       } else huecos.push(K.ventana(P, f, u, { w: 1.35, h: 2.7, v0: 1.0, noche: 0.55, cornisa: true }))
       huecos.push(K.ventana(P, f, u, { w: 1.3, h: 2.3, v0: yP + 0.95, noche: 0.5 }))
     }
-    const Lm = idx < 2 ? L : L + 0.6
-    P.lote.add(M.fachada, geoMuro(-L - (idx < 2 ? 0 : 0), L, 0, yCor, 0.6, huecos), f.base)
-    void Lm
+    P.lote.add(M.fachada, geoMuro(-L, L, 0, yCor, 0.6, huecos), f.base)
     P.lote.add(M.fachada, cajaE(-L, L, 0, 0.8, 0, 0.1), f.base)
   })
   const rect: P2[] = [
@@ -1892,7 +1889,7 @@ function construirAlaOeste(K: Constructor): void {
   const Dc = 0.5
   const Hc = 4.4
   for (const u of [-3.6, -1.2, 1.2, 3.6]) {
-    const p = fN.p(u + (-65 - (W.x0 + W.x1) / 2) * -1, 0, 3.2)
+    const p = fN.p(u, 0, 3.2)
     P.instancia("tosc", () => K.geo(`toscana-${Dc}-${Hc}`, () => geoColumnaToscana(Dc, Hc)), M.moldura, mT(p.x, 0, p.z))
   }
   const cx = -65
@@ -2110,11 +2107,6 @@ function construirObra(K: Constructor): void {
       for (let j = 0; j < zs.length - 1; j++) {
         if (ni === 2 && rnd() < 0.3) continue
         barra(new V3(x, y, zs[j]), new V3(x, y, zs[j + 1]))
-        // Viguetas intermedias.
-        if (ni < 2 && x < 69) for (const t of [0.33, 0.66]) {
-          const zz = zs[j] + (zs[j + 1] - zs[j]) * t
-          void zz
-        }
       }
     }
   })
@@ -2213,7 +2205,11 @@ function construirObra(K: Constructor): void {
   P.grupo.add(mc)
   K.ctx.seleccionable(mc, "obra")
   // Pilas de vigas y tarimas.
-  for (let k = 0; k < 6; k++) P.instancia("vigaI", viga, PR.oxido, mTramo(new V3(73, 0.3 + (k % 3) * 0.32, 8 + k * 0.4), new V3(73, 0.3 + (k % 3) * 0.32, 8 + k * 0.4).add(new V3(-0.01, 0, 0)).setX(79)))
+  for (let k = 0; k < 6; k++) {
+    const y = 0.3 + Math.floor(k / 3) * 0.52
+    const zz = 8 + (k % 3) * 0.42
+    P.instancia("vigaI", viga, PR.oxido, mTramo(new V3(72.6, y, zz), new V3(79.4, y, zz)))
+  }
   for (let k = 0; k < 4; k++) P.lote.add(M.madera, cajaE(-0.6, 0.6, 0, 0.9, -0.5, 0.5), mTR(74 + (k % 2) * 1.5, 0, 16 + Math.floor(k / 2) * 1.3, 0.1 * k))
   // Torres de luz de obra: de noche iluminan la estructura.
   for (const [x, z, r] of [

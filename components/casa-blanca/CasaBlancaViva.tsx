@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { leerClave } from "@/lib/clave"
 import { CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
-import type { Escena, Toque } from "./escena/contrato"
+import type { Escena, ModoCamara, Toque } from "./escena/contrato"
 import { crearEscena } from "./escena/motor"
 import { Simulacion, type EventoSim } from "./motor/simulacion"
 import { ESPECIALES, PERSONAJES } from "./datos/personajes"
@@ -30,7 +30,7 @@ import { Estilos } from "./ui/Estilos"
 import { crearEtiquetaPuesto, crearEtiquetas, type DatoEtiqueta } from "./ui/etiquetas"
 import { Ficha, type MensajeChat } from "./ui/Ficha"
 import { recortar, relojTexto } from "./ui/formato"
-import { ControlesGrabacion, MarcaGrabacion, type TomaId } from "./ui/Grabacion"
+import { ControlesGrabacion, MarcaGrabacion, TOMAS, type Toma } from "./ui/Grabacion"
 import { detectarTema } from "./ui/guion"
 import { AVISO_FICCION, Dinero, Dock, Marca, Notificacion, Subtitulos, type Subtitulo } from "./ui/Hud"
 import { Intro } from "./ui/Intro"
@@ -55,11 +55,19 @@ const INICIO = { dia: 1, minutos: 17 * 60 + 30 }
 const CLAVE_GUARDADO = "casa-blanca-sim-v1"
 
 /** Lo que la interfaz usa de la escena además del contrato, si el motor lo trae. */
+// (El motor de hoy los trae todos: EscenaMotor en escena/motor.ts. Se usan
+// como opcionales para que la página no se rompa si alguno cambia.)
 type EscenaPlus = Escena & {
   modoMaqueta?: (on: boolean) => void
+  /** Las tomas del modo grabación; `modoCamara("cine", id)` fija una. */
+  tomas?: () => ReadonlyArray<Toma>
+  /** El modo de cámara actual (puede cambiarlo el motor solo, p. ej. al terminar la intro). */
+  camara?: () => ModoCamara
+  /** Hover sobre la escena (personaje, puesto o lugar bajo el cursor), si el motor lo ofrece. */
+  alPasar?: (fn: (t: Toque | null, x: number, y: number) => void) => void
 }
 
-type ModoCam = "dron" | "seguir" | "cine"
+type ModoCam = ModoCamara
 
 type Panel =
   | { tipo: "ficha"; id: string }
@@ -178,7 +186,8 @@ export default function CasaBlancaViva() {
   const [retratos, setRetratos] = useState<Record<string, string>>({})
   const [trabajando, setTrabajando] = useState<Record<string, number[]>>({})
   const [grabando, setGrabando] = useState(false)
-  const [toma, setToma] = useState<TomaId>("portico-norte")
+  const [toma, setToma] = useState<string>(TOMAS[0].id)
+  const [tomas, setTomas] = useState<ReadonlyArray<Toma>>(TOMAS)
   const [sesion, setSesion] = useState<SesionConsejo | null>(null)
   const [chats, setChats] = useState<Record<string, MensajeChat[]>>({})
   const compacto = useCompacto()
@@ -422,8 +431,11 @@ export default function CasaBlancaViva() {
       })
 
       if (ahora - ultNivel > 300) {
+        // El motor puede cambiar nivel y cámara por su cuenta (intro, tomas, fundidos): la botonera lo refleja.
         ultNivel = ahora
         setNivel((n) => (n === nv ? n : nv))
+        const modo = escena.camara?.()
+        if (modo && modo !== "intro") setCamara((c) => (c === modo ? c : modo))
       }
       const h = sim.reloj.dia * 24 + Math.floor(sim.reloj.minutos / 60)
       if (h !== horaGuardada) {
@@ -602,9 +614,12 @@ export default function CasaBlancaViva() {
       const m = mundoRef.current
       if (!m) return
       const conv = m.sim.reunir("sala-guerra", ids, tema)
-      irANivel("n2")
+      // enfocar() baja de nivel con su propio fundido: no hace falta mostrarNivel antes.
       const sala = LUGAR["sala-guerra"]
-      if (sala) m.escena.enfocar({ x: (sala.x0 + sala.x1) / 2, y: sala.y, z: (sala.z0 + sala.z1) / 2 }, 46)
+      if (sala) {
+        m.escena.enfocar({ x: (sala.x0 + sala.x1) / 2, y: sala.y, z: (sala.z0 + sala.z1) / 2 }, 46)
+        setNivel(sala.nivel)
+      }
       setSesion({ convId: conv.id, tema, ids, lineas: [], estado: "escribiendo", guion: false })
       setPanel({ tipo: "transcripcion" })
       mostrarAviso("Consejo convocado", tema, 5000)
@@ -636,7 +651,7 @@ export default function CasaBlancaViva() {
       const g = m.sim.conversarGuion("sala-guerra", ids, detectarTema(tema) ?? undefined)
       setSesion({ convId: g.id, tema, ids, lineas: [], estado: "en-curso", guion: true, nota: motivoSinIa(r.ok ? 500 : r.status) })
     },
-    [irANivel, mostrarAviso],
+    [mostrarAviso],
   )
 
   // La sesión termina cuando la simulación saca la conversación de su lista
@@ -735,64 +750,44 @@ export default function CasaBlancaViva() {
   )
 
   // ── Grabación ─────────────────────────────────────────────────
+  // Cada toma es del motor (escena.tomas()): la interfaz solo elige cuál.
   const aplicarToma = useCallback(
-    (t: TomaId) => {
+    (id: string) => {
       const m = mundoRef.current
       if (!m) return
-      setToma(t)
-      const maq = t === "maqueta"
-      m.escena.modoMaqueta?.(maq)
-      setMaqueta(maq)
-      switch (t) {
-        case "portico-norte":
-          irANivel("superficie")
-          m.escena.modoCamara("cine", "portico-norte")
-          setCamara("cine")
-          break
-        case "dron":
-          irANivel("superficie")
-          m.escena.modoCamara("dron")
-          setCamara("dron")
-          break
-        case "bajada":
-          m.escena.modoCamara("cine", "bajada")
-          setCamara("cine")
-          break
-        case "departamento":
-          m.escena.modoCamara("cine", "departamento")
-          setCamara("cine")
-          break
-        case "seguir": {
-          const id = seleccionadoRef.current ?? masCercano()
-          if (id) seguir(id)
-          break
-        }
-        case "consejo":
-          m.escena.modoCamara("cine", "consejo")
-          setCamara("cine")
-          break
-        case "maqueta":
-          irANivel("superficie")
-          m.escena.modoCamara("dron")
-          setCamara("dron")
-          break
+      setToma(id)
+      // El modo maqueta manual se apaga: la toma "maqueta" lo prende por su cuenta.
+      if (maquetaRef.current) {
+        m.escena.modoMaqueta?.(false)
+        setMaqueta(false)
       }
+      if (id === "seguir") {
+        // Primero se elige a quién (el elegido o el más cercano) y después se fija la toma.
+        const quien = seleccionadoRef.current ?? masCercano()
+        if (quien) {
+          setSeleccionado(quien)
+          m.escena.modoCamara("seguir", quien)
+        }
+      }
+      m.escena.modoCamara("cine", id)
+      setCamara("cine")
     },
-    [irANivel, masCercano, seguir],
+    [masCercano],
   )
 
   const entrarGrabacion = useCallback(() => {
+    const m = mundoRef.current
+    const lista = m?.escena.tomas?.()
+    if (lista?.length) setTomas(lista)
     setPanel(null)
     setGrabando(true)
-    aplicarToma(toma)
+    aplicarToma(lista?.some((t) => t.id === toma) ? toma : (lista?.[0]?.id ?? toma))
   }, [aplicarToma, toma])
 
   const salirGrabacion = useCallback(() => {
     setGrabando(false)
     const m = mundoRef.current
     if (!m) return
-    m.escena.modoMaqueta?.(false)
-    setMaqueta(false)
     m.escena.modoCamara("dron")
     setCamara("dron")
   }, [])
@@ -929,7 +924,7 @@ export default function CasaBlancaViva() {
         </div>
       )}
 
-      {enJuego && grabando && <ControlesGrabacion toma={toma} onToma={aplicarToma} onSalir={salirGrabacion} compacto={compacto} />}
+      {enJuego && grabando && <ControlesGrabacion tomas={tomas} toma={toma} onToma={aplicarToma} onSalir={salirGrabacion} compacto={compacto} />}
 
       {/* Paneles */}
       {enJuego && !grabando && (

@@ -12,18 +12,24 @@ import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import { FOCO, VIDRIO } from "./base"
 
-/** Las 7 tomas de la spec, en orden. El motor las resuelve por id. */
-export const TOMAS = [
-  { id: "portico-norte", nombre: "Pórtico Norte" },
-  { id: "dron", nombre: "Dron" },
-  { id: "bajada", nombre: "Bajada al subsuelo" },
-  { id: "departamento", nombre: "Departamento" },
-  { id: "seguir", nombre: "Seguir" },
-  { id: "consejo", nombre: "Sala de guerra" },
-  { id: "maqueta", nombre: "Maqueta" },
-] as const
+export interface Toma {
+  id: string
+  nombre: string
+}
 
-export type TomaId = (typeof TOMAS)[number]["id"]
+/**
+ * Las 7 tomas de la spec, en orden. La lista de verdad la da el motor
+ * (escena.tomas()); esta es la de respaldo mientras la escena no la entregó.
+ */
+export const TOMAS: ReadonlyArray<Toma> = [
+  { id: "portico-norte", nombre: "Pórtico Norte" },
+  { id: "dron", nombre: "Dron sobre el complejo" },
+  { id: "bajada", nombre: "Bajada al subsuelo" },
+  { id: "departamento", nombre: "Un departamento por dentro" },
+  { id: "seguir", nombre: "Detrás de un personaje" },
+  { id: "sala-guerra", nombre: "Sala de guerra" },
+  { id: "maqueta", nombre: "Modo maqueta" },
+]
 
 export function MarcaGrabacion() {
   return (
@@ -34,13 +40,15 @@ export function MarcaGrabacion() {
 }
 
 export function ControlesGrabacion({
+  tomas,
   toma,
   onToma,
   onSalir,
   compacto,
 }: {
-  toma: TomaId
-  onToma: (t: TomaId) => void
+  tomas: ReadonlyArray<Toma>
+  toma: string
+  onToma: (id: string) => void
   onSalir: () => void
   compacto: boolean
 }) {
@@ -66,15 +74,15 @@ export function ControlesGrabacion({
     const tecla = (e: KeyboardEvent) => {
       if (e.key === "Escape") onSalir()
       const n = Number(e.key)
-      if (n >= 1 && n <= TOMAS.length) onToma(TOMAS[n - 1].id)
+      if (n >= 1 && n <= tomas.length) onToma(tomas[n - 1].id)
     }
     window.addEventListener("keydown", tecla)
     return () => window.removeEventListener("keydown", tecla)
-  }, [onSalir, onToma])
+  }, [onSalir, onToma, tomas])
 
   const lista = (
     <ol className="flex flex-col gap-1">
-      {TOMAS.map((t, i) => (
+      {tomas.map((t, i) => (
         <li key={t.id}>
           <button
             type="button"
@@ -107,7 +115,7 @@ export function ControlesGrabacion({
         >
           <X className="h-3.5 w-3.5" /> Salir
         </button>
-        <p className="mt-2 px-2 text-[10.5px] leading-snug text-white/40">Teclas 1 a 7 cambian de toma. Esc sale.</p>
+        <p className="mt-2 px-2 text-[10.5px] leading-snug text-white/40">Teclas 1 a {tomas.length} cambian de toma. Esc sale.</p>
       </aside>
     )
   }
@@ -118,7 +126,7 @@ export function ControlesGrabacion({
     >
       <div className={`rounded-[22px] p-2 ${VIDRIO}`}>
         <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] touch-pan-x">
-          {TOMAS.map((t, i) => (
+          {tomas.map((t, i) => (
             <button
               key={t.id}
               type="button"

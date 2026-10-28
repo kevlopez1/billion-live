@@ -126,7 +126,8 @@ const Separador = () => <span className="mx-1 h-6 w-px shrink-0 bg-white/12" ari
 export interface PropsDock {
   nivel: NivelId
   onNivel: (n: NivelId) => void
-  camara: ModoUi
+  /** El modo del motor ("dron", "seguir", "cine", "nivel"…); se marca el botón que coincida. */
+  camara: string
   maqueta: boolean
   onCamara: (m: ModoUi | "maqueta") => void
   hayMaqueta: boolean
