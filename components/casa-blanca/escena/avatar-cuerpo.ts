@@ -787,13 +787,28 @@ export interface Cobertura {
 
 const BLANCO: RGBA = [1, 1, 1, 1]
 
-/** Construye la malla de piel: tronco + cuello + cabeza (una grilla), brazos, manos, piernas, pies, párpados y orejas. */
+/** Factor de color (lineal) para pintar `hex` sobre un material de color `base`. */
+export function factorColor(hex: string, base: string, a = 1): RGBA {
+  const c = new THREE.Color(hex)
+  const k = new THREE.Color(base)
+  return [c.r / Math.max(0.004, k.r), c.g / Math.max(0.004, k.g), c.b / Math.max(0.004, k.b), a]
+}
+
+/**
+ * Construye la malla de piel: tronco + cuello + cabeza (una grilla), brazos,
+ * manos, piernas, pies, párpados, orejas, y la boca por dentro (labios,
+ * dientes y la cavidad oscura que se ve al abrirla).
+ */
 export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number }): { lote: Lote; ojos: Lote } {
   const lote = new Lote()
   const cab = cu.cab
+  const fi = cu.rasgos.f
   const s = cu.s
   const xs = new Float64Array(M)
   const zs = new Float64Array(M)
+  // Tono del cuerpo (cuello, manos) sobre el de la cara.
+  const tc: RGBA = fi.piel.cuerpo ? factorColor(fi.piel.cuerpo, fi.piel.base) : [1, 1, 1, 1]
+  const brilloPiel = clamp(fi.piel.brillo, 0, 1)
 
   // ── Tronco + cabeza: una sola grilla ──
   const ys = cu.filasTronco()
@@ -801,7 +816,9 @@ export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number 
   const ids: number[][] = []
   const centros: THREE.Vector3[] = []
   const cubiertos: boolean[][] = []
-  const rug = (r: number): Mat2 => [r, 0]
+  /** Fila cuyo paso a la siguiente es la boca abierta (no se cierra con piel). */
+  let saltoBoca = -1
+  const rug = (r: number): Mat2 => [r * (1 - 0.35 * brilloPiel), 0]
   for (const y of ys) {
     cu.anilloTronco(y, 1, xs, zs)
     const fila: number[] = []
@@ -810,9 +827,9 @@ export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number 
     for (let j = 0; j < M; j++) {
       const x = xs[j]
       const z = zs[j]
-      // Codos, rodillas y pliegues: tono un poco más rojizo en el pecho alto (sol).
+      // Pliegue de la ingle un poco más oscuro.
       const tono = 1 - 0.04 * campana(y, 0.47 * cu.H, 0.03)
-      fila.push(lote.v(x, y, z, ANG[j] * 0.15, y, [tono, tono * 0.99, tono * 0.99, 1], cu.pesosTronco(x, y, z), rug(0.55)))
+      fila.push(lote.v(x, y, z, ANG[j] * 0.15, y, [tono * tc[0], tono * 0.99 * tc[1], tono * 0.99 * tc[2], 1], cu.pesosTronco(x, y, z), rug(0.55)))
       cf.push(cub.tronco(y, j, false))
       v += z
     }
@@ -821,21 +838,75 @@ export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number 
     centros.push(new THREE.Vector3(0, y, v / M))
   }
   const tmp = new THREE.Vector3()
-  for (const f of filasC) {
+  const ph = fi.pelo
+  const pb = fi.barba
+  const conPelo = ph.rapado <= 0
+  const barbaVol = !!pb && pb.densidad >= 0.35
+  // Arrugas: aparecen desde los ~35 años.
+  const arr = clamp((fi.edad - 0.22) / 0.6, 0, 1)
+  const hoyuelo = clamp(fi.cara.mentonPartido, 0, 1)
+  const bocaLab: { sup: number[]; inf: number[]; l: THREE.Vector3[] } = { sup: [], inf: [], l: [] }
+  for (let fIdx = 0; fIdx < filasC.length; fIdx++) {
+    const f = filasC[fIdx]
     const fila: number[] = []
     const cf: boolean[] = []
+    const esBoca = fIdx === cu.filaBoca
+    const filaInf: number[] = []
     for (let j = 0; j < M; j++) {
       const l = f.l[j]
       const P = f.P[j]
       const ao = cab.oclusion(l.x, l.y, l.z, f.n[j])
-      const col = cab.tinte(l.x, l.y, l.z, ao, op.sombraBarba)
-      // Rugosidad: labios y frente más brillantes.
+      // Pelo y barba sobre esta piel: la tiñen (y donde el pelo es opaco, no hace falta piel).
+      const [mp, gp] = peloEn(cab, l.x, l.y, l.z, ph)
+      const peloT = conPelo ? suave(0.15, 0.7, mp) * 0.85 : mp * ph.rapado * 0.9
+      const barbaT = barbaVol && f.radial ? suave(0.2, 0.75, barbaEn(cab, l.x, l.y, l.z, pb!)[0]) * 0.8 : 0
+      const col = cab.tinte(l.x, l.y, l.z, ao, op.sombraBarba, peloT, barbaT)
+      // El cuello toma el tono del cuerpo.
+      const kc = suave(-0.09, -0.135, l.y)
+      if (kc > 0) {
+        col[0] *= lerp(1, tc[0], kc)
+        col[1] *= lerp(1, tc[1], kc)
+        col[2] *= lerp(1, tc[2], kc)
+      }
+      // Rugosidad: labios y frente más brillantes; la cabeza rapada brilla un poco.
       const ax = Math.abs(l.x)
       const lab = campana(ax, 0, 0.02) * campana(l.y, cab.yBoca, 0.011) * suave(0.085, 0.09, l.z)
       const zonaT = campana(ax, 0, 0.03) * suave(0.0, 0.05, l.y) * suave(0.06, 0.09, l.z) + campana(ax, 0, 0.012) * campana(l.y, cab.nariz.y, 0.02) * suave(0.09, 0.1, l.z)
-      const r = 0.52 - 0.14 * lab - 0.08 * zonaT
-      fila.push(lote.v(P.x, P.y, P.z, ANG[j] * 0.085, P.y, [col[0], col[1], col[2], 1], cu.pesosCabeza(l), rug(r)))
-      cf.push(cub.tronco(P.y, j, true))
+      const craneo = conPelo ? 0 : suave(0.03, 0.08, l.y) * 0.25
+      const r = 0.52 - 0.14 * lab - 0.08 * zonaT - craneo
+      const pw = cu.pesosCabeza(l)
+      const enBoca = esBoca && ax < cab.anchoBoca * 0.97 && l.z > 0.06
+      const i = lote.v(P.x, P.y, P.z, ANG[j] * 0.085, P.y, [col[0], col[1], col[2], 1], enBoca ? [[H.cabeza, 1]] : pw, rug(r))
+      // Mapa de arrugas: coordenadas canónicas, cuánto (edad) y el hoyuelo del mentón.
+      if (f.radial && l.z > -0.02) {
+        const [cu0, cv0] = cab.canonica(l.x, l.y)
+        lote.ex(cu0, cv0, arr * suave(-0.02, 0.03, l.z), hoyuelo)
+      }
+      fila.push(i)
+      // Bajo pelo denso y opaco la piel no se ve: no se arma.
+      cf.push(cub.tronco(P.y, j, true) || (conPelo && mp > 0.97 && gp > 0.0035 && f.radial))
+      if (esBoca) {
+        if (enBoca) {
+          // Labio de abajo: el mismo punto, pero sigue a la mandíbula.
+          const w = 0.92 * (1 - suave(0.55, 1.0, ax / cab.anchoBoca))
+          const i2 = lote.v(P.x, P.y, P.z, ANG[j] * 0.085, P.y, [col[0], col[1], col[2], 1], [[H.cabeza, 1 - w], [H.mandibula, w]], rug(r))
+          if (lote.usaEx) {
+            const [cu0, cv0] = cab.canonica(l.x, l.y)
+            lote.ex(cu0, cv0, arr, hoyuelo)
+          }
+          filaInf.push(i2)
+          bocaLab.sup.push(i)
+          bocaLab.inf.push(i2)
+          bocaLab.l.push(l.clone())
+        } else filaInf.push(i)
+      }
+    }
+    if (esBoca) {
+      // Primero la fila de abajo (labio inferior), después la de arriba: entre las dos, la abertura.
+      ids.push(filaInf)
+      cubiertos.push(cf)
+      centros.push(cab.c)
+      saltoBoca = ids.length - 1
     }
     ids.push(fila)
     cubiertos.push(cf)
@@ -844,6 +915,7 @@ export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number 
   lote.tiras(ids, true, {
     centros,
     emitir: (i, j) => {
+      if (i === saltoBoca) return false
       const j2 = (j + 1) % M
       return !(cubiertos[i][j] && cubiertos[i][j2] && cubiertos[i + 1][j] && cubiertos[i + 1][j2])
     },
@@ -856,11 +928,14 @@ export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number 
   }
   lote.pieza()
 
+  // ── La boca por dentro ──
+  if (bocaLab.sup.length > 1) mallaBoca(lote, cu, bocaLab)
+
   // ── Brazos y manos ──
-  for (const c of cu.brazos) mallaBrazo(lote, cu, c, cub)
+  for (const c of cu.brazos) mallaBrazo(lote, cu, c, cub, tc)
   // ── Piernas y pies ──
-  for (const c of cu.piernas) mallaPierna(lote, cu, c, cub)
-  if (!cub.pie) for (const lado of [1, -1] as const) mallaPie(lote, cu, lado, 0, [1, 1, 1, 1], [0.55, 0], true)
+  for (const c of cu.piernas) mallaPierna(lote, cu, c, cub, tc)
+  if (!cub.pie) for (const lado of [1, -1] as const) mallaPie(lote, cu, lado, 0, tc, [0.55, 0], true)
 
   // ── Párpados y orejas ──
   const ojos = new Lote()
@@ -872,18 +947,92 @@ export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number 
   return { lote, ojos }
 }
 
+/**
+ * Lo que se ve al abrir la boca: la cara interna de los labios, los dientes
+ * (arriba siguen a la cabeza, abajo a la mandíbula) y la cavidad oscura.
+ * Con la boca cerrada todo queda dentro de la cabeza.
+ */
+function mallaBoca(lote: Lote, cu: Cuerpo, b: { sup: number[]; inf: number[]; l: THREE.Vector3[] }) {
+  const cab = cu.cab
+  const base = cu.rasgos.f.piel.base
+  const labioIn = factorColor("#7a3a38", base)
+  const fondo = factorColor("#1c0807", base)
+  const encia = factorColor("#8a4a48", base)
+  const diente = factorColor("#d8d0c0", base)
+  const yb = cab.yBoca
+  const aB = cab.anchoBoca
+  const P = new THREE.Vector3()
+  const n = b.l.length
+  const wInf = (x: number) => 0.92 * (1 - suave(0.55, 1.0, Math.abs(x) / aB))
+  // Cara interna de los labios: del borde hacia adentro.
+  for (const arriba of [true, false]) {
+    const filas: number[][] = [arriba ? b.sup : b.inf]
+    for (const [dy, dz] of [[0.0012, -0.004], [0.0022, -0.008]]) {
+      const fila: number[] = []
+      for (let k = 0; k < n; k++) {
+        const l = b.l[k]
+        cab.aAvatar(l.x * 0.97, l.y + (arriba ? dy : -dy), l.z + dz, P)
+        const w = arriba ? 0 : wInf(l.x)
+        fila.push(lote.v(P.x, P.y, P.z, 0, 0, labioIn, [[H.cabeza, 1 - w], [H.mandibula, w]], [0.3, 0]))
+      }
+      filas.push(fila)
+    }
+    if (!arriba) filas.reverse()
+    lote.tiras(filas, false, { centros: filas.map(() => cab.aAvatar(0, yb, 0.2, new THREE.Vector3())) })
+  }
+  lote.pieza()
+  // Dientes: un arco detrás de los labios.
+  const zDe = (x: number) => 0.0965 - 0.022 * (x / (aB * 1.05)) ** 2
+  for (const arriba of [true, false]) {
+    const filas: number[][] = []
+    const ysD = arriba ? [yb + 0.0068, yb + 0.0035, yb - 0.0006] : [yb + 0.0004, yb - 0.004, yb - 0.0066]
+    for (let r = 0; r < ysD.length; r++) {
+      const fila: number[] = []
+      for (let k = 0; k <= 8; k++) {
+        const x = (k / 8 - 0.5) * 2 * aB * 0.92
+        cab.aAvatar(x, ysD[r], zDe(x) - 0.0005 * (r === 1 ? 0 : 1), P)
+        const w = arriba ? 0 : 0.92
+        const borde = (arriba ? r === 0 : r === 2) ? encia : diente
+        fila.push(lote.v(P.x, P.y, P.z, 0, 0, borde, [[H.cabeza, 1 - w], [H.mandibula, w]], [0.28, 0]))
+      }
+      filas.push(fila)
+    }
+    lote.tiras(filas, false, { centros: filas.map(() => cab.aAvatar(0, yb, 0.0, new THREE.Vector3())) })
+  }
+  lote.pieza()
+  // Cavidad: media cáscara oscura detrás de los dientes, mirando hacia afuera.
+  const filas: number[][] = []
+  const rx = aB * 1.15
+  for (let i = 0; i <= 6; i++) {
+    const v = (i / 6 - 0.5) * Math.PI * 0.95
+    const fila: number[] = []
+    for (let k = 0; k <= 8; k++) {
+      const u = (k / 8 - 0.5) * Math.PI
+      cab.aAvatar(rx * Math.sin(u) * Math.cos(v), yb + 0.014 * Math.sin(v), 0.088 - 0.02 * Math.cos(u) * Math.cos(v), P)
+      const w = 0.92 * suave(0.25, -0.35, Math.sin(v))
+      fila.push(lote.v(P.x, P.y, P.z, 0, 0, fondo, [[H.cabeza, 1 - w], [H.mandibula, w]], [0.6, 0]))
+    }
+    filas.push(fila)
+  }
+  lote.tiras(filas, false, { centros: filas.map(() => cab.aAvatar(0, yb, -0.2, new THREE.Vector3())) })
+  lote.pieza()
+}
+
 /** Brazo + mano (palma con los cinco dedos). */
-function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura) {
+function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura, tc: RGBA) {
   const s = cu.s
   const lado = c.lado
   const uMano = c.u[3]
   const uFin = c.largo
   const cols = 16
   const filas: number[] = []
-  for (let u = -0.02 * s; u < uFin - 0.001; ) {
+  // El brazo nace DENTRO del hombro (el deltoides es del tronco): sin tapa
+  // asomando ni costura en los brazos desnudos.
+  const u0 = 0.014 * s
+  for (let u = u0; u < uFin - 0.001; ) {
     filas.push(u)
     const enMano = u > uMano - 0.02 * s
-    u += (u < 0.03 * s ? 0.014 : enMano ? 0.018 : 0.032) * s
+    u += (u < 0.06 * s ? 0.016 : enMano ? 0.018 : 0.032) * s
   }
   filas.push(uFin - 0.004 * s)
   const ids: number[][] = []
@@ -893,6 +1042,11 @@ function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura) {
   for (const u of filas) {
     c.marco(u, _m)
     const r = cu.radiosBrazo(u)
+    // Los primeros anillos, más finos: quedan bajo la piel del hombro.
+    const ent = lerp(0.6, 1, suave(u0, 0.075 * s, u))
+    r[0] *= ent
+    r[1] *= lerp(0.8, 1, ent)
+    r[3] *= lerp(0.8, 1, ent)
     const fila: number[] = []
     const pesos = cu.pesosBrazo(lado, u)
     const nudillo = suave(uMano + 0.06 * s, uMano + 0.09 * s, u)
@@ -902,7 +1056,7 @@ function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura) {
       // Dorso de la mano y nudillos apenas más rojizos.
       const t = 1 - 0.05 * nudillo * Math.max(0, Math.cos(a))
       const pw: Pesos = nudillo > 0.01 ? [...pesos.map(([h, w]) => [h, w * (1 - nudillo * 0.5)] as [number, number]), [H[`dedos${lado > 0 ? "I" : "D"}`], nudillo * 0.5]] : pesos
-      fila.push(lote.v(P.x, P.y, P.z, (k / cols) * 0.2, u, [1, t, t, 1], pw, [0.55, 0]))
+      fila.push(lote.v(P.x, P.y, P.z, (k / cols) * 0.2, u, [tc[0], t * tc[1], t * tc[2], 1], pw, [0.55, 0]))
     }
     ids.push(fila)
     centros.push(_m.c.clone())
@@ -910,11 +1064,11 @@ function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura) {
   }
   lote.tiras(ids, true, { centros, emitir: (i) => !(cubierto[i] && cubierto[i + 1]) })
   lote.pieza()
-  if (!cub.manos) mallaDedos(lote, cu, c)
+  if (!cub.manos) mallaDedos(lote, cu, c, tc)
 }
 
 /** Cuatro dedos y el pulgar como tubos que nacen de la palma. */
-function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
+function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena, tc: RGBA) {
   const s = cu.s
   const lado = c.lado
   const L = lado > 0 ? "I" : "D"
@@ -923,7 +1077,7 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
   const T = _m.T.clone()
   const N = _m.N.clone()
   const Lat = _m.L.clone()
-  const g = cu.fem ? 0.9 : 1
+  const g = (cu.fem ? 0.9 : 1) * cu.k.manos
   // [posición frente-atrás, largo, radio]
   const dedos: Array<[number, number, number]> = [
     [0.027, 0.075, 0.0091],
@@ -965,7 +1119,7 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
         Cuerpo.puntoAnillo(m, radios, a, 2.2, P)
         // Uñas: lado del dorso (lateral) de la última falange, claras y brillantes.
         const una = t > 0.76 && t < 0.97 && Math.cos(a) > 0.35 ? 1 : 0
-        const col: RGBA = una ? [1.08, 0.98, 0.96, 1] : [1, 0.985, 0.98, 1]
+        const col: RGBA = una ? [1.08 * tc[0], 0.98 * tc[1], 0.96 * tc[2], 1] : [tc[0], 0.985 * tc[1], 0.98 * tc[2], 1]
         fila.push(lote.v(P.x, P.y, P.z, k / cols, t, col, pw, una ? [0.3, 0] : [0.55, 0]))
       }
       ids.push(fila)
@@ -975,7 +1129,7 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
     // Cerrar la punta
     const ult = ids[ids.length - 1]
     const pc = m.c.clone().addScaledVector(dir, 0.0006)
-    const tip = lote.v(pc.x, pc.y, pc.z, 0.5, 1, BLANCO, [[H[`dedos2${L}`], 1]], [0.55, 0])
+    const tip = lote.v(pc.x, pc.y, pc.z, 0.5, 1, tc, [[H[`dedos2${L}`], 1]], [0.55, 0])
     for (let k = 0; k < cols; k++) lote.t(tip, ult[k], ult[(k + 1) % cols])
     lote.pieza()
   }
@@ -1004,7 +1158,7 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
         const a = (k / cols) * Math.PI * 2
         Cuerpo.puntoAnillo(m, [rr, rr * 0.9, rr, rr * 0.9], a, 2.2, P)
         const una = t > 0.72 && t < 0.96 && Math.sin(a) > 0.3 ? 1 : 0
-        fila.push(lote.v(P.x, P.y, P.z, k / cols, t, una ? [1.08, 0.98, 0.96, 1] : BLANCO, pw, una ? [0.3, 0] : [0.55, 0]))
+        fila.push(lote.v(P.x, P.y, P.z, k / cols, t, una ? [1.08 * tc[0], 0.98 * tc[1], 0.96 * tc[2], 1] : tc, pw, una ? [0.3, 0] : [0.55, 0]))
       }
       ids.push(fila)
       centros.push(m.c.clone())
@@ -1012,13 +1166,13 @@ function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena) {
     lote.tiras(ids, true, { centros })
     const ult = ids[ids.length - 1]
     const pc = m.c.clone()
-    const tip = lote.v(pc.x, pc.y, pc.z, 0.5, 1, BLANCO, [[H[`pulgar${L}`], 1]], [0.55, 0])
+    const tip = lote.v(pc.x, pc.y, pc.z, 0.5, 1, tc, [[H[`pulgar${L}`], 1]], [0.55, 0])
     for (let k = 0; k < cols; k++) lote.t(tip, ult[k], ult[(k + 1) % cols])
     lote.pieza()
   }
 }
 
-function mallaPierna(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura) {
+function mallaPierna(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura, tc: RGBA) {
   const s = cu.s
   const lado = c.lado
   const cols = 16
@@ -1042,7 +1196,7 @@ function mallaPierna(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura) {
       const a = (k / cols) * Math.PI * 2
       Cuerpo.puntoAnillo(_m, r, a, 2.2, P)
       const t = 1 - 0.05 * rodilla * Math.max(0, Math.sin(a))
-      fila.push(lote.v(P.x, P.y, P.z, (k / cols) * 0.3, u, [1, t, t, 1], cu.pesosPierna(lado, u, Math.sin(a)), [0.55, 0]))
+      fila.push(lote.v(P.x, P.y, P.z, (k / cols) * 0.3, u, [tc[0], t * tc[1], t * tc[2], 1], cu.pesosPierna(lado, u, Math.sin(a)), [0.55, 0]))
     }
     ids.push(fila)
     centros.push(_m.c.clone())
