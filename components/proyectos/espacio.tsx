@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
-import { BookOpen, Check, Clapperboard, CircleHelp, CloudOff, Loader2, Lock, Network, NotebookPen, Plus, X } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
+import { Box, BookOpen, Check, Clapperboard, CircleHelp, CloudOff, Loader2, Lock, Network, NotebookPen, Plus, X } from "lucide-react"
 import { Arbol } from "@/components/proyectos/arbol"
 import { Mapa } from "@/components/proyectos/mapa"
 import { Pagina } from "@/components/proyectos/pagina"
@@ -10,6 +11,10 @@ import { Panel } from "@/components/branding/panel"
 import { Fabrica } from "@/components/videos/fabrica"
 import { Tablero as TableroPreguntas } from "@/components/preguntas/tablero"
 import { useEspacio } from "@/lib/use-espacio"
+import { ordenActual } from "@/lib/branding-arbol"
+import { CONTENIDO_BASE, type Contenido } from "@/lib/branding"
+import { ETIQUETA_SECCION, type Seccion } from "@/lib/revision"
+import type { Destino } from "@/components/branding/oficina-3d"
 import {
   MAX_ESPACIOS, RAIZ, espacioNuevo, iconoDe, migrar, nodoNuevo, nombreDe, subarbol,
   type Doc, type Tablero, type Trazo,
@@ -23,6 +28,10 @@ import {
 // ──────────────────────────────────────────────────────────────
 
 type Vista = "mapa" | "notas"
+
+// three.js solo en el navegador: en el servidor no hay WebGL.
+const Oficina3D = dynamic(() => import("@/components/branding/oficina-3d"), { ssr: false })
+const LLAVE_OFICINA = "kev-oficina-3d"
 
 // Acepta lo de hoy y lo de antes: una copia vieja en el navegador no se tira,
 // se traduce.
@@ -47,8 +56,37 @@ export function Espacio() {
   const [enPrivadas, setEnPrivadas] = useState(false)
   // Videos, edición, publicación y métricas: público, para el equipo.
   const [enVideos, setEnVideos] = useState(false)
+  // La oficina en 3D es la entrada al manual: cada escritorio, una sección.
+  // Quien la apaga ("Entrar sin 3D") no la vuelve a ver en este dispositivo.
+  const [oficina, setOficina] = useState(true)
+  const [seccion, setSeccion] = useState<Seccion>("personaje")
+  const [orden, setOrden] = useState<Seccion[]>(() => ordenActual(CONTENIDO_BASE))
+  useEffect(() => {
+    try { if (localStorage.getItem(LLAVE_OFICINA) === "no") setOficina(false) } catch {}
+    let vivo = true
+    fetch("/api/branding", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { contenido?: Contenido }) => { if (vivo && d?.contenido) setOrden(ordenActual(d.contenido)) })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [])
+  const recordarOficina = (si: boolean) => {
+    setOficina(si)
+    try { localStorage.setItem(LLAVE_OFICINA, si ? "si" : "no") } catch {}
+  }
   const enOtro = enManual || enPreguntas || enPrivadas || enVideos
   const ir = (m: boolean, p: boolean, v: boolean) => { setEnManual(m); setEnPreguntas(p); setEnPrivadas(v); setEnVideos(false) }
+
+  const destinos = useMemo<Destino[]>(() => [
+    ...orden.map((s) => ({ id: s, nombre: ETIQUETA_SECCION[s], detalle: "Sección" })),
+    { id: "videos", nombre: "Sala de edición", detalle: "Videos" },
+    { id: "preguntas", nombre: "Preguntas", detalle: "Preguntas" },
+  ], [orden])
+  const entrarDesdeOficina = (id: string) => {
+    if (id === "videos") { ir(false, false, false); setEnVideos(true) }
+    else if (id === "preguntas") ir(false, true, false)
+    else { setSeccion(id as Seccion); setOficina(false) }
+  }
 
   const tablero = useMemo(() => (crudo ? migrar(crudo) : null), [crudo])
   const esp = tablero?.espacios.find((e) => e.id === espacioId) ?? tablero?.espacios[0] ?? null
@@ -219,10 +257,20 @@ export function Espacio() {
         <div className="flex items-center gap-1.5 overflow-x-auto px-4 pb-2 sm:px-6">
           <button
             type="button"
-            onClick={() => ir(true, false, false)}
-            aria-pressed={enManual}
+            onClick={() => { ir(true, false, false); recordarOficina(true) }}
+            aria-pressed={enManual && oficina}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-              enManual ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
+              enManual && oficina ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
+            }`}
+          >
+            <Box className="h-3.5 w-3.5" /> Oficina
+          </button>
+          <button
+            type="button"
+            onClick={() => { ir(true, false, false); setOficina(false) }}
+            aria-pressed={enManual && !oficina}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              enManual && !oficina ? "border-foreground/25 bg-foreground/[0.06]" : "border-transparent text-muted-foreground hover:bg-foreground/[0.04]"
             }`}
           >
             <BookOpen className="h-3.5 w-3.5" /> Kev Project GTA Branding
@@ -326,9 +374,20 @@ export function Espacio() {
         </div>
       )}
 
-      {enManual ? (
+      {enManual && oficina ? (
+        <main className="relative mx-3 mb-3 min-h-0 flex-1 overflow-hidden rounded-[2rem] border bg-[#05080c] sm:mx-6 sm:mb-6">
+          <Oficina3D destinos={destinos} onEntrar={entrarDesdeOficina} />
+          <button
+            type="button"
+            onClick={() => recordarOficina(false)}
+            className="absolute right-4 top-4 z-10 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-md transition-colors hover:text-white"
+          >
+            Entrar sin 3D
+          </button>
+        </main>
+      ) : enManual ? (
         <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background px-5 sm:mx-6 sm:mb-6">
-          <Panel incrustado />
+          <Panel key={seccion} incrustado seccionInicial={seccion} />
         </main>
       ) : enVideos ? (
         <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background sm:mx-6 sm:mb-6">
