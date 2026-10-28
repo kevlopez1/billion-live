@@ -753,7 +753,7 @@ export function crearMateriales(calidad: Calidad): MaterialesMotor {
   if (ventanaNoche.emissiveMap) texturas.push(ventanaNoche.emissiveMap)
   ventanaNoche.userData.reflejo = 1.2
 
-  const techoMetal = mundo(genTecho(pide), { color: "#878d93", metalness: 0.55, name: "techoMetal" }, { escala: 3 })
+  const techoMetal = mundo(genTecho(pide), { color: "#8a9096", metalness: 0.12, roughness: 0.62, name: "techoMetal" }, { escala: 3 })
 
   // El pasto comparte texturas; el rayado agrega las franjas del corte (4,5 m).
   const pastoMat = mundo(pasto, { color: "#5c9443", name: "pasto" }, { proyeccion: "planar", escala: 7, macro: 1.1 })

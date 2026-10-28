@@ -22,6 +22,46 @@ import { construirArquitectura } from "./arquitectura"
 import { construirPaisaje } from "./paisaje"
 import { construirSubsuelo } from "./subsuelo"
 import { crearAvatar } from "./avatares"
+import { HUELLAS } from "../lugares"
+
+/**
+ * Cajas de los edificios de la superficie, para no mostrar la etiqueta de
+ * alguien que está detrás de la Residencia. Se prueba el segmento cámara →
+ * cabeza contra cajas alineadas a los ejes: es barato y alcanza para esto.
+ */
+const CAJAS_OCLUSION: Array<[number, number, number, number, number]> = [
+  [HUELLAS.residencia.x0, HUELLAS.residencia.x1, HUELLAS.residencia.z0, HUELLAS.residencia.z1, HUELLAS.residencia.alto],
+  [HUELLAS.alaOeste.x0, HUELLAS.alaOeste.x1, HUELLAS.alaOeste.z0, HUELLAS.alaOeste.z1, HUELLAS.alaOeste.alto],
+  [HUELLAS.eeob.x0, HUELLAS.eeob.x1, HUELLAS.eeob.z0, HUELLAS.eeob.z1, HUELLAS.eeob.alto],
+  [HUELLAS.tesoro.x0, HUELLAS.tesoro.x1, HUELLAS.tesoro.z0, HUELLAS.tesoro.z1, HUELLAS.tesoro.alto],
+]
+function tapado(a: THREE.Vector3, b: THREE.Vector3): boolean {
+  for (const [x0, x1, z0, z1, alto] of CAJAS_OCLUSION) {
+    // Intersección segmento–caja (método de las franjas)
+    let t0 = 0
+    let t1 = 1
+    const ejes: Array<[number, number, number, number]> = [
+      [a.x, b.x - a.x, x0, x1],
+      [a.y, b.y - a.y, 0, alto],
+      [a.z, b.z - a.z, z0, z1],
+    ]
+    let corta = true
+    for (const [o, d, mn, mx] of ejes) {
+      if (Math.abs(d) < 1e-9) {
+        if (o < mn || o > mx) { corta = false; break }
+        continue
+      }
+      let ta = (mn - o) / d
+      let tb = (mx - o) / d
+      if (ta > tb) [ta, tb] = [tb, ta]
+      t0 = Math.max(t0, ta)
+      t1 = Math.min(t1, tb)
+      if (t0 > t1) { corta = false; break }
+    }
+    if (corta && t1 < 0.995) return true
+  }
+  return false
+}
 
 export { TOMAS_CINE }
 
@@ -805,7 +845,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       if (!a) return null
       a.cabeza.getWorldPosition(_p)
       const r = proyectar(_p)
-      return { ...r, visible: r.visible && visibleEnCadena(a.raiz) }
+      const detras = nivelActual === "superficie" && tapado(cam.position, _p)
+      return { ...r, visible: r.visible && !detras && visibleEnCadena(a.raiz) }
     },
     proyectar,
     camaraEnPlanta: () => camara.enPlanta(),

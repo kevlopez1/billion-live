@@ -336,7 +336,10 @@ export default function CasaBlancaViva() {
     let escena: EscenaPlus
     let sim: Simulacion
     try {
-      escena = crearEscena(canvas, { personajes: PERSONAJES }) as EscenaPlus
+      // ?calidad=baja|media|alta fija la calidad (equipos lentos, pruebas, grabación).
+      const pedida = new URLSearchParams(window.location.search).get("calidad")
+      const calidad = pedida === "baja" || pedida === "media" || pedida === "alta" ? pedida : undefined
+      escena = crearEscena(canvas, { personajes: PERSONAJES, calidad }) as EscenaPlus
       sim = new Simulacion(PERSONAJES, ESPECIALES, INICIO)
     } catch (err) {
       console.error("[casa-blanca] no se pudo crear el mundo:", err)

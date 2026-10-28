@@ -1186,6 +1186,8 @@ function seto(w: Mundo, pts: P2[], alto: number, ancho: number) {
 /** Mueve cada vértice a lo largo de su normal con ruido 3D. */
 function deformar(g: THREE.BufferGeometry, amp: number, semilla: number) {
   const p = g.getAttribute("position")
+  // Las bolas de follaje llegan sin normales (se borran para fusionar vértices).
+  if (!g.getAttribute("normal")) g.computeVertexNormals()
   const n = g.getAttribute("normal")
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i)
