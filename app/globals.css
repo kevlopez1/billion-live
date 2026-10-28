@@ -976,3 +976,46 @@ body::after {
 .font-light { font-weight: 400; }
 .font-normal { font-weight: 500; }
 .font-medium { font-weight: 600; }
+
+/* ── El manual como cuaderno (/branding) ──
+   Hoja punteada en vez de fondo liso, un margen rojo como el de un cuaderno y
+   las ideas como notas sueltas. Kev: "más como notas, un lugar más creativo,
+   donde se elaboren ideas directamente escritas". Los puntos no se alinean con
+   el texto a propósito: con renglones, cada tamaño de letra quedaría torcido. */
+.cuaderno {
+  background-color: var(--background);
+  background-image: radial-gradient(color-mix(in oklch, var(--foreground) 16%, transparent) 1px, transparent 1.3px);
+  background-size: 22px 22px;
+  background-attachment: local;
+}
+.hoja {
+  position: relative;
+  padding-left: 1.25rem;
+}
+.hoja::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 1.5px;
+  background: color-mix(in oklch, var(--rojo) 45%, transparent);
+}
+@media (min-width: 768px) {
+  .hoja { padding-left: 2rem; }
+}
+.nota {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+  box-shadow: 0 1px 0 color-mix(in oklch, var(--foreground) 6%, transparent), 0 8px 24px -14px color-mix(in oklch, var(--foreground) 30%, transparent);
+}
+.nota-idea {
+  border-left: 3px solid color-mix(in oklch, var(--rojo) 70%, transparent);
+}
+/* La hoja en blanco: renglones que SÍ coinciden con el texto, porque aquí hay
+   un solo tamaño de letra (16px, alto de línea 28px). */
+.renglones {
+  line-height: 28px;
+  background-image: linear-gradient(transparent 27px, color-mix(in oklch, var(--gold) 30%, transparent) 27px);
+  background-size: 100% 28px;
+  background-attachment: local;
+}

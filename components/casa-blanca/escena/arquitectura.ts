@@ -2881,6 +2881,8 @@ function construirCiudad(K: Constructor): void {
 // Reflectores nocturnos: la fachada bañada de luz como en la realidad
 // ──────────────────────────────────────────────────────────────
 
+const FOCO_FACHADA = 240
+
 function reflectores(K: Constructor): void {
   const g = new THREE.Group()
   g.name = "reflectores"
@@ -2893,11 +2895,13 @@ function reflectores(K: Constructor): void {
     K.ctx.luzNocturna(s, int)
   }
   // Fachada norte: dos focos bajos en el césped que cubren alas y pórtico.
-  foco(-17, -44, -10, 9, -13, 0.62, 1500)
-  foco(17, -44, 10, 9, -13, 0.62, 1500)
+  // A ~33 m de una fachada blanca, 240 la deja bañada de luz; con 1500 la casa
+  // entera se quemaba de blanco de noche (exposición 1,85 + bloom).
+  foco(-17, -44, -10, 9, -13, 0.62, FOCO_FACHADA)
+  foco(17, -44, 10, 9, -13, 0.62, FOCO_FACHADA)
   // Fachada sur.
-  foco(-19, 48, -9, 9, 14, 0.6, 1500)
-  foco(19, 48, 9, 9, 14, 0.6, 1500)
+  foco(-19, 48, -9, 9, 14, 0.6, FOCO_FACHADA)
+  foco(19, 48, 9, 9, 14, 0.6, FOCO_FACHADA)
   K.ctx.niveles.superficie.add(g)
 }
 

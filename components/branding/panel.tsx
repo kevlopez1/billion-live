@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
   AlertTriangle, Check, CircleHelp, Trash2, Undo2, Clapperboard, Cloud, CloudOff, Compass, FileText, Loader2,
-  Lock, Network, NotebookPen, Pencil, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp,
+  Lock, Network, NotebookPen, Pencil, PenLine, Radio, Scissors, Shirt, Sparkles, Target, TrendingUp,
   User, X,
 } from "lucide-react"
 // El mapa y el árbol son los MISMOS de /kevlopez_proyectos. Un segundo mapa
@@ -16,7 +16,7 @@ import { devolver, dondeEstaba, type Borrado } from "@/lib/papelera"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, ordenActual, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
-import { ANCLA, ETIQUETA_SECCION, type Revision, type Seccion } from "@/lib/revision"
+import { ANCLA, ETIQUETA_SECCION, type Revision } from "@/lib/revision"
 import { Indice, type Entrada } from "@/components/branding/indice"
 import { Plegable } from "@/components/branding/plegable"
 import { Agregar, Campo, Fila, ListaTextos } from "@/components/branding/campos"
@@ -54,7 +54,7 @@ type Guardado = "limpio" | "sucio" | "guardando" | "ok" | "error"
 
 /** `incrustado`: dentro del espacio de trabajo de Kev. Ahí sobran los enlaces
  *  a Proyectos y a Preguntas: el espacio de trabajo ya los tiene arriba. */
-export function Panel({ incrustado = false, seccionInicial = "personaje" }: { incrustado?: boolean; seccionInicial?: Seccion } = {}) {
+export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   const [doc, setDoc] = useState<Contenido>(CONTENIDO_BASE)
   const [cargando, setCargando] = useState(true)
   const [configurado, setConfigurado] = useState<boolean | null>(null)
@@ -91,7 +91,11 @@ export function Panel({ incrustado = false, seccionInicial = "personaje" }: { in
   // Documento o mapa: los mismos datos, dos formas de mirarlos. El mapa no es
   // decoración — una rama vacía se ve desde lejos, y eso es lo que hay que ver.
   const [vista, setVista] = useState<"documento" | "mapa">("documento")
-  const [nodoSel, setNodoSel] = useState<string>(idRama(seccionInicial))
+  const [nodoSel, setNodoSel] = useState<string>(idRama("personaje"))
+  // La hoja en blanco de Guiones e ideas: se escribe la idea como sale y
+  // después se le da forma de guion. Kev: "que aquí se elaboren ideas
+  // directamente escritas".
+  const [borrador, setBorrador] = useState("")
 
   // La revisión de la IA.
   const [verRevision, setVerRevision] = useState(false)
@@ -354,11 +358,26 @@ export function Panel({ incrustado = false, seccionInicial = "personaje" }: { in
   // ahí, quizá por los emojis". Doce dibujos de colores convertían una hoja de
   // trabajo en una presentación terminada.
   const Titulo = ({ id, children, numero }: { id: string; emoji?: string; children: React.ReactNode; numero?: string }) => (
-    <div id={id} className="mb-4 flex scroll-mt-28 items-baseline gap-2.5 pt-2">
-      <h2 className="font-display text-[21px] font-bold tracking-tight md:text-[25px]">{children}</h2>
+    <div id={id} className="mb-5 flex scroll-mt-28 items-baseline gap-2.5 pt-2">
+      {/* Serif de cuaderno: el título se lee como encabezado de una hoja de
+          notas, no como el de un informe. */}
+      <h2 className="font-serif-display text-[34px] font-normal italic leading-none tracking-tight md:text-[42px]">{children}</h2>
       {numero && <span className="ml-auto shrink-0 text-[11.5px] tabular-nums text-muted-foreground">{numero}</span>}
     </div>
   )
+
+  const anotar = () => {
+    const t = borrador.trim()
+    if (!t) return
+    const [primera, ...resto] = t.split("\n")
+    const estructura = resto.join("\n").trim()
+    // Arriba de todo: lo último que se te ocurrió es lo primero que ves.
+    editar((d) => ({
+      ...d,
+      enCola: [{ titulo: primera.trim(), formato: "", etapa: "idea", ...(estructura ? { estructura } : {}) }, ...d.enCola],
+    }))
+    setBorrador("")
+  }
 
   const enUso = doc.redes.filter((r) => r.estado === "usamos").length
   const salidasDefinidas = doc.redes.filter((r) => r.estado === "usamos" && (r.salida?.pieza ?? "").trim()).length
@@ -406,6 +425,18 @@ export function Panel({ incrustado = false, seccionInicial = "personaje" }: { in
           )}
 
           <div className="ml-auto flex items-center gap-2">
+            {/* Desde cualquier sección: a la hoja en blanco, con el cursor puesto. */}
+            <button
+              onClick={() => {
+                irANodo(idRama("enCola"))
+                setTimeout(() => document.getElementById("idea-nueva")?.focus(), 80)
+              }}
+              aria-label="Escribir idea"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-foreground px-3 py-1.5 text-[12.5px] font-semibold text-background transition-opacity hover:opacity-85"
+            >
+              <PenLine className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Escribir idea</span>
+            </button>
             {/* Documento o mapa. Los mismos datos, dos formas de mirarlos. */}
             <div className="flex rounded-xl border border-border p-0.5">
               {([
@@ -608,7 +639,7 @@ export function Panel({ incrustado = false, seccionInicial = "personaje" }: { in
           />
         </aside>
 
-        <div id="manual-arriba" className="min-w-0 flex-1 scroll-mt-6 space-y-16 md:space-y-20">
+        <div id="manual-arriba" className="hoja min-w-0 flex-1 scroll-mt-6 space-y-16 md:space-y-20">
           {/* ── El personaje ── */}
           <section className={ver("personaje")}>
             <Titulo id="personaje" emoji="👤">El personaje</Titulo>
@@ -1086,6 +1117,32 @@ export function Panel({ incrustado = false, seccionInicial = "personaje" }: { in
           <section className={ver("cola")}>
             <Titulo id="cola" emoji="🎯" numero={`${doc.enCola.length} videos`}>Guiones e ideas</Titulo>
 
+            {editando && (
+              <div className="nota mb-7 px-5 pb-3 pt-4">
+                <textarea
+                  id="idea-nueva"
+                  value={borrador}
+                  onChange={(e) => setBorrador(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); anotar() }
+                  }}
+                  rows={4}
+                  placeholder={"Escribe la idea como te salga.\nLa primera línea es el título; lo demás queda como estructura."}
+                  className="renglones block w-full resize-none bg-transparent text-[16px] font-medium outline-none placeholder:text-muted-foreground/55"
+                />
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span className="text-[11.5px] text-muted-foreground">Después le pones gancho, estructura y CTA.</span>
+                  <button
+                    onClick={anotar}
+                    disabled={!borrador.trim()}
+                    className="shrink-0 rounded-xl bg-foreground px-3.5 py-1.5 text-[12.5px] font-semibold text-background transition-opacity hover:opacity-85 disabled:opacity-30"
+                  >
+                    Anotar
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* ── La línea de producción ──
                 Una fábrica tiene estaciones. Ver cuántos hay en cada una es lo
                 que deja ver dónde se atasca: diez ideas y cero grabados no es
@@ -1115,7 +1172,7 @@ export function Panel({ incrustado = false, seccionInicial = "personaje" }: { in
                   editando={editando}
                   onBorrar={() => editar((d) => ({ ...d, enCola: d.enCola.filter((_, j) => j !== i) }))}
                 >
-                  <div className="rounded-2xl border border-border bg-card/40 px-4 py-3.5">
+                  <div className={`nota px-4 py-3.5 ${etapa === "idea" ? "nota-idea" : ""}`}>
                     <div className="flex items-start gap-3">
                       <span className="mt-0.5 shrink-0 font-display text-sm font-bold tabular-nums text-gold">
                         {String(i + 1).padStart(2, "0")}
