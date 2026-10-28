@@ -25,3 +25,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Caché de Python que dejan los detectores de scripts/
+__pycache__/
