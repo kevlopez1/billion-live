@@ -243,7 +243,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
     },
     materiales,
   }
-  ctx.alAnochecer(materiales.ventanaNoche, 3.2, 0)
+  // De cerca, con 3,2 una ventana encendida era un rectángulo blanco.
+  ctx.alAnochecer(materiales.ventanaNoche, 2.2, 0)
 
   // ── Construcción (cada módulo aislado) ──
   intentar("construirArquitectura", () => construirArquitectura(ctx))

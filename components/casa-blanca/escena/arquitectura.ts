@@ -833,7 +833,8 @@ class Constructor {
     const farol = std({ color: 0xfff0cf, emissive: 0xffb45a, emissiveIntensity: 0.15, roughness: 0.25 })
     const luzObra = std({ color: 0xd8dde0, emissive: 0xfff1d8, emissiveIntensity: 0, roughness: 0.3 })
     const rojo = std({ color: 0x7a1010, emissive: 0xff2a1a, emissiveIntensity: 0.4, roughness: 0.4 })
-    this.ctx.alAnochecer(farol, 4, 0.12)
+    // El farol del Pórtico Norte: a 2 m de la cámara, con 4 quemaba el centro del cuadro.
+    this.ctx.alAnochecer(farol, 1.2, 0.12)
     this.ctx.alAnochecer(luzObra, 7, 0)
     this.ctx.alAnochecer(rojo, 6, 0.5)
     const bandera = std({ map: texturaBandera(), side: THREE.DoubleSide, roughness: 0.85 })
@@ -1510,7 +1511,8 @@ function farol(K: Constructor, P: Pieza, x: number, y: number, z: number, techo:
   const luz = new THREE.PointLight(0xffb866, 0, 22, 2)
   luz.position.set(x, y + H * 0.5, z)
   P.grupo.add(luz)
-  K.ctx.luzNocturna(luz, 60)
+  // A 1–3 m del cielorraso y las columnas: con 60 las quemaba de blanco.
+  K.ctx.luzNocturna(luz, 12)
 }
 
 /** Fachada sur: tres pisos (la planta baja a la vista) y el arco del Salón Azul. */
