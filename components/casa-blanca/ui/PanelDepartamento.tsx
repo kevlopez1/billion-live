@@ -16,6 +16,7 @@ import { conPrime } from "@/components/prime-mark"
 import { guardarClave, leerClave } from "@/lib/clave"
 import type { Agente, Departamento, Entregable, EstadoPuesto, Objetivo, Personaje } from "../tipos"
 import { BotonFuerte, Campo, Chip, FOCO, Hoja, Retrato, Rotulo } from "./base"
+import { ComoLlegar } from "./ComoLlegar"
 import { haceCuanto } from "./formato"
 
 export type ResultadoTrabajo = { ok: true; cuantos: number; aviso?: string } | { ok: false; status: number; error: string }
@@ -118,6 +119,7 @@ export function PanelDepartamento({
         </button>
       )}
       <p className="mt-3 text-[13px] leading-relaxed text-white/80">{conPrime(dep.mision)}</p>
+      <ComoLlegar lugarId={dep.lugarId} color={dep.color} />
 
       <div className="mt-5">
         <div className="mb-2 flex items-end justify-between gap-2">

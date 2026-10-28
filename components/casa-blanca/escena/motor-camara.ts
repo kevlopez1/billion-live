@@ -23,7 +23,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { ALTURA_NIVEL, type NivelId } from "../tipos"
 import { CELDAS, HUELLAS, LUGAR } from "../lugares"
 import { ORDEN_NIVELES, PABELLON_ASCENSOR, ejeAscensor } from "../navegacion"
-import { VISTAS_CIUDAD, tomaDescensoCiudad } from "./ciudad"
+import { VISTAS_CIUDAD, normaCaverna, techoCiudad, tomaDescensoCiudad } from "./ciudad"
 import type { ModoCamara } from "./contrato"
 
 export interface Pose {
@@ -338,28 +338,66 @@ export function poseAerea(out: Pose = nuevaPose()): Pose {
   return out
 }
 
+/** Una vista lista de la ciudad (escena/ciudad.ts) como pose. */
+function vistaCiudad(id: keyof typeof VISTAS_CIUDAD, out: Pose = nuevaPose()): Pose {
+  const v = VISTAS_CIUDAD[id]
+  out.pos.set(...v.pos)
+  out.mira.set(...v.mira)
+  out.fov = v.fov
+  return out
+}
+
 /**
  * Vista por defecto de un nivel bajo tierra. Subsuelo: desde el norte, a ~55°
- * sobre el horizonte. Ciudad: la caverna entera desde lo alto, a ~42° (la
- * bóveda no tapa: sus caras miran hacia adentro, como una maqueta abierta).
+ * sobre el horizonte (casa de muñecas). Ciudad: desde el Mirador, dentro de
+ * la caverna (desde arriba de la bóveda se verían las estalactitas flotando).
  */
 function poseNivel(n: NivelId, out: Pose = nuevaPose()): Pose {
+  if (n === "ciudad") return vistaCiudad("mirador", out)
   const y = ALTURA_NIVEL[n]
-  const zona = n === "ciudad" ? HUELLAS.ciudad : HUELLAS.subsuelo
+  const zona = HUELLAS.subsuelo
   const cx = (zona.x0 + zona.x1) / 2
-  const cz = (zona.z0 + zona.z1) / 2 + (n === "ciudad" ? 20 : 0)
-  const elev = (n === "ciudad" ? 42 : 55) * THREE.MathUtils.DEG2RAD
-  const d = n === "ciudad" ? 340 : 175
+  const cz = (zona.z0 + zona.z1) / 2
+  const elev = 55 * THREE.MathUtils.DEG2RAD
+  const d = 175
   out.mira.set(cx, y, cz)
-  out.pos.set(cx + (n === "ciudad" ? 40 : 18), y + Math.sin(elev) * d, cz - Math.cos(elev) * d)
+  out.pos.set(cx + 18, y + Math.sin(elev) * d, cz - Math.cos(elev) * d)
   out.fov = 45
   return out
 }
 
-/** Mira un punto a `distancia` m, desde el norte y un poco al este, alto: para encuadrar un lugar. */
-export function poseEnfoque(p: THREE.Vector3, distancia: number, n: NivelId, out: Pose = nuevaPose()): Pose {
-  const elev = (n === S ? 38 : n === "ciudad" ? 45 : 52) * THREE.MathUtils.DEG2RAD
-  const dir = new THREE.Vector3(0.3, 0, -1).normalize()
+/** Lugares de la ciudad con una vista ya compuesta en ciudad.ts. */
+const VISTA_DE_LUGAR: Record<string, keyof typeof VISTAS_CIUDAD> = {
+  "ciudad-mirador": "mirador",
+  "ciudad-plaza": "plaza",
+  "ciudad-avenida": "avenida",
+  "ciudad-torres": "torres",
+}
+
+/**
+ * Mira un punto a `distancia` m para encuadrar un lugar. Superficie y
+ * subsuelo: desde el norte y un poco al este, alto. Ciudad: desde el lado del
+ * centro de la caverna y por debajo de la bóveda.
+ */
+export function poseEnfoque(p: THREE.Vector3, distancia: number, n: NivelId, out: Pose = nuevaPose(), lugarId?: string): Pose {
+  if (n === "ciudad") {
+    const vista = lugarId ? VISTA_DE_LUGAR[lugarId] : undefined
+    if (vista) return vistaCiudad(vista, out)
+    const C = HUELLAS.ciudad
+    const dir = new THREE.Vector3((C.x0 + C.x1) / 2 - p.x, 0, (C.z0 + C.z1) / 2 + 20 - p.z)
+    if (dir.lengthSq() < 400) dir.set(0.3, 0, -1)
+    dir.normalize()
+    const d = Math.min(150, distancia)
+    const elev = 24 * THREE.MathUtils.DEG2RAD
+    out.mira.copy(p)
+    out.pos.set(p.x + dir.x * Math.cos(elev) * d, p.y + Math.sin(elev) * d, p.z + dir.z * Math.cos(elev) * d)
+    out.pos.y = Math.min(out.pos.y, techoCiudad(out.pos.x, out.pos.z) - 4)
+    out.fov = 50
+    return out
+  }
+  const elev = (n === S ? 38 : 52) * THREE.MathUtils.DEG2RAD
+  // En la superficie, lo que está al sur de la Residencia se mira desde el sur (con la casa de fondo, sin taparlo).
+  const dir = new THREE.Vector3(0.3, 0, n === S && p.z > HUELLAS.residencia.z1 + 2 ? 1 : -1).normalize()
   out.mira.copy(p)
   out.pos.set(p.x + dir.x * Math.cos(elev) * distancia, p.y + Math.sin(elev) * distancia, p.z + dir.z * Math.cos(elev) * distancia)
   out.fov = 45
@@ -370,7 +408,7 @@ type TipoLimite = "superficie" | "nivel" | "ciudad" | "seguir"
 const LIMITES: Record<TipoLimite, Partial<OrbitControls>> = {
   superficie: { minDistance: 4, maxDistance: 1100, minPolarAngle: 0.05, maxPolarAngle: 1.5, enablePan: true },
   nivel: { minDistance: 12, maxDistance: 300, minPolarAngle: 0.12, maxPolarAngle: 1.12, enablePan: true },
-  ciudad: { minDistance: 8, maxDistance: 520, minPolarAngle: 0.1, maxPolarAngle: 1.3, enablePan: true },
+  ciudad: { minDistance: 6, maxDistance: 240, minPolarAngle: 0.25, maxPolarAngle: 1.45, enablePan: true },
   seguir: { minDistance: 2.5, maxDistance: 45, minPolarAngle: 0.2, maxPolarAngle: 1.45, enablePan: false },
 }
 const limiteDe = (n: NivelId): TipoLimite => (n === S ? "superficie" : n === "ciudad" ? "ciudad" : "nivel")
@@ -618,6 +656,16 @@ export class ControlCamara {
       y1,
       destino: { pos: final.pos.clone(), mira: final.mira.clone(), fov: final.fov },
     }
+  }
+
+  /** Lleva la cámara a una pose exacta en ~1,1 s (mismo nivel). */
+  irAPose(destino: Pose) {
+    if (this.intro) this.terminarIntro()
+    this.cortarViaje()
+    this.controles.autoRotate = false
+    this.fovBase = destino.fov
+    this.aplicarFov()
+    this.enfoque = { t: 0, dur: 1.1, p0: this.camara.position.clone(), m0: this.controles.target.clone(), p1: destino.pos.clone(), m1: destino.mira.clone() }
   }
 
   /** Termina un viaje en curso de golpe (otro modo lo interrumpe). */
@@ -904,13 +952,29 @@ export class ControlCamara {
       const p = this.camara.position
       const dentro = edificioEn(p.x, p.z, 1.5)
       if (dentro && p.y < dentro.alto + 2) p.y = dentro.alto + 2
+    } else if (this.modo === "nivel" && n === "ciudad") {
+      // Dentro de la caverna: el pivote en el piso, la cámara bajo la bóveda y lejos de la roca.
+      const C = HUELLAS.ciudad
+      const y = ALTURA_NIVEL.ciudad
+      t.x = Math.min(C.x1 - 20, Math.max(C.x0 + 20, t.x))
+      t.z = Math.min(C.z1 - 20, Math.max(C.z0 + 20, t.z))
+      t.y = Math.min(y + 12, Math.max(y, t.y))
+      const p = this.camara.position
+      const borde = normaCaverna(p.x, p.z)
+      if (borde > 0.9) {
+        const k = 0.9 / borde
+        p.x = t.x + (p.x - t.x) * k
+        p.z = t.z + (p.z - t.z) * k
+      }
+      const techo = techoCiudad(p.x, p.z) - 2
+      if (p.y > techo) p.y = techo
+      if (p.y < y + 1.5) p.y = y + 1.5
     } else if (this.modo === "nivel") {
       const y = ALTURA_NIVEL[n]
-      const S2 = n === "ciudad" ? HUELLAS.ciudad : HUELLAS.subsuelo
+      const S2 = HUELLAS.subsuelo
       t.x = Math.min(S2.x1 + 5, Math.max(S2.x0 - 5, t.x))
       t.z = Math.min(S2.z1 + 5, Math.max(S2.z0 - 5, t.z))
       t.y = y
-      if (this.camara.position.y < y + 1.5) this.camara.position.y = y + 1.5
     }
     // Plano cercano según la distancia: precisión de profundidad de cerca y de lejos.
     const d = this.camara.position.distanceTo(t)

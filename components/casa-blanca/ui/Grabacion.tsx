@@ -18,7 +18,7 @@ export interface Toma {
 }
 
 /**
- * Las 7 tomas de la spec, en orden. La lista de verdad la da el motor
+ * Las tomas de la spec, en orden (más el descenso a la ciudad). La lista de verdad la da el motor
  * (escena.tomas()); esta es la de respaldo mientras la escena no la entregó.
  */
 export const TOMAS: ReadonlyArray<Toma> = [
@@ -28,6 +28,7 @@ export const TOMAS: ReadonlyArray<Toma> = [
   { id: "departamento", nombre: "Un departamento por dentro" },
   { id: "seguir", nombre: "Detrás de un personaje" },
   { id: "sala-guerra", nombre: "Sala de guerra" },
+  { id: "ciudad", nombre: "Descenso a la ciudad" },
   { id: "maqueta", nombre: "Modo maqueta" },
 ]
 

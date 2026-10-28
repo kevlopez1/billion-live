@@ -6,10 +6,11 @@
 // subtítulos abajo al centro y la botonera abajo.
 // ──────────────────────────────────────────────────────────────
 
-import { useState, type ReactNode } from "react"
-import { Box, Crosshair, Film, Info, Newspaper, Pause, Play, Plane, Target, Users, Gavel } from "lucide-react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { Box, ChevronDown, ChevronUp, Crosshair, Film, Gavel, Info, Map as IconoMapa, MoreHorizontal, Newspaper, Pause, Play, Plane, Target, Users } from "lucide-react"
 import { CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
 import { NOMBRE_NIVEL, type NivelId } from "../tipos"
+import { NIVEL_CONTENIDO, NIVEL_CORTO, ORDEN_NIVELES, nivelVecino, profundidad } from "../navegacion"
 import { Boton, FOCO, VIDRIO } from "./base"
 import { franja, relojTexto, usd } from "./formato"
 
@@ -99,19 +100,14 @@ export function Notificacion({ titulo, texto }: { titulo: string; texto: ReactNo
 
 type ModoUi = "dron" | "seguir" | "cine"
 
-const NIVELES: Array<{ id: NivelId; corto: string; largo: string }> = [
-  { id: "superficie", corto: "Sup.", largo: "Superficie" },
-  { id: "n1", corto: "S1", largo: "Subsuelo 1" },
-  { id: "n2", corto: "S2", largo: "Subsuelo 2" },
-  { id: "n3", corto: "S3", largo: "Subsuelo 3" },
+const CAMARAS: Array<{ id: ModoUi | "maqueta"; nombre: string; ayuda: string; Icono: typeof Plane }> = [
+  { id: "dron", nombre: "Dron", ayuda: "Dron: vista libre. Arrastra para girar, pellizca o usa la rueda para acercar", Icono: Plane },
+  { id: "seguir", nombre: "Seguir", ayuda: "Seguir: la cámara va detrás de un residente", Icono: Crosshair },
+  { id: "cine", nombre: "Cine", ayuda: "Cine: tomas automáticas, listas para grabar", Icono: Film },
+  { id: "maqueta", nombre: "Maqueta", ayuda: "Maqueta: efecto de miniatura", Icono: Box },
 ]
 
-const CAMARAS: Array<{ id: ModoUi | "maqueta"; nombre: string; etiqueta: string; Icono: typeof Plane }> = [
-  { id: "dron", nombre: "Dron", etiqueta: "Cámara dron", Icono: Plane },
-  { id: "seguir", nombre: "Seguir", etiqueta: "Seguir al personaje elegido", Icono: Crosshair },
-  { id: "cine", nombre: "Cine", etiqueta: "Cámara de cine", Icono: Film },
-  { id: "maqueta", nombre: "Maqueta", etiqueta: "Modo maqueta", Icono: Box },
-]
+const VELOCIDADES = [1, 4, 15]
 
 function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
@@ -135,6 +131,9 @@ export interface PropsDock {
   velocidad: number
   onPausa: () => void
   onVelocidad: (v: number) => void
+  onMapa: () => void
+  /** El mapa está abierto (el botón se marca). */
+  mapaAbierto?: boolean
   onPersonajes: () => void
   onConsejo: () => void
   onNoticia: () => void
@@ -152,142 +151,277 @@ function PuntoGrabar() {
   )
 }
 
+/** "Dron" vale también para la vista libre de un nivel bajo tierra (modo "nivel" del motor). */
+const camaraActiva = (p: PropsDock, id: ModoUi | "maqueta") =>
+  id === "maqueta" ? p.maqueta : !p.maqueta && (p.camara === id || (id === "dron" && p.camara === "nivel"))
+
+/** Cierra un menú desplegable al tocar afuera o con Escape. */
+function useCerrarAfuera(abierto: boolean, cerrar: () => void) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!abierto) return
+    const fuera = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) cerrar()
+    }
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cerrar()
+    }
+    window.addEventListener("pointerdown", fuera)
+    window.addEventListener("keydown", tecla)
+    return () => {
+      window.removeEventListener("pointerdown", fuera)
+      window.removeEventListener("keydown", tecla)
+    }
+  }, [abierto, cerrar])
+  return ref
+}
+
+/** La lista de los cinco niveles, de arriba hacia abajo, para el menú del selector. */
+function MenuNiveles({ actual, onElegir }: { actual: NivelId; onElegir: (n: NivelId) => void }) {
+  return (
+    <div role="menu" aria-label="Niveles" className="flex flex-col gap-0.5">
+      {ORDEN_NIVELES.map((n) => {
+        const activo = n === actual
+        return (
+          <button
+            key={n}
+            type="button"
+            role="menuitemradio"
+            aria-checked={activo}
+            onClick={() => onElegir(n)}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-[14px] px-3 text-left transition-colors ${FOCO} ${
+              activo ? "bg-white text-black" : "text-white hover:bg-white/[0.08]"
+            }`}
+          >
+            <span className={`cb-cond w-11 shrink-0 text-right text-[12px] font-bold tabular-nums ${activo ? "text-black/55" : "text-white/45"}`}>{profundidad(n)}</span>
+            <span className="min-w-0">
+              <span className="block text-[13px] font-bold leading-tight">{NIVEL_CORTO[n]}</span>
+              <span className={`block truncate text-[11px] leading-tight ${activo ? "text-black/60" : "text-white/50"}`}>{NIVEL_CONTENIDO[n]}</span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * El selector de nivel: flecha arriba, el nombre del nivel actual (abre la
+ * lista) y flecha abajo. `ancho`: en celular ocupa toda la fila.
+ */
+function SelectorNivel({ nivel, onNivel, ancho = false }: { nivel: NivelId; onNivel: (n: NivelId) => void; ancho?: boolean }) {
+  const [abierto, setAbierto] = useState(false)
+  const ref = useCerrarAfuera(abierto, () => setAbierto(false))
+  const arriba = nivelVecino(nivel, -1)
+  const abajo = nivelVecino(nivel, 1)
+  const flecha = "grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/85 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-25 disabled:hover:bg-transparent"
+  return (
+    <div ref={ref} className={`relative flex items-center gap-0.5 ${ancho ? "w-full" : ""}`}>
+      {abierto && (
+        <div className={`cb-entra absolute bottom-full left-0 z-10 mb-3 w-[min(300px,calc(100vw-24px))] rounded-[20px] p-1.5 ${VIDRIO} bg-[rgba(9,11,15,0.9)]`}>
+          <MenuNiveles
+            actual={nivel}
+            onElegir={(n) => {
+              setAbierto(false)
+              onNivel(n)
+            }}
+          />
+        </div>
+      )}
+      <button type="button" onClick={() => arriba && onNivel(arriba)} disabled={!arriba} aria-label={arriba ? `Subir a ${NOMBRE_NIVEL[arriba]}` : "Ya estás en la superficie"} title={arriba ? `Subir: ${NIVEL_CORTO[arriba]}` : undefined} className={`${flecha} ${FOCO}`}>
+        <ChevronUp className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+        aria-label={`Nivel: ${NOMBRE_NIVEL[nivel]}. Cambiar de nivel`}
+        title="Cambiar de nivel"
+        className={`flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-full px-2.5 text-left transition-colors hover:bg-white/[0.1] ${FOCO} ${abierto ? "bg-white/[0.12]" : ""} ${ancho ? "justify-center" : "max-w-[230px]"}`}
+      >
+        <span className="cb-cond shrink-0 rounded-full bg-white/[0.12] px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-white/75">{profundidad(nivel)}</span>
+        <span className="min-w-0 leading-none">
+          <span className="block truncate text-[13px] font-extrabold text-white">{NIVEL_CORTO[nivel]}</span>
+          <span className="mt-0.5 block truncate text-[10.5px] font-semibold text-white/55">{NIVEL_CONTENIDO[nivel]}</span>
+        </span>
+      </button>
+      <button type="button" onClick={() => abajo && onNivel(abajo)} disabled={!abajo} aria-label={abajo ? `Bajar a ${NOMBRE_NIVEL[abajo]}` : "Ya estás en el nivel más profundo"} title={abajo ? `Bajar: ${NIVEL_CORTO[abajo]}` : undefined} className={`${flecha} ${FOCO}`}>
+        <ChevronDown className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+/** El botón del mapa: el más visible de la botonera. */
+function BotonMapa({ onClick, abierto }: { onClick: () => void; abierto?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={abierto || undefined}
+      aria-label="Mapa: dónde está cada lugar y cómo llegar"
+      title="Mapa: dónde está cada lugar y cómo llegar"
+      className={`inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-extrabold tracking-[0.01em] transition-colors ${FOCO} ${
+        abierto ? "bg-white text-black" : "bg-[#e3b866] text-[#17130c] shadow-[0_0_22px_-6px_rgba(227,184,102,0.9)] hover:bg-[#f0c97c]"
+      }`}
+    >
+      <IconoMapa className="h-4 w-4 shrink-0" />
+      Mapa
+    </button>
+  )
+}
+
 export function Dock(props: PropsDock) {
   if (props.compacto) return <DockCompacto {...props} />
-  // En pantallas medianas la cámara va en iconos; los títulos (title/aria) siempre están.
-  const medio = "hidden min-[1400px]:inline"
   const ic = "h-3.5 w-3.5 shrink-0"
   const camarasVisibles = CAMARAS.filter((c) => c.id !== "maqueta" || props.hayMaqueta)
-  const activa = (id: ModoUi | "maqueta") => (id === "maqueta" ? props.maqueta : props.camara === id && !props.maqueta)
+  // Las acciones llevan nombre desde 1360 px; más angosto, solo el ícono (el nombre queda en title y aria-label).
+  const nombre = "hidden min-[1360px]:inline"
   return (
-    <nav aria-label="Controles" className={`pointer-events-auto flex max-w-full items-center overflow-x-auto rounded-full px-1.5 py-1.5 [scrollbar-width:none] ${VIDRIO}`}>
-      <Grupo titulo="Nivel">
-        {NIVELES.map((n) => (
-          <Boton key={n.id} activo={props.nivel === n.id} onClick={() => props.onNivel(n.id)} etiqueta={NOMBRE_NIVEL[n.id]} className="px-2.5">
-            {n.id === "superficie" ? (
-              <>
-                <span className="min-[1400px]:hidden">{n.corto}</span>
-                <span className="hidden min-[1400px]:inline">{n.largo}</span>
-              </>
-            ) : (
-              n.corto
-            )}
-          </Boton>
-        ))}
-      </Grupo>
+    <nav aria-label="Controles" className={`pointer-events-auto flex max-w-full items-center rounded-full px-1.5 py-1.5 ${VIDRIO}`}>
+      <SelectorNivel nivel={props.nivel} onNivel={props.onNivel} />
+      <Separador />
+      <BotonMapa onClick={props.onMapa} abierto={props.mapaAbierto} />
       <Separador />
       <Grupo titulo="Cámara">
         {camarasVisibles.map((c) => (
-          <Boton key={c.id} activo={activa(c.id)} onClick={() => props.onCamara(c.id)} etiqueta={c.etiqueta}>
+          <Boton key={c.id} activo={camaraActiva(props, c.id)} onClick={() => props.onCamara(c.id)} etiqueta={c.ayuda} className="px-2.5">
             <c.Icono className={ic} />
-            <span className={medio}>{c.nombre}</span>
+            {c.nombre}
           </Boton>
         ))}
       </Grupo>
       <Separador />
-      <Grupo titulo="Tiempo">
-        <Boton activo={props.pausa} onClick={props.onPausa} etiqueta={props.pausa ? "Reanudar el tiempo" : "Pausar el tiempo"} className="px-2.5">
-          {props.pausa ? <Play className={ic} /> : <Pause className={ic} />}
-        </Boton>
-        {[1, 4, 15].map((v) => (
-          <Boton key={v} activo={!props.pausa && props.velocidad === v} onClick={() => props.onVelocidad(v)} etiqueta={`Velocidad ${v}×`} className="cb-cond px-2.5 text-[13px]">
-            {v}×
-          </Boton>
-        ))}
-      </Grupo>
+      <MenuTiempo {...props} />
       <Separador />
       <Grupo titulo="Acciones">
-        <Boton onClick={props.onPersonajes} etiqueta="Elegir personaje">
+        <Boton onClick={props.onPersonajes} etiqueta="Personajes: dónde está cada uno">
           <Users className={ic} />
-          Personajes
+          <span className={nombre}>Personajes</span>
         </Boton>
         <Boton onClick={props.onConsejo} etiqueta="Convocar al consejo">
           <Gavel className={ic} />
-          Consejo
+          <span className={nombre}>Consejo</span>
         </Boton>
         <Boton onClick={props.onNoticia} etiqueta="Dar una noticia">
           <Newspaper className={ic} />
-          Noticia
+          <span className={nombre}>Noticia</span>
         </Boton>
         <Boton onClick={props.onGrabar} etiqueta="Modo grabación 9:16" className="text-white">
           <PuntoGrabar />
-          Grabar
+          <span className={nombre}>Grabar</span>
         </Boton>
       </Grupo>
     </nav>
   )
 }
 
+/** Tiempo: un botón con la velocidad actual que abre pausa y velocidades. */
+function MenuTiempo(props: PropsDock) {
+  const [abierto, setAbierto] = useState(false)
+  const ref = useCerrarAfuera(abierto, () => setAbierto(false))
+  const ic = "h-3.5 w-3.5 shrink-0"
+  return (
+    <div ref={ref} className="relative">
+      {abierto && (
+        <div role="menu" aria-label="Tiempo" className={`cb-entra absolute bottom-full left-1/2 z-10 mb-3 flex -translate-x-1/2 gap-1 rounded-full p-1.5 ${VIDRIO} bg-[rgba(9,11,15,0.9)]`}>
+          <Boton activo={props.pausa} onClick={props.onPausa} etiqueta={props.pausa ? "Reanudar el tiempo" : "Pausar el tiempo"} className="px-2.5">
+            {props.pausa ? <Play className={ic} /> : <Pause className={ic} />}
+          </Boton>
+          {VELOCIDADES.map((v) => (
+            <Boton key={v} activo={!props.pausa && props.velocidad === v} onClick={() => props.onVelocidad(v)} etiqueta={`Velocidad ${v}×`} className="cb-cond px-3 text-[13px]">
+              {v}×
+            </Boton>
+          ))}
+        </div>
+      )}
+      <Boton onClick={() => setAbierto((v) => !v)} activo={abierto} etiqueta={props.pausa ? "Tiempo en pausa: cambiar" : `Tiempo a ${props.velocidad}×: cambiar`} className="cb-cond px-2.5 text-[13px]">
+        {props.pausa ? <Pause className={ic} /> : <Play className={ic} />}
+        {props.pausa ? "Pausa" : `${props.velocidad}×`}
+      </Boton>
+    </div>
+  )
+}
+
 /**
- * En celular, nivel, cámara y tiempo son menús que se abren hacia arriba:
- * así toda la botonera entra en 360 px sin scroll horizontal.
+ * En celular: arriba el selector de nivel a lo ancho; abajo Mapa, cámara,
+ * personajes y "Más" (tiempo, objetivos, consejo, noticia y grabar).
  */
 function DockCompacto(props: PropsDock) {
-  const [menu, setMenu] = useState<"nivel" | "camara" | "tiempo" | null>(null)
+  const [menu, setMenu] = useState<"camara" | "mas" | null>(null)
+  const ref = useCerrarAfuera(menu !== null, () => setMenu(null))
   const ic = "h-4 w-4 shrink-0"
-  const cam = props.maqueta ? CAMARAS[3] : CAMARAS.find((c) => c.id === props.camara) ?? CAMARAS[0]
-  const nivelCorto = NIVELES.find((n) => n.id === props.nivel)?.corto ?? "Sup."
+  const cam = CAMARAS.find((c) => camaraActiva(props, c.id)) ?? CAMARAS[0]
   const cerrarY = (fn: () => void) => () => {
     fn()
     setMenu(null)
   }
-  const alternar = (m: "nivel" | "camara" | "tiempo") => setMenu((x) => (x === m ? null : m))
+  const alternar = (m: "camara" | "mas") => setMenu((x) => (x === m ? null : m))
+  const fila = "flex w-full items-center rounded-full px-1 py-1"
+  const item = "w-full justify-start px-4 text-[13px]"
 
   return (
-    <div className="pointer-events-auto relative w-full max-w-[420px]">
+    <div ref={ref} className="pointer-events-auto relative flex w-full max-w-[440px] flex-col gap-1.5">
       {menu && (
-        <div className={`cb-entra absolute bottom-full left-0 right-0 mb-2 rounded-[22px] p-1.5 ${VIDRIO} bg-[rgba(9,11,15,0.86)]`} role="menu">
-          {menu === "nivel" &&
-            NIVELES.map((n) => (
-              <Boton key={n.id} activo={props.nivel === n.id} onClick={cerrarY(() => props.onNivel(n.id))} className="w-full justify-start px-4">
-                {NOMBRE_NIVEL[n.id]}
-              </Boton>
-            ))}
+        <div className={`cb-entra absolute bottom-full left-0 right-0 mb-2 rounded-[22px] p-1.5 ${VIDRIO} bg-[rgba(9,11,15,0.9)]`} role="menu">
           {menu === "camara" &&
             CAMARAS.filter((c) => c.id !== "maqueta" || props.hayMaqueta).map((c) => (
-              <Boton key={c.id} activo={c.id === cam.id} onClick={cerrarY(() => props.onCamara(c.id))} className="w-full justify-start px-4">
-                <c.Icono className={ic} /> {c.nombre}
+              <Boton key={c.id} activo={c.id === cam.id} onClick={cerrarY(() => props.onCamara(c.id))} className={`${item} min-h-11`}>
+                <c.Icono className={ic} />
+                <span className="flex min-w-0 flex-col items-start leading-tight">
+                  <span className="font-bold">{c.nombre}</span>
+                  <span className="truncate text-[11px] font-medium opacity-60">{c.ayuda.split(": ")[1]}</span>
+                </span>
               </Boton>
             ))}
-          {menu === "tiempo" && (
-            <div className="grid grid-cols-4 gap-1">
-              <Boton activo={props.pausa} onClick={cerrarY(props.onPausa)} etiqueta={props.pausa ? "Reanudar el tiempo" : "Pausar el tiempo"}>
-                {props.pausa ? <Play className={ic} /> : <Pause className={ic} />}
+          {menu === "mas" && (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center justify-between gap-1 px-2 py-1">
+                <span className="text-[12px] font-semibold text-white/55">Tiempo</span>
+                <div className="flex gap-1">
+                  <Boton activo={props.pausa} onClick={props.onPausa} etiqueta={props.pausa ? "Reanudar el tiempo" : "Pausar el tiempo"} className="px-3">
+                    {props.pausa ? <Play className={ic} /> : <Pause className={ic} />}
+                  </Boton>
+                  {VELOCIDADES.map((v) => (
+                    <Boton key={v} activo={!props.pausa && props.velocidad === v} onClick={() => props.onVelocidad(v)} etiqueta={`Velocidad ${v}×`} className="cb-cond px-3 text-[14px]">
+                      {v}×
+                    </Boton>
+                  ))}
+                </div>
+              </div>
+              <Boton onClick={cerrarY(props.onObjetivos)} className={item}>
+                <Target className={ic} /> Objetivos y lo que está en marcha
               </Boton>
-              {[1, 4, 15].map((v) => (
-                <Boton key={v} activo={!props.pausa && props.velocidad === v} onClick={cerrarY(() => props.onVelocidad(v))} etiqueta={`Velocidad ${v}×`} className="cb-cond text-[14px]">
-                  {v}×
-                </Boton>
-              ))}
+              <Boton onClick={cerrarY(props.onConsejo)} className={item}>
+                <Gavel className={ic} /> Convocar al consejo
+              </Boton>
+              <Boton onClick={cerrarY(props.onNoticia)} className={item}>
+                <Newspaper className={ic} /> Dar una noticia
+              </Boton>
+              <Boton onClick={cerrarY(props.onGrabar)} className={item}>
+                <PuntoGrabar /> Grabar (9:16)
+              </Boton>
             </div>
           )}
         </div>
       )}
-      <nav aria-label="Controles" className={`flex w-full items-center justify-between rounded-full px-1 py-1 ${VIDRIO}`}>
-        <Boton onClick={() => alternar("nivel")} activo={menu === "nivel"} etiqueta={`Nivel: ${NOMBRE_NIVEL[props.nivel]}`} className="cb-cond px-2.5 text-[13px]">
-          {nivelCorto}
-        </Boton>
-        <Boton onClick={() => alternar("camara")} activo={menu === "camara"} etiqueta={`Cámara: ${cam.nombre}`} className="px-2.5">
+      <div className={`${fila} ${VIDRIO}`}>
+        <SelectorNivel nivel={props.nivel} onNivel={props.onNivel} ancho />
+      </div>
+      <nav aria-label="Controles" className={`${fila} justify-between gap-1 ${VIDRIO}`}>
+        <BotonMapa onClick={props.onMapa} abierto={props.mapaAbierto} />
+        <Boton onClick={() => alternar("camara")} activo={menu === "camara"} etiqueta={`Cámara: ${cam.nombre}. Cambiar`} className="px-3 text-[12.5px]">
           <cam.Icono className={ic} />
+          {cam.nombre}
+          <ChevronUp className="h-3 w-3 opacity-60" />
         </Boton>
-        <Boton onClick={() => alternar("tiempo")} activo={menu === "tiempo"} etiqueta={props.pausa ? "Tiempo en pausa" : `Velocidad ${props.velocidad}×`} className="cb-cond px-2.5 text-[13px]">
-          {props.pausa ? <Pause className={ic} /> : `${props.velocidad}×`}
-        </Boton>
-        <span className="mx-0.5 h-6 w-px shrink-0 bg-white/12" aria-hidden />
-        <Boton onClick={props.onPersonajes} etiqueta="Elegir personaje" className="px-2.5">
+        <Boton onClick={props.onPersonajes} etiqueta="Personajes: dónde está cada uno" className="px-3 text-[12.5px]">
           <Users className={ic} />
+          Personajes
         </Boton>
-        <Boton onClick={props.onObjetivos} etiqueta="Objetivos y lo que está en marcha" className="px-2.5">
-          <Target className={ic} />
-        </Boton>
-        <Boton onClick={props.onConsejo} etiqueta="Convocar al consejo" className="px-2.5">
-          <Gavel className={ic} />
-        </Boton>
-        <Boton onClick={props.onNoticia} etiqueta="Dar una noticia" className="px-2.5">
-          <Newspaper className={ic} />
-        </Boton>
-        <Boton onClick={props.onGrabar} etiqueta="Modo grabación 9:16" className="px-2.5">
-          <PuntoGrabar />
+        <Boton onClick={() => alternar("mas")} activo={menu === "mas"} etiqueta="Más: tiempo, objetivos, consejo, noticia y grabar" className="px-2.5">
+          <MoreHorizontal className={ic} />
         </Boton>
       </nav>
     </div>

@@ -9,6 +9,7 @@ import { conPrime } from "@/components/prime-mark"
 import { NOMBRE_NIVEL, type Lugar, type Personaje } from "../tipos"
 import type { Simulacion } from "../motor/simulacion"
 import { FOCO, Hoja, Retrato, Rotulo } from "./base"
+import { ComoLlegar } from "./ComoLlegar"
 import { useLatido } from "./latido"
 
 export function PanelLugar({
@@ -40,6 +41,7 @@ export function PanelLugar({
         <span className="mb-3 inline-flex rounded-full border border-white/15 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-white/60">Ficción</span>
       )}
       <p className="text-[13px] leading-relaxed text-white/80">{conPrime(lugar.dato)}</p>
+      <ComoLlegar lugarId={lugar.id} />
       <Rotulo className="mb-2 mt-5">Aquí ahora</Rotulo>
       {presentes.length === 0 ? (
         <p className="text-[12px] text-white/45">No hay nadie en este momento.</p>

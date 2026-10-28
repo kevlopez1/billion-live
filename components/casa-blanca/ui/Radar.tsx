@@ -5,12 +5,24 @@
 // al centro con su cono y un punto de color por residente. En la superficie
 // dibuja las huellas reales de los edificios (HUELLAS); en el subsuelo, la
 // grilla de celdas del nivel (CELDAS). Se dibuja en un canvas 2D propio a
-// ~20 cuadros por segundo: no compite con el render 3D.
+// ~20 cuadros por segundo: no compite con el render 3D. En la ciudad
+// subterránea dibuja la caverna y sus lugares. El ascensor (el pabellón en la
+// superficie, el núcleo abajo) va siempre marcado: es por donde se cambia de nivel.
 // ──────────────────────────────────────────────────────────────
 
 import { useEffect, useRef } from "react"
-import { CELDAS, HUELLAS, SUB_COLUMNAS, SUB_FILAS, SUB_MEDIO_ANCHO, SUB_MEDIO_FONDO } from "../lugares"
+import { CELDAS, HUELLAS, LUGARES, SUB_COLUMNAS, SUB_FILAS, SUB_MEDIO_ANCHO, SUB_MEDIO_FONDO } from "../lugares"
+import { PABELLON_ASCENSOR, ejeAscensor } from "../navegacion"
 import type { NivelId } from "../tipos"
+
+/** Colores de los lugares de la ciudad en el radar (por tipo). */
+const COLOR_TIPO_CIUDAD: Record<string, string> = {
+  jardin: "#5fae6e",
+  edificio: "#9fb3c8",
+  ocio: "#ffb066",
+  servicio: "#d9ecff",
+  deporte: "#7fd6ff",
+}
 
 export interface DatosRadar {
   cam: { x: number; z: number; rumbo: number }
@@ -89,9 +101,9 @@ function dibujar(ctx: CanvasRenderingContext2D, S: number, d: DatosRadar | null)
     return
   }
 
-  const sub = d.nivel !== "superficie"
+  const sub = d.nivel !== "superficie" && d.nivel !== "ciudad"
   // Metros que caben del centro al borde.
-  const alcance = sub ? 105 : 240
+  const alcance = d.nivel === "ciudad" ? 230 : sub ? 105 : 240
   const k = (R - 4) / alcance
   const c = d.centro ?? d.cam
   const X = (x: number) => R + (x - c.x) * k
@@ -139,6 +151,28 @@ function dibujar(ctx: CanvasRenderingContext2D, S: number, d: DatosRadar | null)
     ctx.strokeStyle = "rgba(240,170,60,0.55)"
     ctx.lineWidth = 1
     ctx.strokeRect(X(o.x0), Z(o.z0), (o.x1 - o.x0) * k, (o.z1 - o.z0) * k)
+
+    // El pabellón del ascensor (la entrada a los subsuelos).
+    ascensor(ctx, X(PABELLON_ASCENSOR.x), Z(PABELLON_ASCENSOR.z))
+  } else if (d.nivel === "ciudad") {
+    // La caverna (un cuadrado de esquinas muy redondeadas) y sus lugares.
+    const c = HUELLAS.ciudad
+    ctx.fillStyle = "rgba(255,255,255,0.05)"
+    ctx.strokeStyle = "rgba(255,255,255,0.18)"
+    ctx.lineWidth = 1
+    redondo(ctx, X(c.x0), Z(c.z0), (c.x1 - c.x0) * k, (c.z1 - c.z0) * k, 120 * k)
+    ctx.fill()
+    ctx.stroke()
+    for (const l of LUGARES) {
+      if (l.nivel !== "ciudad") continue
+      const color = COLOR_TIPO_CIUDAD[l.tipo] ?? "#9aa3ad"
+      ctx.fillStyle = hexAlfa(color, 0.3)
+      ctx.strokeStyle = hexAlfa(color, 0.7)
+      ctx.fillRect(X(l.x0), Z(l.z0), (l.x1 - l.x0) * k, (l.z1 - l.z0) * k)
+      ctx.strokeRect(X(l.x0) + 0.5, Z(l.z0) + 0.5, (l.x1 - l.x0) * k - 1, (l.z1 - l.z0) * k - 1)
+    }
+    const a = ejeAscensor("ciudad")
+    ascensor(ctx, X(a.x), Z(a.z))
   } else {
     // Subsuelo: las doce celdas del nivel con el color de su departamento.
     const celdas = CELDAS[d.nivel as "n1" | "n2" | "n3"]
@@ -161,9 +195,13 @@ function dibujar(ctx: CanvasRenderingContext2D, S: number, d: DatosRadar | null)
         ctx.strokeRect(x + 0.5, z + 0.5, w - 1, h - 1)
       }),
     )
-    // Núcleo de ascensores.
-    ctx.fillStyle = "rgba(140,210,255,0.85)"
-    ctx.fillRect(X(-2.5), Z(19.5), 5 * k, 5 * k)
+    // Pasillos (oscuros) y el núcleo de ascensores.
+    ctx.strokeStyle = "rgba(227,184,102,0.45)"
+    ctx.lineWidth = 1
+    for (const z of [27, 65, 103]) linea(ctx, X(s.x0 + 3), Z(z), X(s.x1 - 3), Z(z))
+    const a = ejeAscensor(d.nivel)
+    linea(ctx, X(a.x), Z(a.z), X(a.x), Z(103))
+    ascensor(ctx, X(a.x), Z(a.z))
   }
 
   // Cono de la cámara.
@@ -250,6 +288,36 @@ function aro(ctx: CanvasRenderingContext2D, R: number) {
   ctx.fill()
   ctx.fillStyle = "#fff"
   ctx.fillText("N", R, 9.5)
+}
+
+/** El ícono del ascensor: un cuadrado dorado con una flecha. */
+function ascensor(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.fillStyle = "rgba(0,0,0,0.75)"
+  ctx.fillRect(-6, -6, 12, 12)
+  ctx.fillStyle = "#e3b866"
+  ctx.fillRect(-4.5, -4.5, 9, 9)
+  ctx.fillStyle = "#14110c"
+  ctx.beginPath()
+  ctx.moveTo(-2.6, -0.6)
+  ctx.lineTo(2.6, -0.6)
+  ctx.lineTo(0, 2.8)
+  ctx.closePath()
+  ctx.fill()
+  ctx.fillRect(-0.8, -3, 1.6, 2.6)
+  ctx.restore()
+}
+
+function redondo(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const rr = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + rr, y)
+  ctx.arcTo(x + w, y, x + w, y + h, rr)
+  ctx.arcTo(x + w, y + h, x, y + h, rr)
+  ctx.arcTo(x, y + h, x, y, rr)
+  ctx.arcTo(x, y, x + w, y, rr)
+  ctx.closePath()
 }
 
 function linea(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) {

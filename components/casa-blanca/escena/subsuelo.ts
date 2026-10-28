@@ -118,11 +118,13 @@ function celdaDe(lugarId: string): { nivel: "n1" | "n2" | "n3"; cx: number; cz: 
   return null
 }
 
+// Pisos con contraste: celdas de concreto medio y pasillos oscuros con tiras
+// de luz. Con todo claro (como antes) la maqueta se lavaba a blanco.
 const PAL = {
-  concreto: "#d6d3cd",
-  pasillo: "#cbc8c2",
-  losa: "#9b9892",
-  muro: "#efece7",
+  concreto: "#a29d95",
+  pasillo: "#33363c",
+  losa: "#2b2c2f",
+  muro: "#e8e3db",
   remate: "#202329",
   columna: "#e2dfd9",
   roble: "#d9b98b",
@@ -1564,9 +1566,9 @@ function celdaDepartamento(o: Obra, depId: string, cx: number, cz: number) {
   const color = colorDe(depId)
   const { x0, x1, z0, z1 } = bordes(cx, cz)
   // Piso de concreto pulido con un tinte del color del depto.
-  L.ext(x0, x1, y, y + 0.03, z0, z1, mezcla(PAL.concreto, color, 0.13), A.pulido)
-  // Alfombra bajo los puestos, en dos mitades: el pasillo central queda pulido
-  const alf = mezcla(color, "#eee8df", 0.72)
+  L.ext(x0, x1, y, y + 0.03, z0, z1, mezcla(PAL.concreto, color, 0.2), A.pulido)
+  // Alfombra oscura teñida bajo los puestos, en dos mitades: el pasillo central queda pulido
+  const alf = mezcla(color, "#24272d", 0.72)
   for (const [a, b] of [
     [x0 + 2.8, cx - 2.0],
     [cx + 2.0, x1 - 2.8],
@@ -2686,7 +2688,7 @@ function cascaron(o: Obra, techoNucleo: number) {
     [S.x0, S.x0 + t, S.z0, S.z1],
     [S.x1 - t, S.x1, S.z0, S.z1],
   ]) {
-    L.ext(x0, x1, y, y + H, z0, z1, "#e4e0d9", A.satin)
+    L.ext(x0, x1, y, y + H, z0, z1, "#d8d3cb", A.satin)
     L.ext(x0 - 0.03, x1 + 0.03, y + H, y + H + 0.08, z0 - 0.03, z1 + 0.03, rem, A.laca)
   }
   // tiras de luz en el piso de los pasillos
@@ -2783,6 +2785,48 @@ function alturaCabina(t: number): number {
   return PARADAS[0]
 }
 
+// ── Sombras de contacto y charcos de luz (calcomanías en el piso) ──
+// Sin ellas los escritorios "flotan" sobre el piso claro y todas las celdas
+// tienen la misma luz. Son cuadros con un degradé radial: una malla por nivel.
+function texturaRadial(): THREE.CanvasTexture {
+  const { c, g } = lienzo(128, 128)
+  const d = g.createRadialGradient(64, 64, 0, 64, 64, 64)
+  d.addColorStop(0, "rgba(255,255,255,1)")
+  d.addColorStop(0.45, "rgba(255,255,255,0.55)")
+  d.addColorStop(1, "rgba(255,255,255,0)")
+  g.fillStyle = d
+  g.fillRect(0, 0, 128, 128)
+  return textura(c)
+}
+function capaCalcos(lista: Array<{ x: number; z: number; w: number; h: number; c: THREE.Color }>, y: number): THREE.BufferGeometry {
+  const pos = new Float32Array(lista.length * 12)
+  const uv = new Float32Array(lista.length * 8)
+  const col = new Float32Array(lista.length * 12)
+  const idx: number[] = []
+  lista.forEach((q, i) => {
+    const esq: Array<[number, number, number, number]> = [
+      [-0.5, -0.5, 0, 0],
+      [0.5, -0.5, 1, 0],
+      [0.5, 0.5, 1, 1],
+      [-0.5, 0.5, 0, 1],
+    ]
+    esq.forEach(([ex, ez, u, v], j) => {
+      pos.set([q.x + ex * q.w, y, q.z + ez * q.h], (i * 4 + j) * 3)
+      uv.set([u, v], (i * 4 + j) * 2)
+      col.set([q.c.r, q.c.g, q.c.b], (i * 4 + j) * 3)
+    })
+    const b = i * 4
+    idx.push(b, b + 2, b + 1, b, b + 3, b + 2)
+  })
+  const g = new THREE.BufferGeometry()
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3))
+  g.setAttribute("uv", new THREE.BufferAttribute(uv, 2))
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3))
+  g.setIndex(idx)
+  g.computeBoundingSphere()
+  return g
+}
+
 // ── Construcción ────────────────────────────────────────────────
 interface NivelPuestos {
   deps: string[]
@@ -2824,6 +2868,29 @@ export function construirSubsuelo(ctx: CtxEscena): Subsuelo {
   const matLibros = new THREE.MeshStandardMaterial({ map: texLomos, roughness: 0.78, metalness: 0 })
   const tex: Obra["texturas"] = {}
   const cabinas: Array<{ malla: THREE.InstancedMesh; y0: number; y1: number }> = []
+  const radial = texturaRadial()
+  const matSombra = new THREE.MeshBasicMaterial({
+    name: "subsuelo-sombras",
+    map: radial,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.62,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  })
+  const matCharco = new THREE.MeshBasicMaterial({
+    name: "subsuelo-charcos",
+    map: radial,
+    vertexColors: true,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  })
 
   for (const nivel of ["n1", "n2", "n3"] as const) {
     const grupo = ctx.niveles[nivel]
@@ -2970,6 +3037,30 @@ export function construirSubsuelo(ctx: CtxEscena): Subsuelo {
         pulso.setX(i, 1 + ((i * 0.37) % 1) * 6)
       }
     })
+    // Sombra bajo cada escritorio y, por departamento, dos charcos de luz de su color.
+    const negro = new THREE.Color(0, 0, 0)
+    const sombras: Array<{ x: number; z: number; w: number; h: number; c: THREE.Color }> = []
+    const charcos: Array<{ x: number; z: number; w: number; h: number; c: THREE.Color }> = []
+    for (const d of deps) {
+      const cel = celdaDe(d.lugarId)
+      if (!cel) continue
+      const z0 = cel.cz - SUB_MEDIO_FONDO
+      for (let p = 0; p < PUESTOS_POR_DEPTO; p++) {
+        sombras.push({ x: cel.cx + OFF_X[p % 10], z: z0 + FILA_Z0 + Math.floor(p / 10) * FILA_PASO - 0.55, w: 2.3, h: 2.2, c: negro })
+      }
+      const tinte = C(colorDe(d.id)).clone().multiplyScalar(0.15)
+      for (const s of [-1, 1]) charcos.push({ x: cel.cx + s * 9.2, z: z0 + 20.5, w: 22, h: 30, c: tinte })
+      charcos.push({ x: cel.cx, z: z0 + 3.2, w: 12, h: 9, c: tinte.clone().multiplyScalar(1.4) })
+    }
+    const mSombras = new THREE.Mesh(capaCalcos(sombras, y + 0.045), matSombra)
+    mSombras.name = `subsuelo-${nivel}-sombras-contacto`
+    mSombras.renderOrder = 1
+    grupo.add(decorativa(mSombras))
+    const mCharcos = new THREE.Mesh(capaCalcos(charcos, y + 0.05), matCharco)
+    mCharcos.name = `subsuelo-${nivel}-charcos-luz`
+    mCharcos.renderOrder = 2
+    grupo.add(decorativa(mCharcos))
+
     for (const im of [escritorios, monitores, pantallas, sillas, cuerpos, cabezas, indicadores]) {
       im.instanceMatrix.needsUpdate = true
       if (im.instanceColor) im.instanceColor.needsUpdate = true

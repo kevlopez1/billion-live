@@ -22,6 +22,7 @@ import { Simulacion, type EventoSim } from "./motor/simulacion"
 import { ESPECIALES, PERSONAJES } from "./datos/personajes"
 import { DEPARTAMENTOS, OBJETIVOS, agentesDe, progresoObjetivo } from "./datos/empresa"
 import { LUGAR } from "./lugares"
+import { dondeEsta, encuadreDe } from "./navegacion"
 import type { Departamento, Entregable, EstadoPuesto, NivelId, Objetivo, Personaje } from "./tipos"
 import { leerEstado, motivoSinIa, pedir, type EstadoServidor } from "./ui/api"
 import { Hoja } from "./ui/base"
@@ -39,6 +40,7 @@ import { DarNoticia } from "./ui/Noticia"
 import { ColumnaObjetivos, ListaEnMarcha, ListaObjetivos, type EnMarcha } from "./ui/Objetivos"
 import { PanelDepartamento, type ResultadoTrabajo } from "./ui/PanelDepartamento"
 import { PanelLugar } from "./ui/PanelLugar"
+import { Mapa } from "./ui/Mapa"
 import { Radar, type DatosRadar } from "./ui/Radar"
 import { Selector } from "./ui/Selector"
 
@@ -65,6 +67,8 @@ type EscenaPlus = Escena & {
   camara?: () => ModoCamara
   /** Hover sobre la escena (personaje, puesto o lugar bajo el cursor), si el motor lo ofrece. */
   alPasar?: (fn: (t: Toque | null, x: number, y: number) => void) => void
+  /** Muestra un lugar entero (por el ascensor si está en otro nivel). */
+  encuadrar?: (centro: { x: number; y: number; z: number }, distancia: number, lugarId?: string) => void
 }
 
 type ModoCam = ModoCamara
@@ -78,6 +82,7 @@ type Panel =
   | { tipo: "transcripcion" }
   | { tipo: "noticia" }
   | { tipo: "objetivos" }
+  | { tipo: "mapa" }
 
 type RespuestaConversacion = { lineas?: Array<{ id: string; texto: string }>; resumen?: string; afinidad?: Array<{ a: string; b: string; delta: number }> }
 type RespuestaNoticia = { reacciones?: Array<{ id: string; texto: string; lugarId: string }> }
@@ -313,6 +318,8 @@ export default function CasaBlancaViva() {
       const d = DEP_POR_LUGAR[t.id] ?? DEP[t.id]
       if (d) setPanel({ tipo: "dep", id: d.id })
       else if (LUGAR[t.id]) setPanel({ tipo: "lugar", id: t.id })
+      // El pabellón del ascensor abre el mapa: desde ahí se elige a qué nivel bajar.
+      else if (t.id === "ascensor") setPanel({ tipo: "mapa" })
     }
   }
 
@@ -565,13 +572,12 @@ export default function CasaBlancaViva() {
       const m = mundoRef.current
       if (!m || !PJ[id]) return
       setSeleccionado(id)
-      const e = m.sim.pj[id]
-      if (e && e.nivel !== m.escena.nivel()) irANivel(e.nivel)
+      // Si está en otro nivel, la cámara de seguir cambia de nivel sola (con fundido).
       apagarMaqueta()
       m.escena.modoCamara("seguir", id)
       setCamara("seguir")
     },
-    [irANivel, apagarMaqueta],
+    [apagarMaqueta],
   )
 
   /** El más cercano a la cámara en el nivel que se ve, para "Seguir" sin nadie elegido. */
@@ -637,6 +643,39 @@ export default function CasaBlancaViva() {
       setPanel({ tipo: "ficha", id })
     },
     [seguir],
+  )
+
+  /** Del mapa: la cámara va al lugar (por el ascensor si está en otro nivel) y se abre su panel. */
+  const irALugar = useCallback(
+    (lugarId: string) => {
+      const m = mundoRef.current
+      const e = encuadreDe(lugarId)
+      if (!m || !e) return
+      apagarMaqueta()
+      if (m.escena.encuadrar) m.escena.encuadrar(e.centro, e.distancia, lugarId)
+      else m.escena.enfocar(e.centro, e.distancia)
+      setNivel(e.nivel)
+      const d = DEP_POR_LUGAR[lugarId]
+      setPanel(d ? { tipo: "dep", id: d.id } : LUGAR[lugarId] ? { tipo: "lugar", id: lugarId } : null)
+    },
+    [apagarMaqueta],
+  )
+
+  /** "Ir" de un residente: la cámara lo sigue; si está dentro de un edificio, se avisa (desde afuera no se ve). */
+  const irConPersonaje = useCallback(
+    (id: string) => {
+      const m = mundoRef.current
+      const p = PJ[id]
+      if (!m || !p) return
+      seguir(id)
+      setPanel(null)
+      const e = m.sim.pj[id]
+      if (e) {
+        const d = dondeEsta(e)
+        mostrarAviso(p.corto, d.dentro ? `${d.texto}: desde afuera no se ve` : d.texto, 4500)
+      }
+    },
+    [seguir, mostrarAviso],
   )
 
   const abrirDep = useCallback((id: string) => setPanel({ tipo: "dep", id }), [])
@@ -927,14 +966,14 @@ export default function CasaBlancaViva() {
             </div>
           )}
 
-          <div className="cb-hud-izq absolute bottom-[calc(max(10px,env(safe-area-inset-bottom))+58px)] left-3 md:bottom-7 md:left-7">
+          <div className="cb-hud-izq absolute bottom-[calc(max(10px,env(safe-area-inset-bottom))+106px)] left-3 md:bottom-7 md:left-7">
             <div className="rounded-full p-[3px] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.9)] bg-black/40">
               <Radar fuente={datosRadar} tam={compacto ? 104 : 172} etiqueta="Radar: la cámara al centro, el norte arriba y un punto por residente" />
             </div>
           </div>
 
           <div
-            className="absolute inset-x-0 bottom-[calc(max(10px,env(safe-area-inset-bottom))+176px)] px-4 md:bottom-[96px] md:left-[220px]"
+            className="absolute inset-x-0 bottom-[calc(max(10px,env(safe-area-inset-bottom))+224px)] px-4 md:bottom-[96px] md:left-[220px]"
             style={!compacto ? { right: panelLateral ? 470 : 350 } : undefined}
           >
             <Subtitulos sub={sub} />
@@ -952,6 +991,8 @@ export default function CasaBlancaViva() {
               velocidad={velocidad}
               onPausa={cambiarPausa}
               onVelocidad={cambiarVelocidad}
+              onMapa={() => setPanel((p) => (p?.tipo === "mapa" ? null : { tipo: "mapa" }))}
+              mapaAbierto={panel?.tipo === "mapa"}
               onPersonajes={() => setPanel({ tipo: "selector" })}
               onConsejo={() => setPanel(sesion && sesion.estado !== "terminado" ? { tipo: "transcripcion" } : { tipo: "consejo" })}
               onNoticia={() => setPanel({ tipo: "noticia" })}
@@ -1002,8 +1043,24 @@ export default function CasaBlancaViva() {
             />
           )}
           {lugar && <PanelLugar lugar={lugar} sim={mundo.sim} personajes={PJ} retratos={retratos} onPersonaje={abrirFicha} onCerrar={cerrarPanel} />}
+          {panel?.tipo === "mapa" && (
+            <Mapa
+              nivel={nivel}
+              sim={mundo.sim}
+              personajes={PERSONAJES}
+              deptos={DEP}
+              retratos={retratos}
+              onIrLugar={irALugar}
+              onIrPersonaje={irConPersonaje}
+              onNivel={(n) => {
+                irANivel(n)
+                setPanel(null)
+              }}
+              onCerrar={cerrarPanel}
+            />
+          )}
           {panel?.tipo === "selector" && (
-            <Selector personajes={PERSONAJES} retratos={retratos} deptos={DEP} seleccionado={seleccionado} onElegir={elegirDelSelector} onCerrar={cerrarPanel} />
+            <Selector personajes={PERSONAJES} retratos={retratos} deptos={DEP} seleccionado={seleccionado} sim={mundo.sim} onElegir={elegirDelSelector} onIr={irConPersonaje} onCerrar={cerrarPanel} />
           )}
           {panel?.tipo === "consejo" && <ConvocarConsejo personajes={PERSONAJES} onConvocar={(t, ids) => void convocar(t, ids)} onCerrar={cerrarPanel} />}
           {panel?.tipo === "transcripcion" && sesion && <TranscripcionConsejo sesion={sesion} personajes={PJ} retratos={retratos} onCerrar={cerrarPanel} />}

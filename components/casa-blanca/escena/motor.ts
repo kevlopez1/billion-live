@@ -85,7 +85,7 @@ export interface EscenaMotor extends Escena {
    * ascensor y sale encuadrándolo. `centro` y `distancia` salen de
    * navegacion.encuadreDe().
    */
-  encuadrar(centro: Vec3, distancia: number): void
+  encuadrar(centro: Vec3, distancia: number, lugarId?: string): void
   /** true mientras la cámara baja o sube por el ascensor. */
   viajando(): boolean
   /** Solo para pruebas y depuración. */
@@ -486,11 +486,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       _ejeX.y = 0
       if (_ejeX.lengthSq() > 1e-6) _centro.addScaledVector(_ejeX.normalize(), mitad * 0.35)
     } else if (nivelActual === "ciudad") {
-      // La caverna entera cabe en 420 m; de cerca, la sombra se ajusta a lo que se ve.
-      mitad = Math.min(210, Math.max(40, d * 0.75))
-      mitad = Math.pow(2, Math.round(Math.log2(mitad) * 4) / 4)
-      const C = HUELLAS.ciudad
-      _centro.set(Math.min(C.x1, Math.max(C.x0, t.x)), ALTURA_NIVEL.ciudad, Math.min(C.z1, Math.max(C.z0, t.z)))
+      // La caverna entera (400 x 400 m) en una sola sombra fija.
+      mitad = 210
+      _centro.set(0, ALTURA_NIVEL.ciudad, 80)
     } else {
       mitad = 105
       _centro.set(0, ALTURA_NIVEL[nivelActual], 80)
@@ -703,9 +701,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       ambientePost.noche = ambCiudad.noche
       ambientePost.exposicion = ambCiudad.exposicion
       ambientePost.bloom = ambCiudad.bloom
-      // Vista de maqueta (la cámara alta, fuera de la bóveda): menos bruma, o la caverna se pierde.
-      const lejos = cam.position.distanceTo(camara.controles.target)
-      nieblaCiudad.density = ambCiudad.niebla.densidad * Math.min(1, Math.max(0.3, 130 / Math.max(1, lejos)))
+      nieblaCiudad.density = ambCiudad.niebla.densidad
       post.aplicar(ambientePost, maquetaMezcla, velo, tiempo, false)
     } else post.aplicar(cielo.ambiente, maquetaMezcla, velo, tiempo, nivelActual !== "superficie")
     post.render(dt)
@@ -884,13 +880,14 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
         })
       } else camara.enfocar(destino, distancia)
     },
-    encuadrar(p, distancia) {
+    encuadrar(p, distancia, lugarId) {
       const n = nivelDeY(p.y)
       const destino = new THREE.Vector3(p.x, p.y, p.z)
       // Salir de cine o de seguir: encuadrar un lugar es mirar el lugar, no seguir a alguien.
       if (!camara.puedeViajar) camara.setModo(n === "superficie" ? "dron" : "nivel")
-      if (n !== nivelActual || camara.viajando) camara.viajar(n, poseEnfoque(destino, distancia, n))
-      else camara.enfocar(destino, distancia)
+      const pose = poseEnfoque(destino, distancia, n, undefined, lugarId)
+      if (n !== nivelActual || camara.viajando) camara.viajar(n, pose)
+      else camara.irAPose(pose)
     },
     viajando: () => camara.viajando,
     actualizarPersonajes(lista) {

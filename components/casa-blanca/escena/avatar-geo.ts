@@ -94,7 +94,9 @@ export class Lote {
       // Mira el primer cuadrilátero no degenerado y su orientación respecto del centro.
       let votos = 0
       const P = this.pos
-      for (let i = 0; i < filas - 1 && Math.abs(votos) < 6; i++) {
+      // Se vota desde la fila del medio (los bordes pueden ser tiras de canto).
+      for (let n = 0; n < filas - 1 && Math.abs(votos) < 6; n++) {
+        const i = (Math.floor((filas - 1) / 2) + n) % (filas - 1)
         for (let j = 0; j < (cerrada ? cols : cols - 1); j += 3) {
           const a = ids[i][j]
           const b = ids[i][(j + 1) % cols]
