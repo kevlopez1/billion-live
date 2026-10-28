@@ -565,8 +565,9 @@ export class ControlCamara {
 
   /** Llamado por el motor al cambiar de nivel (con la pantalla en negro). */
   encuadrarNivel(n: NivelId, desde: NivelId) {
-    if (desde === S && n !== S) this.poseSuperficie = { pos: this.camara.position.clone(), mira: this.controles.target.clone(), fov: this.camara.fov }
-    if (this.modo === "cine" || this.modo === "intro") return
+    // En un viaje, la pose de la superficie se guardó al salir (no la del tubo).
+    if (desde === S && n !== S && !this.viaje) this.poseSuperficie = { pos: this.camara.position.clone(), mira: this.controles.target.clone(), fov: this.camara.fov }
+    if (this.modo === "cine" || this.modo === "intro" || this.viaje) return
     if (this.modo === "seguir") {
       this.seguirListo = false
       return
@@ -581,8 +582,103 @@ export class ControlCamara {
     this.modo = "nivel"
     this.controles.enabled = true
     this.controles.autoRotate = false
-    this.aplicarLimites("nivel")
+    this.aplicarLimites(limiteDe(n))
     this.ponerPose(poseNivel(n, this.pose))
+  }
+
+  /** ¿Puede la cámara hacer el viaje en ascensor ahora? (No en la intro, en cine ni siguiendo a alguien.) */
+  get puedeViajar(): boolean {
+    return !this.intro && !this.cine && this.modo !== "seguir"
+  }
+
+  /**
+   * Cambia de nivel por el ascensor: se acerca al tubo de vidrio, baja (o
+   * sube) por él cruzando las losas y sale a `destino` (por defecto, la vista
+   * general del nivel). Dura entre 2,7 y 3,7 s según cuánto baja.
+   */
+  viajar(hacia: NivelId, destino?: Pose) {
+    const desde = this.viaje ? nivelDeAltura(this.camara.position.y) : this.deps.nivel()
+    if (desde === S && !this.viaje) this.poseSuperficie = { pos: this.camara.position.clone(), mira: this.controles.target.clone(), fov: this.camara.fov }
+    const final = destino ?? (hacia === S ? (this.poseSuperficie ?? poseAerea()) : poseNivel(hacia))
+    const y0 = this.viaje ? this.camara.position.y : ALTURA_NIVEL[desde] + ALTO_TUBO[desde]
+    const y1 = ALTURA_NIVEL[hacia] + ALTO_TUBO[hacia]
+    this.enfoque = null
+    this.controles.enabled = false
+    this.controles.autoRotate = false
+    this.viaje = {
+      t: 0,
+      dA: this.viaje ? 0.25 : 0.75,
+      dR: Math.min(2.1, Math.max(1.1, Math.abs(y1 - y0) / 26)),
+      dX: 1.05,
+      hacia,
+      p0: this.camara.position.clone(),
+      m0: this.controles.target.clone(),
+      fov0: this.fovBase,
+      y0,
+      y1,
+      destino: { pos: final.pos.clone(), mira: final.mira.clone(), fov: final.fov },
+    }
+  }
+
+  /** Termina un viaje en curso de golpe (otro modo lo interrumpe). */
+  private cortarViaje() {
+    const v = this.viaje
+    if (!v) return
+    this.viaje = null
+    this.velo = 0
+    if (this.deps.nivel() !== v.hacia) this.deps.aplicarNivel(v.hacia)
+    this.ponerPose(v.destino)
+    this.controles.enabled = true
+  }
+
+  private actualizarViaje(dt: number) {
+    const v = this.viaje!
+    v.t += dt
+    const p = this.pose
+    const total = v.dA + v.dR + v.dX
+    if (v.t < v.dA) {
+      // Al ascensor del nivel de partida.
+      const k = muySuave(v.t / v.dA)
+      poseTubo(v.y0, _pt)
+      p.pos.lerpVectors(v.p0, _pt.pos, k)
+      p.mira.lerpVectors(v.m0, _pt.mira, k)
+      p.fov = lerp(v.fov0, _pt.fov, k)
+      this.velo = 0
+    } else if (v.t < v.dA + v.dR) {
+      // Por el tubo: un nivel tras otro, con un parpadeo oscuro en cada losa.
+      const k = muySuave((v.t - v.dA) / v.dR)
+      const y = lerp(v.y0, v.y1, k)
+      poseTubo(y, p)
+      this.velo = veloCruce(y)
+      const n = nivelDeAltura(y)
+      if (n !== this.deps.nivel()) this.deps.aplicarNivel(n)
+    } else {
+      // Salida al nivel nuevo.
+      const k = muySuave(Math.min(1, (v.t - v.dA - v.dR) / v.dX))
+      if (this.deps.nivel() !== v.hacia) this.deps.aplicarNivel(v.hacia)
+      poseTubo(v.y1, _pt)
+      p.pos.lerpVectors(_pt.pos, v.destino.pos, k)
+      p.mira.lerpVectors(_pt.mira, v.destino.mira, k)
+      p.fov = lerp(_pt.fov, v.destino.fov, k)
+      this.velo = 0
+    }
+    this.ponerPose(p)
+    if (v.t >= total) {
+      this.viaje = null
+      this.velo = 0
+      this.ponerPose(v.destino)
+      if (v.hacia === S) this.entrarDron()
+      else {
+        this.modo = "nivel"
+        this.controles.enabled = true
+        this.aplicarLimites(limiteDe(v.hacia))
+      }
+      this.ultimaInteraccion = this.reloj
+    }
+  }
+
+  get viajando(): boolean {
+    return this.viaje !== null
   }
 
   /** Lleva la cámara a mirar un punto, en ~1 s. */
