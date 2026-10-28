@@ -16,7 +16,7 @@ import { devolver, dondeEstaba, type Borrado } from "@/lib/papelera"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, ordenActual, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
-import { ANCLA, ETIQUETA_SECCION, type Revision, type Seccion } from "@/lib/revision"
+import { ANCLA, ETIQUETA_SECCION, type Revision } from "@/lib/revision"
 import { Indice, type Entrada } from "@/components/branding/indice"
 import { Plegable } from "@/components/branding/plegable"
 import { Agregar, Campo, Fila, ListaTextos } from "@/components/branding/campos"
@@ -54,7 +54,7 @@ type Guardado = "limpio" | "sucio" | "guardando" | "ok" | "error"
 
 /** `incrustado`: dentro del espacio de trabajo de Kev. Ahí sobran los enlaces
  *  a Proyectos y a Preguntas: el espacio de trabajo ya los tiene arriba. */
-export function Panel({ incrustado = false, seccionInicial = "personaje" }: { incrustado?: boolean; seccionInicial?: Seccion } = {}) {
+export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
   const [doc, setDoc] = useState<Contenido>(CONTENIDO_BASE)
   const [cargando, setCargando] = useState(true)
   const [configurado, setConfigurado] = useState<boolean | null>(null)
@@ -91,7 +91,7 @@ export function Panel({ incrustado = false, seccionInicial = "personaje" }: { in
   // Documento o mapa: los mismos datos, dos formas de mirarlos. El mapa no es
   // decoración — una rama vacía se ve desde lejos, y eso es lo que hay que ver.
   const [vista, setVista] = useState<"documento" | "mapa">("documento")
-  const [nodoSel, setNodoSel] = useState<string>(idRama(seccionInicial))
+  const [nodoSel, setNodoSel] = useState<string>(idRama("personaje"))
 
   // La revisión de la IA.
   const [verRevision, setVerRevision] = useState(false)
