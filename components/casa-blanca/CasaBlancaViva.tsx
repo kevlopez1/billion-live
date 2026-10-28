@@ -194,6 +194,8 @@ export default function CasaBlancaViva() {
   grabandoRef.current = grabando
   const maquetaRef = useRef(maqueta)
   maquetaRef.current = maqueta
+  const camaraRef = useRef(camara)
+  camaraRef.current = camara
   const sesionRef = useRef(sesion)
   sesionRef.current = sesion
   const vivoRef = useRef(false)
@@ -814,8 +816,11 @@ export default function CasaBlancaViva() {
   const datosRadar = useCallback((): DatosRadar | null => {
     const m = mundoRef.current
     if (!m) return null
+    const sel = seleccionadoRef.current
+    const seguido = camaraRef.current === "seguir" && sel ? m.sim.pj[sel] : undefined
     return {
       cam: m.escena.camaraEnPlanta(),
+      centro: seguido ? { x: seguido.pos.x, z: seguido.pos.z } : undefined,
       nivel: m.escena.nivel(),
       puntos: PERSONAJES.map((p) => {
         const e = m.sim.pj[p.id]

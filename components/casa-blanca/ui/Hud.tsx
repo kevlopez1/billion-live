@@ -36,7 +36,7 @@ export function Marca({ nivel, compacto }: { nivel: NivelId; compacto: boolean }
       </div>
       <p className="cb-sombra mt-1 text-[11px] font-semibold text-white/70 md:text-[12px]">{NOMBRE_NIVEL[nivel]}</p>
       {info && (
-        <div role="note" className={`cb-entra absolute left-0 top-full z-50 mt-2 w-[min(340px,86vw)] rounded-2xl p-4 text-[12.5px] leading-relaxed text-white/85 ${VIDRIO} bg-[rgba(9,11,15,0.86)]`}>
+        <div role="note" className={`cb-entra absolute left-0 top-full z-50 mt-2 w-[min(340px,86vw)] rounded-[16px] p-4 text-[12.5px] leading-relaxed text-white/85 ${VIDRIO} bg-[rgba(9,11,15,0.86)]`}>
           {AVISO_FICCION}
         </div>
       )}
@@ -90,7 +90,7 @@ export function Subtitulos({ sub, grande = false }: { sub: Subtitulo | null; gra
 /** Aviso de juego arriba al centro ("Última hora", avisos de la simulación). */
 export function Notificacion({ titulo, texto }: { titulo: string; texto: ReactNode }) {
   return (
-    <div className={`cb-entra pointer-events-none mx-auto w-fit max-w-[min(560px,92vw)] rounded-2xl px-5 py-3 text-center ${VIDRIO}`} role="status">
+    <div className={`cb-entra pointer-events-none mx-auto w-fit max-w-[min(560px,92vw)] rounded-[16px] px-5 py-3 text-center ${VIDRIO}`} role="status">
       <div className="cb-cond text-[11px] font-bold uppercase tracking-[0.28em] text-amber-300">{titulo}</div>
       <div className="mt-0.5 text-[13.5px] font-semibold text-white">{texto}</div>
     </div>

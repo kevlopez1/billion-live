@@ -292,20 +292,29 @@ seccion("reunir / agregarLineas / cerrar")
 {
   const sim = new Simulacion(PERSONAJES, ESPECIALES, { minutos: 11 * 60, semilla: 11 })
   let ahora = 0
+  let transcurrido = 0
   const correr = (seg: number) => {
-    for (let i = 0; i < Math.round(seg / 0.1); i++) sim.avanzar(0.1, (ahora += 100))
+    for (let i = 0; i < Math.round(seg / 0.1); i++) {
+      sim.avanzar(0.1, (ahora += 100))
+      transcurrido += 0.1
+    }
   }
   correr(5)
   const oidas: LineaConv[] = []
   let presentesAlEmpezar: string[] = []
+  let empezoA = -1
   let conv: Conversacion | null = null
   sim.on((e) => {
     if (e.tipo !== "linea" || !conv || e.conv.id !== conv.id) return
-    if (!oidas.length) presentesAlEmpezar = sim.presentes("sala-guerra")
+    if (!oidas.length) {
+      presentesAlEmpezar = sim.presentes("sala-guerra")
+      empezoA = transcurrido
+    }
     oidas.push(e.linea)
   })
   const antes = sim.pj.kobe.afinidad.hormozi
   conv = sim.reunir("sala-guerra", IDS, "Consejo de prueba")
+  const reunidoA = transcurrido
   ok(conv.abierta && conv.lineas.length === 0 && conv.ids.length === 4, "reunir abre una conversación sin líneas")
   ok(IDS.every((id) => sim.pj[id].conversacionId === conv!.id), "todos quedan en la conversación")
   correr(1)
@@ -321,7 +330,7 @@ seccion("reunir / agregarLineas / cerrar")
   }
   ok(oidas.length === 2, `se dicen las líneas agregadas (${oidas.length})`)
   ok(presentesAlEmpezar.length === 4, `cuando empieza, están todos en la Sala de guerra (${presentesAlEmpezar.join(", ")})`)
-  ok(t <= 45, `no espera más de 40 s reales (empezó a los ${t} s)`)
+  ok(empezoA - reunidoA <= 40.5, `no espera más de 40 s reales (empezó a los ${(empezoA - reunidoA).toFixed(1)} s)`)
   correr(30)
   ok(sim.conversaciones.some((c) => c.id === conv!.id) && oidas.length === 2, "abierta y sin líneas nuevas, espera")
   ok(IDS.every((id) => sim.pj[id].lugarId === "sala-guerra"), "mientras espera, nadie se va")

@@ -75,7 +75,7 @@ export function ListaEnMarcha({
                 <button
                   type="button"
                   onClick={() => onDep(m.dep.id)}
-                  className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left hover:bg-white/[0.06] ${FOCO}`}
+                  className={`flex w-full items-center gap-2.5 rounded-[12px] px-2 py-1.5 text-left hover:bg-white/[0.06] ${FOCO}`}
                 >
                   <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
                     <span className="absolute inset-0 rounded-full motion-safe:animate-ping" style={{ background: m.dep.color, opacity: 0.55 }} />
@@ -101,7 +101,7 @@ export function ListaEnMarcha({
           <ul className="space-y-2">
             {recientes.slice(0, 4).map((e) => (
               <li key={e.id}>
-                <button type="button" onClick={() => onDep(e.departamentoId)} className={`w-full rounded-xl px-2 py-1 text-left hover:bg-white/[0.06] ${FOCO}`}>
+                <button type="button" onClick={() => onDep(e.departamentoId)} className={`w-full rounded-[12px] px-2 py-1 text-left hover:bg-white/[0.06] ${FOCO}`}>
                   <span className="block text-[12.5px] font-semibold leading-snug text-white">{conPrime(recortar(e.titulo, 90), false)}</span>
                   <span className="block truncate text-[11px] text-white/45">
                     {deptos[e.departamentoId]?.nombre ?? e.departamentoId} · {e.agenteNombre} · {haceCuanto(e.creado)}

@@ -155,7 +155,7 @@ export function TranscripcionConsejo({
   return (
     <Hoja titulo="Consejo" cabecera={cabecera} onCerrar={onCerrar} ancho={430}>
       {sesion.guion && (
-        <p className="mb-3 rounded-xl bg-white/[0.06] px-3 py-2 text-[11.5px] text-white/60">
+        <p className="mb-3 rounded-[12px] bg-white/[0.06] px-3 py-2 text-[11.5px] text-white/60">
           <b className="mr-1 uppercase tracking-[0.1em] text-white/80">Guion.</b>
           {sesion.nota ?? "La IA no respondió: debaten con su guion."}
         </p>

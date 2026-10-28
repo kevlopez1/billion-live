@@ -14,6 +14,8 @@ import type { NivelId } from "../tipos"
 
 export interface DatosRadar {
   cam: { x: number; z: number; rumbo: number }
+  /** Centro del radar. Por defecto, la cámara; al seguir a alguien, esa persona (como el jugador en GTA). */
+  centro?: { x: number; z: number }
   nivel: NivelId
   puntos: Array<{ id: string; x: number; z: number; color: string; nivel: NivelId; visible: boolean }>
   seleccionado: string | null
@@ -89,10 +91,11 @@ function dibujar(ctx: CanvasRenderingContext2D, S: number, d: DatosRadar | null)
 
   const sub = d.nivel !== "superficie"
   // Metros que caben del centro al borde.
-  const alcance = sub ? 105 : 175
+  const alcance = sub ? 105 : 240
   const k = (R - 4) / alcance
-  const X = (x: number) => R + (x - d.cam.x) * k
-  const Z = (z: number) => R + (z - d.cam.z) * k
+  const c = d.centro ?? d.cam
+  const X = (x: number) => R + (x - c.x) * k
+  const Z = (z: number) => R + (z - c.z) * k
 
   if (!sub) {
     // Terreno del predio, calles y edificios (huellas reales).

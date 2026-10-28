@@ -49,7 +49,7 @@ export function PanelLugar({
             const p = personajes[id]
             return (
               <li key={id}>
-                <button type="button" onClick={() => onPersonaje(id)} className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left hover:bg-white/[0.06] ${FOCO}`}>
+                <button type="button" onClick={() => onPersonaje(id)} className={`flex w-full items-center gap-3 rounded-[12px] px-2 py-1.5 text-left hover:bg-white/[0.06] ${FOCO}`}>
                   <Retrato p={p} url={retratos[id]} tam={34} />
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-bold text-white">{p.nombre}</span>

@@ -27,10 +27,21 @@ interface Nodo {
   ultAct: string
   ultBurbuja: string
   ultTipo: string
+  ultTag: boolean
+  /** Tamaño medido; se vuelve a medir solo cuando cambia el contenido. */
+  w: number
+  h: number
+  sucio: boolean
 }
 
 const MAX_ETIQUETAS = 7
 const MAX_BURBUJAS = 6
+/** Más lejos que esto (m, en planta) no se etiqueta: se ve como un punto. */
+const LEJOS_ETIQUETA = 320
+const LEJOS_BURBUJA = 400
+
+type Rect = { x0: number; x1: number; y0: number; y1: number }
+const solapan = (a: Rect, b: Rect) => a.x0 < b.x1 - 2 && b.x0 < a.x1 - 2 && a.y0 < b.y1 - 2 && b.y0 < a.y1 - 2
 
 export function crearEtiquetas(contenedor: HTMLElement, personajes: Personaje[], alTocar: (id: string) => void) {
   const nodos = new Map<string, Nodo>()
@@ -60,56 +71,49 @@ export function crearEtiquetas(contenedor: HTMLElement, personajes: Personaje[],
 
     raiz.append(burbuja, tag)
     contenedor.append(raiz)
-    nodos.set(p.id, { raiz, tag, act, burbuja, ultAct: "", ultBurbuja: "", ultTipo: "" })
+    nodos.set(p.id, { raiz, tag, act, burbuja, ultAct: "", ultBurbuja: "", ultTipo: "", ultTag: true, w: 0, h: 0, sucio: true })
   }
 
+  // El ancho de la capa se guarda al cambiar, no se lee en cada cuadro (forzaría un layout).
+  let ancho = contenedor.clientWidth
+  const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => (ancho = contenedor.clientWidth)) : null
+  ro?.observe(contenedor)
+
   function actualizar(datos: DatoEtiqueta[], opciones: { seleccionado: string | null; soloBurbujas: boolean; oculto: boolean }) {
-    const visibles = new Set<string>()
-    const conTag = new Set<string>()
-    const conBurbuja = new Set<string>()
+    const mostrados = new Set<string>()
     if (!opciones.oculto) {
-      const orden = [...datos].sort((a, b) => a.dist - b.dist)
+      const sel = opciones.seleccionado
+      // El elegido primero; después, los más cercanos. Si una etiqueta pisa a otra ya puesta, no sale.
+      const orden = [...datos].sort((a, b) => (a.id === sel ? -1 : b.id === sel ? 1 : a.dist - b.dist))
+      const ocupados: Rect[] = []
       let nt = 0
       let nb = 0
       for (const d of orden) {
-        const sel = d.id === opciones.seleccionado
-        if (d.burbuja && nb < MAX_BURBUJAS && d.dist < 240) {
-          conBurbuja.add(d.id)
-          nb++
-        }
-        if (sel || (!opciones.soloBurbujas && nt < MAX_ETIQUETAS && d.dist < 150)) {
-          conTag.add(d.id)
-          if (!sel) nt++
-        }
-        if (conTag.has(d.id) || conBurbuja.has(d.id)) visibles.add(d.id)
-      }
-    }
-    const porId = new Map(datos.map((d) => [d.id, d]))
-    for (const [id, n] of nodos) {
-      const d = porId.get(id)
-      if (!d || !visibles.has(id)) {
-        if (n.raiz.style.display !== "none") n.raiz.style.display = "none"
-        continue
-      }
-      n.raiz.style.display = ""
-      n.raiz.style.transform = `translate3d(${d.x.toFixed(1)}px, ${(d.y - 6).toFixed(1)}px, 0) translate(-50%, -100%)`
-      // Más lejos, más tenue: da profundidad sin ocultar.
-      n.raiz.style.opacity = String(Math.max(0.55, Math.min(1, 1.25 - d.dist / 200)))
-      n.raiz.classList.toggle("cb-sel", id === opciones.seleccionado)
+        const n = nodos.get(d.id)
+        if (!n) continue
+        const esSel = d.id === sel
+        const tagOn = esSel || (!opciones.soloBurbujas && nt < MAX_ETIQUETAS && d.dist < LEJOS_ETIQUETA)
+        const b = d.burbuja && nb < MAX_BURBUJAS && d.dist < LEJOS_BURBUJA ? d.burbuja : null
+        if (!tagOn && !b) continue
 
-      const tagOn = conTag.has(id)
-      n.tag.style.display = tagOn ? "" : "none"
-      if (tagOn && d.actividad !== n.ultAct) {
-        n.act.textContent = d.actividad
-        n.ultAct = d.actividad
-      }
-      const b = conBurbuja.has(id) ? d.burbuja : null
-      if (!b) {
-        if (n.burbuja.style.display !== "none") n.burbuja.style.display = "none"
-        n.ultBurbuja = ""
-      } else {
-        n.burbuja.style.display = ""
-        if (b.texto !== n.ultBurbuja || b.tipo !== n.ultTipo) {
+        if (tagOn !== n.ultTag) {
+          n.tag.style.display = tagOn ? "" : "none"
+          n.ultTag = tagOn
+          n.sucio = true
+        }
+        if (tagOn && d.actividad !== n.ultAct) {
+          n.act.textContent = d.actividad
+          n.ultAct = d.actividad
+          n.sucio = true
+        }
+        if (!b) {
+          if (n.ultBurbuja) {
+            n.burbuja.style.display = "none"
+            n.ultBurbuja = ""
+            n.sucio = true
+          }
+        } else if (b.texto !== n.ultBurbuja || b.tipo !== n.ultTipo) {
+          n.burbuja.style.display = ""
           n.burbuja.textContent = b.texto
           n.burbuja.classList.toggle("cb-piensa", b.tipo === "piensa")
           // Al cambiar el texto, la burbuja vuelve a "saltar".
@@ -118,12 +122,41 @@ export function crearEtiquetas(contenedor: HTMLElement, personajes: Personaje[],
           n.burbuja.classList.add("cb-pop")
           n.ultBurbuja = b.texto
           n.ultTipo = b.tipo
+          n.sucio = true
         }
+        if (n.raiz.style.display === "none") n.raiz.style.display = ""
+        if (n.sucio) {
+          n.w = n.raiz.offsetWidth
+          n.h = n.raiz.offsetHeight
+          n.sucio = false
+        }
+
+        // Dentro de la pantalla aunque el personaje esté en el borde.
+        const medio = n.w / 2
+        const x = ancho > n.w + 12 ? Math.max(medio + 6, Math.min(ancho - medio - 6, d.x)) : d.x
+        const y = d.y - 6
+        const r: Rect = { x0: x - medio, x1: x + medio, y0: y - n.h, y1: y }
+        if (!esSel && ocupados.some((o) => solapan(o, r))) {
+          n.raiz.style.display = "none"
+          continue
+        }
+        ocupados.push(r)
+        if (tagOn && !esSel) nt++
+        if (b) nb++
+        mostrados.add(d.id)
+        n.raiz.style.transform = `translate3d(${(x - medio).toFixed(1)}px, ${(y - n.h).toFixed(1)}px, 0)`
+        // Más lejos, más tenue: da profundidad sin ocultar.
+        n.raiz.style.opacity = String(Math.max(0.6, Math.min(1, 1.3 - d.dist / 300)))
+        n.raiz.classList.toggle("cb-sel", esSel)
       }
+    }
+    for (const [id, n] of nodos) {
+      if (!mostrados.has(id) && n.raiz.style.display !== "none") n.raiz.style.display = "none"
     }
   }
 
   function destruir() {
+    ro?.disconnect()
     for (const n of nodos.values()) n.raiz.remove()
     nodos.clear()
   }

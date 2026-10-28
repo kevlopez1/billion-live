@@ -195,7 +195,7 @@ export function Ficha({
 
       <p className="mt-4 text-[13px] leading-relaxed text-white/80">{conPrime(p.bio)}</p>
 
-      <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5">
+      <div className="mt-4 rounded-[16px] border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5">
         <Rotulo>Ahora</Rotulo>
         <p className="mt-1 text-[13px] font-semibold text-white">{conPrime(ahora)}</p>
       </div>
@@ -237,8 +237,8 @@ export function Ficha({
           {historial.map((m, i) => (
             <li key={i} className={`flex ${m.de === "tu" ? "justify-end" : "justify-start"}`}>
               <div
-                className={`max-w-[86%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
-                  m.de === "tu" ? "rounded-br-md bg-white text-black" : "rounded-bl-md border border-white/10 bg-white/[0.06] text-white"
+                className={`max-w-[86%] rounded-[16px] px-3.5 py-2 text-[13px] leading-relaxed ${
+                  m.de === "tu" ? "rounded-br-[6px] bg-white text-black" : "rounded-bl-[6px] border border-white/10 bg-white/[0.06] text-white"
                 }`}
                 style={m.de === "el" ? { borderLeft: `3px solid ${p.color}` } : undefined}
               >
@@ -255,7 +255,7 @@ export function Ficha({
           ))}
           {ocupado && (
             <li className="flex justify-start">
-              <div className="rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.06] px-3.5 py-2.5" aria-label="Escribiendo">
+              <div className="rounded-[16px] rounded-bl-[6px] border border-white/10 bg-white/[0.06] px-3.5 py-2.5" aria-label="Escribiendo">
                 <span className="cb-puntos" aria-hidden>
                   <i />
                   <i />

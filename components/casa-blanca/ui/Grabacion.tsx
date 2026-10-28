@@ -80,7 +80,7 @@ export function ControlesGrabacion({
             type="button"
             onClick={() => onToma(t.id)}
             aria-pressed={toma === t.id}
-            className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] font-semibold transition-colors ${FOCO} ${
+            className={`flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2 text-left text-[13px] font-semibold transition-colors ${FOCO} ${
               toma === t.id ? "bg-white text-black" : "text-white/80 hover:bg-white/10"
             }`}
           >
@@ -103,7 +103,7 @@ export function ControlesGrabacion({
         <button
           type="button"
           onClick={onSalir}
-          className={`mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/15 px-3 py-2 text-[12px] font-bold text-white/80 hover:bg-white/10 ${FOCO}`}
+          className={`mt-2 flex w-full items-center justify-center gap-1.5 rounded-[12px] border border-white/15 px-3 py-2 text-[12px] font-bold text-white/80 hover:bg-white/10 ${FOCO}`}
         >
           <X className="h-3.5 w-3.5" /> Salir
         </button>

@@ -108,7 +108,7 @@ export function PanelDepartamento({
         <button
           type="button"
           onClick={() => onLider(lider.id)}
-          className={`flex w-full items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-2.5 text-left hover:bg-white/[0.07] ${FOCO}`}
+          className={`flex w-full items-center gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.03] p-2.5 text-left hover:bg-white/[0.07] ${FOCO}`}
         >
           <Retrato p={lider} url={retrato} tam={44} />
           <span className="min-w-0">
@@ -127,7 +127,7 @@ export function PanelDepartamento({
           </span>
         </div>
         <div
-          className="grid grid-cols-10 gap-[3px] rounded-2xl border border-white/[0.07] bg-black/30 p-2"
+          className="grid grid-cols-10 gap-[3px] rounded-[16px] border border-white/[0.07] bg-black/30 p-2"
           role="img"
           aria-label={`Grilla de 100 puestos: ${cuenta.entregado} entregados, ${cuenta.trabajando} trabajando, ${cuenta.libre} libres.`}
           onMouseLeave={() => setPuesto(puestoInicial ?? null)}
@@ -144,7 +144,7 @@ export function PanelDepartamento({
           ))}
         </div>
         {/* Etiqueta tipo reel del puesto bajo el cursor. */}
-        <div className="mt-2 min-h-[52px] rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2">
+        <div className="mt-2 min-h-[52px] rounded-[12px] border border-white/[0.07] bg-white/[0.03] px-3 py-2">
           {ag ? (
             <>
               <div className="flex items-baseline justify-between gap-2">
@@ -248,7 +248,7 @@ export function PanelDepartamento({
         ) : (
           <ul className="space-y-2">
             {entregables.map((e) => (
-              <li key={e.id} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5">
+              <li key={e.id} className="rounded-[16px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5">
                 <button
                   type="button"
                   onClick={() => setAbierto((v) => (v === e.id ? null : e.id))}

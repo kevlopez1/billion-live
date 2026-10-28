@@ -36,7 +36,7 @@ export function Selector({
                 type="button"
                 onClick={() => onElegir(p.id)}
                 aria-pressed={sel}
-                className={`group flex w-full flex-col items-center gap-1.5 rounded-2xl border px-1.5 pb-2 pt-3 text-center transition-colors ${FOCO} ${
+                className={`group flex w-full flex-col items-center gap-1.5 rounded-[16px] border px-1.5 pb-2 pt-3 text-center transition-colors ${FOCO} ${
                   sel ? "border-white/60 bg-white/[0.1]" : "border-transparent hover:border-white/15 hover:bg-white/[0.05]"
                 }`}
               >

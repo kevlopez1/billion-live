@@ -260,7 +260,7 @@ export function Campo({
       aria-label={etiqueta}
       maxLength={max}
       autoFocus={autoFocus}
-      className={`h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-[16px] text-white placeholder:text-white/35 md:text-[14px] ${FOCO}`}
+      className={`h-11 w-full rounded-[16px] border border-white/10 bg-white/[0.05] px-4 text-[16px] text-white placeholder:text-white/35 md:text-[14px] ${FOCO}`}
     />
   )
 }
