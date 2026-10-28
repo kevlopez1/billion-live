@@ -33,6 +33,11 @@ export const HUELLAS = {
   fuenteSur: { x: 0, z: 86, radio: 9 },
   /** Huella del subsuelo (los tres niveles). */
   subsuelo: { x0: -90, x1: 90, z0: 18, z1: 142 },
+  /**
+   * La ciudad subterránea: una caverna de 400 x 400 m con piso en y = -60 y
+   * bóveda que sube hasta y = -28 en el centro (por debajo del nivel 3).
+   */
+  ciudad: { x0: -200, x1: 200, z0: -120, z1: 280, piso: -60, boveda: -28 },
 } as const
 
 // ── Grilla del subsuelo: 4 columnas x 3 filas de celdas de 40 x 34 m ──
@@ -265,6 +270,42 @@ E("asc-sup", "n1-asc", { ascensor: true })
 E("n1-asc", "n2-asc", { ascensor: true })
 E("n2-asc", "n3-asc", { ascensor: true })
 
+// ── Ciudad subterránea (ficción): el ascensor sigue bajando hasta y = -60 ──
+const C = ALTURA_NIVEL.ciudad
+const NC = (id: string, x: number, z: number) => N(id, x, C, z, "ciudad")
+NC("ciudad-asc", 0, 22)
+NC("c-plaza", 0, 42)
+NC("c-plaza-o", -34, 60)
+NC("c-plaza-e", 34, 60)
+NC("c-av-1", 0, 100)
+NC("c-av-2", 0, 160)
+NC("c-av-3", 0, 215)
+NC("c-estacion", 0, 238)
+NC("c-torres-n", -60, 70)
+NC("c-torres-s", -60, 170)
+NC("c-parque", 45, 130)
+NC("c-mercado", 45, 62)
+NC("c-arena", 70, 10)
+NC("c-club", -70, 0)
+NC("c-mirador", 0, -20)
+E("n3-asc", "ciudad-asc", { ascensor: true })
+E("ciudad-asc", "c-plaza")
+E("c-plaza", "c-plaza-o")
+E("c-plaza", "c-plaza-e")
+E("c-plaza", "c-av-1")
+E("c-av-1", "c-av-2")
+E("c-av-2", "c-av-3")
+E("c-av-3", "c-estacion")
+E("c-plaza-o", "c-torres-n")
+E("c-torres-n", "c-torres-s")
+E("c-torres-s", "c-av-2")
+E("c-plaza-e", "c-mercado")
+E("c-mercado", "c-parque")
+E("c-parque", "c-av-2")
+E("c-plaza-e", "c-arena")
+E("c-plaza-o", "c-club")
+E("ciudad-asc", "c-mirador")
+
 export const GRAFO: Grafo = { nodos, aristas }
 
 // ── Lugares ───────────────────────────────────────────────────
@@ -363,6 +404,21 @@ const SUBSUELO: Lugar[] = SUBNIVELES.flatMap((nv) =>
   ),
 )
 
-export const LUGARES: Lugar[] = [...SUPERFICIE, ...SUBSUELO]
+const lc = (id: string, nombre: string, tipo: Lugar["tipo"], rect: [number, number, number, number], acceso: string, dato: string): Lugar => ({
+  id, nombre, nivel: "ciudad", tipo, x0: rect[0], x1: rect[1], z0: rect[2], z1: rect[3], y: ALTURA_NIVEL.ciudad, acceso, dato, ficcion: true,
+})
+const CIUDAD: Lugar[] = [
+  lc("ciudad-plaza", "Plaza Central", "jardin", [-30, 30, 30, 85], "c-plaza", "Ficción: el corazón de la ciudad subterránea, con la pantalla gigante del reto."),
+  lc("ciudad-avenida", "Gran Avenida", "jardin", [-12, 12, 85, 230], "c-av-2", "Ficción: el bulevar principal, de la plaza a la estación."),
+  lc("ciudad-torres", "Distrito de las Torres", "edificio", [-150, -45, 40, 200], "c-torres-n", "Ficción: las torres donde viven los 2.200 agentes."),
+  lc("ciudad-mercado", "Mercado", "ocio", [30, 90, 40, 90], "c-mercado", "Ficción: puestos de comida y café abiertos las 24 horas."),
+  lc("ciudad-parque", "Parque bajo la bóveda", "jardin", [30, 140, 100, 220], "c-parque", "Ficción: árboles y pasto bajo un cielo artificial que cambia con la hora de la superficie."),
+  lc("ciudad-estacion", "Estación del monorriel", "servicio", [-25, 25, 230, 265], "c-estacion", "Ficción: el monorriel recorre la ciudad en un circuito cerrado."),
+  lc("ciudad-arena", "Arena", "deporte", [50, 150, -40, 30], "c-arena", "Ficción: un estadio techado para partidos, peleas y eventos."),
+  lc("ciudad-club", "Club", "ocio", [-130, -50, -40, 25], "c-club", "Ficción: un salón de luces de neón para las noches de la ciudad."),
+  lc("ciudad-mirador", "Mirador", "jardin", [-30, 30, -40, -10], "c-mirador", "Ficción: un balcón sobre la caverna, junto al ascensor, con la ciudad entera a la vista."),
+]
+
+export const LUGARES: Lugar[] = [...SUPERFICIE, ...SUBSUELO, ...CIUDAD]
 export const LUGAR: Record<string, Lugar> = Object.fromEntries(LUGARES.map((l) => [l.id, l]))
 export const NODO: Record<string, NodoGrafo> = Object.fromEntries(nodos.map((n) => [n.id, n]))

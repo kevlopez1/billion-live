@@ -11,14 +11,15 @@
 
 export type Vec3 = { x: number; y: number; z: number }
 
-/** La superficie y los tres pisos subterráneos. */
-export type NivelId = "superficie" | "n1" | "n2" | "n3"
-export const ALTURA_NIVEL: Record<NivelId, number> = { superficie: 0, n1: -8, n2: -16, n3: -24 }
+/** La superficie, los tres pisos subterráneos y la ciudad subterránea, la más profunda. */
+export type NivelId = "superficie" | "n1" | "n2" | "n3" | "ciudad"
+export const ALTURA_NIVEL: Record<NivelId, number> = { superficie: 0, n1: -8, n2: -16, n3: -24, ciudad: -60 }
 export const NOMBRE_NIVEL: Record<NivelId, string> = {
   superficie: "Superficie",
   n1: "Subsuelo 1 · Departamentos",
   n2: "Subsuelo 2 · Departamentos y Sala de guerra",
   n3: "Subsuelo 3 · Deporte y ocio",
+  ciudad: "Ciudad subterránea",
 }
 
 export type TipoLugar = "edificio" | "jardin" | "deporte" | "departamento" | "ocio" | "servicio" | "obra" | "interior"
