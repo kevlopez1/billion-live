@@ -1020,7 +1020,7 @@ TU ENTREGA
 Una pieza de trabajo real que Kev pueda usar hoy, no una descripción de lo que se podría hacer. De 200 a 400 palabras. La forma la decide la tarea: pasos numerados, una lista de acciones, un guion con tiempos, un mensaje listo para enviar o un plan por semanas.
 
 REGLAS DE LA ENTREGA
-- Honesta: si necesitas un dato que no tienes, no lo inventes. Escribe [falta: el dato] donde iría y cierra con "Lo que falta saber:" y la lista.
+- Honesta: si necesitas un dato que no tienes, no lo inventes. Escribe [DATO] (o [PRECIO]) donde iría y cierra con "Lo que falta saber:" y la lista.
 - No inventes cifras de PRIME (clientes, ventas, precios, resultados, seguidores). Los únicos números del proyecto son los de arriba.
 - No nombres a ningún cliente de PRIME, ni real ni inventado: describe por rubro ("una empresa de servicios").
 - Nunca uses la palabra "monopolio": di "el número uno" o "la categoría que creó".

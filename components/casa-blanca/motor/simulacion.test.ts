@@ -362,8 +362,8 @@ seccion("reunir / agregarLineas / cerrar")
 // ── irA: manda hasta el próximo cambio de horario ──
 seccion("irA")
 {
-  // A las 20:00 amodei está en el Jardín Sur; su horario cambia a las 22:00.
-  const sim = new Simulacion(PERSONAJES, ESPECIALES, { minutos: 20 * 60, semilla: 4 })
+  // A las 19:00 amodei está en el Jardín Sur; su horario cambia a las 22:00.
+  const sim = new Simulacion(PERSONAJES, ESPECIALES, { minutos: 19 * 60, semilla: 4 })
   let ahora = 0
   sim.irA("amodei", "jardin-norte", "Mira la fachada")
   ok(sim.pj.amodei.destinoId === "jardin-norte" && sim.pj.amodei.actividad === "Mira la fachada", "irA cambia destino y actividad")

@@ -95,6 +95,8 @@ export interface OpcionesSimulacion {
 // ── Constantes ────────────────────────────────────────────────
 
 const VEL_CAMINA = 1.4
+/** Paso apurado: sigue caminando, pero rápido. Antes de correr, se apura. */
+const VEL_APURADO = 2.1
 const VEL_CORRE = 3.5
 /** Cada tramo de ascensor dura 4 s (con el mismo reloj que el paso de los personajes). */
 const ASCENSOR_S = 4
@@ -110,8 +112,9 @@ const ESPERA_GUION_S = 20
 const SILENCIO_MAX_S = 120
 /** Después de conversar, cada uno descansa 15 s antes de la próxima charla de guion. */
 const DESCANSO_CONV_S = 15
-/** Un lugar no arranca otra charla de guion antes de 9 s. */
+/** Un lugar no arranca otra charla de guion antes de 9 s, salvo que haya gente de sobra para otro grupo. */
 const ENFRIA_LUGAR_S = 9
+const GENTE_PARA_OTRO_GRUPO = 4
 const CADA_CONV_S = 2
 const PROB_CONV = 0.4
 const PROB_ESPECIAL = 0.7
@@ -122,8 +125,13 @@ const PENSAR_MS = 4200
 const RADIO_CHARLA = 25
 /** A menos de 3,5 m del otro ya se está conversando: nadie se mueve. */
 const CERCA_CHARLA = 3.5
-/** Si caminando gastaría más del 60 % de lo que dura su actividad, va corriendo. */
-const UMBRAL_TARDE = 0.6
+/** Al llegar, se para a menos de 30 m del acceso: en un jardín de 120 m nadie cruza todo para quedarse en la otra punta. */
+const RADIO_LLEGADA = 30
+/**
+ * Si a paso normal llegaría con menos del 15 % de su actividad por delante, se
+ * apura; si ni apurado llega, corre. Más bajo y media casa corre todo el día.
+ */
+const UMBRAL_TARDE = 0.85
 const PASO_MAX_S = 0.1
 const DT_MAX_S = 1
 const MINUTOS_INICIO = 17 * 60 + 30
@@ -459,6 +467,9 @@ export function escritorioDe(p: Personaje, personajes: Personaje[]): { lugarId: 
 
 // ── Estado interno ────────────────────────────────────────────
 
+type Ritmo = "paso" | "apurado" | "corre"
+const VEL: Record<Ritmo, number> = { paso: VEL_CAMINA, apurado: VEL_APURADO, corre: VEL_CORRE }
+
 /** Un punto del recorrido. `nodo` = es un nodo del grafo; `entra` = al llegar aquí, entra a ese lugar. */
 interface Tramo {
   p: Vec3
@@ -488,7 +499,7 @@ interface Interno {
   /** El estado del cuerpo cuando está quieto en su lugar. */
   base: EstadoCuerpo
   fantasma: boolean
-  corre: boolean
+  ritmo: Ritmo
   vagar: number
   libreDesde: number
   recientes: string[]
@@ -600,7 +611,7 @@ export class Simulacion {
         meta: null,
         base: "quieto",
         fantasma: false,
-        corre: false,
+        ritmo: "paso",
         vagar: 2 + this.rand() * 8,
         libreDesde: 0,
         recientes: [],
@@ -648,6 +659,7 @@ export class Simulacion {
     this.sacarDeConv(id)
     s.manual = { lugarId, actividad: (typeof actividad === "string" && actividad.trim()) || `Visita: ${l.nombre}` }
     this.aplicarHorario(id)
+    this.refrescar()
   }
 
   /** Junta a varios en un lugar y abre una conversación sin líneas (la IA o el guion las agregan). */
@@ -664,7 +676,9 @@ export class Simulacion {
       s.base = "quieto"
       this.pj[id].actividad = tit ?? `Reunión · ${l.nombre}`
     }
-    return this.abrir(l, quienes, { auto: false, lineas: [], abierta: true, titulo: tit, tema: null, formacion: "centro", espera: ESPERA_REUNION_S, corre: true })
+    const conv = this.abrir(l, quienes, { auto: false, lineas: [], abierta: true, titulo: tit, tema: null, formacion: "centro", espera: ESPERA_REUNION_S, corre: true })
+    this.refrescar()
+    return conv
   }
 
   /** Agrega líneas a una conversación abierta. Solo cuentan las de quienes participan. */
@@ -687,7 +701,10 @@ export class Simulacion {
     if (typeof resumen === "string" && resumen.trim()) ci.resumen = resumen.trim()
     if (Array.isArray(afinidad))
       ci.deltas = afinidad.filter((d) => d && typeof d.a === "string" && typeof d.b === "string" && Number.isFinite(d.delta))
-    if (!ci.conv.lineas.length) this.terminar(ci)
+    if (!ci.conv.lineas.length) {
+      this.terminar(ci)
+      this.refrescar()
+    }
   }
 
   /** Una conversación de guion a mano: si no están en el lugar, van. */
@@ -701,7 +718,9 @@ export class Simulacion {
       const s = this.int[id]
       if (s.base === "duerme") s.base = "quieto"
     }
-    return this.abrir(l, quienes, { auto: false, lineas: g.lineas, abierta: false, tema: g.tema, formacion: "ancla", espera: ESPERA_REUNION_S, corre: false })
+    const conv = this.abrir(l, quienes, { auto: false, lineas: g.lineas, abierta: false, tema: g.tema, formacion: "ancla", espera: ESPERA_REUNION_S, corre: false })
+    this.refrescar()
+    return conv
   }
 
   recordar(id: string, texto: string): void {
@@ -790,12 +809,12 @@ export class Simulacion {
         const ent = s.horario[s.entrada]
         if (guardado && (!ent || ent[1] !== guardado.id)) {
           // Aparece donde estaba y, si su horario dice otra cosa, camina hacia allá.
-          this.colocar(id, guardado, this.puntoLibre(guardado, id), null)
+          this.colocar(id, guardado, this.puntoDeLlegada(guardado, id), null)
           this.aplicarHorario(id)
         } else this.aplicarHorario(id, true)
       }
       this.marcaHora = this.horaAbsoluta()
-      for (const id of this.ids) this.actualizarVista(id, Math.max(0, this.reloj.velocidad))
+      this.refrescar()
     } catch {
       // Datos rotos: queda lo que ya se pudo cargar.
     }
@@ -899,11 +918,11 @@ export class Simulacion {
     e.actividad = actividad
     s.fantasma = marca === "fantasma"
     s.base = estadoBase(s.p, l, actividad, marca)
-    s.corre = s.base === "corre"
+    s.ritmo = s.base === "corre" ? "corre" : "paso"
     const esc = marca === "trabaja" ? escritorioDe(s.p, this.personajes) : null
     const escritorio = esc && esc.lugarId === l.id ? esc : null
     if (forzar) {
-      this.colocar(id, l, escritorio ? copia(escritorio.pos) : this.puntoLibre(l, id), escritorio ? escritorio.rumbo : null)
+      this.colocar(id, l, escritorio ? copia(escritorio.pos) : this.puntoDeLlegada(l, id), escritorio ? escritorio.rumbo : null)
       return
     }
     if (s.zona === l.id && !s.viaje) {
@@ -917,15 +936,15 @@ export class Simulacion {
       }
       return
     }
-    this.planear(id, l, escritorio ? copia(escritorio.pos) : this.puntoLibre(l, id), escritorio ? escritorio.rumbo : null)
-    // Si caminando no llega a tiempo para hacer lo suyo, corre.
-    if (!s.corre && !s.manual && this.vaTarde(id)) s.corre = true
+    this.planear(id, l, escritorio ? copia(escritorio.pos) : this.puntoDeLlegada(l, id), escritorio ? escritorio.rumbo : null)
+    // Si a paso normal no llega a tiempo para hacer lo suyo, se apura o corre.
+    if (s.ritmo === "paso" && !s.manual) s.ritmo = this.ritmoParaLlegar(id)
   }
 
-  private vaTarde(id: string) {
+  private ritmoParaLlegar(id: string): Ritmo {
     const s = this.int[id]
     const v = this.reloj.velocidad
-    if (!(v > 0) || s.horario.length < 2) return false
+    if (!(v > 0) || s.horario.length < 2) return "paso"
     let largo = 0
     let ascensores = 0
     let prev = this.pj[id].pos
@@ -934,7 +953,6 @@ export class Simulacion {
       else largo += dist3(prev, t.p)
       prev = t.p
     }
-    const segundos = (largo / VEL_CAMINA + ascensores * ASCENSOR_S) / Math.sqrt(v)
     const m = this.reloj.minutos
     let proxima = Infinity
     for (const ent of s.horario) {
@@ -942,7 +960,9 @@ export class Simulacion {
       if (em > m + 1e-6) proxima = Math.min(proxima, em)
     }
     if (proxima === Infinity) proxima = s.horario[0][0] * 60 + 1440
-    return segundos > UMBRAL_TARDE * ((proxima - m) / v)
+    const disponibles = UMBRAL_TARDE * ((proxima - m) / v)
+    const llega = (vel: number) => (largo / vel + ascensores * ASCENSOR_S) / Math.sqrt(v) <= disponibles
+    return llega(VEL_CAMINA) ? "paso" : llega(VEL_APURADO) ? "apurado" : "corre"
   }
 
   // ── Movimiento ──
@@ -1061,7 +1081,7 @@ export class Simulacion {
           this.alcanzar(id, w)
         }
       } else {
-        const vel = s.corre ? VEL_CORRE : VEL_CAMINA
+        const vel = VEL[s.ritmo]
         const dx = w.p.x - e.pos.x
         const dy = w.p.y - e.pos.y
         const dz = w.p.z - e.pos.z
@@ -1107,7 +1127,7 @@ export class Simulacion {
     const e = this.pj[id]
     const s = this.int[id]
     if (s.meta && s.meta.rumbo != null) e.rumbo = s.meta.rumbo
-    s.corre = s.base === "corre"
+    s.ritmo = s.base === "corre" ? "corre" : "paso"
     const ci = e.conversacionId ? this.convs.get(e.conversacionId) : undefined
     if (ci) this.orientar(ci)
   }
@@ -1120,7 +1140,7 @@ export class Simulacion {
     const l = LUGAR[s.zona]
     if (!l || l.interior) return
     if (s.base === "corre") {
-      s.corre = true
+      s.ritmo = "corre"
       this.planear(id, l, this.puntoLibre(l, id), null)
       return
     }
@@ -1130,9 +1150,14 @@ export class Simulacion {
     const deporte = s.base === "deporte"
     s.vagar = deporte ? 3 + this.rand() * 5 : 6 + this.rand() * 10
     if (this.rand() < 0.6) {
-      s.corre = false
+      s.ritmo = "paso"
       this.planear(id, l, this.puntoLibre(l, id, { p: e.pos, radio: deporte ? 5 : 8 }), null)
     }
+  }
+
+  private puntoDeLlegada(l: Lugar, yo: string): Vec3 {
+    const acc = NODO[l.acceso]
+    return this.puntoLibre(l, yo, acc ? { p: acc.p, radio: RADIO_LLEGADA } : undefined)
   }
 
   /** Un punto libre dentro del lugar: a 1 m o más de los demás y de los escritorios ajenos. */
@@ -1178,6 +1203,12 @@ export class Simulacion {
     return d
   }
 
+  /** Deja `pj` al día después de una llamada de la interfaz (sin esperar al próximo paso). */
+  private refrescar() {
+    const v = Number.isFinite(this.reloj.velocidad) && this.reloj.velocidad > 0 ? this.reloj.velocidad : 0
+    for (const id of this.ids) this.actualizarVista(id, v)
+  }
+
   private actualizarVista(id: string, v: number) {
     const e = this.pj[id]
     const s = this.int[id]
@@ -1188,8 +1219,8 @@ export class Simulacion {
         e.estado = "ascensor"
         e.velocidad = 0
       } else {
-        e.estado = s.corre ? "corre" : "camina"
-        e.velocidad = (s.corre ? VEL_CORRE : VEL_CAMINA) * Math.sqrt(v)
+        e.estado = s.ritmo === "corre" ? "corre" : "camina"
+        e.velocidad = VEL[s.ritmo] * Math.sqrt(v)
       }
     } else {
       const l = s.zona ? LUGAR[s.zona] : undefined
@@ -1197,7 +1228,7 @@ export class Simulacion {
       e.visible = l ? !l.interior : !nodo?.oculto
       e.velocidad = 0
       const ci = e.conversacionId ? this.convs.get(e.conversacionId) : undefined
-      e.estado = ci && !ci.esperando ? "habla" : s.base
+      e.estado = ci && !ci.esperando ? "habla" : s.base === "corre" ? "quieto" : s.base
     }
     e.lugarId = s.viaje ? null : s.zona
     e.destinoId = s.meta?.lugarId ?? e.lugarId
@@ -1266,7 +1297,7 @@ export class Simulacion {
           }
           const spot = this.puestoEnAnillo(l, centro, e.pos, tomados, 1.5, id)
           tomados.push(spot)
-          this.int[id].corre = corre
+          this.int[id].ritmo = corre ? "corre" : "paso"
           this.planear(id, l, spot, null)
         }
         ci.centro = centro
@@ -1283,7 +1314,7 @@ export class Simulacion {
     orden.forEach((id, k) => {
       const ang = a0 + (k * Math.PI * 2) / Math.max(1, n)
       const spot = { x: centro.x + Math.sin(ang) * radio, y: l.y, z: centro.z + Math.cos(ang) * radio }
-      this.int[id].corre = corre
+      this.int[id].ritmo = corre ? "corre" : "paso"
       this.planear(id, l, spot, Math.atan2(centro.x - spot.x, centro.z - spot.z))
     })
     ci.centro = centro
@@ -1477,7 +1508,7 @@ export class Simulacion {
     }
     for (const [lugarId, ids] of porLugar) {
       if (ids.length < 2) continue
-      if ((this.enfriaLugar[lugarId] ?? 0) > this.tReal) continue
+      if ((this.enfriaLugar[lugarId] ?? 0) > this.tReal && ids.length < GENTE_PARA_OTRO_GRUPO) continue
       if (this.rand() > PROB_CONV) continue
       const grupo = this.elegirGrupo(ids)
       if (!grupo) continue

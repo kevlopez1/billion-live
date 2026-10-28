@@ -4,8 +4,9 @@
 //
 // Orden: escena (HDR lineal) → bloom → OutputPass (ACES + sRGB) → gradación
 // (en espacio de pantalla, como un LUT) → tilt-shift → FXAA. El antialias de
-// la geometría en calidad alta es MSAA x4 en el render target de la escena;
-// en media y baja, FXAA al final.
+// la geometría en calidad alta es MSAA x4 solo en el búfer de la escena (un
+// pase propio: los búferes del composer no se multiplican por 4); en media y
+// baja, FXAA al final.
 // ──────────────────────────────────────────────────────────────
 
 import * as THREE from "three"
@@ -15,6 +16,8 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js"
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js"
 import { FXAAPass } from "three/examples/jsm/postprocessing/FXAAPass.js"
+import { FullScreenQuad, Pass } from "three/examples/jsm/postprocessing/Pass.js"
+import { CopyShader } from "three/examples/jsm/shaders/CopyShader.js"
 import type { Calidad } from "../tipos"
 import type { Ambiente } from "./motor-cielo"
 
@@ -110,6 +113,45 @@ void main() {
 }`,
 }
 
+/** Dibuja la escena en un búfer con MSAA y lo copia al composer (solo calidad alta). */
+class PaseEscenaMSAA extends Pass {
+  private readonly rt: THREE.WebGLRenderTarget
+  private readonly copia: FullScreenQuad
+  private readonly material: THREE.ShaderMaterial
+  constructor(
+    private readonly scene: THREE.Scene,
+    private readonly camara: THREE.Camera,
+  ) {
+    super()
+    this.needsSwap = false
+    this.rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 })
+    this.material = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.clone(CopyShader.uniforms),
+      vertexShader: CopyShader.vertexShader,
+      fragmentShader: CopyShader.fragmentShader,
+      depthTest: false,
+      depthWrite: false,
+    })
+    this.copia = new FullScreenQuad(this.material)
+  }
+  setSize(ancho: number, alto: number) {
+    this.rt.setSize(ancho, alto)
+  }
+  render(renderer: THREE.WebGLRenderer, _escritura: THREE.WebGLRenderTarget, lectura: THREE.WebGLRenderTarget) {
+    renderer.setRenderTarget(this.rt)
+    renderer.clear()
+    renderer.render(this.scene, this.camara)
+    this.material.uniforms.tDiffuse.value = this.rt.texture
+    renderer.setRenderTarget(this.renderToScreen ? null : lectura)
+    this.copia.render(renderer)
+  }
+  dispose() {
+    this.rt.dispose()
+    this.material.dispose()
+    this.copia.dispose()
+  }
+}
+
 export class Post {
   readonly composer: EffectComposer
   private readonly bloom: UnrealBloomPass | null
@@ -117,19 +159,14 @@ export class Post {
   private readonly tiltH: ShaderPass
   private readonly tiltV: ShaderPass
   private readonly fxaa: FXAAPass | null
-  private readonly destino: THREE.WebGLRenderTarget
   private ancho = 1
   private alto = 1
   private pr = 1
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camara: THREE.Camera, calidad: Calidad) {
     const tam = renderer.getDrawingBufferSize(new THREE.Vector2())
-    this.destino = new THREE.WebGLRenderTarget(Math.max(1, tam.x), Math.max(1, tam.y), {
-      type: THREE.HalfFloatType,
-      samples: calidad === "alta" ? 4 : 0,
-    })
-    this.composer = new EffectComposer(renderer, this.destino)
-    this.composer.addPass(new RenderPass(scene, camara))
+    this.composer = new EffectComposer(renderer)
+    this.composer.addPass(calidad === "alta" ? new PaseEscenaMSAA(scene, camara) : new RenderPass(scene, camara))
     this.bloom = calidad === "baja" ? null : new UnrealBloomPass(new THREE.Vector2(tam.x, tam.y), 0.3, 0.45, 1.3)
     if (this.bloom) this.composer.addPass(this.bloom)
     this.composer.addPass(new OutputPass())
@@ -197,6 +234,5 @@ export class Post {
   dispose() {
     for (const p of this.composer.passes) p.dispose()
     this.composer.dispose()
-    this.destino.dispose()
   }
 }
