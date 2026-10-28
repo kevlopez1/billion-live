@@ -712,6 +712,7 @@ export class ControlCamara {
   private salirDeCine() {
     if (this.cine) {
       this.cine = null
+      this.velo = 0
       this.deps.setMaqueta(false)
     }
   }
@@ -787,6 +788,10 @@ export class ControlCamara {
       this.actualizarCine(dt)
       return
     }
+    if (this.viaje) {
+      this.actualizarViaje(dt)
+      return
+    }
     if (this.enfoque) {
       const e = this.enfoque
       e.t += dt
@@ -812,14 +817,18 @@ export class ControlCamara {
       const t = Math.min(1, c.t)
       const n = this.nivelDeToma(toma, t)
       if (n !== this.deps.nivel()) {
-        c.cambiando = true
-        this.deps.fundir(() => {
-          this.deps.aplicarNivel(n)
-          if (this.cine) this.cine.cambiando = false
-        })
+        if (toma.ascensor) this.deps.aplicarNivel(n)
+        else {
+          c.cambiando = true
+          this.deps.fundir(() => {
+            this.deps.aplicarNivel(n)
+            if (this.cine) this.cine.cambiando = false
+          })
+        }
       }
       if (!toma.pose(t, this.pose, this.ctxToma(), dt)) c.t = 1
       else this.ponerPose(this.pose)
+      this.velo = toma.ascensor ? veloCruce(this.pose.pos.y) : 0
       if (c.t >= 1) {
         const sig = c.fija ? c.i : (c.i + 1) % TOMAS.length
         this.empezarToma(sig)
@@ -897,10 +906,11 @@ export class ControlCamara {
       if (dentro && p.y < dentro.alto + 2) p.y = dentro.alto + 2
     } else if (this.modo === "nivel") {
       const y = ALTURA_NIVEL[n]
-      const S2 = HUELLAS.subsuelo
+      const S2 = n === "ciudad" ? HUELLAS.ciudad : HUELLAS.subsuelo
       t.x = Math.min(S2.x1 + 5, Math.max(S2.x0 - 5, t.x))
       t.z = Math.min(S2.z1 + 5, Math.max(S2.z0 - 5, t.z))
       t.y = y
+      if (this.camara.position.y < y + 1.5) this.camara.position.y = y + 1.5
     }
     // Plano cercano según la distancia: precisión de profundidad de cerca y de lejos.
     const d = this.camara.position.distanceTo(t)
@@ -941,3 +951,4 @@ const _v = new THREE.Vector3()
 const _v2 = new THREE.Vector3()
 const _v3 = new THREE.Vector3()
 const _esf = new THREE.Spherical()
+const _pt = nuevaPose()

@@ -17,12 +17,15 @@ import type { Avatar, CtxEscena, Escena, ModoCamara, Subsuelo, Toque } from "./c
 import { crearMateriales, type MaterialesMotor } from "./materiales"
 import { Cielo } from "./motor-cielo"
 import { Post } from "./motor-post"
-import { ControlCamara, TOMAS_CINE, type InfoPersonaje } from "./motor-camara"
+import { ControlCamara, TOMAS_CINE, poseEnfoque, type InfoPersonaje } from "./motor-camara"
 import { construirArquitectura } from "./arquitectura"
 import { construirPaisaje } from "./paisaje"
 import { construirSubsuelo } from "./subsuelo"
+import { ambienteCiudad, construirCiudad, type AmbienteCiudad } from "./ciudad"
+import { construirNavegacion } from "./navegacion"
 import { crearAvatar } from "./avatares"
 import { HUELLAS } from "../lugares"
+import type { Ambiente } from "./motor-cielo"
 
 /**
  * Cajas de los edificios de la superficie, para no mostrar la etiqueta de
@@ -77,6 +80,14 @@ export interface EscenaMotor extends Escena {
   tomaActual(): string | null
   /** El modo de cámara actual. */
   camara(): ModoCamara
+  /**
+   * Muestra un lugar entero: si está en otro nivel, la cámara viaja por el
+   * ascensor y sale encuadrándolo. `centro` y `distancia` salen de
+   * navegacion.encuadreDe().
+   */
+  encuadrar(centro: Vec3, distancia: number): void
+  /** true mientras la cámara baja o sube por el ascensor. */
+  viajando(): boolean
   /** Solo para pruebas y depuración. */
   depurar: {
     /** Fija el avance de la intro (segundos) y quita el fundido. */
@@ -87,14 +98,15 @@ export interface EscenaMotor extends Escena {
   }
 }
 
-const NIVELES: NivelId[] = ["superficie", "n1", "n2", "n3"]
+const NIVELES: NivelId[] = ["superficie", "n1", "n2", "n3", "ciudad"]
 
-/** El nivel al que pertenece una altura (superficie si y > -4, n1 si -12 < y ≤ -4…). */
+/** El nivel al que pertenece una altura (superficie si y > -4, n1 si -12 < y ≤ -4… y la ciudad por debajo de -40). */
 export function nivelDeY(y: number): NivelId {
   if (y > -4) return "superficie"
   if (y > -12) return "n1"
   if (y > -20) return "n2"
-  return "n3"
+  if (y > -40) return "n3"
+  return "ciudad"
 }
 
 const PIXEL_RATIO: Record<Calidad, number> = { alta: 1.5, media: 1.5, baja: 1 }
@@ -213,6 +225,10 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
   const sol = cielo.sol
   const fondoSub = fondoInterior()
   const nieblaSub = new THREE.FogExp2(0x070b12, 0.0022)
+  // La ciudad: su luz sale de ambienteCiudad(hora) (escena/ciudad.ts), como la superficie sale del cielo.
+  const nieblaCiudad = new THREE.FogExp2(0x0b1016, 0.0036)
+  let ambCiudad: AmbienteCiudad | null = null
+  const ambientePost: Ambiente = { hora: 17.5, noche: 0, elevacion: 0, exposicion: 1, bloom: { fuerza: 0.4, umbral: 0.9, radio: 0.5 } }
 
   // ── Registro del contexto ──
   const alCuadro: Array<(t: TickEscena) => void> = []
@@ -249,6 +265,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
   intentar("construirArquitectura", () => construirArquitectura(ctx))
   intentar("construirPaisaje", () => construirPaisaje(ctx))
   const subsuelo: Subsuelo | null = intentar("construirSubsuelo", () => construirSubsuelo(ctx))
+  intentar("construirCiudad", () => construirCiudad(ctx))
+  // Letreros, pasillos marcados y el pabellón del ascensor: después de todo lo demás, encima.
+  intentar("construirNavegacion", () => construirNavegacion(ctx))
 
   const avatares = new Map<string, Avatar>()
   const porRaiz = new Map<THREE.Object3D, string>()
@@ -337,7 +356,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
     cielo.cielo.visible = sup
     cielo.nubes.visible = sup
     scene.background = sup ? null : fondoSub
-    scene.fog = sup ? cielo.niebla : nieblaSub
+    scene.fog = sup ? cielo.niebla : n === "ciudad" ? nieblaCiudad : nieblaSub
     camara.encuadrarNivel(n, desde)
     horaSucia = true
   }
@@ -371,14 +390,30 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
   let post = new Post(renderer, scene, cam, calidad)
 
   // ── Hora ──
+  // Subsuelo: luz de estudio baja y cálida, con poco relleno. Con más luz el
+  // concreto claro se lavaba a blanco y la maqueta se veía plana.
   const ambienteInterior = () => {
-    sol.color.set("#fff1df")
-    sol.intensity = 2.6
-    cielo.luzDir.set(0.38, 1, -0.3).normalize()
-    cielo.hemi.color.set("#dbe5ff")
-    cielo.hemi.groundColor.set("#2b2723")
-    cielo.hemi.intensity = 0.6
-    renderer.toneMappingExposure = 1.0
+    sol.color.set("#ffe9d2")
+    sol.intensity = 1.55
+    cielo.luzDir.set(0.42, 1, -0.55).normalize()
+    cielo.hemi.color.set("#c9d6f2")
+    cielo.hemi.groundColor.set("#1c1a18")
+    cielo.hemi.intensity = 0.3
+    renderer.toneMappingExposure = 0.9
+  }
+
+  /** La ciudad: sol del cielo artificial, hemisferio, niebla y exposición de ambienteCiudad. */
+  const aplicarCiudad = (h: number) => {
+    const a = (ambCiudad = ambienteCiudad(h, ambCiudad ?? undefined))
+    sol.color.copy(a.sol.color)
+    sol.intensity = a.sol.intensidad
+    cielo.luzDir.copy(a.sol.dir)
+    cielo.hemi.color.copy(a.hemi.cielo)
+    cielo.hemi.groundColor.copy(a.hemi.suelo)
+    cielo.hemi.intensity = a.hemi.intensidad
+    nieblaCiudad.color.copy(a.niebla.color)
+    renderer.toneMappingExposure = a.exposicion
+    return a
   }
 
   const aplicarHora = (tiempoReal: number) => {
@@ -393,10 +428,14 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       renderer.toneMappingExposure = a.exposicion
       env = cielo.entorno(tiempoReal)
       intensidadEnv = cielo.intensidadEntorno
+    } else if (nivelActual === "ciudad") {
+      const c = aplicarCiudad(hora)
+      env = cielo.entornoInterior()
+      intensidadEnv = c.entorno
     } else {
       ambienteInterior()
       env = cielo.entornoInterior()
-      intensidadEnv = 0.6
+      intensidadEnv = 0.32
     }
     scene.environment = env
     scene.environmentIntensity = intensidadEnv
@@ -446,6 +485,12 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       cam.getWorldDirection(_ejeX)
       _ejeX.y = 0
       if (_ejeX.lengthSq() > 1e-6) _centro.addScaledVector(_ejeX.normalize(), mitad * 0.35)
+    } else if (nivelActual === "ciudad") {
+      // La caverna entera cabe en 420 m; de cerca, la sombra se ajusta a lo que se ve.
+      mitad = Math.min(210, Math.max(40, d * 0.75))
+      mitad = Math.pow(2, Math.round(Math.log2(mitad) * 4) / 4)
+      const C = HUELLAS.ciudad
+      _centro.set(Math.min(C.x1, Math.max(C.x0, t.x)), ALTURA_NIVEL.ciudad, Math.min(C.z1, Math.max(C.z0, t.z)))
     } else {
       mitad = 105
       _centro.set(0, ALTURA_NIVEL[nivelActual], 80)
@@ -651,7 +696,18 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
     } else fundido = 0
     maquetaMezcla += ((maquetaOn ? 1 : 0) - maquetaMezcla) * (1 - Math.exp(-5 * dt))
     if (Math.abs(maquetaMezcla - (maquetaOn ? 1 : 0)) < 0.002) maquetaMezcla = maquetaOn ? 1 : 0
-    post.aplicar(cielo.ambiente, maquetaMezcla, fundido, tiempo, nivelActual !== "superficie")
+    const velo = Math.max(fundido, camara.velo)
+    if (nivelActual === "ciudad" && ambCiudad) {
+      // La ciudad tiene su propia noche (la del cielo artificial) y su bloom.
+      ambientePost.hora = ambCiudad.hora
+      ambientePost.noche = ambCiudad.noche
+      ambientePost.exposicion = ambCiudad.exposicion
+      ambientePost.bloom = ambCiudad.bloom
+      // Vista de maqueta (la cámara alta, fuera de la bóveda): menos bruma, o la caverna se pierde.
+      const lejos = cam.position.distanceTo(camara.controles.target)
+      nieblaCiudad.density = ambCiudad.niebla.densidad * Math.min(1, Math.max(0.3, 130 / Math.max(1, lejos)))
+      post.aplicar(ambientePost, maquetaMezcla, velo, tiempo, false)
+    } else post.aplicar(cielo.ambiente, maquetaMezcla, velo, tiempo, nivelActual !== "superficie")
     post.render(dt)
     medirFps(dtReal)
   }
@@ -797,8 +853,10 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       }
     },
     mostrarNivel(n) {
-      if (n === nivelActual && !trans) return
-      fundir(() => aplicarNivel(n))
+      if (n === nivelActual && !trans && !camara.viajando) return
+      // Con la cámara libre, se baja (o sube) por el ascensor; en cine o siguiendo a alguien, fundido.
+      if (camara.puedeViajar) camara.viajar(n)
+      else fundir(() => aplicarNivel(n))
     },
     nivel: () => nivelActual,
     intro() {
@@ -818,13 +876,23 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
     enfocar(p, distancia = 40) {
       const n = nivelDeY(p.y)
       const destino = new THREE.Vector3(p.x, p.y, p.z)
-      if (n !== nivelActual) {
+      if ((n !== nivelActual || camara.viajando) && camara.puedeViajar) camara.viajar(n, poseEnfoque(destino, distancia, n))
+      else if (n !== nivelActual) {
         fundir(() => {
           aplicarNivel(n)
           camara.enfocar(destino, distancia)
         })
       } else camara.enfocar(destino, distancia)
     },
+    encuadrar(p, distancia) {
+      const n = nivelDeY(p.y)
+      const destino = new THREE.Vector3(p.x, p.y, p.z)
+      // Salir de cine o de seguir: encuadrar un lugar es mirar el lugar, no seguir a alguien.
+      if (!camara.puedeViajar) camara.setModo(n === "superficie" ? "dron" : "nivel")
+      if (n !== nivelActual || camara.viajando) camara.viajar(n, poseEnfoque(destino, distancia, n))
+      else camara.enfocar(destino, distancia)
+    },
+    viajando: () => camara.viajando,
     actualizarPersonajes(lista) {
       for (const e of lista) {
         const previo = estados.get(e.id)
