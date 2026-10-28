@@ -17,7 +17,7 @@ import type { Avatar, CtxEscena, Escena, ModoCamara, Subsuelo, Toque } from "./c
 import { crearMateriales, type MaterialesMotor } from "./materiales"
 import { Cielo } from "./motor-cielo"
 import { Post } from "./motor-post"
-import { ControlCamara, TOMAS_CINE, poseEnfoque, type InfoPersonaje } from "./motor-camara"
+import { ControlCamara, TOMAS_CINE, poseEnfoque, type InfoPersonaje, type OpcionesCamara } from "./motor-camara"
 import { construirArquitectura } from "./arquitectura"
 import { construirPaisaje } from "./paisaje"
 import { construirSubsuelo } from "./subsuelo"
@@ -67,15 +67,41 @@ function tapado(a: THREE.Vector3, b: THREE.Vector3): boolean {
 }
 
 export { TOMAS_CINE }
+export type { OpcionesCamara }
+
+/**
+ * Opciones de crearEscena. La página viva pasa solo `personajes` (y a veces
+ * `calidad`); el resto es del estudio (/casa-blanca/estudio).
+ */
+export interface OpcionesEscena {
+  personajes: Personaje[]
+  /** Fija la calidad (sin bajadas automáticas). */
+  calidad?: Calidad
+  /** Píxeles del búfer por píxel CSS. Sin él, el de la pantalla con el tope de la calidad. El estudio pasa 1: la salida mide exactamente 1920×1080. */
+  pixelRatio?: number
+  /**
+   * Letreros flotantes de navegación (lugares y "ASCENSOR"). Por defecto se
+   * ven en las vistas libres y en seguir, y nunca en las tomas de cine;
+   * con false no se ven nunca (el estudio).
+   */
+  letreros?: boolean
+}
 
 /** Lo que el motor ofrece además del contrato Escena. */
 export interface EscenaMotor extends Escena {
   /** Modo maqueta: tilt-shift, más saturación y contraste (una toma del modo grabación y un botón). */
-  modoMaqueta(on: boolean): void
   /** Si el modo maqueta está prendido. */
   maqueta(): boolean
   /** Las tomas del modo grabación, para el selector. `modoCamara("cine", id)` fija una. */
   tomas(): ReadonlyArray<{ id: string; nombre: string; duracion: number }>
+  /**
+   * Como en Escena, más `opciones` del estudio: `corte` (nivel y pose en el
+   * acto, sin fundido) y `sostener` (una toma fija que termina se queda en su
+   * última pose). Sin opciones, igual que siempre.
+   */
+  modoCamara(modo: ModoCamara, objetivoId?: string, opciones?: OpcionesCamara): void
+  /** Con `corte`, la mezcla del tilt-shift salta al valor final (sin los ~0,8 s de entrada). */
+  modoMaqueta(on: boolean, opciones?: { corte?: boolean }): void
   /** La toma que está corriendo en modo cine (null fuera de cine). */
   tomaActual(): string | null
   /** El modo de cámara actual. */
@@ -83,9 +109,9 @@ export interface EscenaMotor extends Escena {
   /**
    * Muestra un lugar entero: si está en otro nivel, la cámara viaja por el
    * ascensor y sale encuadrándolo. `centro` y `distancia` salen de
-   * navegacion.encuadreDe().
+   * navegacion.encuadreDe(). Con `corte`, sin viaje: el nivel y la pose en el acto.
    */
-  encuadrar(centro: Vec3, distancia: number, lugarId?: string, opciones?: { subir?: number }): void
+  encuadrar(centro: Vec3, distancia: number, lugarId?: string, opciones?: { subir?: number; corte?: boolean }): void
   /** true mientras la cámara baja o sube por el ascensor. */
   viajando(): boolean
   /** Solo para pruebas y depuración. */
@@ -94,7 +120,10 @@ export interface EscenaMotor extends Escena {
     fijarIntro(segundos: number): void
     /** Dibuja un cuadro ya (sin esperar al bucle). */
     cuadro(dt?: number): void
-    info(): { calidad: Calidad; hora: number; noche: number; drawCalls: number; triangulos: number; fps: number }
+    /** El mismo cuadro sin dibujarlo (sin postproceso ni render): avanza cámara, hora, avatares y fundidos `dt` segundos. */
+    avanzar(dt: number): void
+    /** `fundido`: el negro del fundido en curso (0 = ninguno). `velo`: el negro total (fundido y cámara). */
+    info(): { calidad: Calidad; hora: number; noche: number; drawCalls: number; triangulos: number; fps: number; fundido: number; velo: number }
   }
 }
 
@@ -187,7 +216,7 @@ interface EstadoAvatar {
   velocidad: number
 }
 
-export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: Personaje[]; calidad?: Calidad }): EscenaMotor {
+export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena): EscenaMotor {
   let calidad: Calidad = opciones.calidad ?? calidadInicial()
   const automatica = !opciones.calidad
 
@@ -202,7 +231,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
   // PCFSoftShadowMap ya no existe en three 0.186 (avisa y cae a PCF): PCF con radio da la misma suavidad.
   renderer.shadowMap.type = THREE.PCFShadowMap
   renderer.shadowMap.enabled = calidad !== "baja"
-  const pr = () => Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, PIXEL_RATIO[calidad])
+  const pr = () => opciones.pixelRatio ?? Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, PIXEL_RATIO[calidad])
   renderer.setPixelRatio(pr())
 
   // ── Escena y niveles ──
@@ -269,6 +298,11 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
   intentar("construirCiudad", () => construirCiudad(ctx))
   // Letreros, pasillos marcados y el pabellón del ascensor: después de todo lo demás, encima.
   intentar("construirNavegacion", () => construirNavegacion(ctx))
+  // Los letreros flotantes (navegacion.ts los marca): se ocultan en las tomas de cine y en el estudio.
+  const letrerosFlotantes: THREE.Object3D[] = []
+  scene.traverse((o) => {
+    if (o.userData.letreroFlotante) letrerosFlotantes.push(o)
+  })
 
   const avatares = new Map<string, Avatar>()
   const porRaiz = new Map<THREE.Object3D, string>()
@@ -337,7 +371,16 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
   // Transición con fundido a negro: sale, ejecuta la acción en negro, entra.
   let trans: { fase: "sale" | "entra"; t: number; accion: (() => void) | null; durSale: number; durEntra: number } | null = null
   let fundido = 0
-  const fundir = (accion: () => void) => {
+  const fundir = (accion: () => void, corte = false) => {
+    if (corte) {
+      // Corte seco: lo que esperaba en negro corre ya, y no queda fundido.
+      const previa = trans?.accion
+      trans = null
+      fundido = 0
+      if (previa) intentar("transición", previa)
+      accion()
+      return
+    }
     if (trans && trans.fase === "sale") {
       const previa = trans.accion
       trans.accion = () => {
@@ -653,7 +696,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
   let tiempo = 0
   const fallidos = new Set<(t: TickEscena) => void>()
 
-  const cuadro = (dt: number, dtReal: number) => {
+  let verLetreros: boolean | null = null
+  const cuadro = (dt: number, dtReal: number, dibujar = true) => {
     tiempo += dt
     renderer.info.reset()
     camara.actualizar(dt)
@@ -682,6 +726,11 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       }
     }
     if (renderer.shadowMap.enabled) seguirSombra()
+    const letreros = opciones.letreros !== false && camara.modo !== "cine"
+    if (letreros !== verLetreros) {
+      verLetreros = letreros
+      for (const o of letrerosFlotantes) o.visible = letreros
+    }
 
     if (trans) {
       if (trans.fase === "sale") {
@@ -710,6 +759,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       nieblaCiudad.density = ambCiudad.niebla.densidad
       post.aplicar(ambientePost, maquetaMezcla, velo, tiempo, false)
     } else post.aplicar(cielo.ambiente, maquetaMezcla, velo, tiempo, nivelActual !== "superficie")
+    if (!dibujar) return
     post.render(dt)
     medirFps(dtReal)
   }
@@ -873,9 +923,10 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
     saltarIntro() {
       camara.saltarIntro()
     },
-    modoCamara(modo, objetivoId) {
-      camara.setModo(modo, objetivoId)
+    modoCamara(modo, objetivoId, op) {
+      camara.setModo(modo, objetivoId, op)
       if (modo !== "cine") maquetaOn = maquetaManual
+      if (op?.corte) maquetaMezcla = maquetaOn ? 1 : 0
     },
     enfocar(p, distancia = 40) {
       const n = nivelDeY(p.y)
@@ -904,7 +955,10 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
           pose.mira.add(atras)
         }
       }
-      if (n !== nivelActual || camara.viajando) camara.viajar(n, pose)
+      if (opciones?.corte) {
+        camara.cortarA(pose, n)
+        maquetaMezcla = maquetaOn ? 1 : 0
+      } else if (n !== nivelActual || camara.viajando) camara.viajar(n, pose)
       else camara.irAPose(pose)
     },
     viajando: () => camara.viajando,
@@ -990,9 +1044,10 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
         delete (window as unknown as Record<string, unknown>).__casaBlancaEscena
       }
     },
-    modoMaqueta(on) {
+    modoMaqueta(on, op) {
       maquetaManual = on
       maquetaOn = on
+      if (op?.corte) maquetaMezcla = on ? 1 : 0
     },
     maqueta: () => maquetaOn,
     tomas: () => TOMAS_CINE,
@@ -1007,6 +1062,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       cuadro(dt = 1 / 60) {
         cuadro(dt, dt)
       },
+      avanzar(dt) {
+        cuadro(dt, dt, false)
+      },
       info: () => ({
         calidad,
         hora,
@@ -1014,6 +1072,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
         drawCalls: renderer.info.render.calls,
         triangulos: renderer.info.render.triangles,
         fps: Math.round(fps.medio),
+        fundido,
+        velo: Math.max(fundido, camara.velo),
       }),
     },
   }

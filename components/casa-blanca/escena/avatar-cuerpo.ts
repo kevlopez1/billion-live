@@ -49,7 +49,9 @@ export const ANG: number[] = (() => {
 })()
 
 /** Ángulos α de las filas de la cabeza en la columna del frente (grados desde la coronilla). */
-const ALFAS = [0, 8, 16, 24, 32, 39, 46, 52, 57.5, 62.5, 66.5, 70, 73, 75.5, 78, 80.5, 83, 85.5, 88, 90.5, 93, 95.5, 98, 100.5, 103, 105.5, 108, 110.5, 113, 115.5, 118, 120, 122, 124, 126, 128, 130, 132.5, 135, 137.5, 140, 143, 146]
+// Entre 77° y 91° (la franja de los ojos) las filas van cada ~1°: la abertura
+// del ojo mide unos 5° y con filas cada 2,5° el párpado la tapaba (ojos "punto").
+const ALFAS = [0, 8, 16, 24, 32, 39, 46, 52, 57.5, 62.5, 66.5, 70, 73, 75.5, 77.5, 79, 80.2, 81.3, 82.4, 83.5, 84.6, 85.7, 86.8, 87.9, 89.2, 90.8, 93, 95.5, 98, 100.5, 103, 105.5, 108, 110.5, 113, 115.5, 118, 120, 122, 124, 126, 128, 130, 132.5, 135, 137.5, 140, 143, 146]
 const FILAS_CUELLO = 6
 
 /** Tronco masculino de 1,78 m, complexión media: [y/H, medio ancho, frente z, espalda z, z del costado]. */
@@ -1305,9 +1307,14 @@ function mallaParpado(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
       cab.aAvatar(lado * o.x + dx * R, o.y + dy * R, o.z + dz * R, P)
       // Borde oscuro (pestañas/línea) y lagrimal rosado.
       let col: RGBA = [0.96, 0.92, 0.92, 1]
-      if (k <= 1) col = sup ? [0.36, 0.28, 0.27, 1] : [0.86, 0.66, 0.64, 1]
+      // Arriba, las pestañas: una línea casi negra que se afina hacia el lagrimal
+      // (es lo que hace que el ojo se lea a distancia, como en los juegos).
+      const lag = suave(-0.6, -0.95, cp)
+      // (las filas 0–1 miran al globo; la 2 es el canto que se ve de frente)
+      if (k <= 2) col = sup ? [0.09 + 0.3 * lag, 0.07 + 0.22 * lag, 0.07 + 0.22 * lag, 1] : [0.62, 0.46, 0.44, 1]
       if (k <= 1 && cp < -0.85) col = [0.95, 0.68, 0.66, 1]
-      if (k === 2) col = sup ? [0.86, 0.8, 0.79, 1] : [0.94, 0.88, 0.87, 1]
+      if (k === 2 && !sup) col = [0.8, 0.68, 0.66, 1]
+      if (k === 3) col = sup ? [0.5 + 0.35 * lag, 0.43 + 0.35 * lag, 0.43 + 0.35 * lag, 1] : [0.92, 0.85, 0.84, 1]
       // Pesos: la mitad de arriba sigue al párpado cerca del borde.
       const wp = sup * suave(-0.05, 0.25, sp) * (1 - suave(1.2, 1.5, lam))
       const pw: Pesos = [[H.cabeza, 1 - wp]]

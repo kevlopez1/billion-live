@@ -250,6 +250,8 @@ function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max:
   m.renderOrder = op.encima ? 30 : 20
   // No le roban el toque a lo que está debajo.
   m.raycast = () => {}
+  // Son de juego, no del mundo: el motor los oculta en las tomas de cine y en el estudio.
+  m.userData.letreroFlotante = true
   return m
 }
 

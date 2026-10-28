@@ -165,7 +165,7 @@ export class Cabeza {
   private readonly bolsas: number
   private readonly pliegue: boolean
   /** Colores de la piel por zona, como factores sobre el tono base (lineal). */
-  private readonly zonas: { ojos: [number, number, number, number] | null; rubor: [number, number, number, number] | null; labios: [number, number, number] | null }
+  private readonly zonas: { ojos: [number, number, number, number] | null; rubor: [number, number, number, number] | null; labios: [number, number, number] | null; sombra: [number, number, number, number] | null }
   /** Factores del pelo, la barba y las cejas sobre la piel (se calculan una vez). */
   private readonly fPelo: [number, number, number]
   private readonly fBarba: [number, number, number] | null
@@ -207,11 +207,13 @@ export class Cabeza {
     this.Fm = f.fem ? 1 : 0
     this.NK = f.cuerpo.cuelloGrosor
     const o = cara.ojos
-    this.ojo = { x: 0.032 * o.sep * W, y: 0.012, z: 0.0712 - 0.004 * o.hundidos, r: 0.0118 * o.tam }
+    // Globo de 13,4 mm de radio (el real es de 12): con el ojo apenas más grande y la
+    // abertura más ancha, el ojo se lee como ojo y no como un punto.
+    this.ojo = { x: 0.032 * o.sep * W, y: 0.012, z: 0.0702 - 0.004 * o.hundidos, r: 0.0134 * o.tam }
     this.hood = clamp(o.parpado, 0, 1)
     this.bolsas = clamp(o.bolsas, 0, 1)
     this.pliegue = !o.monoparpado
-    this.parpado = { U: 1.08, Vu: 0.36 * o.abierto * (1 - 0.22 * this.hood), Vl: 0.29 * Math.sqrt(Math.max(0.3, o.abierto)), incl: o.incl }
+    this.parpado = { U: 1.28, Vu: 0.42 * o.abierto * (1 - 0.22 * this.hood), Vl: 0.33 * Math.sqrt(Math.max(0.3, o.abierto)), incl: o.incl }
     this.yBoca = -0.06 * L
     this.anchoBoca = 0.024 * this.LW
     const nl = n.largo
@@ -232,6 +234,7 @@ export class Cabeza {
       ojos: f.piel.ojos ? [...fac(f.piel.ojos[0]), f.piel.ojos[1]] : null,
       rubor: f.piel.rubor ? [...fac(f.piel.rubor[0]), f.piel.rubor[1]] : null,
       labios: f.piel.labios ? fac(f.piel.labios) : null,
+      sombra: f.piel.sombraOjos ? [...fac(f.piel.sombraOjos[0]), f.piel.sombraOjos[1]] : null,
     }
     this.fPelo = fac(f.pelo.color)
     this.fBarba = f.barba ? fac(f.barba.color) : null
@@ -260,10 +263,19 @@ export class Cabeza {
       d = smin(d, cono(ax, y, z, 0.05 * W, -0.004, 0.06, 0.068 * W, 0.0, 0.012, 0.009, 0.006), 0.02)
       // Carrillos: más con grasa, caen con la papada.
       // (la grasa ensancha y baja el carrillo entero, no una bola junto a la boca)
-      d = smin(d, elip(ax, y, z, (0.041 + 0.005 * lleno) * W, -0.038 * L - 0.008 * lleno - 0.004 * Pa, 0.064 - 0.006 * lleno, 0.022 + 0.008 * lleno, 0.025 + 0.007 * lleno, 0.026 + 0.003 * lleno), 0.024 + 0.012 * lleno)
+      // (más adentro que antes: con el carrillo tan afuera como el pómulo la cara
+      // era un rectángulo; la cara real es un huevo, angosta abajo)
+      d = smin(d, elip(ax, y, z, (0.036 + 0.007 * lleno) * W, -0.038 * L - 0.008 * lleno - 0.004 * Pa, 0.066 - 0.006 * lleno, 0.021 + 0.009 * lleno, 0.024 + 0.007 * lleno, 0.026 + 0.003 * lleno), 0.024 + 0.012 * lleno)
       // Mejillas hundidas bajo el pómulo.
       // (el elipsoide está fuera de la piel: solo hunde unos mm, -6 mm con mejillas = -1)
-      if (Mj < -0.05) d = smax(d, -elip(ax, y, z, 0.052 * W, -0.04 * L, 0.1, 0.016, 0.022, 0.0118 - 0.0045 * Mj), 0.01)
+      // (mezcla ancha: con 1 cm el borde del hueco se veía como un pliegue o una cicatriz)
+      // Se empuja la superficie hacia adentro con una campana suave (hasta ~5 mm):
+      // un hueco tallado con otro volumen dejaba un escalón que se veía como cicatriz.
+      if (Mj < -0.05) {
+        const gx = (ax - 0.05 * W) / 0.02
+        const gy = (y + 0.045 * L) / 0.024
+        d += -Mj * 0.0052 * Math.exp(-gx * gx - gy * gy) * suave(0.03, 0.07, z)
+      }
       // Carrillos caídos (papada lateral) junto al mentón.
       if (Pa > 0.05) d = smin(d, elip(ax, y, z, 0.047 * W, -0.092 * L - 0.004 * Pa, 0.048, 0.014 + 0.006 * Pa, 0.012 + 0.006 * Pa, 0.02), 0.028)
     }
@@ -271,7 +283,7 @@ export class Cabeza {
       // Mandíbula: de cada ángulo al mentón. Ángulo marcado = mezcla corta.
       const k = this.JK
       const sq = this.MC
-      d = smin(d, cono(ax, y, z, 0.052 * J * W, -0.058 * L - 0.006 * sq, 0.004, 0.019 * Mn * (1 + 0.45 * sq), -0.095 * L, 0.084 + this.MA, 0.0145 + 0.004 * lleno, 0.0145), k)
+      d = smin(d, cono(ax, y, z, 0.05 * J * W, -0.058 * L - 0.006 * sq, 0.004, 0.019 * Mn * (1 + 0.45 * sq), -0.095 * L, 0.084 + this.MA, 0.0145 + 0.004 * lleno, 0.0145), k)
       d = smin(d, elip(x, y, z, 0, -0.064 * L, 0.046, 0.05 * J, 0.033 * L, 0.052), 0.026)
       // Mentón: tamaño, avance y forma cuadrada.
       d = smin(d, elip(x, y, z, 0, -0.092 * L, 0.089 + 0.005 * (Mn - 1) + this.MA, 0.021 * Mn * (1.1 - F * 0.15) * (1 + 0.4 * sq), 0.0165, 0.0165), 0.012)
@@ -362,14 +374,14 @@ export class Cabeza {
 
   /** Oclusión ambiental aproximada (0 = ocluido, 1 = libre) a partir del campo. */
   oclusion(x: number, y: number, z: number, n: THREE.Vector3): number {
+    // Tres distancias (4, 9 y 16 mm): las cuencas, las aletas de la nariz, la
+    // comisura y el surco bajo el labio se oscurecen como en una foto; con
+    // una sola distancia corta la cara quedaba plana bajo el cielo.
     let o = 0
-    let w = 1
-    for (let i = 1; i <= 2; i++) {
-      const h = 0.0055 * i
-      o += w * (h - this.sdf(x + n.x * h, y + n.y * h, z + n.z * h))
-      w *= 0.6
-    }
-    return clamp(1 - o * 8, 0, 1)
+    o += 1.0 * Math.max(0, 0.004 - this.sdf(x + n.x * 0.004, y + n.y * 0.004, z + n.z * 0.004)) / 0.004
+    o += 0.75 * Math.max(0, 0.009 - this.sdf(x + n.x * 0.009, y + n.y * 0.009, z + n.z * 0.009)) / 0.009
+    o += 0.5 * Math.max(0, 0.016 - this.sdf(x + n.x * 0.016, y + n.y * 0.016, z + n.z * 0.016)) / 0.016
+    return clamp(1 - o * 0.5, 0, 1)
   }
 
   /** Distancia `t` del punto de la superficie más externo sobre el rayo o + d·t (t ≤ tMax). */
@@ -522,10 +534,62 @@ export class Cabeza {
     b -= 0.28 * linea
     // Ojeras y párpados
     const o = this.ojo
-    const ojera = campana(ax, o.x, 0.016) * campana(y, o.y - 0.004, 0.012) * frente * (0.6 + this.r.edad * 0.6)
+    const ojera = campana(ax, o.x, 0.016) * campana(y, o.y - 0.008, 0.009) * frente * (0.35 + this.r.edad * 0.5)
     r -= 0.07 * ojera
     g -= 0.09 * ojera
     b -= 0.05 * ojera
+    // Pliegue del párpado de arriba: una línea más oscura unos 5 mm sobre las
+    // pestañas que se apaga hacia las esquinas. Da al ojo su forma a distancia.
+    {
+      const ex = ax - o.x
+      const ey = y - o.y
+      const ez = z - o.z
+      const rr = Math.sqrt(ex * ex + ey * ey + ez * ez)
+      if (rr < o.r + 0.009 && ez > 0 && ey > -0.004) {
+        const pa = this.parpado
+        const u = Math.atan2(ex, ez) / (pa.U * 1.12)
+        const v = Math.atan2(ey, Math.sqrt(ex * ex + ez * ez)) - pa.incl * u
+        const arco = Math.sqrt(Math.max(0, 1 - u * u))
+        const vc = (pa.Vu + 0.3 + 0.08 * this.hood) * arco
+        const k = campana(v, vc, 0.07) * suave(1.0, 0.6, Math.abs(u)) * frente
+        r -= 0.2 * k
+        g -= 0.24 * k
+        b -= 0.22 * k
+        // Párpado móvil (entre las pestañas y el pliegue): apenas más oscuro y rosado.
+        const lid = suave(pa.Vu * arco - 0.02, pa.Vu * arco + 0.06, v) * suave(vc + 0.02, vc - 0.06, v) * suave(1.0, 0.7, Math.abs(u)) * frente
+        r -= 0.04 * lid
+        g -= 0.09 * lid
+        b -= 0.07 * lid
+        // Sombra de color en el párpado (Cleopatra: malaquita).
+        const so = this.zonas.sombra
+        if (so) {
+          const k = suave(pa.Vu * arco - 0.02, pa.Vu * arco + 0.05, v) * suave(vc + 0.1, vc - 0.02, v) * suave(1.15, 0.8, Math.abs(u)) * frente * so[3]
+          r = lerp(r, so[0], k)
+          g = lerp(g, so[1], k)
+          b = lerp(b, so[2], k)
+        }
+      }
+    }
+    // Delineado (kohl): línea negra pegada a las pestañas de arriba y de abajo,
+    // con la cola que sigue hacia la sien desde la esquina de afuera.
+    const del = this.f.piel.delineado
+    if (del > 0.01 && z > 0.04) {
+      const ex = ax - o.x
+      const ey = y - o.y
+      const pa = this.parpado
+      const u = Math.atan2(ex, Math.max(0.001, z - o.z)) / pa.U
+      const v = Math.atan2(ey, Math.sqrt(ex * ex + (z - o.z) ** 2)) - pa.incl * u
+      const lam = Math.sqrt(u * u + (v / (v > 0 ? pa.Vu : pa.Vl)) ** 2)
+      // Anillo alrededor de la abertura (más grueso arriba).
+      let k = campana(lam, v > 0 ? 1.18 : 1.12, v > 0 ? 0.13 : 0.08) * (lam > 1.0 ? 1 : 0)
+      // Cola: desde la esquina de afuera, sube un poco hacia la sien.
+      const cola = (ex - o.r * 0.9) / (o.r * 1.1)
+      if (cola > -0.2 && cola < 1) k = Math.max(k, campana(ey - 0.0035 * Math.max(0, cola), 0.0005, 0.0018) * suave(1, 0.6, cola) * suave(-0.2, 0.1, cola))
+      k *= del
+      r = lerp(r, 0.12, k)
+      g = lerp(g, 0.11, k)
+      b = lerp(b, 0.12, k)
+    }
     // Contorno de los ojos de otro tono (más claro o más oscuro).
     if (zn.ojos) {
       const k = campana(ax, o.x, 0.02) * campana(y, o.y, 0.014) * frente * zn.ojos[3]
@@ -563,7 +627,9 @@ export class Cabeza {
     const ceja = cejaEn(this, x, y, z)
     if (ceja > 0.001) {
       const c = this.fCeja
-      const k = ceja * 0.45
+      // (con 0,45 las cejas se leían como trazos sueltos; la piel de abajo
+      // casi del color de la ceja las vuelve una forma, como en los juegos)
+      const k = ceja * 0.82
       r = lerp(r, c[0], k)
       g = lerp(g, c[1], k)
       b = lerp(b, c[2], k)
@@ -585,7 +651,7 @@ export class Cabeza {
       gg = lerp(gg, c[1], barbaT)
       bb = lerp(bb, c[2], barbaT)
     }
-    const a = 0.55 + 0.45 * ao
+    const a = 0.42 + 0.58 * ao
     return [rr * a, gg * a, bb * a]
   }
 }
@@ -699,7 +765,8 @@ export function peloEn(cab: Cabeza, x: number, y: number, z: number, ph: PeloR =
   m = clamp(m, 0, 1)
   if (m <= 0) return [0, 0]
   const enLado = suave(0.045, 0.06, ax)
-  const arriba = suave(-0.02, 0.07, y)
+  // (arriba empieza más alto: el volumen de la coronilla no baja a las sienes, sin casco)
+  const arriba = suave(0.0, 0.085, y)
   const atras = suave(0.01, -0.07, z)
   const delante = suave(0.02, 0.07, z) * suave(0.02, 0.07, y)
   let g = ph.vBase + ph.vArriba * arriba + ph.vFrente * delante + ph.vLados * enLado + ph.vAtras * atras

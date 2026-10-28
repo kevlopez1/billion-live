@@ -334,7 +334,8 @@ const A = {
   acero: acabado(P.acero, 0.35, 0.8),
   aceroOsc: acabado("#4a525a", 0.4, 0.7),
   blanco: acabado("#f2f5f7", 0.4, 0),
-  rejilla: acabado("#4a5056", 0.55, 0.6, 0.6),
+  // Rejilla de acero galvanizado: clara y poco metálica (con metal alto reflejaba el techo oscuro y se veía negra).
+  rejilla: acabado("#8a939b", 0.5, 0.3, 0.6),
 }
 
 type V2 = [number, number]
@@ -1404,6 +1405,9 @@ function construirPozo(k: Kit, pz: Piezas) {
 
   // La boca del pozo: un cielo raso oscuro con paneles de luz y cañerías.
   k.techo.agregar(horizontal(POZO, TOPE, true), null, A.grafito)
+  // Su cara de arriba (la roca): la cámara del ascensor cruza por encima de la boca justo antes del
+  // fundido a negro, y sin esta tapa se veía el pozo por dentro desde arriba.
+  k.techo.agregar(horizontal({ x0: POZO.x0 - 1, x1: POZO.x1 + 1, z0: POZO.z0 - 1, z1: POZO.z1 + 1 }, TOPE + 0.05), null, A.concretoOsc)
   for (let x = POZO.x0 + 2; x < POZO.x1; x += 4)
     for (let z = POZO.z0 + 2; z < POZO.z1; z += 4) k.luz.agregar(pz.plano, M(x, TOPE - 0.02, z, 0, 1.2, 1.2, 1, Math.PI / 2), luz(P.frio, 3.2))
   for (const z of [16, 28, 40]) tubo(k.base, pz, new THREE.Vector3(POZO.x0, TOPE - 0.7, z), new THREE.Vector3(POZO.x1, TOPE - 0.7, z), 0.3, A.aceroOsc)
@@ -1945,33 +1949,55 @@ type Vista = { pos: [number, number, number]; mira: [number, number, number]; fo
  * piso y mirando un poco hacia abajo (la órbita no pasa de 83° desde arriba).
  */
 export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea" | "torres" | "anden" | "control" | "comedor" | "jardin" | "camara", Vista> = {
-  mirador: { pos: [5.5, Y0 + 9.6, 15.3], mira: [-2.5, Y0 + 0.5, 36], fov: 62 },
-  plaza: { pos: [7, Y0 + 5, 42], mira: [-2, Y0 + 1.5, 22], fov: 64 },
+  // Desde el pie del pozo hacia arriba: el ascensor, el balcón y las galerías (el final del Descenso).
+  mirador: { pos: [5.2, Y0 + 2.0, 41.2], mira: [-0.5, Y0 + 8.6, 24], fov: 60 },
+  // Desde la primera galería (lado oeste, por fuera de las cajas de los ascensores): el atrio abajo y las galerías de enfrente.
+  plaza: { pos: [-8.8, Y0 + 10, 25], mira: [2.5, Y0 + 0.5, 41], fov: 64 },
   avenida: { pos: [1.5, Y0 + 2.9, 94.8], mira: [-0.4, Y0 + 0.1, 76], fov: 60 },
   aerea: { pos: [31, Y0 + 13.5, 107.5], mira: [-4, Y0, 52], fov: 55 },
   torres: { pos: [-5.6, Y0 + 3.6, 91], mira: [-18, Y0 + 0.5, 74], fov: 62 },
   anden: { pos: [-13.2, Y0 + 4.6, 42.8], mira: [-27, Y0 + 0.5, 22], fov: 62 },
-  control: { pos: [11.2, Y0 + 4.6, 38.6], mira: [26, Y0 + 1.5, 25], fov: 64 },
+  // La pantalla curva con el contador, de frente y por el costado del núcleo (que no la tapa).
+  control: { pos: [16, Y0 + 3.2, 34.5], mira: [33.5, Y0 + 3.6, 21.5], fov: 58 },
   comedor: { pos: [5.5, Y0 + 3.6, 66.8], mira: [19, Y0 + 0.6, 54], fov: 62 },
-  jardin: { pos: [5.4, Y0 + 3.6, 92], mira: [18, Y0 + 0.6, 76], fov: 62 },
+  jardin: { pos: [6.2, Y0 + 3.3, 70.2], mira: [21, Y0 + 0.9, 83], fov: 62 },
   camara: { pos: [-12.6, Y0 + 7, 110.6], mira: [4, Y0 + 1.5, 101], fov: 64 },
 }
 
 /**
- * La toma "Descenso a la ciudad" (0 ≤ t ≤ 1): baja por el eje del pozo desde
- * la boca hasta el atrio, girando un cuarto de vuelta mientras las galerías
- * suben por los costados, y termina mirando el ascensor. Devuelve el campo de
- * visión.
+ * La toma "Descenso a la ciudad" (0 ≤ t ≤ 1), como la apertura de la película:
+ * la cámara cae por el vacío del pozo desde la boca, mirando hacia abajo, con
+ * las galerías pasando como anillos y el pozo girando despacio; al llegar al
+ * atrio se endereza y termina mirando hacia arriba, al ascensor y a las
+ * galerías por las que bajó. Va siempre por la parte libre del vacío (al sur
+ * de los ascensores). Devuelve el campo de visión.
+ *
+ * El último cuadro queda cerca de VISTAS_CIUDAD.mirador, que es adonde el
+ * motor la lleva al final de la toma.
  */
+const DESCENSO = {
+  /** Del centro del vacío (al sur de los ascensores) al pie del pozo. */
+  desde: { x: -1.5, z: 30 },
+  hasta: { x: 3.2, z: 40.5 },
+  /** Rumbo (0 = +z) y cabeceo (grados; negativo = hacia abajo). */
+  rumbo: [0.15 * Math.PI, Math.PI],
+  cabeceo: [-78, 20],
+  fov: [70, 60],
+}
 export function tomaDescensoCiudad(t: number, pos: THREE.Vector3, mira: THREE.Vector3): number {
-  const k = t * t * (3 - 2 * t)
-  const ang = THREE.MathUtils.lerp(-0.9, 0.5, k)
-  const r = THREE.MathUtils.lerp(4.2, 6.0, k)
-  const y = THREE.MathUtils.lerp(TOPE - 1.6, Y0 + 3.2, Math.pow(k, 0.9))
-  pos.set(Math.sin(ang) * r, y, 30 + Math.cos(ang) * r)
-  const km = Math.pow(k, 1.6)
-  mira.set(THREE.MathUtils.lerp(0, -1, km), THREE.MathUtils.lerp(TOPE - 18, Y0 + 8.5, km), THREE.MathUtils.lerp(26, 16, km))
-  return THREE.MathUtils.lerp(66, 58, k)
+  const D = DESCENSO
+  const u = Math.min(1, Math.max(0, t))
+  const k = u * u * (3 - 2 * u)
+  // Baja con algo de velocidad desde el primer cuadro (aparece desde el negro ya cayendo).
+  const caida = 0.2 * u + 0.8 * k
+  const y = THREE.MathUtils.lerp(TOPE - 1.3, Y0 + 2.6, caida)
+  const h = smooth(0.25, 1, u)
+  pos.set(THREE.MathUtils.lerp(D.desde.x, D.hasta.x, h), y, THREE.MathUtils.lerp(D.desde.z, D.hasta.z, h))
+  const rumbo = THREE.MathUtils.lerp(D.rumbo[0], D.rumbo[1], k)
+  const cab = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(D.cabeceo[0], D.cabeceo[1], smooth(0.45, 1, u)))
+  const L = 14
+  mira.set(pos.x + Math.sin(rumbo) * Math.cos(cab) * L, pos.y + Math.sin(cab) * L, pos.z + Math.cos(rumbo) * Math.cos(cab) * L)
+  return THREE.MathUtils.lerp(D.fov[0], D.fov[1], k)
 }
 
 export function construirCiudad(ctx: CtxEscena): void {

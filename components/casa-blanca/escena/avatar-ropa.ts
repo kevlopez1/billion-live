@@ -18,6 +18,7 @@ import type { Apariencia, Personaje } from "../tipos"
 import { ANG, Cuerpo, H, M, mallaPie, type Cobertura, type Marco } from "./avatar-cuerpo"
 import { campana, clamp, escalarRGBA, lerp, Lote, rgba, suave, type Mat2, type Pesos, type RGBA } from "./avatar-geo"
 import { peloEn } from "./avatar-cabeza"
+import { vestuarioDe } from "./avatar-fichas"
 import type { Tejido } from "./avatar-texturas"
 
 const DOS_PI = Math.PI * 2
@@ -1126,6 +1127,83 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
   const acc = new Set(ap.accesorios)
   const cab = cu.cab
   const pesoCab = (): Pesos => [[H.cabeza, 1]]
+  // Capucha profunda (hábito del Iluminado): una concha alrededor de la cabeza
+  // que tapa la frente y deja ver solo el tercio de abajo de la cara (la nariz,
+  // la boca y el mentón); cae como cuello sobre los hombros. Dos caras (afuera y
+  // adentro, que se ve por la abertura) y un ribete en el borde.
+  const capucha = vestuarioDe(p.id).capucha
+  if (capucha) {
+    const L = S.lote
+    const ct = rgba(capucha.color)
+    const cr = capucha.ribete ? rgba(capucha.ribete) : ct
+    const NT = 20
+    const NA = 44
+    const centro = new THREE.Vector3(0, 0.012, -0.012)
+    const dir = new THREE.Vector3()
+    const pt = new THREE.Vector3()
+    const FR = Math.PI / 2
+    const hueco = (y: number) => {
+      // Medio ancho (rad) de la abertura de la cara a la altura y (local).
+      // De la línea de los ojos (y ≈ 0) al cuello: la frente y los ojos quedan en la sombra.
+      const e = (y + 0.07) / 0.068
+      return e >= 1 || e <= -1.5 ? 0 : 0.8 * Math.sqrt(Math.max(0, 1 - Math.min(1, e * e)))
+    }
+    const ext: number[][] = []
+    const int: number[][] = []
+    const abierto: boolean[][] = []
+    for (let i = 0; i <= NT; i++) {
+      const th = (i / NT) * (158 * Math.PI) / 180
+      const fe: number[] = []
+      const fi: number[] = []
+      const fa: boolean[] = []
+      for (let k = 0; k < NA; k++) {
+        const a = FR + (k / NA) * DOS_PI
+        dir.set(Math.sin(th) * Math.cos(a), Math.cos(th), Math.sin(th) * Math.sin(a))
+        const t = cab.rayo(centro.x, centro.y, centro.z, dir.x, dir.y, dir.z, 0.2)
+        // Holgura: más arriba y adelante (el pico de la capucha sobresale sobre la frente).
+        const adelante = Math.pow(Math.max(0, Math.sin(a)), 2) * suave(2.0, 1.0, th)
+        const r = Math.max(t, 0.07) + 0.026 + 0.05 * adelante + 0.012 * suave(1.6, 2.6, th)
+        pt.copy(dir).multiplyScalar(r).add(centro)
+        // Abajo, la tela cae hacia los hombros (se abre).
+        const caida = suave(2.0, 2.75, th)
+        pt.x *= 1 + 0.55 * caida
+        pt.z = pt.z * (1 + 0.25 * caida) - 0.01 * caida
+        pt.y -= 0.035 * caida
+        const da = Math.abs(Math.atan2(Math.sin(a - FR), Math.cos(a - FR)))
+        const h = hueco(pt.y)
+        fa.push(da < h)
+        const borde = h > 0.12 && da < h + 0.14
+        const col = borde ? cr : ct
+        const wCuello = suave(-0.07, -0.16, pt.y)
+        const pw: Pesos = wCuello > 0 ? [[H.cabeza, 1 - wCuello], [H.cuello, wCuello * 0.6], [H.pecho, wCuello * 0.4]] : pesoCab()
+        cab.aAvatar(pt.x, pt.y, pt.z, _v)
+        fe.push(L.v(_v.x, _v.y, _v.z, k / NA, i / NT, col, pw, [0.95, 0]))
+        // Adentro: 4 mm hacia el centro, más oscuro (la sombra de la tela).
+        pt.sub(centro).multiplyScalar(1 - 0.004 / Math.max(0.05, pt.length())).add(centro)
+        cab.aAvatar(pt.x, pt.y, pt.z, _v)
+        fi.push(L.v(_v.x, _v.y, _v.z, k / NA, i / NT, borde ? cr : escalarRGBA(ct, 0.55), pw, [0.95, 0]))
+      }
+      ext.push(fe)
+      int.push(fi)
+      abierto.push(fa)
+    }
+    // Orientación: la cara de afuera mira lejos del centro de la cabeza.
+    const P = L.pos
+    const iA = ext[10][NA >> 1], iB = ext[10][(NA >> 1) + 1], iD = ext[11][NA >> 1]
+    const e1 = new THREE.Vector3(P[iB * 3] - P[iA * 3], P[iB * 3 + 1] - P[iA * 3 + 1], P[iB * 3 + 2] - P[iA * 3 + 2])
+    const e2 = new THREE.Vector3(P[iD * 3] - P[iA * 3], P[iD * 3 + 1] - P[iA * 3 + 1], P[iD * 3 + 2] - P[iA * 3 + 2])
+    const cAv = cab.aAvatar(centro.x, centro.y, centro.z, new THREE.Vector3())
+    const rad = new THREE.Vector3(P[iA * 3] - cAv.x, P[iA * 3 + 1] - cAv.y, P[iA * 3 + 2] - cAv.z)
+    const afuera = e1.cross(e2).dot(rad) > 0
+    const emitir = (i: number, j: number) => {
+      const j2 = (j + 1) % NA
+      return !(abierto[i][j] || abierto[i][j2] || abierto[i + 1][j] || abierto[i + 1][j2])
+    }
+    L.tiras(ext, true, { invertir: !afuera, emitir })
+    L.pieza()
+    L.tiras(int, true, { invertir: afuera, emitir })
+    L.pieza()
+  }
   if (acc.has("faja")) banda(-1, 0.075 * s, holgTraje(0.7 * Hh, 0) + 0.004, (w) => (Math.abs(w) > 0.7 ? rgba("#d4aa48") : rgba(ap.ropa.corbata ?? "#1e3a8a")))
   if (acc.has("collar_oro") && tipo !== "vestido_egipcio") {
     const pts: THREE.Vector3[] = []
@@ -1149,9 +1227,17 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     const sol = acc.has("gafas_sol")
     const red = acc.has("gafas_redondas")
     const o = cab.ojo
-    const zL = o.z + o.r + 0.0115
+    // Delante de la piel: con pómulos o cejas salientes el cristal quedaba
+    // detrás de la mejilla y se veía recortado en escalones.
+    let zL = o.z + o.r + 0.0115
+    for (const sx of [0.6, 1, 1.4]) for (const sy of [-0.018, -0.006, 0.008]) {
+      const t = cab.rayo(sx * o.x, o.y + sy, 0, 0, 0, 1, 0.16)
+      zL = Math.max(zL, t + 0.0045)
+    }
     const lote = new Lote()
-    const montura = rgba(red ? "#3a332c" : sol ? "#0f0f10" : "#1c1c1e")
+    // Sin aro (Jobs): solo un filo plateado finísimo que marca el borde del cristal.
+    const sinAro = !!vestuarioDe(p.id).gafasSinAro
+    const montura = rgba(sinAro ? "#b8b8b8" : red ? "#3a332c" : sol ? "#0f0f10" : "#1c1c1e")
     for (const lado of [1, -1] as const) {
       const cx = lado * (o.x + 0.002)
       const cy = o.y - 0.001
@@ -1180,7 +1266,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         lente.push(lote.v(_v.x, _v.y, _v.z, 0, 0, [1, 1, 1, 1], pesoCab(), [0.05, 0]))
       }
       for (let k = 0; k < 24; k++) lote.t(cen, lente[k], lente[(k + 1) % 24])
-      S.cordon(pts, red ? 0.0011 * cab.hs : 0.0017 * cab.hs, montura, MAT_BOTON, pesoCab, true, 5)
+      S.cordon(pts, sinAro ? 0.00045 * cab.hs : red ? 0.0011 * cab.hs : 0.0017 * cab.hs, montura, MAT_BOTON, pesoCab, true, sinAro ? 3 : 5)
       // Patilla hacia la oreja.
       const pat: THREE.Vector3[] = []
       for (let k = 0; k <= 6; k++) {
@@ -1286,45 +1372,93 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         break
       }
       case "bicornio": {
-        // Media luna de fieltro de costado (puntas a los lados), con escarapela.
-        const L = S.lote
-        const n = 24
-        const largo = rx * 2.7
+        // Bicornio "en bataille": media luna de fieltro de ~44 cm de punta a punta
+        // y ~16 cm de alto en el centro, puesto de costado (las puntas sobre los
+        // hombros). Dos caras (adelante y atrás) que se abren abajo para la
+        // cabeza y se juntan arriba y en las puntas; escarapela tricolor a la
+        // izquierda. (Antes medía lo mismo que la cabeza y se leía como gorra.)
+        const largo = Math.max(rx * 2.7, 0.44)
+        const alto = 0.135
+        const y0 = yB - 0.014
+        const forma = (cara: number, t: number, v: number, out: THREE.Vector3) => {
+          const u = 2 * t - 1
+          const x = u * largo * 0.5
+          const tope = y0 + 0.016 + alto * Math.pow(Math.max(0, 1 - u * u), 0.62) - 0.012 * u * u * u * u
+          const y = lerp(y0 + 0.01 * u * u, tope, v)
+          const base = Math.sqrt(Math.max(0, 1 - (x / (rx * 1.04)) ** 2)) * rz * 1.05
+          // Las alas se abren un poco hacia afuera abajo y se curvan al juntarse arriba.
+          const z = -0.004 + cara * ((base + 0.008) * Math.pow(1 - v, 0.8) + 0.004 * Math.sin(Math.PI * v) * (1 - u * u))
+          return cab.aAvatar(x, y, z, out)
+        }
+        const _a = new THREE.Vector3()
+        const _b = new THREE.Vector3()
         for (const cara of [1, -1]) {
-          const fila: number[][] = []
-          for (let i = 0; i <= n; i++) {
-            const t = i / n
-            const x = (t - 0.5) * largo
-            const alto = Math.sqrt(Math.max(0, 1 - (2 * t - 1) ** 2)) * 0.105 + 0.012
-            const cierre = Math.sqrt(Math.sin(Math.PI * t))
-            const col: number[] = []
-            for (let k = 0; k <= 5; k++) {
-              const v = k / 5
-              const y = yB - 0.012 + v * alto
-              const grosorBase = Math.sqrt(Math.max(0, 1 - (x / (rx * 1.02)) ** 2)) * rz * 1.04
-              const z = -0.004 + cara * (lerp(grosorBase + 0.012, 0.0004, Math.pow(v, 0.9)) + 0.0004) * cierre
-              cab.aAvatar(x, y, z, _v)
-              col.push(L.v(_v.x, _v.y, _v.z, t, v, negroF, pesoCab(), [0.75, 0]))
-            }
-            fila.push(col)
-          }
-          // fila[i][k]: i a lo largo, k hacia arriba
-          const ids = fila
-          L.tiras(ids, false, { centros: ids.map((_, i) => cab.aAvatar((i / n - 0.5) * largo, yB + 0.03, -0.004 - cara * 0.2, new THREE.Vector3())) })
-          L.pieza()
+          S.tira({
+            filas: 22,
+            cols: 6,
+            grosor: 0.0035 * hs,
+            pos: (t, w, out) => forma(cara, t, (w + 1) / 2, out),
+            normal: (t, w, out) => {
+              const v = (w + 1) / 2
+              forma(cara, Math.min(1, t + 0.01), v, _a).sub(forma(cara, Math.max(0, t - 0.01), v, _b))
+              const dt = _a.clone()
+              forma(cara, t, Math.min(1, v + 0.02), _a).sub(forma(cara, t, Math.max(0, v - 0.02), _b))
+              out.crossVectors(dt, _a).normalize()
+              if (out.z * cara < 0) out.negate()
+              return out
+            },
+            color: () => negroF,
+            mat: [0.85, 0],
+            pesos: () => pesoCab(),
+          })
         }
-        // Escarapela tricolor al frente izquierdo.
-        const cx = rx * 0.45
-        for (const [r, c] of [[0.022, "#1f3fae"], [0.015, "#f4f4f2"], [0.008, "#c9283a"]] as const) {
-          const pz = -0.004 + Math.sqrt(Math.max(0, 1 - (cx / (rx * 1.02)) ** 2)) * rz * 1.04 * 0.55 + 0.018 + (0.022 - r) * 0.05
-          const p0 = cab.aAvatar(cx, yB + 0.045, pz, new THREE.Vector3())
-          S.boton(p0, new THREE.Vector3(0, 0.15, 1).normalize(), r * hs, 0.0015, rgba(c), [0.7, 0], pesoCab(), 12)
+        // Escarapela tricolor sobre la cara de adelante, del lado izquierdo.
+        const tc = 0.5 + 0.075 / largo
+        const pc = forma(1, tc, 0.58, new THREE.Vector3())
+        const nc = forma(1, tc, 0.6, new THREE.Vector3()).sub(forma(1, tc, 0.56, _b))
+        const tg = forma(1, tc + 0.01, 0.58, _a).sub(pc)
+        const ncar = new THREE.Vector3().crossVectors(tg, nc).normalize()
+        if (ncar.z < 0) ncar.negate()
+        pc.addScaledVector(ncar, 0.004 * hs)
+        for (const [r, c, dz] of [[0.024, "#1f3a8a", 0], [0.016, "#f4f4f2", 0.0016], [0.008, "#c8102e", 0.0032]] as const) {
+          S.boton(pc.clone().addScaledVector(ncar, dz * hs), ncar, r * hs, 0.0016 * hs, rgba(c), [0.7, 0], pesoCab(), 14)
         }
-        altoSombrero = (yB + 0.11 - 0.123) * hs
+        altoSombrero = (y0 + 0.016 + alto - 0.123) * hs
         break
       }
       case "boina": {
-        cilindro([[yB + 0.004, rx + 0.002, rz + 0.002], [yB + 0.016, rx + 0.014, rz + 0.016], [yB + 0.04, rx + 0.024, rz + 0.026], [yB + 0.058, rx + 0.016, rz + 0.018], [yB + 0.066, rx * 0.6, rz * 0.6], [yB + 0.069, 0.001, 0.001]], C2, [0.95, 0], false)
+        // Gorro blando renacentista: banda ceñida y una copa de tela ancha y
+        // floja que cae hacia un costado (como la estatua de los Uffizi), no un disco.
+        const L = S.lote
+        const filas: Array<[y: number, sx: number, sz: number, cae: number]> = [
+          [yB - 0.004, rx + 0.003, rz + 0.003, 0],
+          [yB + 0.012, rx + 0.004, rz + 0.004, 0.1],
+          [yB + 0.026, rx + 0.022, rz + 0.02, 0.45],
+          [yB + 0.042, rx + 0.034, rz + 0.03, 0.8],
+          [yB + 0.06, rx + 0.032, rz + 0.028, 1],
+          [yB + 0.076, rx + 0.016, rz + 0.014, 1],
+          [yB + 0.084, rx * 0.55, rz * 0.55, 1],
+          [yB + 0.087, 0.002, 0.002, 1],
+        ]
+        const col = escalarRGBA(rgba("#2a221d"), 1)
+        const ids: number[][] = []
+        const centros: THREE.Vector3[] = []
+        for (const [y, sx, sz, cae] of filas) {
+          const fila: number[] = []
+          for (let k = 0; k < 32; k++) {
+            const g = (k / 32) * DOS_PI
+            const x = Math.cos(g) * sx + 0.016 * cae
+            const z = -0.004 + Math.sin(g) * sz
+            // Cae hacia la izquierda del personaje (+x) y un poco atrás; pliegues suaves.
+            const yy = y - 0.03 * cae * Math.max(0, x / (rx + 0.03)) - 0.006 * cae * Math.max(0, -Math.sin(g)) + 0.0025 * cae * Math.sin(g * 5)
+            cab.aAvatar(x, yy, z, _v)
+            fila.push(L.v(_v.x, _v.y, _v.z, k / 32, y, col, pesoCab(), [0.95, 0]))
+          }
+          ids.push(fila)
+          centros.push(cab.aAvatar(0.016 * cae, y - 0.01, -0.004, new THREE.Vector3()))
+        }
+        L.tiras(ids, true, { centros })
+        L.pieza()
         altoSombrero = 0.02
         break
       }
@@ -1338,23 +1472,85 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         cilindro([[yB - 0.002, rx + 0.002, rz + 0.002], [yB + 0.016, rx + 0.002, rz + 0.002]], oro, MAT_ORO, false)
         // Ureo (cobra) al frente.
         const base = cab.aAvatar(0, yB + 0.012, rz + 0.002 - 0.004, new THREE.Vector3())
-        const pts = [base, cab.aAvatar(0, yB + 0.03, rz + 0.012 - 0.004, new THREE.Vector3()), cab.aAvatar(0, yB + 0.046, rz + 0.01 - 0.004, new THREE.Vector3()), cab.aAvatar(0, yB + 0.05, rz + 0.016 - 0.004, new THREE.Vector3())]
-        S.cordon(pts, 0.0045 * hs, oro, MAT_ORO, pesoCab, false, 6)
+        // Ureo: la cobra erguida (~5 cm), con el cuerpo en S y la capucha abierta.
+        const pts = [base, cab.aAvatar(0, yB + 0.022, rz + 0.012 - 0.004, new THREE.Vector3()), cab.aAvatar(0, yB + 0.036, rz + 0.006 - 0.004, new THREE.Vector3()), cab.aAvatar(0, yB + 0.05, rz + 0.012 - 0.004, new THREE.Vector3())]
+        S.cordon(pts, 0.0062 * hs, oro, MAT_ORO, pesoCab, false, 8)
+        const capu = cab.aAvatar(0, yB + 0.044, rz + 0.012 - 0.004, new THREE.Vector3())
+        S.boton(capu, new THREE.Vector3(0, 0.25, 1).normalize(), 0.013 * hs, 0.003 * hs, oro, MAT_ORO, pesoCab(), 12)
+        const cabeza = cab.aAvatar(0, yB + 0.058, rz + 0.016 - 0.004, new THREE.Vector3())
+        S.boton(cabeza, new THREE.Vector3(0, 0.5, 1).normalize(), 0.006 * hs, 0.004 * hs, oro, MAT_ORO, pesoCab(), 8)
         altoSombrero = 0
         break
       }
       case "laurel": {
-        const verde = rgba("#3f6b2a")
-        for (let k = 0; k < 26; k++) {
-          const g = (k / 26) * DOS_PI
-          if (Math.sin(g) > 0.92) continue
-          const lado = Math.cos(g) >= 0 ? 1 : -1
-          const y = yB + 0.004 + 0.006 * Math.sin(g)
-          const p0 = cab.aAvatar(Math.cos(g) * (rx + 0.002), y, -0.004 + Math.sin(g) * (rz + 0.002), new THREE.Vector3())
-          const dir = new THREE.Vector3(-Math.sin(g) * lado, 0.55, Math.cos(g) * lado).normalize()
-          const p1 = p0.clone().addScaledVector(dir, 0.026 * hs)
-          S.cordon([p0, p0.clone().lerp(p1, 0.5).add(new THREE.Vector3(Math.cos(g) * 0.004, 0, Math.sin(g) * 0.004)), p1], 0.0042 * hs, k % 3 ? verde : escalarRGBA(verde, 1.25), [0.55, 0], pesoCab, false, 4)
+        // Corona de laurel: dos ramas que nacen en la nuca (atadas con una
+        // cinta) y se encuentran sobre la frente; hojas de ~3 cm en dos hileras,
+        // apoyadas sobre el pelo y abiertas hacia arriba. Cada hoja es un rombo
+        // con nervio (dos caras), no un trazo: así se lee como laurel a distancia.
+        const L = S.lote
+        const verdes = [rgba("#4f6b2a"), rgba("#5d7a32"), rgba("#43602a")]
+        const yL = yB + 0.006
+        const ra = rx + 0.006
+        const rb = rz + 0.006
+        const radial = new THREE.Vector3()
+        const tang = new THREE.Vector3()
+        const dir = new THREE.Vector3()
+        const lat = new THREE.Vector3()
+        const pt = (g: number, out: THREE.Vector3) => cab.aAvatar(Math.cos(g) * ra, yL + 0.008 * Math.sin(g), -0.004 + Math.sin(g) * rb, out)
+        const p0 = new THREE.Vector3()
+        const p1 = new THREE.Vector3()
+        let n = 0
+        for (const lado of [1, -1]) {
+          // g: ángulo alrededor de la cabeza (π/2 = frente). De la nuca (-π/2) hacia la frente.
+          const nHojas = 13
+          for (let i = 0; i < nHojas; i++) {
+            const f = i / (nHojas - 1)
+            const g = lado > 0 ? lerp(-Math.PI / 2 + 0.12, Math.PI / 2 - 0.2, f) : lerp(-Math.PI / 2 - 0.12, -Math.PI * 1.5 + 0.2, f)
+            pt(g, p0)
+            // Hacia la frente siguiendo el aro.
+            pt(g + (lado > 0 ? 0.05 : -0.05), p1)
+            tang.subVectors(p1, p0).normalize()
+            radial.set(Math.cos(g), 0, Math.sin(g))
+            for (const fila of [1, -1]) {
+              const largo = (0.03 + 0.004 * Math.sin(i * 2.3)) * hs * (fila > 0 ? 1 : 0.85)
+              const ancho = 0.012 * hs * (fila > 0 ? 1 : 0.85)
+              dir.copy(tang).multiplyScalar(0.8).addScaledVector(new THREE.Vector3(0, 1, 0), fila > 0 ? 0.55 : -0.2).addScaledVector(radial, 0.12).normalize()
+              lat.crossVectors(dir, radial).normalize()
+              const base = p0.clone().addScaledVector(radial, 0.002 * hs).addScaledVector(new THREE.Vector3(0, 1, 0), fila > 0 ? 0.002 * hs : -0.002 * hs)
+              const punta = base.clone().addScaledVector(dir, largo).addScaledVector(radial, 0.004 * hs)
+              const medio = base.clone().addScaledVector(dir, largo * 0.42).addScaledVector(radial, 0.0035 * hs)
+              const c = verdes[(n++) % 3]
+              const pw = pesoCab()
+              const m1 = medio.clone().addScaledVector(lat, ancho * 0.5)
+              const m2 = medio.clone().addScaledVector(lat, -ancho * 0.5)
+              medio.addScaledVector(radial, 0.0012 * hs)
+              // Las dos caras (sin material de doble cara): la de atrás con sus propios
+              // vértices, apenas hundidos, para que las normales no se anulen al soldar.
+              for (const cara of [1, -1]) {
+                const k = cara > 0 ? 0 : -0.0007 * hs
+                const vb = L.v(base.x + radial.x * k, base.y, base.z + radial.z * k, 0, 0, c, pw, [0.55, 0])
+                const vp = L.v(punta.x + radial.x * k, punta.y, punta.z + radial.z * k, 0, 1, c, pw, [0.55, 0])
+                const vm = L.v(medio.x + radial.x * k, medio.y, medio.z + radial.z * k, 0.5, 0.42, escalarRGBA(c, cara > 0 ? 1.15 : 0.8), pw, [0.5, 0])
+                const v1 = L.v(m1.x + radial.x * k, m1.y, m1.z + radial.z * k, 1, 0.42, c, pw, [0.55, 0])
+                const v2 = L.v(m2.x + radial.x * k, m2.y, m2.z + radial.z * k, 0, 0.42, c, pw, [0.55, 0])
+                // Afuera: la normal mira lejos de la cabeza (se comprueba con el radial).
+                const e1 = new THREE.Vector3().subVectors(m1, base)
+                const e2 = new THREE.Vector3().subVectors(punta, base)
+                const afuera = e1.cross(e2).dot(radial) * cara > 0
+                if (afuera) { L.t(vb, v1, vm); L.t(vm, v1, vp); L.t(vb, vm, v2); L.t(vm, vp, v2) }
+                else { L.t(vb, vm, v1); L.t(vm, vp, v1); L.t(vb, v2, vm); L.t(vm, v2, vp) }
+              }
+            }
+          }
         }
+        // Cinta atada en la nuca.
+        const nudo = pt(-Math.PI / 2, new THREE.Vector3())
+        const cinta = rgba("#b8a36a")
+        for (const lado of [1, -1]) {
+          const pts = [nudo.clone(), nudo.clone().add(new THREE.Vector3(lado * 0.012 * hs, -0.03 * hs, -0.006 * hs)), nudo.clone().add(new THREE.Vector3(lado * 0.02 * hs, -0.07 * hs, -0.012 * hs))]
+          S.cordon(pts, 0.003 * hs, cinta, [0.6, 0], pesoCab, false, 4)
+        }
+        L.pieza()
         altoSombrero = 0
         break
       }

@@ -139,6 +139,10 @@ export interface FichaPiel {
   manchas?: number
   /** Brillo de la piel (0..1: cabeza rapada, sudor). */
   brillo?: number
+  /** Delineado negro (kohl) alrededor del ojo, con la cola hacia la sien (0..1). */
+  delineado?: number
+  /** Sombra de color sobre el párpado móvil: color y cuánto (0..1). */
+  sombraOjos?: [string, number]
 }
 
 export interface FichaPelo {
@@ -325,7 +329,7 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#E6A97E", ojos: ["#EDBF9C", 0.25], rubor: ["#D98F70", 0.3], cuerpo: "#EBBC98" },
     iris: "#6f8aa0",
-    pelo: { color: "#E3BE78", puntas: "#F2DCA6", bajo: "#C29A5A", volumen: { base: 0.006, arriba: 0.012, lados: 0.001 }, copete: { alto: 0.032, avance: 0.03 }, linea: { alto: 0.6, entradas: 0.5, nuca: -0.3, cubreOrejas: 0 }, borde: 0.15, remolino: "coronilla", largo: 0 },
+    pelo: { color: "#DDAC66", puntas: "#EFCD92", bajo: "#B5874C", volumen: { base: 0.004, arriba: 0.012, lados: 0 }, copete: { alto: 0.032, avance: 0.03 }, linea: { alto: 0.6, entradas: 0.5, nuca: -0.3, cubreOrejas: 0 }, borde: 0.15, remolino: "coronilla", largo: 0 },
     barba: { densidad: 0 },
     cejas: { color: "#CDAE78", grosor: 0.6, densidad: 0.45, largo: 0.85, arco: 0.25 },
   },
@@ -408,7 +412,7 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#EDC6A8", rubor: ["#E4B394", 0.25] },
     iris: "#5f7a80",
-    pelo: { color: "#3B2C22", puntas: "#5A4636", canasSienes: 0.25, volumen: { base: 0.007, arriba: 0.022, frente: 0.012, lados: 0.002, atras: 0.002 }, copete: { alto: 0.012, avance: 0.004 }, linea: { entradas: 0.45, alto: 0.3, flequillo: 0 }, raya: null, remolino: "frente", borde: 0.4, rizo: 0.15 },
+    pelo: { color: "#3B2C22", puntas: "#5A4636", canasSienes: 0.25, volumen: { base: 0.0028, arriba: 0.02, frente: 0.01, lados: 0, atras: 0.001 }, copete: { alto: 0.014, avance: 0.004 }, linea: { entradas: 0.45, alto: 0.3, flequillo: 0 }, raya: null, remolino: "frente", borde: 0.4, rizo: 0.15 },
     barba: { densidad: 0.15, color: "#6A5A50" },
     cejas: { color: "#3E2E24", grosor: 1.05, arco: 0.15, alto: -0.15 },
   },
@@ -443,7 +447,7 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#ECC6A6", rubor: ["#E2B496", 0.25] },
     iris: "#4A3828",
-    pelo: { color: "#34251C", rizo: 0.9, frecRizo: 1.2, volumen: { base: 0.018, arriba: 0.035, lados: 0.025, atras: 0.02, frente: 0.02 }, linea: { cubreOrejas: 0.5, entradas: 0.1 }, borde: 0.2 },
+    pelo: { color: "#3A2A20", puntas: "#5A4232", bajo: "#24180F", rizo: 0.9, frecRizo: 1.2, volumen: { base: 0.012, arriba: 0.022, lados: 0.013, atras: 0.012, frente: 0.014 }, linea: { cubreOrejas: 0.5, entradas: 0.1 }, borde: 0.2 },
     barba: { densidad: 0.25, color: "#4A3A30" },
     cejas: { color: "#2E2018", grosor: 1.25, densidad: 1, arco: 0.3 },
   },
@@ -544,7 +548,7 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#E7C09E", rubor: ["#DDB08C", 0.25] },
     iris: "#4A3E36",
-    pelo: { color: "#C8C4BC", bajo: "#8E8A84", puntas: "#D8D4CC", rizo: 1, frecRizo: 1.3, volumen: { base: 0.03, arriba: 0.06, lados: 0.06, atras: 0.04, frente: 0.025 }, linea: { cubreOrejas: 0.7, entradas: 0.3 }, borde: 0.2 },
+    pelo: { color: "#CBC5BA", bajo: "#9A948A", puntas: "#DCD6CB", rizo: 0.55, frecRizo: 1.3, volumen: { base: 0.022, arriba: 0.042, lados: 0.04, atras: 0.03, frente: 0.018 }, linea: { cubreOrejas: 0.7, entradas: 0.3 }, borde: 0.2 },
     barba: { densidad: 0 },
     cejas: { color: "#4A4440", grosor: 1.3, densidad: 1, arco: 0.45, alto: 0.15, pobladas: 0.3 },
   },
@@ -625,7 +629,7 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#E6C2A0" },
     iris: "#3B2A1E",
-    pelo: { color: "#3E2B1F", volumen: { base: 0.008, arriba: 0.03, frente: 0.022, lados: 0.004, atras: 0.008 }, copete: { alto: 0.015, avance: 0 }, ondas: 0.3, rizo: 0.15, remolino: "frente", linea: { recta: 0.4, entradas: 0.05 }, borde: 0.35, raya: null },
+    pelo: { color: "#3E2B1F", puntas: "#5A4030", volumen: { base: 0.0045, arriba: 0.018, frente: 0.012, lados: 0.001, atras: 0.006 }, copete: { alto: 0.01, avance: 0 }, ondas: 0.3, rizo: 0.15, remolino: "frente", linea: { recta: 0.4, entradas: 0.05 }, borde: 0.35, raya: null },
     barba: { color: "#3A2A1E", densidad: 0.3 },
     cejas: { color: "#2E2018", grosor: 1.2, arco: 0.15 },
   },
@@ -689,9 +693,9 @@ export const FICHAS: Record<string, Ficha> = {
       nariz: { largo: 1.02, puente: 0.75, gancho: 0.2, ancho: 0.92, proy: 1.05 },
       labios: { superior: 1.15, inferior: 1.2 },
     },
-    piel: { base: "#C99A70", ojos: ["#2a2c38", 0.3], labios: "#A85A4E" },
+    piel: { base: "#C99A70", labios: "#A85A4E", delineado: 1, sombraOjos: ["#2F6B4F", 0.6] },
     iris: "#2E1E14",
-    pelo: { color: "#121212", puntas: "#2a2a2e", largo: 0.09, linea: { flequillo: 1, cubreOrejas: 1 }, borde: 0.15, raya: null, volumen: { base: 0.01, arriba: 0.008, lados: 0.006 } },
+    pelo: { color: "#121212", puntas: "#2a2a2e", largo: 0.15, linea: { flequillo: 1, cubreOrejas: 1 }, borde: 0.1, raya: null, volumen: { base: 0.009, arriba: 0.006, lados: 0.008 } },
     cejas: { color: "#141414", grosor: 0.9, arco: 0.55 },
   },
 
@@ -906,6 +910,8 @@ export interface PielR {
   labios: string | null
   manchas: number
   brillo: number
+  delineado: number
+  sombraOjos: [string, number] | null
 }
 
 export interface FichaR {
@@ -1088,6 +1094,27 @@ export function resolverFicha(p: Personaje): FichaR {
     orejas: { tam: cor.tam ?? v(0.08) * (1 + edad * 0.08), despegadas: cor.despegadas ?? 0.2, lobulo: cor.lobulo ?? 1 + edad * 0.2 },
   }
 
+  // ── Acento ──
+  // Con los valores tal cual, las 24 caras salían del mismo molde (en pantalla
+  // una cara 6 % más ancha no se nota). Se acentúa la diferencia con la media
+  // —sin pasar a caricatura: cada medida tiene tope— y la nariz de todos crece
+  // un poco (se leía chica a la distancia de juego).
+  const ac = (x: number, k: number, lo: number, hi: number) => clamp(1 + (x - 1) * k, lo, hi)
+  cara.ancho = ac(cara.ancho, 1.6, 0.84, 1.2)
+  cara.largo = ac(cara.largo, 1.6, 0.86, 1.2)
+  cara.mandibula = ac(cara.mandibula, 1.6, 0.75, 1.35)
+  cara.menton = ac(cara.menton, 1.5, 0.7, 1.4)
+  cara.pomulos = ac(cara.pomulos, 1.4, 0.75, 1.45)
+  cara.mejillas = clamp(cara.mejillas * 1.25, -1, 1)
+  cara.papada = clamp(cara.papada * 1.2, 0, 1)
+  cara.ojos.tam = ac(cara.ojos.tam, 1.4, 0.8, 1.25)
+  cara.nariz.largo = ac(cara.nariz.largo, 1.6, 0.8, 1.35) * 1.06
+  cara.nariz.ancho = ac(cara.nariz.ancho, 1.5, 0.8, 1.35)
+  cara.nariz.punta = ac(cara.nariz.punta, 1.4, 0.8, 1.35) * 1.05
+  cara.nariz.proy = ac(cara.nariz.proy, 1.6, 0.75, 1.35) * 1.08
+  cara.labios.superior = ac(cara.labios.superior, 1.4, 0.45, 1.5)
+  cara.labios.inferior = ac(cara.labios.inferior, 1.4, 0.55, 1.6)
+
   // ── Piel y ojos ──
   const fp = f.piel ?? {}
   const piel: PielR = {
@@ -1098,6 +1125,8 @@ export function resolverFicha(p: Personaje): FichaR {
     labios: fp.labios ?? null,
     manchas: fp.manchas ?? clamp((edad - 0.6) * 1.5, 0, 0.6),
     brillo: fp.brillo ?? 0,
+    delineado: fp.delineado ?? 0,
+    sombraOjos: fp.sombraOjos ?? null,
   }
   const claro = g1.l > 0.42 && g1.s > 0.15 && !canasAp
   const irisClaros = ["#5f86a8", "#6b8f7a", "#7d6a45", "#4f7795"]

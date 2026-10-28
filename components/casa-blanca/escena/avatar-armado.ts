@@ -113,7 +113,9 @@ export function crearAvatarReal(original: Personaje): Avatar {
   } else {
     piel(lPiel.geometria(), matPiel(cu.rasgos.f.piel.base))
     piel(ropa.lote.geometria(), matRopa(ropa.tejido, ropa.numero))
-    piel(lPelo.geometria(), matPelo(cu.rasgos.f.pelo.color))
+    // El pelo no proyecta sombra: con alfa recortado, las hebras dejaban manchas
+    // de "tierra" en la frente y en las mejillas (mapa de sombras a 2 mm).
+    piel(lPelo.geometria(), matPelo(cu.rasgos.f.pelo.color, cu.rasgos.f.pelo.rizo >= 0.6), false)
     piel(lOjos.geometria(), matOjo(cu.rasgos.iris, cu.rasgos.f.esclera), false)
     if (ropa.lentes) piel(ropa.lentes.lote.geometria(), matLente(ropa.lentes.sol), false)
     if (ropa.utileria) utileria = piel(ropa.utileria.geometria(), matRopa(ropa.tejido, ropa.numero))

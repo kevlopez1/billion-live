@@ -168,6 +168,58 @@ export function texPelo(): THREE.Texture {
   })
 }
 
+/**
+ * Pelo rizado: bucles apretados (discos con su brillo y una espiral oscura)
+ * sobre un fondo casi transparente. Con las capas de afuera casi opacas, la
+ * silueta queda hecha de bucles —no de hebras sueltas— y el interior de la
+ * mata se lee como rizos (Marco Aurelio, Sócrates, Karp, Amodei).
+ * Se repite en u y v (sin costuras).
+ */
+export function texRizos(): THREE.Texture {
+  return una("rizos", () => {
+    const n = 256
+    const rnd = azar(211)
+    const L = new Float32Array(n * n).fill(0.45)
+    const A = new Float32Array(n * n).fill(0.14)
+    const hondo = new Float32Array(n * n).fill(-1)
+    for (let c = 0; c < 240; c++) {
+      const cx = rnd() * n
+      const cy = rnd() * n
+      const r = 8 + rnd() * 6
+      const fase = rnd() * 6.28
+      const z0 = rnd()
+      for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
+        for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {
+          const d = Math.hypot(dx, dy) / r
+          if (d > 1) continue
+          const x = (Math.floor(cx + dx) % n + n) % n
+          const y = (Math.floor(cy + dy) % n + n) % n
+          const i = y * n + x
+          // Cada bucle tapa a los de abajo (el de "z" mayor queda arriba).
+          const zz = z0 + (1 - d) * 0.6
+          if (zz < hondo[i]) continue
+          hondo[i] = zz
+          // Bola iluminada desde arriba a la izquierda, con una espiral más oscura.
+          const nz = Math.sqrt(Math.max(0, 1 - d * d))
+          const luz = Math.max(0, (-dx / r) * 0.45 + (-dy / r) * 0.55 + nz * 0.7)
+          const espiral = 0.86 + 0.14 * Math.cos(Math.atan2(dy, dx) * 2 + d * 9 + fase)
+          L[i] = (0.66 + 0.34 * luz) * espiral * (0.85 + 0.15 * (1 - d))
+          A[i] = d < 0.82 ? 1 : 1 - (d - 0.82) / 0.18
+        }
+      }
+    }
+    const px = new Uint8ClampedArray(n * n * 4)
+    for (let i = 0; i < n * n; i++) {
+      px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = Math.min(255, L[i] * 255)
+      px[i * 4 + 3] = Math.min(255, A[i] * 255)
+    }
+    const t = textura(n, px, { color: true, anisotropia: ANISO })
+    // Las UV del pelo dan ~7 x 11 cm por vuelta de textura: así cada bucle mide ~1,5–2 cm.
+    t.repeat.set(0.4, 0.55)
+    return t
+  })
+}
+
 /** Ojo: iris y esclerótica en coordenadas polares (fila = ángulo desde el frente). */
 export function texOjo(iris: string, esclera = "#ece6de"): THREE.Texture {
   return una(`ojo-${iris}-${esclera}`, () => {

@@ -81,6 +81,8 @@ function pelo(lote: Lote, cu: Cuerpo, ph: PeloR, filas: FilaCabeza[], sem: numbe
   const gros: Float64Array[] = []
   let gMax = 0
   const frec = 190 * ph.frecRizo
+  // Con la textura de bucles (ficha rizo ≥ 0,6) el fondo es casi transparente: la capa de adentro tapa sola.
+  const rizado = ph.rizo >= 0.6
   for (let i = 0; i < nF; i++) {
     const f = filas[i]
     const fm = new Float64Array(M)
@@ -90,8 +92,8 @@ function pelo(lote: Lote, cu: Cuerpo, ph: PeloR, filas: FilaCabeza[], sem: numbe
       let [m, g] = peloEn(cab, l.x, l.y, l.z, ph)
       if (m > 0) {
         // Bajo el sombrero, el pelo se aplasta.
-        if (op.bajoSombrero && op.sombreroY !== undefined && l.y > op.sombreroY) g *= 0.5
-        if (ph.rizo > 0) g += ph.rizo * 0.0085 * (0.55 + 0.45 * rizos(l.x, l.y, l.z, frec, sem)) * suave(0, 0.5, m)
+        if (op.bajoSombrero && op.sombreroY !== undefined && l.y > op.sombreroY) g *= 0.5 * suave(op.sombreroY + 0.03, op.sombreroY, l.y) + 0.12
+        if (ph.rizo > 0) g += ph.rizo * (rizado ? 0.004 : 0.0085) * (0.55 + 0.45 * rizos(l.x, l.y, l.z, frec, sem)) * suave(0, 0.5, m)
         // Borde: canto grueso (copete, rizos) o se afina hasta la piel.
         g *= suave(0, 0.08 + 0.7 * ph.borde, m)
       }
@@ -168,7 +170,10 @@ function pelo(lote: Lote, cu: Cuerpo, ph: PeloR, filas: FilaCabeza[], sem: numbe
         col = conCanas(col, ph.canas + ph.canasSienes * suave(0.04, 0.065, Math.abs(l.x)) * suave(0.06, 0.0, l.y) * suave(-0.03, 0.02, l.z), ruido)
         const kk = nuca * (0.9 + 0.1 * ruido) * (interior ? 0.85 : 1)
         // Alfa: la capa de adentro tapa (alfa > 1: sin huecos); las de afuera, hebras.
-        const a = interior ? suave(0.04, 0.55, m) * 2.4 : suave(0.0, 0.45, m) * (exterior ? 1.3 : 1.6)
+        // (las de afuera, casi opacas: con alfa 1,3 la silueta se deshilachaba en
+        // tiras sueltas; la hebra se lee en el color de la textura, no en huecos.
+        // En el borde —la línea del pelo— siguen sueltas.)
+        const a = interior ? suave(0.04, 0.55, m) * (rizado ? 8 : 2.4) : suave(0.0, 0.45, m) * (exterior ? 2.05 : 2.3) * lerp(0.62, 1, suave(0.45, 0.9, m))
         fila.push(lote.v(_v.x, _v.y, _v.z, u, v, [col[0] * kk, col[1] * kk, col[2] * kk, a], cu.pesosCabeza(l), [interior ? 0.6 : 0.5, 0]))
         fm.push(m)
       }
@@ -328,6 +333,8 @@ function mono(lote: Lote, cu: Cuerpo, ph: PeloR) {
 
 function barba(lote: Lote, cu: Cuerpo, b: BarbaR, filas: FilaCabeza[], sem: number) {
   const cab = cu.cab
+  // El material del pelo (y de la barba) usa la textura de bucles si el pelo es rizado.
+  const rizado = cu.rasgos.f.pelo.rizo >= 0.6
   const nF = filas.length
   const cB = rgba(b.color)
   // Puntas de la barba algo más claras (la luz atraviesa las puntas).
@@ -375,8 +382,10 @@ function barba(lote: Lote, cu: Cuerpo, b: BarbaR, filas: FilaCabeza[], sem: numb
         const k = interior ? 0.85 : 0.95 + 0.15 * ruido
         col = [col[0] * k, col[1] * k, col[2] * k, 1]
         // Borde: la de adentro tapa, la de afuera deja ver hebras.
-        const a = interior ? suave(0.15, 0.6, m) * 2 * b.densidad : suave(0.02, 0.55, m) * 0.95 * b.densidad
-        fila.push(lote.v(_v.x, _v.y, _v.z, ANG[j] * 4 + c * 0.31, l.y * 12, [col[0], col[1], col[2], a], cu.pesosCabeza(l), [0.62, 0]))
+        // (la de afuera, casi opaca salvo en el borde: con 0,95 la barba era una
+        // mancha oscura con hebras sueltas alrededor; con bucles, tapa la de adentro)
+        const a = interior ? suave(0.15, 0.6, m) * (rizado ? 8 : 2) * b.densidad : suave(0.02, 0.55, m) * lerp(0.95, 1.7, suave(0.5, 0.95, m)) * b.densidad
+        fila.push(lote.v(_v.x, _v.y, _v.z, ANG[j] * (rizado ? 1.4 : 4) + c * 0.31, l.y * (rizado ? 18 : 12), [col[0], col[1], col[2], a], cu.pesosCabeza(l), [0.62, 0]))
       }
       ids.push(fila)
       mk.push(fm)

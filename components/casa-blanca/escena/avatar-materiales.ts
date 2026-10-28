@@ -15,7 +15,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import * as THREE from "three"
-import { texArrugas, texNumero, texOjo, texPelo, texPielColor, texPielNormal, texTela, type Tejido } from "./avatar-texturas"
+import { texArrugas, texNumero, texOjo, texPelo, texPielColor, texPielNormal, texRizos, texTela, type Tejido } from "./avatar-texturas"
 
 /** Lee la rugosidad y el metal del vértice (atributo aMat) y, si hay color de dispersión, envuelve la luz. */
 function inyectar(m: THREE.MeshPhysicalMaterial, sss: THREE.Color | null) {
@@ -77,9 +77,18 @@ export function matPiel(color: string): THREE.MeshPhysicalMaterial {
   // pierde el tono). Se baja la luminancia de las pieles claras y se les
   // devuelve un poco de saturación; las oscuras quedan casi igual, menos el
   // naranja.
-  const claro = THREE.MathUtils.smoothstep(hsl.l, 0.3, 0.82)
-  const alb = new THREE.Color().setHSL(hsl.h, Math.min(1, hsl.s * (1 + 0.12 * claro) * (1 - 0.18 * (1 - claro))), hsl.l)
-  alb.multiplyScalar(1 - 0.3 * claro)
+  //
+  // Calibrado con el banco de ajuste (2026-10-28): se midió el color de la
+  // mejilla al sol (9:00 y 12:00, cámara 3/4) de los 22 residentes con cinco
+  // escalas de albedo y se buscó, por canal, el albedo que da el tono de la
+  // ficha. El cielo azul (hemisferio + entorno) y el hombro del ACES lavan las
+  // pieles claras hacia el blanco: hay que bajarles el azul y el verde (más
+  // croma). Las oscuras salían algo rojas (la dispersión y el rubor): se
+  // bajan parejo, un poco más el rojo. Y = luminancia lineal del tono.
+  const Y = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+  const t = Math.pow(THREE.MathUtils.clamp((Y - 0.1) / 0.5, 0, 1), 1.5)
+  const gR = THREE.MathUtils.lerp(0.6, 0.9, t)
+  const alb = new THREE.Color(c.r * gR, c.g * gR * THREE.MathUtils.lerp(1.12, 0.75, t), c.b * gR * THREE.MathUtils.lerp(1.08, 0.64, t))
   m = new THREE.MeshPhysicalMaterial({
     color: alb,
     vertexColors: true,
@@ -111,7 +120,9 @@ export function matRopa(tejido: Tejido, numero?: { texto: string; relleno: strin
   const nor = texTela(tejido)
   nor.repeat.set(26, 26)
   m = new THREE.MeshPhysicalMaterial({
-    color: "#ffffff",
+    // Ninguna tela refleja más del ~85 %: una camisa blanca al sol se quemaba
+    // a blanco y el resplandor (bloom) lavaba la cara de al lado.
+    color: new THREE.Color(0.86, 0.86, 0.86),
     vertexColors: true,
     roughness: 1,
     metalness: 0,
@@ -122,6 +133,10 @@ export function matRopa(tejido: Tejido, numero?: { texto: string; relleno: strin
     sheenColor: new THREE.Color(0.16, 0.16, 0.17),
     specularIntensity: 0.55,
   })
+  // Sombras de las dos caras: el ala de un sombrero, una cinta o el alambre de
+  // unas gafas son láminas abiertas; con la cara de atrás sola, solo el contorno
+  // proyectaba sombra y en la cara quedaban líneas como cicatrices.
+  m.shadowSide = THREE.DoubleSide
   if (numero) {
     m.map = texNumero(numero.texto, numero.relleno, numero.borde)
     m.alphaTest = 0.5
@@ -134,33 +149,39 @@ export function matRopa(tejido: Tejido, numero?: { texto: string; relleno: strin
 
 const pelos = new Map<string, THREE.MeshPhysicalMaterial>()
 /** Pelo, barba y cejas: hebras con alfa recortado y brillo anisotrópico (teñido por `color`). */
-export function matPelo(color: string): THREE.MeshPhysicalMaterial {
-  let m = pelos.get(color)
+export function matPelo(color: string, rizado = false): THREE.MeshPhysicalMaterial {
+  const clave = `${color}${rizado ? "|rizos" : ""}`
+  let m = pelos.get(clave)
   if (m) return m
   const c = new THREE.Color(color)
   const hsl = { h: 0, s: 0, l: 0 }
   c.getHSL(hsl)
-  const t = texPelo()
+  const t = rizado ? texRizos() : texPelo()
   // El color de cada hebra va en el vértice (pelo, barba y cejas en un solo material);
   // el tono del pelo solo tiñe el brillo.
   m = new THREE.MeshPhysicalMaterial({
-    color: "#ffffff",
+    // Canas y rubios: un poco más cálidos (bajo el cielo azul el blanco se iba a celeste).
+    color: new THREE.Color(1, 1 - 0.08 * hsl.l, 1 - 0.3 * hsl.l),
     map: t,
     vertexColors: true,
     alphaTest: 0.42,
     // Con MSAA el borde de cada hebra se suaviza (sin escalones en la línea del pelo).
     alphaToCoverage: true,
     side: THREE.DoubleSide,
-    roughness: 0.52,
+    // Los bucles, más mates (con el brillo del pelo lacio parecían de metal).
+    roughness: rizado ? 0.78 : 0.52,
     metalness: 0,
-    sheen: 0.35,
+    sheen: rizado ? 0.08 : 0.35,
     sheenRoughness: 0.45,
-    sheenColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.25).multiplyScalar(0.5),
-    specularIntensity: 0.55 + 0.25 * hsl.l,
-    specularColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.6),
+    sheenColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.25).multiplyScalar(0.5 - 0.25 * hsl.l),
+    // El pelo claro (canas, rubio) reflejaba el cielo y se veía celeste o
+    // verdoso: menos especular y un reflejo teñido del propio pelo.
+    specularIntensity: (0.55 - 0.25 * hsl.l) * (rizado ? 0.5 : 1),
+    // (y el pelo negro reflejaba el cielo: barbas y bigotes oscuros salían azules)
+    specularColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.35 - 0.15 * hsl.l),
   })
-  m.name = `pelo-${color}`
-  pelos.set(color, m)
+  m.name = `pelo-${clave}`
+  pelos.set(clave, m)
   return m
 }
 
@@ -192,14 +213,16 @@ export function matLente(sol: boolean): THREE.MeshPhysicalMaterial {
   if (m) return m
   m = new THREE.MeshPhysicalMaterial({
     color: sol ? "#0b0d10" : "#e8f0f4",
-    roughness: 0.04,
-    metalness: sol ? 0.2 : 0,
+    roughness: sol ? 0.3 : 0.04,
+    metalness: 0,
     transparent: true,
     opacity: sol ? 0.92 : 0.16,
     depthWrite: false,
-    clearcoat: 1,
-    clearcoatRoughness: 0.02,
-    envMapIntensity: 1.4,
+    // Las de sol reflejaban tanto cielo que se leían como cristal claro (el
+    // envMapIntensity no cuenta con scene.environment: se baja el barniz).
+    clearcoat: sol ? 0.25 : 1,
+    clearcoatRoughness: sol ? 0.15 : 0.02,
+    specularIntensity: sol ? 0.45 : 1,
   })
   m.name = `lente-${k}`
   lentes.set(k, m)

@@ -51,6 +51,18 @@ function salidaDeCaja(x: number, z: number, ux: number, uz: number, c: { x0: num
   return Math.max(0, Math.min(tx, tz))
 }
 
+/**
+ * Opciones de un cambio de cámara. Las usa el estudio (/casa-blanca/estudio);
+ * la página viva no las pasa y se comporta como siempre.
+ * - corte: nivel y pose en el acto, sin fundido ni viaje (corte seco de montaje).
+ * - sostener: una toma fija que termina se queda en su última pose en vez de
+ *   empezar otra vez con un fundido.
+ */
+export interface OpcionesCamara {
+  corte?: boolean
+  sostener?: boolean
+}
+
 export interface InfoPersonaje {
   pos: THREE.Vector3
   rumbo: number
@@ -61,8 +73,11 @@ export interface InfoPersonaje {
 /** Lo que la cámara necesita del motor. */
 export interface DepsCamara {
   nivel(): NivelId
-  /** Cambia de nivel con fundido a negro; `alCambiar` corre con la pantalla en negro. */
-  fundir(accion: () => void): void
+  /**
+   * Cambia de nivel con fundido a negro; `accion` corre con la pantalla en negro.
+   * Con `corte`, sin fundido: lo pendiente y `accion` corren ya (cortes secos del estudio).
+   */
+  fundir(accion: () => void, corte?: boolean): void
   aplicarNivel(n: NivelId): void
   setMaqueta(on: boolean): void
   personaje(id: string): InfoPersonaje | null
@@ -488,7 +503,7 @@ export class ControlCamara {
   private interactuando = false
   private intro: { t: number; resolver: () => void } | null = null
   private promesaIntro: Promise<void> | null = null
-  private cine: { i: number; t: number; fija: boolean; cambiando: boolean } | null = null
+  private cine: { i: number; t: number; fija: boolean; cambiando: boolean; sostener: boolean } | null = null
   private seguirId: string | null = null
   private seguirListo = false
   private readonly seguirPose = nuevaPose()
@@ -607,7 +622,7 @@ export class ControlCamara {
     return this.modo === "seguir" ? this.seguirId : null
   }
 
-  setModo(modo: ModoCamara, objetivoId?: string) {
+  setModo(modo: ModoCamara, objetivoId?: string, op: OpcionesCamara = {}) {
     if (modo === "intro") {
       void this.iniciarIntro()
       return
@@ -632,6 +647,9 @@ export class ControlCamara {
       this.controles.enabled = true
       this.controles.autoRotate = false
       this.aplicarLimites("seguir")
+      // Corte seco: si está en otro nivel, la cámara aparece allí (sin el fundido de actualizarSeguir).
+      const n = this.deps.personaje(id)?.nivel
+      if (op.corte && n && n !== this.deps.nivel()) this.deps.fundir(() => this.deps.aplicarNivel(n), true)
     } else if (modo === "cine") {
       const fija = objetivoId ? TOMAS.findIndex((t) => t.id === objetivoId) : -1
       if (fija < 0 && objetivoId && this.deps.personaje(objetivoId)) this.seguirId = objetivoId
@@ -639,8 +657,8 @@ export class ControlCamara {
       this.controles.enabled = false
       this.controles.autoRotate = false
       const i = fija >= 0 ? fija : this.cine && !this.cine.fija ? this.cine.i : 0
-      this.cine = { i, t: 0, fija: fija >= 0, cambiando: false }
-      this.empezarToma(i)
+      this.cine = { i, t: 0, fija: fija >= 0, cambiando: false, sostener: !!op.sostener }
+      this.empezarToma(i, !!op.corte)
     } else if (modo === "nivel") {
       const n = this.deps.nivel()
       if (n === S) this.entrarDron()
@@ -722,6 +740,30 @@ export class ControlCamara {
     this.fovBase = destino.fov
     this.aplicarFov()
     this.enfoque = { t: 0, dur: 1.1, p0: this.camara.position.clone(), m0: this.controles.target.clone(), p1: destino.pos.clone(), m1: destino.mira.clone() }
+  }
+
+  /**
+   * Corte seco a una pose de cualquier nivel: el nivel y la pose en el acto, sin
+   * fundido, viaje ni acercamiento. Queda en dron (superficie) o en la vista libre del nivel.
+   */
+  cortarA(destino: Pose, n: NivelId) {
+    if (this.intro) this.terminarIntro()
+    this.salirDeCine()
+    this.cortarViaje()
+    this.enfoque = null
+    this.controles.autoRotate = false
+    // Un fundido pendiente corre ya (y no queda negro); después, el nivel.
+    this.deps.fundir(() => {
+      if (this.deps.nivel() !== n) this.deps.aplicarNivel(n)
+    }, true)
+    this.ponerPose(destino)
+    if (n === S) this.entrarDron()
+    else {
+      this.modo = "nivel"
+      this.controles.enabled = true
+      this.aplicarLimites(limiteDe(n))
+      this.ultimaInteraccion = this.reloj
+    }
   }
 
   /** Termina un viaje en curso de golpe (otro modo lo interrumpe). */
@@ -838,7 +880,7 @@ export class ControlCamara {
     }
   }
 
-  private empezarToma(i: number) {
+  private empezarToma(i: number, corte = false) {
     const toma = TOMAS[i]
     const ctx = this.ctxToma()
     const arrancar = () => {
@@ -853,7 +895,7 @@ export class ControlCamara {
       if (toma.pose(0, this.pose, ctx, 0)) this.ponerPose(this.pose)
     }
     if (this.cine) this.cine.cambiando = true
-    this.deps.fundir(arrancar)
+    this.deps.fundir(arrancar, corte)
   }
 
   private nivelDeToma(toma: Toma, t: number): NivelId {
@@ -951,8 +993,12 @@ export class ControlCamara {
       else this.ponerPose(this.pose)
       this.velo = toma.ascensor ? Math.max(veloCruce(this.pose.pos.y), toma.velo?.(t) ?? 0) : 0
       if (c.t >= 1) {
-        const sig = c.fija ? c.i : (c.i + 1) % TOMAS.length
-        this.empezarToma(sig)
+        // El estudio: la toma fija se queda en su última pose (pose(1) cada cuadro) hasta el próximo corte.
+        if (c.fija && c.sostener) c.t = 1
+        else {
+          const sig = c.fija ? c.i : (c.i + 1) % TOMAS.length
+          this.empezarToma(sig)
+        }
       }
     } else if (toma.pose(Math.min(1, c.t), this.pose, this.ctxToma(), dt)) {
       this.ponerPose(this.pose)
