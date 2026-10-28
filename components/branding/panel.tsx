@@ -16,7 +16,7 @@ import { devolver, dondeEstaba, type Borrado } from "@/lib/papelera"
 import { Arbol } from "@/components/proyectos/arbol"
 import { aDoc, idRama, ordenActual, seccionDe } from "@/lib/branding-arbol"
 import { PanelRevision } from "@/components/branding/revision-panel"
-import { ANCLA, ETIQUETA_SECCION, type Revision } from "@/lib/revision"
+import { ANCLA, ETIQUETA_SECCION, type Revision, type Seccion } from "@/lib/revision"
 import { Indice, type Entrada } from "@/components/branding/indice"
 import { Plegable } from "@/components/branding/plegable"
 import { Agregar, Campo, Fila, ListaTextos } from "@/components/branding/campos"
@@ -54,7 +54,7 @@ type Guardado = "limpio" | "sucio" | "guardando" | "ok" | "error"
 
 /** `incrustado`: dentro del espacio de trabajo de Kev. Ahí sobran los enlaces
  *  a Proyectos y a Preguntas: el espacio de trabajo ya los tiene arriba. */
-export function Panel({ incrustado = false }: { incrustado?: boolean } = {}) {
+export function Panel({ incrustado = false, seccionInicial = "personaje" }: { incrustado?: boolean; seccionInicial?: Seccion } = {}) {
   const [doc, setDoc] = useState<Contenido>(CONTENIDO_BASE)
   const [cargando, setCargando] = useState(true)
   const [configurado, setConfigurado] = useState<boolean | null>(null)
