@@ -72,8 +72,16 @@ export function matPiel(color: string): THREE.MeshPhysicalMaterial {
   nor.repeat.set(70, 70)
   const det = texPielColor()
   det.repeat.set(9, 9)
+  // El tono de la ficha es la piel "como se ve"; como albedo, una piel clara
+  // refleja bastante menos (si no, el sol y el ACES la queman a blanco y se
+  // pierde el tono). Se baja la luminancia de las pieles claras y se les
+  // devuelve un poco de saturación; las oscuras quedan casi igual, menos el
+  // naranja.
+  const claro = THREE.MathUtils.smoothstep(hsl.l, 0.3, 0.82)
+  const alb = new THREE.Color().setHSL(hsl.h, Math.min(1, hsl.s * (1 + 0.12 * claro) * (1 - 0.18 * (1 - claro))), hsl.l)
+  alb.multiplyScalar(1 - 0.3 * claro)
   m = new THREE.MeshPhysicalMaterial({
-    color: c,
+    color: alb,
     vertexColors: true,
     roughness: 1,
     metalness: 0,
@@ -87,7 +95,7 @@ export function matPiel(color: string): THREE.MeshPhysicalMaterial {
     specularColor: new THREE.Color("#fff4ee"),
   })
   // Pieles oscuras dispersan menos rojo visible; las claras, más.
-  const k = 0.35 + 0.4 * hsl.l
+  const k = 0.25 + 0.5 * hsl.l
   inyectar(m, new THREE.Color(0.95 * k, 0.32 * k, 0.2 * k))
   m.name = `piel-${color}`
   pieles.set(color, m)

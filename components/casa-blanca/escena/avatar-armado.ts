@@ -17,6 +17,7 @@ import { vestir, holguraDe } from "./avatar-ropa"
 import { armarPelo } from "./avatar-pelo"
 import { Animador } from "./avatar-anim"
 import { hashTexto } from "./avatar-geo"
+import { conFicha } from "./avatar-fichas"
 import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra } from "./avatar-materiales"
 import { texBalon, texPunto, texSombra } from "./avatar-texturas"
 
@@ -24,7 +25,9 @@ let matBalon: THREE.MeshStandardMaterial | null = null
 let geoBalon: THREE.SphereGeometry | null = null
 const sinRayos = () => {}
 
-export function crearAvatarReal(p: Personaje): Avatar {
+export function crearAvatarReal(original: Personaje): Avatar {
+  // La ficha puede corregir la Apariencia (ropa, colores, peinado base).
+  const p = conFicha(original)
   const ap = p.apariencia
   const holo = ap.ropa.tipo === "holograma"
   const cu = new Cuerpo(p, holguraDe(ap))

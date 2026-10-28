@@ -234,7 +234,59 @@ export interface FichaCejas {
   alto?: number
 }
 
+/** Lo que la ficha cambia de la Apariencia (solo para armar el avatar). */
+export interface FichaAp {
+  piel?: string
+  complexion?: Apariencia["complexion"]
+  pelo?: Partial<Apariencia["pelo"]>
+  /** null = sin barba en la Apariencia. */
+  barba?: Apariencia["barba"] | null
+  sombrero?: Apariencia["sombrero"]
+  ropa?: Partial<Apariencia["ropa"]>
+  accesorios?: Apariencia["accesorios"]
+}
+
+/** Detalles de la ropa que distinguen a cada uno (avatar-ropa.ts los lee). */
+export interface FichaVestuario {
+  /** Remera ajustada (en vez de suéter) en la ropa casual. */
+  remera?: boolean
+  /** Pantalón de mezclilla (jean) o de tela. */
+  mezclilla?: boolean
+  /** Cuello en V (suéter o camiseta). */
+  cuelloV?: boolean
+  /** Camisa con cuello abajo, bajo un suéter (se ve el cuello). */
+  cuelloCamisa?: string
+  /** Chaleco bajo el saco (color): de la camisa solo queda una franja. */
+  chaleco?: string
+  /** Túnica: alto del ruedo (fracción de la estatura; 0,035 = tobillo, 0,28 = rodilla). */
+  ruedo?: number
+  /** Mangas de la túnica: largo (m sobre el brazo; 0 = sin manga) y ancho de la boca (m). */
+  manga?: number
+  mangaAncha?: number
+  /** Cinturón o faja de tela (color, ancho en m); null = sin cinturón. */
+  cinturon?: { color: string; ancho?: number } | null
+  /** Manto cruzado (himation, toga, palio): color, ancho (m), hombro (1 = izquierdo) y borde. */
+  manto?: { color: string; ancho?: number; lado?: 1 | -1; borde?: string; bajo?: number } | null
+  /** Capa larga sobre la espalda (color) prendida en un hombro. */
+  capa?: { color: string; largo?: number } | null
+  /** Capucha profunda (hábito). */
+  capucha?: { color: string; ribete?: string } | null
+  /** Mandil de piel blanca con ribete (masón). */
+  mandil?: { color: string; ribete: string } | null
+  /** Faja diagonal: color del centro y del borde. */
+  faja?: { color: string; borde: string } | null
+  /** Descalzo (sin sandalias). */
+  descalzo?: boolean
+  /** Gafas sin aro (solo el cristal, el puente y las patillas). */
+  gafasSinAro?: boolean
+  /** Cuello alto de la casaca o pechera más angosta (uniforme). */
+  pecheraAngosta?: boolean
+}
+
 export interface Ficha {
+  /** Cambios de la Apariencia (ropa, colores, accesorios, peinado base). */
+  ap?: FichaAp
+  vestuario?: FichaVestuario
   estatura?: number
   /** Edad aparente en años. */
   edad?: number
@@ -255,7 +307,503 @@ export interface Ficha {
  * de su Apariencia como antes. Un banco de pruebas puede registrar fichas
  * de ensayo con `FICHAS["id"] = {...}` antes de crear el avatar.
  */
-export const FICHAS: Record<string, Ficha> = {}
+export const FICHAS: Record<string, Ficha> = {
+  // Donald Trump: 1,90 m, corpulento con el vientre alto contenido por el saco;
+  // cara ancha con papada, ojos entrecerrados; el copete rubio hacia adelante
+  // y los costados peinados hacia atrás, sobre las orejas.
+  trump: {
+    estatura: 1.9,
+    edad: 79,
+    ap: { piel: "#E6A97E", ropa: { color: "#1B2340", color2: "#F4F4F2", corbata: "#C8102E" } },
+    cuerpo: { anchoHombros: 0.5, pecho: 1.12, profundidad: 1.1, cintura: 1.3, panza: 0.07, panzaAlta: 0.85, cuello: { grosor: 1.25, largo: 0.7 }, piernas: 0.97, muslo: 0.95 },
+    cara: {
+      ancho: 1.1, largo: 1.03, mandibula: 1.12, menton: 1.05, mejillas: 0.8, papada: 0.75, arcoCejas: 1.1,
+      ojos: { abierto: 0.62, parpado: 0.9, tam: 0.92, bolsas: 0.7 },
+      nariz: { ancho: 1.1, punta: 1.18 },
+      labios: { superior: 0.7, inferior: 1.15, avanceInferior: 0.6, ancho: 0.92 },
+      orejas: { tam: 1.15, lobulo: 1.35 },
+    },
+    piel: { base: "#E6A97E", ojos: ["#EDBF9C", 0.25], rubor: ["#D98F70", 0.3], cuerpo: "#EBBC98" },
+    iris: "#6f8aa0",
+    pelo: { color: "#E3BE78", puntas: "#F2DCA6", bajo: "#C29A5A", volumen: { base: 0.006, arriba: 0.012, lados: 0.001 }, copete: { alto: 0.032, avance: 0.03 }, linea: { alto: 0.6, entradas: 0.5, nuca: -0.3, cubreOrejas: 0 }, borde: 0.15, remolino: "coronilla", largo: 0 },
+    barba: { densidad: 0 },
+    cejas: { color: "#CDAE78", grosor: 0.6, densidad: 0.45, largo: 0.85, arco: 0.25 },
+  },
+
+  // Sun Tzu: general erudito, delgado; moño alto en la coronilla y barba de
+  // tres mechones (bigote caído y perilla larga, mejillas afeitadas).
+  suntzu: {
+    estatura: 1.7,
+    edad: 55,
+    ap: { piel: "#DDB98F", pelo: { estilo: "peinado_atras", color: "#1C1A18" }, ropa: { color: "#34452F", color2: "#B08D57" } },
+    vestuario: { cinturon: { color: "#6B1E1E", ancho: 0.05 }, mangaAncha: 0.06 },
+    cuerpo: { anchoHombros: 0.38, anchoCintura: 0.27, musculo: { brazos: 0.85, piernas: 0.9 } },
+    cara: {
+      ancho: 0.94, largo: 1.06, frente: 0.8, pomulos: 1.2, mejillas: -0.1, mandibula: 0.95, menton: 0.95,
+      ojos: { monoparpado: true, incl: 0.1, abierto: 0.78, tam: 0.95, parpado: 0.45, hundidos: -0.25, bolsas: 0.3 },
+      nariz: { puente: 0.15, ancho: 1.02, punta: 0.95, proy: 0.85 },
+      labios: { superior: 0.7, inferior: 0.8 },
+    },
+    piel: { base: "#DDB98F" },
+    iris: "#2a1d15",
+    pelo: { color: "#1C1A18", canasSienes: 0.2, largo: 0, mono: { alto: 0.06, radio: 0.026 }, volumen: { base: 0.003, arriba: 0.003, lados: 0.001, frente: 0, atras: 0 }, raya: null, remolino: "frente", linea: { entradas: 0, recta: 0.5, alto: 0.6, cubreOrejas: 0 }, borde: 0.6, ondas: 0, adelante: 0 },
+    barba: { color: "#2A2724", canas: 0.3, densidad: 0.9, largo: 0.004, bigote: 0.7, perilla: 0.8, mandibula: 0, mejillas: 0, cuello: 0, anchoPerilla: 0.6, colgante: 0.15, anchoColgante: 0.035, bigoteCaido: 0.08, borde: 0.2 },
+    cejas: { color: "#1E1A17", grosor: 0.75, largo: 1.15, arco: 0.1, inclinacion: -0.2 },
+  },
+
+  // Peter Thiel: frente alta con entradas en M, raya al costado, cara larga
+  // con mentón fuerte; traje con la camisa abierta.
+  thiel: {
+    estatura: 1.78,
+    edad: 59,
+    ap: { piel: "#EAC4A4", ropa: { color: "#1E2A44", color2: "#DCE3EC" } },
+    cuerpo: { anchoHombros: 0.43, panza: 0.012 },
+    cara: {
+      ancho: 0.95, largo: 1.08, frente: 1.2, mandibula: 1.05, anguloMandibula: 0.6, menton: 1.2, mentonAvance: 0.3, mentonCuadrado: 0.5, mejillas: -0.3, pomulos: 1.1,
+      ojos: { abierto: 0.85, parpado: 0.5, tam: 0.95 },
+      nariz: { largo: 1.08, puente: 0.6 },
+      labios: { superior: 0.6, inferior: 0.8, comisuras: -0.1 },
+    },
+    piel: { base: "#EAC4A4", rubor: ["#E0AE90", 0.25] },
+    iris: "#7C8C9A",
+    pelo: { color: "#9C7B5B", canas: 0.3, volumen: { base: 0.004, arriba: 0.008, frente: 0.004 }, linea: { entradas: 0.85, alto: 0.8 }, raya: 1, remolino: "raya", borde: 0.5 },
+    barba: { densidad: 0 },
+    cejas: { color: "#8A6E52", grosor: 0.75, arco: 0.15 },
+  },
+
+  // Sam Altman: bajo y delgado, cara juvenil y ojos grandes e intensos;
+  // pelo corto despeinado hacia adelante. Suéter y jeans.
+  altman: {
+    estatura: 1.73,
+    edad: 41,
+    ap: { piel: "#EFC8A8", ropa: { color: "#8A8F96", color2: "#2F3E55" } },
+    cuerpo: { anchoHombros: 0.4, anchoCintura: 0.28, cuello: { grosor: 0.9, largo: 0.85 }, musculo: { brazos: 0.85, piernas: 0.88 }, cabeza: 1.04 },
+    cara: {
+      ancho: 0.96, largo: 0.97, mandibula: 0.9, menton: 0.85, mejillas: 0.1, papada: 0, pomulos: 0.95,
+      ojos: { tam: 1.15, abierto: 1.15, parpado: 0.1, bolsas: 0.25, hundidos: -0.1 },
+      nariz: { largo: 0.92, ancho: 0.9, puente: 0.4 },
+      labios: { superior: 0.75, inferior: 0.85, ancho: 0.92 },
+      orejas: { despegadas: 0.55 },
+    },
+    piel: { base: "#EFC8A8", ojos: ["#D9AE92", 0.2] },
+    iris: "#6E7C5A",
+    pelo: { color: "#5E4A3A", canasSienes: 0.3, volumen: { base: 0.005, arriba: 0.012, frente: 0.006, lados: 0.001 }, linea: { entradas: 0.4 }, remolino: "coronilla", rizo: 0.2, borde: 0.5 },
+    barba: { densidad: 0.1 },
+    cejas: { color: "#5A4A3C", grosor: 0.8, arco: 0.3, alto: 0.15 },
+  },
+
+  // Elon Musk: grande y pesado, hombros redondeados, cuello grueso, mandíbula
+  // ancha; pelo corto y tupido peinado hacia arriba y atrás. Remera negra.
+  musk: {
+    estatura: 1.88,
+    edad: 55,
+    ap: { piel: "#EDC6A8", ropa: { color: "#141518", color2: "#2A2F38" } },
+    vestuario: { remera: true, mezclilla: true },
+    cuerpo: { anchoHombros: 0.49, pecho: 1.1, profundidad: 1.1, cintura: 1.18, panza: 0.03, panzaAlta: 0.5, cuello: { grosor: 1.2, largo: 0.8 }, encorvado: 0.25, musculo: { brazos: 1.0, piernas: 1.05 } },
+    cara: {
+      ancho: 1.06, largo: 1.02, mandibula: 1.15, anguloMandibula: 0.5, menton: 1.15, mentonCuadrado: 0.5, mentonAvance: 0.2, mejillas: 0.4, papada: 0.3,
+      ojos: { tam: 0.92, abierto: 0.85, parpado: 0.6, hundidos: 0.3, sep: 1.04, bolsas: 0.35 },
+      nariz: { puente: 0.6, punta: 1.08, ancho: 1.05 },
+      labios: { superior: 0.75, inferior: 1.1, comisuras: 0.15 },
+    },
+    piel: { base: "#EDC6A8", rubor: ["#E4B394", 0.25] },
+    iris: "#5f7a80",
+    pelo: { color: "#3B2C22", puntas: "#5A4636", canasSienes: 0.25, volumen: { base: 0.007, arriba: 0.022, frente: 0.012, lados: 0.002, atras: 0.002 }, copete: { alto: 0.012, avance: 0.004 }, linea: { entradas: 0.45, alto: 0.3, flequillo: 0 }, raya: null, remolino: "frente", borde: 0.4, rizo: 0.15 },
+    barba: { densidad: 0.15, color: "#6A5A50" },
+    cejas: { color: "#3E2E24", grosor: 1.05, arco: 0.15, alto: -0.15 },
+  },
+
+  // Alex Hormozi: espalda en V de levantador, cuello grueso, cabeza rapada y
+  // barba oscura completa y recortada. Remera negra ajustada.
+  hormozi: {
+    estatura: 1.8,
+    edad: 37,
+    ap: { piel: "#D6A47E", ropa: { color: "#141414", color2: "#1E1E1E" } },
+    vestuario: { remera: true, mezclilla: false },
+    cuerpo: { anchoHombros: 0.53, anchoCintura: 0.34, pecho: 1.15, profundidad: 1.12, panza: 0, cuello: { grosor: 1.35, largo: 0.8 }, musculo: { brazos: 1.5, antebrazos: 1.3, pecho: 1.8, espalda: 1.7, deltoides: 1.5, trapecio: 1, piernas: 1.25 } },
+    cara: { ancho: 1.04, mandibula: 1.15, anguloMandibula: 0.9, mentonCuadrado: 0.7, arcoCejas: 1.2, ojos: { hundidos: 0.3 }, nariz: { ancho: 1.12 } },
+    piel: { base: "#D6A47E", brillo: 0.6 },
+    iris: "#2E2018",
+    pelo: { rapado: 0.18, color: "#3A2E26", linea: { entradas: 0.3 } },
+    barba: { color: "#231A14", densidad: 1, largo: 0.016, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.6, cuello: 0.55, borde: 0.05 },
+    cejas: { color: "#1E1612", grosor: 1.3, arco: 0.1, densidad: 1 },
+  },
+
+  // Dario Amodei: cara redonda y llena, gafas, mata de rizos oscuros. Suéter en V.
+  amodei: {
+    estatura: 1.78,
+    edad: 43,
+    ap: { piel: "#ECC6A6", ropa: { color: "#5A7394", color2: "#2E3440" } },
+    vestuario: { cuelloV: true },
+    cuerpo: { anchoHombros: 0.42, panza: 0.015, encorvado: 0.2 },
+    cara: {
+      ancho: 1.06, largo: 0.97, mejillas: 0.5, papada: 0.15, mandibula: 0.95, anguloMandibula: 0.15, menton: 0.95,
+      nariz: { punta: 1.1 },
+      labios: { superior: 1.1, inferior: 1.2, comisuras: 0.2 },
+    },
+    piel: { base: "#ECC6A6", rubor: ["#E2B496", 0.25] },
+    iris: "#4A3828",
+    pelo: { color: "#34251C", rizo: 0.9, frecRizo: 1.2, volumen: { base: 0.018, arriba: 0.035, lados: 0.025, atras: 0.02, frente: 0.02 }, linea: { cubreOrejas: 0.5, entradas: 0.1 }, borde: 0.2 },
+    barba: { densidad: 0.25, color: "#4A3A30" },
+    cejas: { color: "#2E2018", grosor: 1.25, densidad: 1, arco: 0.3 },
+  },
+
+  // Sundar Pichai: frente alta por las entradas, pelo negro con canas peinado
+  // atrás, mejillas suaves, sonrisa cálida, gafas finas. Suéter sobre camisa.
+  pichai: {
+    estatura: 1.75,
+    edad: 54,
+    ap: { piel: "#A6724F", ropa: { color: "#6B7280", color2: "#8C8576" } },
+    vestuario: { cuelloV: true, cuelloCamisa: "#E8ECF2", mezclilla: false },
+    cuerpo: { anchoHombros: 0.42, panza: 0.01, musculo: { brazos: 0.88 } },
+    cara: {
+      ancho: 1.0, frente: 1.0, mejillas: 0.4, mandibula: 0.95, anguloMandibula: 0.2, menton: 0.95, pomulos: 1.05,
+      ojos: { abierto: 0.9, bolsas: 0.3 },
+      nariz: { ancho: 1.18, punta: 1.15, puente: 0.35 },
+      labios: { superior: 1.1, inferior: 1.2, comisuras: 0.35 },
+    },
+    piel: { base: "#A6724F", labios: "#8A5544" },
+    iris: "#3A2A20",
+    pelo: { color: "#262322", canas: 0.2, canasSienes: 0.5, volumen: { base: 0.004, arriba: 0.008, frente: 0.003 }, linea: { entradas: 0.85, alto: 0.9, coronilla: 0.2 }, remolino: "frente", raya: null },
+    barba: { densidad: 0.1, color: "#4a3a30" },
+    cejas: { color: "#2A2420", grosor: 1.2, arco: 0.55, densidad: 1 },
+  },
+
+  // El Gran Maestro: anciano distinguido, pelo blanco hacia atrás, barba blanca
+  // completa en pala, cejas largas; traje negro con mandil y faja blanca.
+  mason: {
+    estatura: 1.78,
+    edad: 74,
+    ap: { piel: "#E6C2A4", pelo: { estilo: "peinado_atras", color: "#E4E1DA" }, barba: { estilo: "completa", color: "#ECE8E0" }, ropa: { color: "#111111", color2: "#F2EFE6", corbata: "#0E0E10" }, accesorios: ["faja", "collar_oro"] },
+    vestuario: { mandil: { color: "#F4F1EA", ribete: "#C9A040" }, faja: { color: "#F2EFE6", borde: "#C9A040" } },
+    cuerpo: { anchoHombros: 0.43, panza: 0.03, panzaAlta: 0.45, encorvado: 0.35 },
+    cara: {
+      ancho: 1.0, largo: 1.06, frente: 1.0, mandibula: 1.05, mentonCuadrado: 0.4, mejillas: -0.1, papada: 0.25,
+      ojos: { parpado: 0.85, bolsas: 0.7, abierto: 0.8, tam: 0.95 },
+      nariz: { largo: 1.15, gancho: 0.25, puente: 0.75 },
+      orejas: { tam: 1.12, lobulo: 1.3 },
+    },
+    piel: { base: "#E6C2A4", rubor: ["#D9A58C", 0.3], manchas: 0.35 },
+    iris: "#5f6f7a",
+    pelo: { color: "#E4E1DA", puntas: "#EEECE6", bajo: "#C8C4BC", volumen: { base: 0.006, arriba: 0.012, frente: 0.008, atras: 0.006 }, linea: { entradas: 0.75, coronilla: 0.35, nuca: 1.2 }, ondas: 0.4, remolino: "frente", raya: null, borde: 0.4 },
+    barba: { color: "#ECE8E0", canas: 0.1, densidad: 1, largo: 0.02, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.6, colgante: 0.04, anchoColgante: 0.1, borde: 0.5 },
+    cejas: { color: "#E8E4DC", grosor: 1.3, pobladas: 0.9, densidad: 1 },
+  },
+
+  // El Iluminado: alto y delgado, hábito negro con capucha profunda; de la cara
+  // solo se ve el mentón afilado.
+  iluminado: {
+    estatura: 1.84,
+    edad: 45,
+    ap: { piel: "#D6C0AE", pelo: { estilo: "peinado_atras", color: "#121212" }, ropa: { tipo: "tunica", color: "#17151D", color2: "#C9A43A" }, accesorios: [], sombrero: null },
+    vestuario: { capucha: { color: "#17151D", ribete: "#C9A43A" }, cinturon: { color: "#C9A43A", ancho: 0.012 }, mangaAncha: 0.08, manto: null },
+    cuerpo: { anchoHombros: 0.4, anchoCintura: 0.28 },
+    cara: {
+      ancho: 0.9, largo: 1.08, mandibula: 0.95, anguloMandibula: 0.75, menton: 1.0, mentonAvance: 0.1, mejillas: -0.3,
+      nariz: { largo: 1.12, ancho: 0.88 },
+      labios: { superior: 0.6, inferior: 0.7 },
+    },
+    piel: { base: "#D6C0AE" },
+    pelo: { color: "#121212", volumen: { base: 0.003, arriba: 0.004 } },
+    barba: { densidad: 0 },
+  },
+
+  // Jesús de Nazaret: delgado, cara alargada y serena, pelo largo ondulado con
+  // raya al medio, barba castaña de largo medio. Túnica clara y manto rojo.
+  jesus: {
+    estatura: 1.7,
+    edad: 33,
+    ap: { piel: "#C49C78", ropa: { color: "#ECE4D2", color2: "#8E2B2B" } },
+    vestuario: { cinturon: { color: "#8C6A4A", ancho: 0.02 }, manto: { color: "#8E2B2B", ancho: 0.34, lado: 1 } },
+    cuerpo: { anchoHombros: 0.42, anchoCintura: 0.28, musculo: { brazos: 0.95 } },
+    cara: {
+      ancho: 0.93, largo: 1.08, pomulos: 1.15, mejillas: -0.15, mandibula: 0.95,
+      ojos: { tam: 1.04, abierto: 0.95, parpado: 0.35 },
+      nariz: { largo: 1.08, ancho: 0.95, puente: 0.7 },
+      labios: { superior: 0.95, inferior: 1.05, comisuras: 0.12 },
+    },
+    piel: { base: "#C49C78" },
+    iris: "#3B2618",
+    pelo: { color: "#3E2B1E", puntas: "#5A4030", largo: 0.17, ondas: 0.6, raya: 0, adelante: 0.55, linea: { cubreOrejas: 0.6, entradas: 0.1 }, volumen: { base: 0.004, arriba: 0.006, lados: 0.002 }, remolino: "raya", borde: 0.5 },
+    barba: { color: "#3E2B1E", densidad: 0.95, largo: 0.016, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.6, cuello: 0.5, colgante: 0.04, partida: 0.6, anchoColgante: 0.07, rizo: 0.5, borde: 0.8 },
+    cejas: { color: "#3A2A1E", grosor: 0.95, arco: 0.35, densidad: 0.85 },
+  },
+
+  // Alex Karp: enjuto y nervudo, nube enorme de rizos grises, nariz fuerte,
+  // pómulos altos.
+  karp: {
+    estatura: 1.76,
+    edad: 59,
+    ap: { piel: "#E7C09E", ropa: { color: "#374151", color2: "#1F2937" } },
+    cuerpo: { anchoHombros: 0.41, anchoCintura: 0.27, cuello: { grosor: 0.85, largo: 1.12 }, piernas: 1.02, musculo: { brazos: 0.82, piernas: 0.88 } },
+    cara: {
+      ancho: 0.92, largo: 1.1, pomulos: 1.3, mejillas: -0.6, mandibula: 0.95, menton: 1.1, anguloMandibula: 0.6,
+      ojos: { hundidos: 0.4, abierto: 1.05 },
+      nariz: { largo: 1.15, proy: 1.15, gancho: 0.35, puente: 0.8 },
+      labios: { ancho: 1.1 },
+    },
+    piel: { base: "#E7C09E", rubor: ["#DDB08C", 0.25] },
+    iris: "#4A3E36",
+    pelo: { color: "#C8C4BC", bajo: "#8E8A84", puntas: "#D8D4CC", rizo: 1, frecRizo: 1.3, volumen: { base: 0.03, arriba: 0.06, lados: 0.06, atras: 0.04, frente: 0.025 }, linea: { cubreOrejas: 0.7, entradas: 0.3 }, borde: 0.2 },
+    barba: { densidad: 0 },
+    cejas: { color: "#4A4440", grosor: 1.3, densidad: 1, arco: 0.45, alto: 0.15, pobladas: 0.3 },
+  },
+
+  // Marco Aurelio: cara larga, ojos grandes de párpado pesado, rizos apretados
+  // y barba rizada de filósofo; túnica a la rodilla y manto púrpura.
+  marco: {
+    estatura: 1.72,
+    edad: 52,
+    ap: { piel: "#E2BC98", ropa: { color: "#EDE6D6", color2: "#5B1E4E" } },
+    vestuario: { ruedo: 0.27, manga: 0.15, manto: { color: "#5B1E4E", ancho: 0.3, lado: 1 }, cinturon: { color: "#9a7a3a", ancho: 0.012 } },
+    cuerpo: { anchoHombros: 0.42, musculo: { antebrazos: 1.05, pantorrillas: 1.1 } },
+    cara: {
+      ancho: 0.94, largo: 1.1, frente: 0.5, pomulos: 0.95,
+      ojos: { tam: 1.12, abierto: 0.85, parpado: 0.85, hundidos: -0.3 },
+      nariz: { largo: 1.1, puente: 0.8 },
+    },
+    piel: { base: "#E2BC98" },
+    iris: "#4a3828",
+    pelo: { color: "#5A4330", canas: 0.2, rizo: 1, frecRizo: 1.6, volumen: { base: 0.014, arriba: 0.03, frente: 0.02, lados: 0.02, atras: 0.012 }, linea: { cubreOrejas: 0.5, entradas: 0, recta: 0.4 }, borde: 0.2 },
+    barba: { color: "#5A4330", canas: 0.3, densidad: 1, largo: 0.022, rizo: 1, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.6, partida: 0.4, colgante: 0.04, anchoColgante: 0.09, borde: 0.5 },
+    cejas: { inclinacion: 0.35, arco: 0.6, grosor: 1.05 },
+  },
+
+  // Napoleón: 1,69 m (estatura media de su época), cara lisa de rasgos
+  // clásicos, mechón en la frente, bicornio de costado; casaca verde.
+  napoleon: {
+    estatura: 1.69,
+    edad: 36,
+    ap: { piel: "#E4C3A2", ropa: { color: "#2E4A32", color2: "#EDEAE0" } },
+    vestuario: { pecheraAngosta: true },
+    cuerpo: { anchoHombros: 0.41, panza: 0.015, piernas: 0.97, manos: 0.92 },
+    cara: {
+      ancho: 1.0, largo: 0.98, frente: 0.9, mejillas: 0.15, mandibula: 1.0, anguloMandibula: 0.3, menton: 1.1, papada: 0.15, pomulos: 0.95,
+      ojos: { tam: 1.02, abierto: 0.95, parpado: 0.25 },
+      nariz: { puente: 0.85, largo: 1.05, proy: 1.08 },
+      labios: { superior: 0.7, inferior: 0.85, ancho: 0.9 },
+    },
+    piel: { base: "#E4C3A2" },
+    iris: "#6E7E8C",
+    pelo: { color: "#3A2A1E", volumen: { base: 0.004, arriba: 0.006, frente: 0.006 }, linea: { flequillo: 0.35, entradas: 0.35 }, remolino: "coronilla", rizo: 0.1, borde: 0.6 },
+    barba: { densidad: 0 },
+    cejas: { color: "#4A3626", grosor: 0.9, arco: 0.2 },
+  },
+
+  // Andrew Tate (solo físico y ropa): peleador ancho, cabeza rapada, barba
+  // corta completa, cuello grueso. Traje negro con camisa negra abierta.
+  tate: {
+    estatura: 1.9,
+    edad: 39,
+    ap: { piel: "#C4916A", barba: { estilo: "corta", color: "#1E1A18" }, ropa: { color: "#121212", color2: "#1A1A1A" } },
+    cuerpo: { anchoHombros: 0.5, anchoCintura: 0.34, pecho: 1.12, profundidad: 1.08, panza: 0, cuello: { grosor: 1.3, largo: 0.85 }, manos: 1.08, musculo: { brazos: 1.35, antebrazos: 1.25, pecho: 1.4, espalda: 1.4, deltoides: 1.35, trapecio: 0.9, piernas: 1.12 } },
+    cara: {
+      ancho: 1.04, largo: 1.05, mandibula: 1.18, anguloMandibula: 0.95, mentonCuadrado: 0.75, menton: 1.1, mentonAvance: 0.25, arcoCejas: 1.15, mejillas: -0.1,
+      ojos: { abierto: 0.75, parpado: 0.55, hundidos: 0.25 },
+      nariz: { ancho: 1.12, puente: 0.6 },
+    },
+    piel: { base: "#C4916A", brillo: 0.5 },
+    iris: "#3A2416",
+    pelo: { rapado: 0.1, color: "#2A2522" },
+    barba: { color: "#1E1A18", densidad: 0.95, largo: 0.006, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.55, cuello: 0.4, borde: 0.05 },
+    cejas: { color: "#1E1A18", grosor: 1.25, arco: 0.1 },
+  },
+
+  // Iman Gadzhi: 25 años, delgado y erguido, cara alargada de pómulos altos,
+  // pelo castaño hacia atrás con volumen. Remera negra ajustada y pantalón beige.
+  gadzhi: {
+    estatura: 1.8,
+    edad: 25,
+    ap: { piel: "#E6C2A0", ropa: { color: "#151515", color2: "#CBB89E" }, accesorios: ["reloj"] },
+    vestuario: { remera: true, mezclilla: false },
+    cuerpo: { anchoHombros: 0.42, anchoCintura: 0.28, piernas: 1.02, cuello: { grosor: 0.95 }, musculo: { brazos: 0.95, antebrazos: 1.0 } },
+    cara: {
+      ancho: 0.93, largo: 1.07, pomulos: 1.25, mejillas: -0.3, mandibula: 0.98, anguloMandibula: 0.75, menton: 0.95, papada: 0,
+      ojos: { abierto: 0.92, parpado: 0.3, bolsas: 0 },
+      nariz: { ancho: 0.88, puente: 0.7, largo: 1.02 },
+      labios: { superior: 0.75, inferior: 0.9 },
+    },
+    piel: { base: "#E6C2A0" },
+    iris: "#3B2A1E",
+    pelo: { color: "#3E2B1F", volumen: { base: 0.008, arriba: 0.03, frente: 0.022, lados: 0.004, atras: 0.008 }, copete: { alto: 0.015, avance: 0 }, ondas: 0.3, rizo: 0.15, remolino: "frente", linea: { recta: 0.4, entradas: 0.05 }, borde: 0.35, raya: null },
+    barba: { color: "#3A2A1E", densidad: 0.3 },
+    cejas: { color: "#2E2018", grosor: 1.2, arco: 0.15 },
+  },
+
+  // Kobe Bryant (#24): el más alto, escolta atlético de brazos largos, cabeza
+  // rapada con la línea recta, barba de candado corta. Camiseta de los Lakers.
+  kobe: {
+    estatura: 1.98,
+    edad: 34,
+    ap: { piel: "#7A4E34", barba: { estilo: "candado", color: "#141414" } },
+    vestuario: { cuelloV: true },
+    cuerpo: { anchoHombros: 0.48, anchoCintura: 0.31, brazos: 1.065, piernas: 1.02, cuello: { grosor: 1.1, largo: 0.85 }, manos: 1.12, musculo: { brazos: 1.2, antebrazos: 1.2, deltoides: 1.25, pecho: 1.15, piernas: 1.15, pantorrillas: 1.2 } },
+    cara: {
+      ancho: 0.97, largo: 1.06, pomulos: 1.25, mandibula: 1.08, anguloMandibula: 0.7, menton: 1.1, mentonAvance: 0.15, mejillas: 0,
+      ojos: { tam: 0.95, abierto: 0.9 },
+      nariz: { ancho: 1.25, puente: 0.3, punta: 1.15 },
+      labios: { superior: 1.25, inferior: 1.3, ancho: 1.05 },
+      orejas: { despegadas: 0.55 },
+    },
+    piel: { base: "#7A4E34", brillo: 0.3 },
+    iris: "#2A1A12",
+    esclera: "#E8E0D6",
+    pelo: { rapado: 0.85, color: "#141414", linea: { recta: 1, entradas: 0 } },
+    barba: { color: "#141414", densidad: 0.9, largo: 0.003, bigote: 0.9, perilla: 1, mandibula: 0.1, mejillas: 0, cuello: 0, borde: 0.2, anchoPerilla: 0.9 },
+    cejas: { color: "#141414", grosor: 1.0, arco: 0.3 },
+  },
+
+  // Sócrates: bajo y robusto, cara ancha de Sileno (nariz chata y respingada,
+  // ojos saltones), calvo con corona de rizos blancos, barba blanca en pala;
+  // descalzo, con el manto de lana sin teñir.
+  socrates: {
+    estatura: 1.66,
+    edad: 68,
+    ap: { piel: "#CDA27C", ropa: { color: "#C4B08C", color2: "#9C8A68" } },
+    vestuario: { manga: 0.06, manto: { color: "#B8A47E", ancho: 0.4, lado: 1, borde: "#9C8A68" }, cinturon: null, descalzo: true },
+    cuerpo: { anchoHombros: 0.45, pecho: 1.1, profundidad: 1.12, cintura: 1.2, panza: 0.05, panzaAlta: 0.5, cuello: { grosor: 1.2, largo: 0.75 }, piernas: 0.95, encorvado: 0.2, musculo: { brazos: 1.1, piernas: 1.1 } },
+    cara: {
+      ancho: 1.14, largo: 0.96, frente: 1.3, mejillas: 0.6, pomulos: 1.1, papada: 0.2,
+      ojos: { tam: 1.12, sep: 1.12, hundidos: -0.45, abierto: 1.05 },
+      nariz: { chata: 0.8, respingada: 0.75, ancho: 1.35, punta: 1.3, puente: 0, largo: 0.9 },
+      labios: { superior: 1.2, inferior: 1.35, ancho: 1.05 },
+    },
+    piel: { base: "#CDA27C", rubor: ["#C08A68", 0.3] },
+    iris: "#4a3828",
+    pelo: { color: "#C9C3B8", volumen: { lados: 0.015, atras: 0.012 }, rizo: 0.7, linea: { calvo: 1 } },
+    barba: { color: "#D8D2C6", canas: 0.3, densidad: 1, largo: 0.024, rizo: 0.9, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.85, cuello: 0.6, colgante: 0.06, anchoColgante: 0.12, borde: 0.8 },
+    cejas: { color: "#D8D2C6", grosor: 1.3, pobladas: 0.5 },
+  },
+
+  // Cleopatra VII: estatura media-baja, cara ovalada con mentón definido, nariz
+  // recta de puente marcado, ojos grandes con kohl; peluca negra con flequillo.
+  cleopatra: {
+    estatura: 1.6,
+    edad: 32,
+    fem: true,
+    ap: { piel: "#C99A70" },
+    cuerpo: { anchoHombros: 0.36, cintura: 0.84, cadera: 1.04, cuello: { grosor: 0.8, largo: 0.75 } },
+    cara: {
+      ancho: 0.92, largo: 1.0, menton: 0.95, mentonAvance: 0.15, pomulos: 1.25, mejillas: -0.05, mandibula: 0.88, anguloMandibula: 0.3, papada: 0,
+      ojos: { tam: 1.12, abierto: 1.0, incl: 0.1, parpado: 0.15 },
+      nariz: { largo: 1.02, puente: 0.75, gancho: 0.2, ancho: 0.92, proy: 1.05 },
+      labios: { superior: 1.15, inferior: 1.2 },
+    },
+    piel: { base: "#C99A70", ojos: ["#2a2c38", 0.3], labios: "#A85A4E" },
+    iris: "#2E1E14",
+    pelo: { color: "#121212", puntas: "#2a2a2e", largo: 0.09, linea: { flequillo: 1, cubreOrejas: 1 }, borde: 0.15, raya: null, volumen: { base: 0.01, arriba: 0.008, lados: 0.006 } },
+    cejas: { color: "#141414", grosor: 0.9, arco: 0.55 },
+  },
+
+  // Leonardo da Vinci: 65 años, frente alta, nariz aguileña, cejas pobladas;
+  // pelo y barba blancos, largos y ondulados que enmarcan la cara. Túnica rosa vieja.
+  leonardo: {
+    estatura: 1.73,
+    edad: 65,
+    ap: { piel: "#E3BB9A", ropa: { color: "#A84A55", color2: "#3A2A20" } },
+    cuerpo: { anchoHombros: 0.4, encorvado: 0.3, musculo: { brazos: 0.9 } },
+    cara: {
+      ancho: 0.96, largo: 1.08, frente: 1.4, pomulos: 1.15, mejillas: -0.4, arcoCejas: 1.2,
+      ojos: { hundidos: 0.45, parpado: 0.7, abierto: 0.85 },
+      nariz: { largo: 1.15, gancho: 0.45, puente: 0.85, proy: 1.1 },
+      labios: { comisuras: -0.4 },
+    },
+    piel: { base: "#E3BB9A", manchas: 0.3 },
+    iris: "#5a5040",
+    pelo: { color: "#D8D4CC", puntas: "#E4E0D8", bajo: "#B8B2A8", largo: 0.22, ondas: 0.7, adelante: 0.7, raya: 0, linea: { entradas: 0.8, alto: 1.2, cubreOrejas: 1 }, volumen: { base: 0.005, arriba: 0.004 }, remolino: "raya", borde: 0.45 },
+    barba: { color: "#E0DCD4", canas: 0.2, densidad: 0.95, largo: 0.016, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.7, colgante: 0.26, anchoColgante: 0.11, partida: 0.15, bigoteCaido: 0.03, rizo: 0.6, borde: 0.7 },
+    cejas: { color: "#CFCAC0", grosor: 1.4, pobladas: 0.7, densidad: 1 },
+  },
+
+  // Abraham Lincoln: muy alto y flaco, piernas largas, cara larga y huesuda,
+  // barba de mentón sin bigote, orejas grandes; levita negra y chistera.
+  lincoln: {
+    estatura: 1.93,
+    edad: 55,
+    ap: { piel: "#C9A07C", ropa: { color: "#16171B", color2: "#F2F0EA", corbata: "#0E0E10" } },
+    vestuario: { chaleco: "#141418" },
+    cuerpo: { hombros: 0.92, cintura: 0.88, piernas: 1.05, brazos: 1.05, manos: 1.15, pies: 1.1, encorvado: 0.5, musculo: { brazos: 0.88, piernas: 0.9 } },
+    cara: {
+      ancho: 0.94, largo: 1.12, pomulos: 1.35, mejillas: -0.85, mandibula: 1.05, anguloMandibula: 0.8, arcoCejas: 1.25,
+      ojos: { hundidos: 0.6, parpado: 0.7, abierto: 0.85 },
+      nariz: { largo: 1.18, gancho: 0.3, proy: 1.12 },
+      labios: { inferior: 1.2 },
+      orejas: { tam: 1.18, despegadas: 0.7 },
+    },
+    piel: { base: "#C9A07C" },
+    iris: "#4a4a48",
+    pelo: { color: "#1E1A17", canas: 0.12, volumen: { base: 0.008, arriba: 0.012, lados: 0.01 }, raya: 0.6, rizo: 0.25, linea: { cubreOrejas: 0.5 }, remolino: "raya" },
+    barba: { color: "#1E1A17", densidad: 0.95, largo: 0.014, bigote: 0, perilla: 1, mandibula: 1, mejillas: 0.12, cuello: 0.35, borde: 0.3 },
+    cejas: { grosor: 1.35, densidad: 1, arco: 0.2 },
+  },
+
+  // Steve Jobs: alto y delgado, cara larga de pómulos marcados, pelo muy corto
+  // y canoso con entradas, barba de pocos días; cuello alto negro, jeans y
+  // gafas redondas sin aro.
+  jobs: {
+    estatura: 1.88,
+    edad: 52,
+    ap: { piel: "#E2B897", ropa: { color: "#101010", color2: "#4A6A92" } },
+    vestuario: { gafasSinAro: true },
+    cuerpo: { anchoHombros: 0.4, anchoCintura: 0.28, piernas: 1.03, brazos: 1.03, encorvado: 0.25, cuello: { grosor: 0.88 }, musculo: { brazos: 0.82, piernas: 0.85 } },
+    cara: {
+      ancho: 0.92, largo: 1.08, frente: 1.2, pomulos: 1.25, mejillas: -0.55, mandibula: 0.92, menton: 0.9, anguloMandibula: 0.45,
+      ojos: { tam: 0.95, abierto: 0.9, hundidos: 0.2, parpado: 0.4 },
+      nariz: { largo: 1.12, punta: 1.12, puente: 0.6 },
+      labios: { ancho: 1.08, superior: 0.65, inferior: 0.8, comisuras: 0.15 },
+    },
+    piel: { base: "#E2B897", rubor: ["#D9A080", 0.25] },
+    iris: "#3A2A20",
+    pelo: { color: "#6E6A66", canas: 0.4, canasSienes: 0.6, volumen: { base: 0.003, arriba: 0.005, frente: 0.002 }, linea: { entradas: 0.9, alto: 1.4, coronilla: 0.4, flequillo: 0 }, raya: null, remolino: "coronilla", borde: 0.6 },
+    barba: { color: "#7A7672", densidad: 0.32 },
+    cejas: { color: "#3E3A36", grosor: 0.95, arco: 0.2 },
+  },
+
+  // Claude (holograma): silueta suave y serena.
+  claude: {
+    estatura: 1.78,
+    edad: 30,
+    cara: { ancho: 0.95, mejillas: 0.1, mandibula: 0.9, anguloMandibula: 0.1, labios: { comisuras: 0.25 }, ojos: { tam: 1.05 } },
+    pelo: { volumen: { base: 0.008, arriba: 0.014, frente: 0.006 }, ondas: 0.5, raya: 0.6, remolino: "raya" },
+    barba: { densidad: 0 },
+  },
+
+  // ChatGPT (holograma): silueta recta, hombros marcados.
+  chatgpt: {
+    estatura: 1.73,
+    edad: 28,
+    cuerpo: { anchoHombros: 0.46, anchoCintura: 0.29 },
+    cara: { mandibula: 1.1, anguloMandibula: 1, mentonCuadrado: 0.8, pomulos: 1.2 },
+    pelo: { volumen: { base: 0.004, arriba: 0.016, frente: 0.01, lados: 0 }, copete: { alto: 0.012, avance: 0.004 }, remolino: "frente" },
+    barba: { densidad: 0 },
+  },
+}
+
+/** El personaje con su Apariencia corregida por la ficha (para armar el avatar). */
+export function conFicha(p: Personaje): Personaje {
+  const a = FICHAS[p.id]?.ap
+  if (!a) return p
+  const ap = p.apariencia
+  const barba = a.barba === null ? undefined : a.barba ?? ap.barba
+  return {
+    ...p,
+    apariencia: {
+      ...ap,
+      piel: a.piel ?? ap.piel,
+      complexion: a.complexion ?? ap.complexion,
+      pelo: { ...ap.pelo, ...a.pelo },
+      barba,
+      sombrero: a.sombrero !== undefined ? a.sombrero : ap.sombrero,
+      ropa: { ...ap.ropa, ...a.ropa },
+      accesorios: a.accesorios ?? ap.accesorios,
+    },
+  }
+}
+
+/** Detalles de vestuario de la ficha (vacío si no hay). */
+export function vestuarioDe(id: string): FichaVestuario {
+  return FICHAS[id]?.vestuario ?? {}
+}
 
 // ── Lo que usa el generador (todo resuelto en números) ─────────
 
