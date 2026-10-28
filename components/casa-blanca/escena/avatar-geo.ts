@@ -151,6 +151,52 @@ export class Lote {
     return this.nv - 1
   }
 
+  /** Copia un vértice (todos sus atributos) y devuelve el índice nuevo. */
+  duplicar(v: number, du = 0): number {
+    const P = this.bPos.a, U = this.bUv.a, U1 = this.bUv1.a, C = this.bCol.a, Mt = this.bMat.a, SI = this.bSi.a, SW = this.bSw.a
+    this.bPos.push3(P[v * 3], P[v * 3 + 1], P[v * 3 + 2])
+    this.bUv.push2(U[v * 2] + du, U[v * 2 + 1])
+    this.bUv1.push2(U1[v * 2], U1[v * 2 + 1])
+    this.bCol.push4(C[v * 4], C[v * 4 + 1], C[v * 4 + 2], C[v * 4 + 3])
+    this.bMat.push2(Mt[v * 2], Mt[v * 2 + 1])
+    this.bSi.push4(SI[v * 4], SI[v * 4 + 1], SI[v * 4 + 2], SI[v * 4 + 3])
+    this.bSw.push4(SW[v * 4], SW[v * 4 + 1], SW[v * 4 + 2], SW[v * 4 + 3])
+    if (this.usaEx) {
+      const E = this.bEx.a
+      this.bEx.push4(E[v * 4], E[v * 4 + 1], E[v * 4 + 2], E[v * 4 + 3])
+    }
+    return this.nv - 1
+  }
+
+  /**
+   * Costura de una coordenada u periódica (ángulo alrededor de un remolino):
+   * en los triángulos que la cruzan, los vértices del lado bajo se duplican
+   * con u + período, así la textura no se aplasta en esa fila.
+   */
+  costuraU(i0: number, periodo: number) {
+    const dup = new Map<number, number>()
+    const I = this.bIdx.a
+    const n = this.bIdx.n
+    for (let k = i0; k < n; k += 3) {
+      const U = this.bUv.a
+      const a = I[k], b = I[k + 1], c = I[k + 2]
+      const ua = U[a * 2], ub = U[b * 2], uc = U[c * 2]
+      const mx = Math.max(ua, ub, uc)
+      if (mx - Math.min(ua, ub, uc) <= periodo * 0.5) continue
+      for (let q = 0; q < 3; q++) {
+        const v = I[k + q]
+        if (this.bUv.a[v * 2] < mx - periodo * 0.5) {
+          let d = dup.get(v)
+          if (d === undefined) {
+            d = this.duplicar(v, periodo)
+            dup.set(v, d)
+          }
+          this.bIdx.a[k + q] = d
+        }
+      }
+    }
+  }
+
   t(a: number, b: number, c: number) {
     this.bIdx.push3(a, b, c)
   }

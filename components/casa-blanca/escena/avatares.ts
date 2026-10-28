@@ -2,18 +2,23 @@
 // LOS PERSONAJES EN 3D
 //
 // Personajes semirrealistas generados con código, sin modelos ni servicios
-// externos. Todo sale de la Apariencia de cada uno (datos/personajes.ts):
+// externos. Todo sale de la Apariencia de cada uno (datos/personajes.ts),
+// corregida por su ficha física (avatar-fichas.ts: estatura, contextura,
+// cara, edad, piel, pelo, barba y cejas, para que se reconozca a cada uno):
 //
+//   avatar-fichas.ts      las fichas por id y el motor que las resuelve en números.
 //   avatar-cuerpo.ts      proporciones reales, esqueleto de 32 huesos y piel:
 //                         tronco, cuello y cabeza en UNA malla continua;
 //                         brazos con manos de cinco dedos; piernas y pies.
 //   avatar-cabeza.ts      la cabeza esculpida con un campo de distancia
-//                         (nariz, labios, párpados, mandíbula…), rasgos por
-//                         personaje y máscaras de pelo y barba.
+//                         (nariz, labios, párpados, mandíbula, papada…), la
+//                         boca que se abre al hablar, y máscaras de pelo,
+//                         cejas y barba.
 //   avatar-ropa.ts        la ropa como capas que siguen al cuerpo (traje con
 //                         solapas y corbata, túnicas con pliegues, uniforme,
 //                         camiseta 24…), sombreros, gafas y accesorios.
-//   avatar-pelo.ts        pelo con volumen y hebras, barba, cejas y pestañas.
+//   avatar-pelo.ts        pelo en capas con hebras, mechones largos, barba por
+//                         zonas, cejas con volumen y pestañas.
 //   avatar-materiales.ts  piel con dispersión, tejidos, pelo, ojos, holograma.
 //   avatar-texturas.ts    texturas procedurales (CanvasTexture).
 //   avatar-anim.ts        caminar y correr con los pies plantados, sentarse y

@@ -265,8 +265,19 @@ export class Cuerpo {
     j.parpadoI = j.ojoI.clone()
     j.parpadoD = j.ojoD.clone()
     // Brazos: separados del cuerpo lo justo para no atravesar cintura, vientre y cadera (con la ropa).
-    const anchoCintura = 0.149 * s * k.cintura * (this.fem ? 0.88 : 1) + k.panza * 0.9 + Math.max(0, k.mEspalda - 1) * 0.03 * s
-    const anchoCadera = 0.17 * s * k.cadera * (this.fem ? 1.06 : 1)
+    // Medido en las secciones reales del tronco (vientre, dorsales y cadera incluidos).
+    const ax = new Float64Array(M)
+    const az = new Float64Array(M)
+    const anchoEn = (y0: number, y1: number) => {
+      let w = 0
+      for (let i = 0; i <= 4; i++) {
+        this.anilloTronco(lerp(y0, y1, i / 4) * Hh, 1, ax, az)
+        for (let q = 0; q < M; q++) w = Math.max(w, Math.abs(ax[q]))
+      }
+      return w
+    }
+    const anchoCintura = anchoEn(0.59, 0.65)
+    const anchoCadera = anchoEn(0.5, 0.56)
     const mano = k.manos
     for (const [lado, L] of [[1, "I"], [-1, "D"]] as const) {
       const hx = 0.176 * s * k.hombros

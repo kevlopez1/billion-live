@@ -117,6 +117,7 @@ export interface OjoGeo {
   r: number
 }
 
+const SOMBRA_ZONAS: BarbaR = { color: "#000", canas: 0, densidad: 0.3, largo: 0.001, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.7, cuello: 0.5, anchoPerilla: 1, colgante: 0, anchoColgante: 0, partida: 0, bigoteCaido: 0, rizo: 0, borde: 0.6 }
 const lin = (hex: string) => new THREE.Color(hex)
 
 export class Cabeza {
@@ -165,6 +166,12 @@ export class Cabeza {
   private readonly pliegue: boolean
   /** Colores de la piel por zona, como factores sobre el tono base (lineal). */
   private readonly zonas: { ojos: [number, number, number, number] | null; rubor: [number, number, number, number] | null; labios: [number, number, number] | null }
+  /** Factores del pelo, la barba y las cejas sobre la piel (se calculan una vez). */
+  private readonly fPelo: [number, number, number]
+  private readonly fBarba: [number, number, number] | null
+  private readonly fCeja: [number, number, number]
+  /** Zonas de la sombra de afeitado. */
+  readonly zonasSombra: BarbaR
 
   constructor(c: THREE.Vector3, hs: number, r: Rasgos) {
     this.c = c
@@ -226,6 +233,11 @@ export class Cabeza {
       rubor: f.piel.rubor ? [...fac(f.piel.rubor[0]), f.piel.rubor[1]] : null,
       labios: f.piel.labios ? fac(f.piel.labios) : null,
     }
+    this.fPelo = fac(f.pelo.color)
+    this.fBarba = f.barba ? fac(f.barba.color) : null
+    this.fCeja = fac(f.cejas.color)
+    const b = f.barba
+    this.zonasSombra = b ? { ...b, mejillas: Math.max(b.mejillas, 0.7), bigote: 1, perilla: 1, mandibula: 1, cuello: 0.5 } : SOMBRA_ZONAS
   }
 
   /** Distancia firmada a la superficie de la piel (coordenadas locales). */
@@ -247,11 +259,13 @@ export class Cabeza {
       // Arco cigomático: del pómulo a la oreja
       d = smin(d, cono(ax, y, z, 0.05 * W, -0.004, 0.06, 0.068 * W, 0.0, 0.012, 0.009, 0.006), 0.02)
       // Carrillos: más con grasa, caen con la papada.
-      d = smin(d, elip(ax, y, z, 0.041 * W, -0.038 * L - 0.006 * Pa, 0.064, 0.022 + 0.009 * lleno, 0.025 + 0.004 * Pa, 0.026), 0.024)
+      // (la grasa ensancha y baja el carrillo entero, no una bola junto a la boca)
+      d = smin(d, elip(ax, y, z, (0.041 + 0.005 * lleno) * W, -0.038 * L - 0.008 * lleno - 0.004 * Pa, 0.064 - 0.006 * lleno, 0.022 + 0.008 * lleno, 0.025 + 0.007 * lleno, 0.026 + 0.003 * lleno), 0.024 + 0.012 * lleno)
       // Mejillas hundidas bajo el pómulo.
-      if (Mj < -0.02) d = smax(d, -elip(ax, y, z, 0.05 * W, -0.034 * L, 0.084, 0.017, 0.02, 0.012 - 0.008 * Mj), 0.014)
+      // (el elipsoide está fuera de la piel: solo hunde unos mm, -6 mm con mejillas = -1)
+      if (Mj < -0.05) d = smax(d, -elip(ax, y, z, 0.052 * W, -0.04 * L, 0.1, 0.016, 0.022, 0.0118 - 0.0045 * Mj), 0.01)
       // Carrillos caídos (papada lateral) junto al mentón.
-      if (Pa > 0.05) d = smin(d, elip(ax, y, z, 0.043 * W, -0.084 * L - 0.005 * Pa, 0.058, 0.013 + 0.007 * Pa, 0.012 + 0.007 * Pa, 0.017), 0.02)
+      if (Pa > 0.05) d = smin(d, elip(ax, y, z, 0.047 * W, -0.092 * L - 0.004 * Pa, 0.048, 0.014 + 0.006 * Pa, 0.012 + 0.006 * Pa, 0.02), 0.028)
     }
     if (!lejos(x, y, z, 0, -0.08, 0.04, 0.09, d, 0.034)) {
       // Mandíbula: de cada ángulo al mentón. Ángulo marcado = mezcla corta.
@@ -545,40 +559,60 @@ export class Cabeza {
       g -= 0.24 * k
       b -= 0.18 * k
     }
+    // Bajo las cejas, la piel toma un poco su color (se leen como pelo, no como trazo).
+    const ceja = cejaEn(this, x, y, z)
+    if (ceja > 0.001) {
+      const c = this.fCeja
+      const k = ceja * 0.45
+      r = lerp(r, c[0], k)
+      g = lerp(g, c[1], k)
+      b = lerp(b, c[2], k)
+    }
     let rr = r
     let gg = g
     let bb = b
     // Debajo del pelo y de la barba la piel toma su color: los huecos entre
     // hebras se leen como pelo, no como piel (y la cabeza rapada muestra la sombra).
-    if (peloT > 0.001 || barbaT > 0.001) {
-      const base = lin(this.f.piel.base)
-      if (peloT > 0.001) {
-        const c = lin(this.f.pelo.color)
-        rr = lerp(rr, c.r / Math.max(0.004, base.r), peloT)
-        gg = lerp(gg, c.g / Math.max(0.004, base.g), peloT)
-        bb = lerp(bb, c.b / Math.max(0.004, base.b), peloT)
-      }
-      if (barbaT > 0.001 && this.f.barba) {
-        const c = lin(this.f.barba.color)
-        rr = lerp(rr, c.r / Math.max(0.004, base.r), barbaT)
-        gg = lerp(gg, c.g / Math.max(0.004, base.g), barbaT)
-        bb = lerp(bb, c.b / Math.max(0.004, base.b), barbaT)
-      }
+    if (peloT > 0.001) {
+      const c = this.fPelo
+      rr = lerp(rr, c[0], peloT)
+      gg = lerp(gg, c[1], peloT)
+      bb = lerp(bb, c[2], peloT)
+    }
+    if (barbaT > 0.001 && this.fBarba) {
+      const c = this.fBarba
+      rr = lerp(rr, c[0], barbaT)
+      gg = lerp(gg, c[1], barbaT)
+      bb = lerp(bb, c[2], barbaT)
     }
     const a = 0.55 + 0.45 * ao
     return [rr * a, gg * a, bb * a]
   }
 }
 
-// ── Máscaras de pelo y barba ──────────────────────────────────
+// ── Máscaras de pelo, cejas y barba ───────────────────────────
+
+/** Densidad de la ceja sobre la piel (para teñir debajo de las tiras). */
+export function cejaEn(cab: Cabeza, x: number, y: number, z: number): number {
+  if (z < 0.05) return 0
+  const ce = cab.f.cejas
+  const o = cab.ojo
+  const ax = Math.abs(x)
+  const x0 = 0.011 * cab.r.ancho
+  const x1 = (0.011 + 0.045 * ce.largo) * cab.r.ancho
+  const t = (ax - x0) / (x1 - x0)
+  if (t < -0.15 || t > 1.1) return 0
+  const tc = clamp(t, 0, 1)
+  const arco = (0.004 + 0.008 * ce.arco) * Math.sin(Math.PI * Math.min(1, tc * 1.15))
+  const yc = o.y + 0.0172 + 0.01 * ce.alto + arco - 0.003 * tc + ce.inclinacion * 0.004 * (1 - tc)
+  const alto = lerp(0.0112, 0.0058, tc) * ce.grosor * 0.5
+  return suave(alto + 0.002, alto * 0.4, Math.abs(y - yc)) * suave(-0.15, 0.1, t) * suave(1.1, 0.85, t) * ce.densidad
+}
 
 /** Dónde crece la barba (sombra de afeitado: la zona completa). */
 function barbaSombra(cab: Cabeza, x: number, y: number, z: number): number {
-  const b = cab.f.barba
-  const zonas = b ? { ...b, mejillas: Math.max(b.mejillas, 0.7), bigote: 1, perilla: 1, mandibula: 1, cuello: 0.5 } : SOMBRA_ZONAS
-  return barbaEn(cab, x, y, z, zonas)[0]
+  return barbaEn(cab, x, y, z, cab.zonasSombra)[0]
 }
-const SOMBRA_ZONAS: BarbaR = { color: "#000", canas: 0, densidad: 0.3, largo: 0.001, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.7, cuello: 0.5, anchoPerilla: 1, colgante: 0, anchoColgante: 0, partida: 0, bigoteCaido: 0, rizo: 0, borde: 0.6 }
 
 /**
  * Barba en un punto de la cara (coordenadas locales): [máscara 0..1, grosor m].
@@ -613,9 +647,12 @@ export function barbaEn(cab: Cabeza, x: number, y: number, z: number, b: BarbaR)
   const cue = b.cuello * suave(-0.1, -0.125, y) * suave(-0.17 + 0.03 * b.cuello, -0.14, y) * suave(-0.01, 0.03, z)
   const m = clamp(Math.max(bigote, Math.max(perilla, mand, mej) * labios, cue), 0, 1)
   if (m <= 0) return [0, 0]
-  // Grosor: lo que dice la ficha en el mentón; menos en las mejillas y el bigote.
-  const menton = campana(ax, 0, 0.03) * suave(yb - 0.01, yb - 0.04, y)
-  const g = b.largo * (0.5 + 0.5 * menton) * (bigote > Math.max(perilla, mand, mej) ? 0.7 : 1)
+  // Grosor: lo que dice la ficha en el mentón; menos en las mejillas, el bigote
+  // y bajo la mandíbula (la barba sigue el hueso y se afina hacia el cuello).
+  const menton = campana(ax, 0, 0.032) * suave(yb - 0.008, yb - 0.035, y)
+  const bajo = suave(-0.105, -0.14, y) * (1 - 0.6 * menton)
+  // (el pelo de la barba va inclinado: la capa es más fina que el largo, sobre todo en las mejillas)
+  const g = b.largo * (0.3 + 0.7 * menton) * (bigote > Math.max(perilla, mand, mej) ? 0.6 : 1) * (1 - 0.65 * bajo)
   return [m, g]
 }
 
@@ -632,6 +669,8 @@ export function peloEn(cab: Cabeza, x: number, y: number, z: number, ph: PeloR =
   yF += ph.entradas * 0.03 * campana(ax, 0.043, 0.016)
   // Línea recta: las esquinas de las sienes no bajan.
   yF -= 0.006 * ph.recta * suave(0.03, 0.05, ax)
+  // Pelo largo con raya: se abre hacia los costados y deja la frente en "V" invertida.
+  if (ph.raya !== null && ph.largo > 0 && ph.flequillo < 0.5) yF += 0.024 * campana(x, ph.raya * 0.026, 0.024)
   yF = lerp(yF, 0.03, clamp(ph.flequillo, 0, 1))
   const anchoBorde = lerp(0.011, 0.004, clamp(ph.recta, 0, 1))
   const wF = suave(0.025, 0.055, z) * suave(0.07, 0.05, ax)
@@ -670,6 +709,9 @@ export function peloEn(cab: Cabeza, x: number, y: number, z: number, ph: PeloR =
   if (ph.raya !== null) {
     const xr = ph.raya * 0.026
     g -= 0.75 * (ph.vArriba + ph.vBase) * campana(x, xr, 0.004) * suave(-0.03, 0.04, z) * arriba
+    // Junto a la raya, al frente, el pelo se va hacia los costados: la frente
+    // queda libre en "V" invertida (sin flequillo de casco).
+    if (ph.flequillo < 0.5) g *= 1 - 0.65 * campana(x, xr, 0.028) * suave(0.03, 0.075, z) * suave(0.02, 0.06, y)
   }
   // Patillas y costados bajos: el pelo se pega a la cabeza (sin "casco"), salvo
   // que el estilo tape las orejas.

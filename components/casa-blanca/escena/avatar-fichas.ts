@@ -507,7 +507,7 @@ export function resolverFicha(p: Personaje): FichaR {
     mentonPartido: c.mentonPartido ?? 0,
     mentonCuadrado: c.mentonCuadrado ?? (fem ? 0 : 0.2),
     pomulos: c.pomulos ?? v(0.15) * (fem ? 1.1 : 1),
-    mejillas: c.mejillas ?? (grasa - 0.3) * 0.8,
+    mejillas: c.mejillas ?? Math.max(0, (grasa - 0.3) * 0.8),
     papada: c.papada ?? clamp((grasa - 0.4) * 0.6 + edad * 0.15, 0, 1),
     arcoCejas: c.arcoCejas ?? v(0.15) * (fem ? 0.6 : 1),
     ojos: {

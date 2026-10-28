@@ -17,7 +17,7 @@ import * as THREE from "three"
 import type { Apariencia, Personaje } from "../tipos"
 import { ANG, Cuerpo, H, M, mallaPie, type Cobertura, type Marco } from "./avatar-cuerpo"
 import { campana, clamp, escalarRGBA, lerp, Lote, rgba, suave, type Mat2, type Pesos, type RGBA } from "./avatar-geo"
-import { pelo as peloDe } from "./avatar-cabeza"
+import { peloEn } from "./avatar-cabeza"
 import type { Tejido } from "./avatar-texturas"
 
 const DOS_PI = Math.PI * 2
@@ -913,9 +913,11 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
   }
 
   // ── Por tipo de ropa ──
-  const sombraBase = cu.fem ? 0 : 0.14
-  let sombraBarba = sombraBase
-  if (ap.barba?.estilo === "barba_de_dias") sombraBarba = 0.4
+  // Sombra de barba en la piel: afeitado (leve), de pocos días (según la densidad)
+  // o bajo una barba. Densidad 0 en la ficha = afeitado al ras, sin sombra.
+  const bf = cu.rasgos.f.barba
+  let sombraBarba = cu.fem ? 0 : 0.14
+  if (bf) sombraBarba = bf.densidad <= 0.02 ? 0 : bf.densidad < 0.35 ? 0.18 + bf.densidad * 1.4 : 0.3
 
   switch (tipo) {
     case "traje": {
@@ -1242,7 +1244,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       const dx = Math.cos(g)
       const dz = Math.sin(g)
       const t = cab.rayo(0, yB, -0.004, dx, 0, dz, 0.14)
-      const [, gr] = peloDe(cab, dx * t, yB, dz * t - 0.004, ap.pelo.estilo, false)
+      const [, gr] = peloEn(cab, dx * t, yB, dz * t - 0.004)
       const r = t + gr + 0.004
       rx = Math.max(rx, Math.abs(dx) * r)
       rz = Math.max(rz, Math.abs(dz) * r)

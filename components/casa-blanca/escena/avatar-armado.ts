@@ -28,18 +28,21 @@ export function crearAvatarReal(p: Personaje): Avatar {
   const ap = p.apariencia
   const holo = ap.ropa.tipo === "holograma"
   const cu = new Cuerpo(p, holguraDe(ap))
-  const { huesos, esqueleto } = cu.esqueleto()
   const raiz = new THREE.Group()
   raiz.name = `avatar-${p.id}`
   raiz.userData.personajeId = p.id
-  raiz.add(huesos[0])
   const s = cu.s
 
   const ropa = vestir(cu, p)
   const { lote: lPiel, ojos: lOjos } = mallaPiel(cu, ropa.cobertura, { sombraBarba: ropa.sombraBarba })
   const espalda = ap.ropa.tipo === "traje" || ap.ropa.tipo === "uniforme_militar" ? 0.02 : 0.026
   const lPelo = armarPelo(cu, p, { holguraEspalda: espalda, bajoSombrero: !!ap.sombrero && ap.sombrero !== "laurel" && ap.sombrero !== "corona_egipcia", sombreroY: 0.07 })
+  // Largo de piernas, brazos y cuello de la ficha: se estira todo junto (piel,
+  // ropa, pelo) antes de armar el esqueleto.
+  cu.reproporcionar([lPiel, lOjos, ropa.lote, lPelo, ...(ropa.lentes ? [ropa.lentes.lote] : []), ...(ropa.utileria ? [ropa.utileria] : [])])
 
+  const { huesos, esqueleto } = cu.esqueleto()
+  raiz.add(huesos[0])
   const propias: Array<{ dispose(): void }> = [esqueleto]
   const mallas: THREE.Mesh[] = []
   let triangulos = 0
@@ -69,7 +72,10 @@ export function crearAvatarReal(p: Personaje): Avatar {
   if (holo) {
     // Una sola figura de luz: piel, ropa, pelo y ojos fundidos.
     const partes = [lPiel.geometria(), ropa.lote.geometria(), lPelo.geometria(), lOjos.geometria()]
-    for (const g of partes) g.deleteAttribute("uv1")
+    for (const g of partes) {
+      g.deleteAttribute("uv1")
+      g.deleteAttribute("aArr")
+    }
     const g = mergeGeometries(partes, false)!
     for (const x of partes) x.dispose()
     holoMats = matHolograma(ap.ropa.color, ap.ropa.color2 ?? "#ffffff", cu.H)
@@ -102,10 +108,10 @@ export function crearAvatarReal(p: Personaje): Avatar {
     particulas.raycast = sinRayos
     raiz.add(particulas)
   } else {
-    piel(lPiel.geometria(), matPiel(ap.piel))
+    piel(lPiel.geometria(), matPiel(cu.rasgos.f.piel.base))
     piel(ropa.lote.geometria(), matRopa(ropa.tejido, ropa.numero))
-    piel(lPelo.geometria(), matPelo(ap.pelo.color))
-    piel(lOjos.geometria(), matOjo(cu.rasgos.iris), false)
+    piel(lPelo.geometria(), matPelo(cu.rasgos.f.pelo.color))
+    piel(lOjos.geometria(), matOjo(cu.rasgos.iris, cu.rasgos.f.esclera), false)
     if (ropa.lentes) piel(ropa.lentes.lote.geometria(), matLente(ropa.lentes.sol), false)
     if (ropa.utileria) utileria = piel(ropa.utileria.geometria(), matRopa(ropa.tejido, ropa.numero))
     if (ap.accesorios.includes("balon")) {

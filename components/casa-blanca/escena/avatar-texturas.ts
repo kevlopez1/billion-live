@@ -140,9 +140,14 @@ export function texPelo(): THREE.Texture {
     const rnd = azar(97)
     const brillo = new Float32Array(n)
     const alfa = new Float32Array(n)
+    const fase = new Float32Array(n)
     for (let x = 0; x < n; x++) {
+      // Fase propia de cada hebra: sin el patrón en zigzag de una fase lineal.
+      fase[x] = rnd() * Math.PI * 2
       brillo[x] = 0.72 + rnd() * 0.28
-      alfa[x] = 0.55 + rnd() * 0.45
+      // Alfa por hebra repartido: con alfa del vértice 1 quedan huecos entre hebras
+      // (las capas de afuera se ven sueltas); con alfa > 2 la capa es opaca.
+      alfa[x] = 0.22 + rnd() * 0.78
     }
     const largo = fbm(n, 64, 3, 3, 101)
     const px = new Uint8ClampedArray(n * n * 4)
@@ -150,9 +155,9 @@ export function texPelo(): THREE.Texture {
       for (let x = 0; x < n; x++) {
         const i = y * n + x
         // Hebra que ondula un poco a lo largo.
-        const xo = (x + Math.round(Math.sin((y / n) * Math.PI * 4 + x * 0.3) * 1.5) + n) % n
+        const xo = (x + Math.round(Math.sin((y / n) * Math.PI * 4 + fase[x]) * 1.2) + n) % n
         const b = brillo[xo] * (0.75 + 0.25 * largo[i])
-        const a = alfa[xo] * (0.85 + 0.15 * largo[i])
+        const a = alfa[xo] * (0.72 + 0.28 * largo[i])
         const o = i * 4
         px[o] = px[o + 1] = px[o + 2] = Math.min(255, b * 255)
         px[o + 3] = Math.min(255, a * 255)
