@@ -485,6 +485,42 @@ export default function CasaBlancaViva() {
     return () => window.clearInterval(t)
   }, [refrescar])
 
+  // ── Pensamientos del día (la conciencia del servidor) ─────────
+  // De vez en cuando, alguien quieto y a la vista piensa lo que escribió en su
+  // reflexión de hoy. Es la misma burbuja "piensa" de la simulación: no pisa
+  // otra burbuja ni una conversación, y cada uno repite su pensamiento como
+  // mucho cada 4 minutos.
+  const concienciasRef = useRef(estado?.conciencias)
+  concienciasRef.current = estado?.conciencias
+  useEffect(() => {
+    if (!mundo) return
+    const ultimo: Record<string, number> = {}
+    const recordados = new Set<string>()
+    const t = window.setInterval(() => {
+      const cs = concienciasRef.current
+      if (!cs || faseRef.current !== "juego" || Math.random() > 0.6) return
+      const ahora = performance.now()
+      const nv = mundo.escena.nivel()
+      const libres = Object.keys(cs).filter((id) => {
+        const e = mundo.sim.pj[id]
+        return (
+          !!PJ[id] && !!cs[id]?.pensamiento && !!e && e.visible && e.nivel === nv && !e.burbuja && !e.conversacionId &&
+          e.estado !== "duerme" && e.estado !== "ascensor" && ahora - (ultimo[id] ?? -Infinity) > 240_000 && !!mundo.escena.pantallaDe(id)?.visible
+        )
+      })
+      if (!libres.length) return
+      const id = libres[Math.floor(Math.random() * libres.length)]
+      const texto = cs[id].pensamiento
+      mundo.sim.pj[id].burbuja = { texto: recortar(texto, 150), hasta: ahora + duracionLectura(texto), tipo: "piensa" }
+      ultimo[id] = ahora
+      if (!recordados.has(id)) {
+        recordados.add(id)
+        mundo.sim.recordar(id, `Pensó: «${recortar(texto, 90)}»`)
+      }
+    }, 15_000)
+    return () => window.clearInterval(t)
+  }, [mundo])
+
   const entregables = useMemo(
     () => [...(estado?.entregables ?? [])].sort((a, b) => Date.parse(b.creado) - Date.parse(a.creado)),
     [estado],

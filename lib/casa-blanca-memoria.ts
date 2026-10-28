@@ -175,8 +175,31 @@ export function sinDatosPersonales(texto: string, nombres: string[] = []): strin
     // Al principio de una oración va con mayúscula.
     t = t.replace(re, (_m, pos: number) => (pos === 0 || /[.!?¡¿]\s*$/.test(t.slice(0, pos)) ? "Alguien" : "alguien"))
   }
-  // Dos marcas seguidas ("[dato privado] [dato privado]") se juntan en una.
-  return t.replace(/(\[dato privado\][\s,;/-]*){2,}/g, `${PRIVADO} `).replace(/\s{2,}/g, " ").trim()
+  return (
+    t
+      // Dos marcas seguidas ("[dato privado], [dato privado]") se juntan en una.
+      .replace(/(\[dato privado\][\s,;/-]*){2,}/g, `${PRIVADO} `)
+      // Un paréntesis que solo tenía datos privados no dice nada: se quita.
+      .replace(/\s*\(\s*\[dato privado\]\s*\)/g, "")
+      .replace(/\s+([),.;:!?])/g, "$1")
+      .replace(/\s{2,}/g, " ")
+      .trim()
+  )
+}
+
+// Las palabras que no pueden cerrar un ánimo cortado ("imparable y con").
+const COLGANTES = new Set(["y", "e", "o", "u", "con", "de", "del", "la", "el", "los", "las", "un", "una", "que", "en", "a", "al", "por", "para", "sin", "pero", "muy", "más", "algo", "tan", "bastante"])
+
+/** El ánimo en 2–4 palabras. Si el modelo se pasó, la primera parte (antes de la coma) o las 4 primeras sin dejar un "y con" colgando. */
+export function animoCorto(s: string): string {
+  const t = s.replace(/[.…!]+$/, "").trim()
+  const palabras = t.split(/\s+/).filter(Boolean)
+  if (palabras.length <= 4) return t
+  const primera = t.split(/[,;:]/)[0].trim()
+  if (primera && primera.split(/\s+/).length <= 4) return primera
+  const corte = palabras.slice(0, 4)
+  while (corte.length > 1 && COLGANTES.has(corte[corte.length - 1].toLocaleLowerCase("es"))) corte.pop()
+  return corte.join(" ").replace(/[,;:]+$/, "")
 }
 
 // ── Guardar y leer recuerdos ──────────────────────────────────

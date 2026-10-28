@@ -24,6 +24,7 @@ import { LUGAR, LUGARES } from "@/components/casa-blanca/lugares"
 import type { Agente, Departamento, Entregable, Linea, Objetivo, Personaje } from "@/components/casa-blanca/tipos"
 import { cuandoFue } from "@/components/casa-blanca/ui/formato"
 import {
+  animoCorto,
   guardarConciencias,
   guardarRecuerdos,
   leerConciencias,
@@ -1521,7 +1522,7 @@ async function reflexionar(dia: string): Promise<{ ok: true; cuantos: number } |
     const pj = PJ.get(x.id)
     if (!pj || vistos.has(x.id)) continue
     const limpio = (s: string) => limpiarTexto(sinDatosPersonales(sinEtiqueta(String(s ?? ""), pj).replace(/\s+/g, " ")))
-    const animo = recortar(recortarPalabras(limpio(x.animo), 4).replace(/[.…]+$/, ""), 50)
+    const animo = recortar(animoCorto(limpio(x.animo)), 50)
     const pensamiento = recortar(limpio(x.pensamiento), 220)
     if (!animo || !pensamiento) continue
     vistos.add(x.id)

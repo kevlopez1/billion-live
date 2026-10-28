@@ -240,8 +240,8 @@ class EntornoCiudad {
     const rnd = semilla(77)
     const colores = [COLOR.tibio, COLOR.tibio, "#ffd9a8", COLOR.cian, COLOR.magenta, "#ffffff", COLOR.dorado]
     for (const cara of [0, 1, 4, 5])
-      for (let i = 0; i < 30; i++)
-        this.luces.push({ cara, x: rnd() * T, y: T * (0.5 + rnd() * 0.3), r: 1.5 + Math.pow(rnd(), 2) * 9, color: colores[Math.floor(rnd() * colores.length)], a: 0.35 + rnd() * 0.65 })
+      for (let i = 0; i < 16; i++)
+        this.luces.push({ cara, x: rnd() * T, y: T * (0.55 + rnd() * 0.22), r: 8 + rnd() * 14, color: colores[Math.floor(rnd() * colores.length)], a: 0.25 + rnd() * 0.35 })
     this.textura = new THREE.CubeTexture(this.caras)
     this.textura.colorSpace = THREE.SRGBColorSpace
   }
@@ -691,6 +691,7 @@ interface MaterialesCiudad {
   chorros: THREE.ShaderMaterial
   vapor: THREE.ShaderMaterial
   reflejos: THREE.ShaderMaterial
+  charcos: THREE.ShaderMaterial
   haces: THREE.ShaderMaterial
   pisoLed: THREE.ShaderMaterial
   senal: THREE.MeshBasicMaterial
@@ -719,6 +720,7 @@ interface MaterialesCiudad {
     escalaPuntos: THREE.IUniform<number>
     /** Los reflejos de las luces en el piso pesan menos de día. */
     reflejo: THREE.IUniform<number>
+    charco: THREE.IUniform<number>
   }
 }
 
@@ -744,6 +746,7 @@ function crearMaterialesCiudad(ctx: CtxEscena, focos: Foco[], atlas: THREE.Textu
     bordeCielo: { value: new THREE.Color() },
     escalaPuntos: { value: 600 },
     reflejo: { value: 1 },
+    charco: { value: 0.2 },
   }
   const defs = `#define CB_CX ${CX.toFixed(2)}\n#define CB_CZ ${CZ.toFixed(2)}\n#define CB_MEDIO ${MEDIO.toFixed(2)}\n#define CB_RCIELO ${R_CIELO.toFixed(3)}\n#define CB_Y0 ${Y0.toFixed(2)}\n`
 
@@ -979,6 +982,8 @@ void main() {
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
+// La semilla llega interpolada: se redondea, porque un hash amplifica cualquier error mínimo.
+float semT = floor(vSem + 0.5);
 float esMuro = 1.0 - step(0.5, abs(vNorM.y));
 float lobby = (1.0 - step(4.4, vUvM.y)) * esMuro;
 // Pisos de 3,3 m con ventanas de 1,9 m; en la planta baja, vidrieras de 3,8 x 4,4 m.
@@ -999,21 +1004,21 @@ vec3 colMarco = diffuseColor.rgb * (0.9 + 0.2 * cbRuido(vPosM * 0.5));
 float losaF = (1.0 - smoothstep(0.0, 0.06 + fw.y, f.y)) * (1.0 - lobby) * (1.0 - lejos) * esMuro;
 colMarco *= 1.0 + losaF * 0.7;
 diffuseColor.rgb = mix(colMarco, vec3(0.012, 0.015, 0.02), vent);
-float rugT = mix(0.55, 0.05, vent);
+float rugT = mix(0.55, 0.16, vent);
 float metT = mix(0.35, 0.9, vent);
 // Ventanas encendidas: cada una cambia de estado cada uno o dos minutos, a su ritmo.
-float hId = cbHash2(idV + vSem * 17.0);
-float periodo = 60.0 + 90.0 * cbHash2(idV.yx + vSem);
+float hId = cbHash2(idV + semT * 17.0);
+float periodo = 60.0 + 90.0 * cbHash2(idV.yx + semT);
 float fase = floor((uTiempo + hId * periodo) / periodo);
-float hOn = cbHash2(idV * 1.37 + fase * 3.1 + vSem * 7.0);
+float hOn = cbHash2(idV * 1.37 + fase * 3.1 + semT * 7.0);
 float frac = mix(mix(0.34, 0.6, uNoche), 0.7, lobby);
 float on = mix(step(1.0 - frac, hOn), frac, lejos);
-float tipo = cbHash2(idV + 31.0 + vSem);
+float tipo = cbHash2(idV + 31.0 + semT);
 vec3 colV = tipo < 0.62 ? vec3(1.0, 0.6, 0.28) : tipo < 0.86 ? vec3(1.0, 0.8, 0.55) : vec3(0.5, 0.74, 1.0);
 colV = mix(colV, vec3(0.62, 0.95, 0.9), step(0.93, tipo) * lobby);
 // Dentro: la luz del techo arriba y, en algunas, cortinas.
 float gradV = mix(0.5, 1.0, smoothstep(0.2, 0.85, f.y));
-float hc = cbHash2(idV + 13.0 + vSem);
+float hc = cbHash2(idV + 13.0 + semT);
 float cortina = step(0.7, hc) * smoothstep(0.3 + hc * 0.4 - 0.04, 0.3 + hc * 0.4 + 0.04, f.y);
 float baseV = mix(0.42, 1.15, uNoche) * mix(1.0, 0.8, lobby);
 // Muebles: una franja oscura abajo en algunas ventanas.
@@ -1246,6 +1251,36 @@ void main() {
 }`,
   })
 
+  // ── Charcos de luz bajo los faroles: discos aditivos que pesan más de noche ──
+  const charcos = new THREE.ShaderMaterial({
+    name: "ciudad-charcos",
+    uniforms: { uFuerza: u.charco },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexShader: /* glsl */ `
+attribute vec4 aCharco;
+attribute vec3 aColor;
+varying vec2 vQ;
+varying vec3 vCol;
+void main() {
+  vQ = position.xy * 2.0;
+  vCol = aColor;
+  // z = -y: así el cuadro mira hacia arriba (con +y quedaría de espaldas y no se dibuja).
+  vec3 p = vec3(aCharco.x + position.x * aCharco.w * 2.0, aCharco.y + 0.03, aCharco.z - position.y * aCharco.w * 2.0);
+  gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
+}`,
+    fragmentShader: /* glsl */ `
+uniform float uFuerza;
+varying vec2 vQ;
+varying vec3 vCol;
+void main() {
+  float d = length(vQ);
+  float a = (1.0 - smoothstep(0.0, 1.0, d));
+  gl_FragColor = vec4(vCol * a * a * uFuerza, 1.0);
+}`,
+  })
+
   // ── Haces de luz: conos aditivos que barren (club, arena) ──
   const haces = new THREE.ShaderMaterial({
     name: "ciudad-haces",
@@ -1346,6 +1381,7 @@ void main() {
   const agua = copia(C.agua, 1.3, "ciudad-agua")
   agua.color.set("#0f3340")
   return {
+    charcos,
     roca,
     cielo,
     base,
@@ -1688,6 +1724,8 @@ interface Kit {
   pisoLed: Lote
   arboles: Arbol[]
   reflejos: Reflejo[]
+  /** Charcos de luz: el círculo que un farol deja en el piso (x, y del suelo, z, radio, color). */
+  charcos: Array<{ x: number; y: number; z: number; r: number; color: string }>
   vapores: Vapor[]
   haces: Haz[]
   celdas: Record<string, Celda>
@@ -2035,7 +2073,7 @@ function construirCaverna(k: Kit, pz: Piezas, mats: MaterialesCiudad, grupo: THR
       (_i, out) => out.set(0, -1, 0),
       true,
     )
-    k.luz.agregar(linea, null, luz("#fff1d8", 1.0))
+    k.luz.agregar(linea, null, luz("#fff1d8", 0.7))
     aro.dispose()
     linea.dispose()
   }
@@ -2196,7 +2234,8 @@ function aro(k: Kit, x: number, y: number, z: number, r: number, grosor: number,
   g.dispose()
 }
 
-function farol(k: Kit, pz: Piezas, x: number, z: number, alto = 5, color: string = COLOR.tibio, fuerza = 4.5) {
+function farol(k: Kit, pz: Piezas, x: number, z: number, alto = 5, color: string = COLOR.tibio, fuerza = 4.5, suelo: number = Y0) {
+  k.charcos.push({ x, y: suelo, z, r: alto * 1.35, color })
   k.hierro.agregar(pz.cil8, M(x, Y0 + alto / 2, z, 0, 0.09, alto, 0.09))
   k.hierro.agregar(pz.cil8, M(x, Y0 + 0.25, z, 0, 0.22, 0.5, 0.22))
   k.hierro.agregar(pz.cil8, M(x, Y0 + alto + 0.05, z, 0, 0.28, 0.1, 0.28))
@@ -2468,7 +2507,7 @@ function construirAvenida(k: Kit, pz: Piezas, rnd: () => number) {
       ]
       const estilo = (i * 2 + (s > 0 ? 1 : 0)) % 5
       const tono = ["#2a2f36", "#3a342e", "#24292f", "#423b33", "#2f343c"][estilo]
-      k.torres.agregar(prisma(pol, Y0, Y0 + alto), null, { color: hexA(tono), aSem: [i * 7 + (s > 0 ? 3 : 0) + 0.5] })
+      k.torres.agregar(prisma(pol, Y0, Y0 + alto), null, { color: hexA(tono), aSem: [i * 7 + (s > 0 ? 3 : 0) + 1] })
       const fx = s < 0 ? x1 : x0
       if (estilo % 2 === 0) {
         // Balcones corridos con baranda de vidrio y una luz bajo cada losa.
@@ -2533,7 +2572,7 @@ function construirTorres(k: Kit, pz: Piezas, rnd: () => number) {
     torres.push({ x, z, ancho, alto, tipo: Math.floor(rnd() * 4), acento, giro: rnd() * Math.PI })
   }
   torres.forEach((t, i) => {
-    const sem = [100 + i * 3.7]
+    const sem = [100 + i * 7]
     const tonos = ["#262b33", "#1d232a", "#36322d", "#2a313b", "#7d7b77"]
     const tono = hexA(tonos[i % 5])
     const a = t.ancho / 2
@@ -2770,7 +2809,7 @@ function construirParque(k: Kit, pz: Piezas, rnd: () => number) {
   // Faroles de globo a lo largo del anillo y bancos.
   for (let i = 0; i < 14; i++) {
     const a = (i / 14) * Math.PI * 2
-    farol(k, pz, pcx + Math.cos(a) * 42, pcz + Math.sin(a) * 46, 4.2, "#fff0c8", 4)
+    farol(k, pz, pcx + Math.cos(a) * 42, pcz + Math.sin(a) * 46, 4.2, "#fff0c8", 4, Y0 + 0.17)
     if (i % 2 === 0) banco(k, pz, pcx + Math.cos(a + 0.2) * 35.5, pcz + Math.sin(a + 0.2) * 39.5, Math.PI / 2 - (a + 0.2) + Math.PI)
   }
   // Luciérnagas sobre el pasto (puntos de luz que flotan: ver drones).
@@ -3207,7 +3246,7 @@ function construirRelleno(k: Kit, rnd: () => number) {
       [x1, z1],
       [x0, z1],
     ]
-    k.torres.agregar(prisma(pol, Y0, Y0 + alto + rnd() * 2), null, { color: hexA(["#2c3138", "#3a352f", "#262b31"][i % 3]), aSem: [300 + i * 5.1] })
+    k.torres.agregar(prisma(pol, Y0, Y0 + alto + rnd() * 2), null, { color: hexA(["#2c3138", "#3a352f", "#262b31"][i % 3]), aSem: [300 + i * 5] })
   })
 }
 
@@ -3216,11 +3255,12 @@ function construirRelleno(k: Kit, rnd: () => number) {
 // ═══════════════════════════════════════════════════════════════
 
 /** Vistas listas para grabar la ciudad (cámara y punto al que mira). */
-export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea", { pos: [number, number, number]; mira: [number, number, number]; fov: number }> = {
+export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea" | "torres", { pos: [number, number, number]; mira: [number, number, number]; fov: number }> = {
   mirador: { pos: [15, Y0 + 8.5, R_MIRADOR.z1 - 6], mira: [-12, Y0 + 4, 150], fov: 56 },
   plaza: { pos: [-21, Y0 + 1.7, cz(R_PLAZA) - 8], mira: [0, PANTALLA.base + 3, PANTALLA.z], fov: 52 },
   avenida: { pos: [2.4, Y0 + 1.6, R_AVENIDA.z1 - 6], mira: [0, Y0 + 5.5, 40], fov: 50 },
   aerea: { pos: [118, Y0 + 23, 200], mira: [-40, Y0 + 1, 40], fov: 56 },
+  torres: { pos: [-112, Y0 + 20, 214], mira: [20, Y0 + 2, 10], fov: 56 },
 }
 
 /**
@@ -3230,12 +3270,13 @@ export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea", { 
  */
 export function tomaDescensoCiudad(t: number, pos: THREE.Vector3, mira: THREE.Vector3): number {
   const k = t * t * (3 - 2 * t)
-  const a = THREE.MathUtils.lerp(-0.6, 0.35, k)
-  const r = THREE.MathUtils.lerp(4.2, 22, Math.pow(k, 1.6))
-  const y = THREE.MathUtils.lerp(techoCiudad(ASC.x, ASC.z) - 2.5, Y0 + 9, Math.pow(k, 0.8))
-  pos.set(ASC.x + Math.sin(a) * r, y, ASC.z - Math.cos(a) * r)
-  mira.set(0, THREE.MathUtils.lerp(Y0 + 4, PANTALLA.base + 2, k), THREE.MathUtils.lerp(PANTALLA.z, 150, k * k))
-  return THREE.MathUtils.lerp(62, 48, k)
+  // Espiral por fuera del tubo (del lado de la plaza): no se mira a través de los parantes.
+  const a = THREE.MathUtils.lerp(-1.1, 0.35, k)
+  const r = THREE.MathUtils.lerp(7, 15, k)
+  const y = THREE.MathUtils.lerp(techoCiudad(ASC.x, ASC.z) - 3, Y0 + 5.5, Math.pow(k, 0.85))
+  pos.set(ASC.x + Math.sin(a) * r, y, ASC.z + Math.cos(a) * r)
+  mira.set(0, THREE.MathUtils.lerp(Y0 + 1, PANTALLA.base + 3, k), THREE.MathUtils.lerp(cz(R_PLAZA) - 8, PANTALLA.z + 30, k))
+  return THREE.MathUtils.lerp(60, 50, k)
 }
 
 export function construirCiudad(ctx: CtxEscena): void {
@@ -3321,6 +3362,7 @@ export function construirCiudad(ctx: CtxEscena): void {
     pisoLed: new Lote(),
     arboles: [],
     reflejos: [],
+    charcos: [],
     vapores: [],
     haces: [],
     celdas,
@@ -3447,6 +3489,34 @@ export function construirCiudad(ctx: CtxEscena): void {
     g.instanceCount = lista.length
     const m = new THREE.Mesh(g, mats.reflejos)
     m.name = "ciudad-reflejos"
+    m.frustumCulled = false
+    m.renderOrder = 1
+    grupo.add(m)
+  }
+
+  // ── Charcos de luz ──
+  {
+    const lista = k.charcos
+    const q = new THREE.PlaneGeometry(1, 1)
+    const g = new THREE.InstancedBufferGeometry()
+    g.index = q.index
+    g.setAttribute("position", q.getAttribute("position"))
+    g.setAttribute("aCharco", new THREE.InstancedBufferAttribute(new Float32Array(lista.flatMap((c) => [c.x, c.y, c.z, c.r])), 4))
+    g.setAttribute(
+      "aColor",
+      new THREE.InstancedBufferAttribute(
+        new Float32Array(
+          lista.flatMap((c) => {
+            _col.set(c.color)
+            return [_col.r, _col.g, _col.b]
+          }),
+        ),
+        3,
+      ),
+    )
+    g.instanceCount = lista.length
+    const m = new THREE.Mesh(g, mats.charcos)
+    m.name = "ciudad-charcos"
     m.frustumCulled = false
     m.renderOrder = 1
     grupo.add(m)
@@ -3629,6 +3699,7 @@ export function construirCiudad(ctx: CtxEscena): void {
     u.tiempo.value = t
     u.noche.value = noche
     u.reflejo.value = 0.45 + 0.55 * noche
+    u.charco.value = 0.08 + 0.75 * noche
     u.cenit.value.copy(amb.cielo.cenit).multiplyScalar(1.1)
     u.horizonte.value.copy(amb.cielo.horizonte).multiplyScalar(0.95)
     u.solCol.value.copy(amb.cielo.sol)
