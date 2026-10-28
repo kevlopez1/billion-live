@@ -1345,7 +1345,7 @@ export type RespuestaInterior = {
   /** Solo con ?personaje=<id>: su estado completo (null si todavía no reflexionó). */
   conciencia?: { animo: string; meta: string; pensamiento: string; diario: string; opiniones: Opiniones; dia: string } | null
   /** Solo con ?personaje=<id>: sus 10 recuerdos más nuevos. */
-  recuerdos?: { texto: string; tipo: TipoRecuerdo; creado: string; con: string[] }[]
+  recuerdos?: { id: string; texto: string; tipo: TipoRecuerdo; creado: string; con: string[] }[]
 }
 
 /**
@@ -1366,7 +1366,7 @@ export async function interior(personajeId: string | null): Promise<{ datos: Res
     datos.conciencia = c
       ? { animo: c.animo, meta: c.meta, pensamiento: c.pensamiento, diario: c.diario, opiniones: c.opiniones, dia: c.dia }
       : null
-    datos.recuerdos = (recuerdos ?? []).map((r) => ({ texto: r.texto, tipo: r.tipo, creado: r.creado, con: r.con }))
+    datos.recuerdos = (recuerdos ?? []).map((r) => ({ id: r.id, texto: r.texto, tipo: r.tipo, creado: r.creado, con: r.con }))
   }
   return { datos, reflexionar: tocaReflexionar(cs) }
 }

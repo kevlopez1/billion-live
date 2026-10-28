@@ -1,4 +1,5 @@
 import { NextResponse, after } from "next/server"
+import * as z from "zod/v4"
 import { autorizado, quien, soloKev } from "@/lib/auth-admin"
 import {
   SIN_CLAVE_IA,
@@ -18,6 +19,7 @@ import {
   validarPublico,
   type Resultado,
 } from "@/lib/casa-blanca-servidor"
+import { borrarRecuerdo } from "@/lib/casa-blanca-memoria"
 
 // ──────────────────────────────────────────────────────────────
 // /api/casa-blanca — la IA de LA CASA BLANCA PROJECT
@@ -30,6 +32,7 @@ import {
 //   POST   { accion: "hablar" | "conversar" | "consejo" | "noticia" } público, con límite.
 //          { accion: "trabajar" } solo Kev: cada entrega cuesta y se guarda.
 //   PATCH  { id, publico } solo Kev: muestra (o esconde) un entregable.
+//   DELETE ?recuerdo=<uuid> solo Kev: borra un recuerdo de la memoria compartida.
 //
 // Si algo falta (la clave de la IA, la base), responde con un error que dice
 // qué falta y la página sigue con su guion. La lógica vive en
@@ -150,6 +153,20 @@ export async function PATCH(req: Request) {
     return responder(await marcarPublico(v.data.id, v.data.publico))
   } catch (e) {
     console.error("[api/casa-blanca] PATCH falló:", (e as Error).message)
+    return json({ error: "Algo falló en el servidor. Inténtalo de nuevo." }, 500)
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const no = exigirKev(req, "Borrar recuerdos lo hace solo Kev.")
+    if (no) return no
+    const id = z.string().uuid().safeParse(new URL(req.url).searchParams.get("recuerdo"))
+    if (!id.success) return json({ error: "Falta el recuerdo: se espera ?recuerdo=<uuid>." }, 400)
+    const r = await borrarRecuerdo(id.data)
+    return r.ok ? json({ borrados: r.borrados }) : json({ error: r.error }, 500)
+  } catch (e) {
+    console.error("[api/casa-blanca] DELETE falló:", (e as Error).message)
     return json({ error: "Algo falló en el servidor. Inténtalo de nuevo." }, 500)
   }
 }

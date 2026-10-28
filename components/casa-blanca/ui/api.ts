@@ -28,6 +28,7 @@ export interface ConcienciaServidor {
 
 /** Un recuerdo de la memoria compartida (lo que vivió con todos los visitantes). */
 export interface RecuerdoServidor {
+  id?: string
   texto: string
   tipo: "charla" | "conversacion" | "consejo" | "noticia" | "trabajo" | "diario"
   creado: string
@@ -128,4 +129,19 @@ export function motivoSinIa(status: number) {
   if (status === 429) return "La IA llegó a su límite por hoy: responde el guion."
   if (status === 0) return "Sin conexión: responde el guion."
   return "La IA no está disponible: responde el guion."
+}
+
+/** Borra un recuerdo de la memoria compartida (solo con la clave de Kev). null si salió bien; si no, el error. */
+export async function borrarRecuerdo(id: string, clave: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${RUTA}?recuerdo=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${clave}` },
+    })
+    if (r.ok) return null
+    const j = (await r.json().catch(() => null)) as { error?: string } | null
+    return j?.error ?? "No se pudo borrar el recuerdo."
+  } catch {
+    return "Sin conexión: no se pudo borrar el recuerdo."
+  }
 }

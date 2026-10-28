@@ -13,13 +13,13 @@
 // ──────────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Crosshair, Send } from "lucide-react"
+import { Crosshair, Send, Trash2 } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
 import { leerClave } from "@/lib/clave"
 import { LUGAR } from "../lugares"
 import type { Departamento, Personaje } from "../tipos"
 import type { Simulacion } from "../motor/simulacion"
-import { leerInterior, motivoSinIa, pedir, type InteriorServidor, type RecuerdoServidor } from "./api"
+import { borrarRecuerdo, leerInterior, motivoSinIa, pedir, type InteriorServidor, type RecuerdoServidor } from "./api"
 import { Barra, EtiquetaFiccion, FOCO, Hoja, Retrato, Rotulo } from "./base"
 import { cuandoFue, recortar, relojTexto } from "./formato"
 import { detectarTema, lineaDeGuion } from "./guion"
@@ -109,6 +109,18 @@ export function Ficha({
     void cargarInterior()
     return () => interiorRef.current?.abort()
   }, [cargarInterior])
+  // Con la clave de Kev en este dispositivo, cada recuerdo se puede borrar.
+  const [clave, setClave] = useState<string | null>(null)
+  const [borrando, setBorrando] = useState<string | null>(null)
+  useEffect(() => setClave(leerClave()), [])
+  async function borrar(id: string) {
+    if (!clave || borrando || !window.confirm("¿Borrar este recuerdo para todos los visitantes?")) return
+    setBorrando(id)
+    const error = await borrarRecuerdo(id, clave)
+    setBorrando(null)
+    if (error) window.alert(error)
+    else void cargarInterior()
+  }
   useEffect(() => () => abortRef.current?.abort(), [])
   useEffect(() => {
     finRef.current?.scrollIntoView({ block: "nearest" })
@@ -266,6 +278,18 @@ export function Ficha({
                   </span>
                   {conPrime(m.texto)}
                   {m.con.length > 0 && <span className="text-white/35"> · {conQuienes(m.con, personajes)}</span>}
+                  {clave && m.id && (
+                    <button
+                      type="button"
+                      onClick={() => void borrar(m.id!)}
+                      disabled={borrando !== null}
+                      aria-label="Borrar este recuerdo"
+                      title="Borrar este recuerdo"
+                      className={`ml-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full align-middle text-white/35 hover:bg-white/10 hover:text-white disabled:opacity-40 ${FOCO}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

@@ -306,6 +306,23 @@ export async function ultimosRecuerdos(id: string, n = 10): Promise<Recuerdo[] |
   }
 }
 
+/**
+ * Borra un recuerdo (solo Kev, desde la ficha): si algún día se guarda algo
+ * que no debía quedar, se quita sin entrar a Supabase.
+ */
+export async function borrarRecuerdo(id: string): Promise<{ ok: true; borrados: number } | { ok: false; error: string }> {
+  const admin = getAdminClient()
+  if (!admin) return { ok: false, error: "Falta la conexión a la base (SUPABASE_SERVICE_ROLE_KEY)." }
+  try {
+    const { data, error } = await admin.from(TABLA_MEMORIA).delete().eq("id", id).select("id")
+    if (error) throw new Error(error.message)
+    return { ok: true, borrados: (data ?? []).length }
+  } catch (e) {
+    console.error("[casa-blanca] no se pudo borrar el recuerdo:", (e as Error).message)
+    return { ok: false, error: "No se pudo borrar el recuerdo. Inténtalo de nuevo." }
+  }
+}
+
 // ── La conciencia ─────────────────────────────────────────────
 
 type FilaConciencia = {
