@@ -1294,14 +1294,16 @@ function mallaParpado(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
       cab.aAvatar(lado * o.x + dx * R, o.y + dy * R, o.z + dz * R, P)
       // Borde oscuro (pestañas/línea) y lagrimal rosado.
       let col: RGBA = [0.96, 0.92, 0.92, 1]
-      if (k <= 1) col = sup ? [0.42, 0.34, 0.33, 1] : [0.8, 0.66, 0.64, 1]
+      if (k <= 1) col = sup ? [0.36, 0.28, 0.27, 1] : [0.86, 0.66, 0.64, 1]
       if (k <= 1 && cp < -0.85) col = [0.95, 0.68, 0.66, 1]
       if (k === 2) col = sup ? [0.86, 0.8, 0.79, 1] : [0.94, 0.88, 0.87, 1]
       // Pesos: la mitad de arriba sigue al párpado cerca del borde.
       const wp = sup * suave(-0.05, 0.25, sp) * (1 - suave(1.2, 1.5, lam))
       const pw: Pesos = [[H.cabeza, 1 - wp]]
       if (wp > 0.001) pw.push([H[`parpado${L}`], wp])
-      fila.push(lote.v(P.x, P.y, P.z, i / cols, k * 0.1, col, pw, [k <= 1 ? 0.35 : 0.5, 0]))
+      // Borde de abajo húmedo (brilla con la luz): el ojo se ve vivo.
+      const humedo = k <= 1 && !sup
+      fila.push(lote.v(P.x, P.y, P.z, i / cols, k * 0.1, col, pw, [humedo ? 0.14 : k <= 1 ? 0.32 : 0.5, 0]))
     }
     ids.push(fila)
   }
@@ -1332,7 +1334,12 @@ function mallaGlobo(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
       const dy = Math.sin(ang) * Math.sin(az)
       const dz = Math.cos(ang)
       cab.aAvatar(lado * o.x + dx * R, o.y + dy * R, o.z + dz * R, P)
-      fila.push(lote.v(P.x, P.y, P.z, k / cols, 1 - ang / Math.PI, BLANCO, [[H[`ojo${L}`], 1]], [0.3, 0]))
+      // Sombra del párpado de arriba sobre el ojo y rincones más oscuros: sin
+      // esto el globo se ve como una bola pegada.
+      const arriba = suave(0.12, 0.62, dy)
+      const rincon = suave(0.45, 0.85, Math.abs(dx))
+      const sh = (1 - 0.55 * arriba) * (1 - 0.22 * rincon)
+      fila.push(lote.v(P.x, P.y, P.z, k / cols, 1 - ang / Math.PI, [sh, sh * 0.98, sh * 0.97, 1], [[H[`ojo${L}`], 1]], [0.3, 0]))
     }
     ids.push(fila)
   }
@@ -1347,6 +1354,8 @@ function mallaOreja(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
   const tam = cab.r.oreja
   const alto = 0.06 * tam
   const ancho = 0.033 * tam
+  const desp = clamp(cab.f.cara.orejas.despegadas, 0, 1)
+  const lobulo = cab.f.cara.orejas.lobulo
   // Centro y orientación (local de la cabeza).
   const centro = new THREE.Vector3(lado * 0.0795 * cab.r.ancho, 0.004, -0.01)
   const giroY = lado * 0.42 // la cara de la oreja mira un poco al frente
@@ -1367,7 +1376,7 @@ function mallaOreja(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
         const cg = Math.cos(g)
         const sg = Math.sin(g)
         let a = ancho * 0.5 * cg * (cg < 0 ? 0.55 : 1) * (sg < 0 ? 0.78 + 0.22 * (1 + sg) : 1)
-        let b = alto * 0.5 * sg
+        let b = alto * 0.5 * sg * (sg < 0 ? lobulo : 1)
         a *= 1 - t
         b *= 1 - t * 0.92
         b -= t * alto * 0.06
@@ -1380,6 +1389,8 @@ function mallaOreja(lote: Lote, cu: Cuerpo, lado: 1 | -1) {
           d = 0.002 + helix + anti + concha
         } else d = -0.0028 - t * 0.003
         P.copy(centro).addScaledVector(atras, a).addScaledVector(arriba, b).addScaledVector(n, d)
+        // Orejas despegadas: el borde de atrás se aleja de la cabeza.
+        P.x += lado * Math.max(0, a + ancho * 0.25) * 0.6 * (desp - 0.2)
         cab.aAvatar(P.x, P.y, P.z, P)
         const sombra = cara === 0 ? 1 - 0.35 * suave(0.55, 0.9, t) : 0.9
         fila.push(lote.v(P.x, P.y, P.z, i / cols, t, [1.04 * sombra, 0.93 * sombra, 0.92 * sombra, 1], [[H.cabeza, 1]], [0.5, 0]))

@@ -164,10 +164,12 @@ export function texPelo(): THREE.Texture {
 }
 
 /** Ojo: iris y esclerótica en coordenadas polares (fila = ángulo desde el frente). */
-export function texOjo(iris: string): THREE.Texture {
-  return una(`ojo-${iris}`, () => {
+export function texOjo(iris: string, esclera = "#ece6de"): THREE.Texture {
+  return una(`ojo-${iris}-${esclera}`, () => {
     const n = 128
     const c = new THREE.Color(iris)
+    const e = new THREE.Color(esclera)
+    const ER = e.r * 255, EG = e.g * 255, EB = e.b * 255
     const rnd = azar(131)
     const fib = new Float32Array(n)
     for (let x = 0; x < n; x++) fib[x] = rnd()
@@ -194,16 +196,16 @@ export function texOjo(iris: string): THREE.Texture {
         } else if (ang < 0.58) {
           // Anillo limbal: transición suave a la esclerótica.
           const t = (ang - 0.52) / 0.06
-          r = 40 + t * 180
-          g = 34 + t * 172
-          b = 32 + t * 165
+          r = 40 + t * (ER - 56)
+          g = 34 + t * (EG - 58)
+          b = 32 + t * (EB - 57)
         } else {
           const t = Math.min(1, (ang - 0.58) / 1.6)
           const v = vena[y * n + x]
           const rojo = Math.max(0, v - 0.62) * 2.4 * t
-          r = 236 - t * 10
-          g = 230 - t * 26 - rojo * 70
-          b = 222 - t * 30 - rojo * 70
+          r = ER - t * 10
+          g = EG - t * 26 - rojo * 70
+          b = EB - t * 30 - rojo * 70
         }
         px[o] = r
         px[o + 1] = g
@@ -212,6 +214,81 @@ export function texOjo(iris: string): THREE.Texture {
       }
     }
     const t = textura(n, px, { color: true, anisotropia: ANISO })
+    t.wrapT = THREE.ClampToEdgeWrapping
+    return t
+  })
+}
+
+/**
+ * Arrugas y pliegues de la cara en un mapa canónico (u por el ancho de la
+ * cara, v de mentón a frente: mentón 0,1 · boca 0,3 · nariz 0,45 · ojos 0,68).
+ * R = profundidad de las arrugas de la edad (frente, entrecejo, patas de
+ * gallo, bajo los ojos, surcos nasogenianos, líneas de marioneta).
+ * G = hoyuelo del mentón partido. La piel las usa como relieve y sombra.
+ */
+export function texArrugas(): THREE.Texture {
+  return una("arrugas", () => {
+    const n = 256
+    const R = new Float32Array(n * n)
+    const G = new Float32Array(n * n)
+    const ruido = fbm(n, 12, 12, 3, 211)
+    // Suma una línea (segmento curvo muestreado) con un ancho en píxeles.
+    const linea = (dst: Float32Array, pts: Array<[number, number]>, ancho: number, prof: number) => {
+      for (let k = 0; k < pts.length - 1; k++) {
+        const [u0, v0] = pts[k]
+        const [u1, v1] = pts[k + 1]
+        const x0 = u0 * n, y0 = (1 - v0) * n, x1 = u1 * n, y1 = (1 - v1) * n
+        const minx = Math.max(0, Math.floor(Math.min(x0, x1) - ancho * 3)), maxx = Math.min(n - 1, Math.ceil(Math.max(x0, x1) + ancho * 3))
+        const miny = Math.max(0, Math.floor(Math.min(y0, y1) - ancho * 3)), maxy = Math.min(n - 1, Math.ceil(Math.max(y0, y1) + ancho * 3))
+        const dx = x1 - x0, dy = y1 - y0
+        const l2 = dx * dx + dy * dy || 1
+        // Se afina hacia las puntas de la línea entera.
+        const t0 = k / (pts.length - 1), t1 = (k + 1) / (pts.length - 1)
+        for (let y = miny; y <= maxy; y++) {
+          for (let x = minx; x <= maxx; x++) {
+            const t = Math.min(1, Math.max(0, ((x - x0) * dx + (y - y0) * dy) / l2))
+            const px = x0 + dx * t - x, py = y0 + dy * t - y
+            const d = Math.sqrt(px * px + py * py)
+            const tg = t0 + (t1 - t0) * t
+            const punta = Math.sin(Math.PI * Math.min(1, Math.max(0, tg))) ** 0.6
+            const v = prof * punta * Math.exp(-((d / ancho) ** 2))
+            const i = y * n + x
+            if (v > dst[i]) dst[i] = v
+          }
+        }
+      }
+    }
+    const curva = (f: (t: number) => [number, number], m = 12) => Array.from({ length: m + 1 }, (_, i) => f(i / m))
+    for (const lado of [-1, 1]) {
+      const U = (du: number) => 0.5 + lado * du
+      // Patas de gallo: abanico desde el rabillo del ojo.
+      for (const [ang, largo, p] of [[-0.45, 0.055, 0.7], [-0.12, 0.065, 0.9], [0.22, 0.06, 0.8], [0.55, 0.045, 0.55]] as const) {
+        linea(R, curva((t) => [U(0.3 + Math.cos(ang) * largo * t), 0.685 + Math.sin(ang) * largo * t * 1.4 - 0.006 * t * t], 6), 1.1, p)
+      }
+      // Bajo el ojo: un arco que cuelga.
+      linea(R, curva((t) => [U(0.13 + 0.17 * t), 0.636 - 0.018 * Math.sin(Math.PI * t) + 0.012 * t]), 1.4, 0.55)
+      // Surco nasogeniano: del ala de la nariz a la comisura y un poco más.
+      linea(R, curva((t) => [U(0.095 + 0.085 * t + 0.01 * Math.sin(Math.PI * t)), 0.455 - 0.2 * t]), 2.2, 1)
+      // Marioneta: de la comisura hacia el mentón.
+      linea(R, curva((t) => [U(0.168 - 0.01 * t), 0.275 - 0.11 * t]), 1.6, 0.6)
+      // Entrecejo
+      linea(R, curva((t) => [U(0.03 + 0.006 * t), 0.73 + 0.06 * t], 4), 1.1, 0.8)
+    }
+    // Frente: tres líneas largas, onduladas.
+    for (const [v, p] of [[0.81, 0.75], [0.848, 1], [0.886, 0.8]] as const) {
+      linea(R, curva((t) => [0.24 + 0.52 * t, v + 0.008 * Math.sin(t * Math.PI) + 0.004 * Math.sin(t * 17 + v * 50)], 24), 1.3, p)
+    }
+    // Hoyuelo del mentón.
+    linea(G, curva((t) => [0.5, 0.125 + 0.075 * t], 4), 2.6, 1)
+    const px = new Uint8ClampedArray(n * n * 4)
+    for (let i = 0; i < n * n; i++) {
+      px[i * 4] = Math.min(255, R[i] * (0.8 + 0.4 * ruido[i]) * 255)
+      px[i * 4 + 1] = Math.min(255, G[i] * 255)
+      px[i * 4 + 2] = 0
+      px[i * 4 + 3] = 255
+    }
+    const t = textura(n, px, { color: false, anisotropia: ANISO })
+    t.wrapS = THREE.ClampToEdgeWrapping
     t.wrapT = THREE.ClampToEdgeWrapping
     return t
   })

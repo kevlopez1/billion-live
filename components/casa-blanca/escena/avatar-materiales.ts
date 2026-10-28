@@ -15,7 +15,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import * as THREE from "three"
-import { texNumero, texOjo, texPelo, texPielColor, texPielNormal, texTela, type Tejido } from "./avatar-texturas"
+import { texArrugas, texNumero, texOjo, texPelo, texPielColor, texPielNormal, texTela, type Tejido } from "./avatar-texturas"
 
 /** Lee la rugosidad y el metal del vértice (atributo aMat) y, si hay color de dispersión, envuelve la luz. */
 function inyectar(m: THREE.MeshPhysicalMaterial, sss: THREE.Color | null) {
@@ -29,6 +29,16 @@ function inyectar(m: THREE.MeshPhysicalMaterial, sss: THREE.Color | null) {
       .replace("#include <metalnessmap_fragment>", "float metalnessFactor = max( metalness, vMat.y );")
     if (sss) {
       sh.uniforms.uSSS = { value: sss }
+      sh.uniforms.uArrugas = { value: texArrugas() }
+      // Arrugas: mapa canónico de la cara (aArr = u, v, edad, hoyuelo) como relieve
+      // (gradiente de la altura en pantalla, sin tangentes) y una sombra leve en el pliegue.
+      sh.vertexShader = sh.vertexShader
+        .replace("#include <common>", "#include <common>\nattribute vec4 aArr;\nvarying vec4 vArr;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\n\tvArr = aArr;")
+      f = f
+        .replace("#include <common>", "#include <common>\nuniform sampler2D uArrugas;\nvarying vec4 vArr;\nvec3 arrugaNormal( vec3 p, vec3 n, float h, float fd ) {\n\tvec3 dpx = dFdx( p );\n\tvec3 dpy = dFdy( p );\n\tvec3 r1 = cross( dpy, n );\n\tvec3 r2 = cross( n, dpx );\n\tfloat det = dot( dpx, r1 ) * fd;\n\tvec3 g = sign( det ) * ( dFdx( h ) * r1 + dFdy( h ) * r2 );\n\treturn normalize( abs( det ) * n - g );\n}")
+        .replace("#include <color_fragment>", "#include <color_fragment>\n\tvec4 arrW = texture2D( uArrugas, vArr.xy );\n\tfloat arrH = arrW.r * vArr.z + arrW.g * vArr.w;\n\tdiffuseColor.rgb *= 1.0 - 0.3 * arrH;")
+        .replace("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\n\tif ( arrH > 0.002 ) normal = arrugaNormal( - vViewPosition, normal, - arrH * 0.00045, faceDirection );")
       f = f
         .replace("#include <common>", "#include <common>\nuniform vec3 uSSS;")
         .replace(
@@ -130,6 +140,8 @@ export function matPelo(color: string): THREE.MeshPhysicalMaterial {
     map: t,
     vertexColors: true,
     alphaTest: 0.42,
+    // Con MSAA el borde de cada hebra se suaviza (sin escalones en la línea del pelo).
+    alphaToCoverage: true,
     side: THREE.DoubleSide,
     roughness: 0.52,
     metalness: 0,
@@ -145,11 +157,14 @@ export function matPelo(color: string): THREE.MeshPhysicalMaterial {
 }
 
 const ojos = new Map<string, THREE.MeshPhysicalMaterial>()
-export function matOjo(iris: string): THREE.MeshPhysicalMaterial {
-  let m = ojos.get(iris)
+export function matOjo(iris: string, esclera = "#ece6de"): THREE.MeshPhysicalMaterial {
+  const clave = `${iris}|${esclera}`
+  let m = ojos.get(clave)
   if (m) return m
   m = new THREE.MeshPhysicalMaterial({
-    map: texOjo(iris),
+    map: texOjo(iris, esclera),
+    // El color del vértice da la sombra del párpado sobre el ojo.
+    vertexColors: true,
     roughness: 0.3,
     metalness: 0,
     clearcoat: 1,
@@ -157,7 +172,7 @@ export function matOjo(iris: string): THREE.MeshPhysicalMaterial {
     specularIntensity: 0.4,
   })
   m.name = `ojo-${iris}`
-  ojos.set(iris, m)
+  ojos.set(clave, m)
   return m
 }
 
