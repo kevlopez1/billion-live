@@ -28,6 +28,16 @@ export interface Pose {
 
 const nuevaPose = (): Pose => ({ pos: new THREE.Vector3(), mira: new THREE.Vector3(), fov: 45 })
 
+/** Edificios de la superficie con su altura: la cámara no entra en ellos. */
+const EDIFICIOS = [HUELLAS.residencia, HUELLAS.alaOeste, HUELLAS.eeob, HUELLAS.tesoro, { ...HUELLAS.porticoNorte, alto: 18 }]
+function edificioEn(x: number, z: number, margen = 0): { x0: number; x1: number; z0: number; z1: number; alto: number } | null {
+  for (const e of EDIFICIOS) if (x > e.x0 - margen && x < e.x1 + margen && z > e.z0 - margen && z < e.z1 + margen) return e
+  // Pórtico Sur (semicírculo)
+  const ps = HUELLAS.porticoSur
+  if (z > ps.cz && Math.hypot(x - ps.cx, z - ps.cz) < ps.radio + margen) return { x0: -ps.radio, x1: ps.radio, z0: ps.cz, z1: ps.cz + ps.radio, alto: 18 }
+  return null
+}
+
 export interface InfoPersonaje {
   pos: THREE.Vector3
   rumbo: number
@@ -595,11 +605,15 @@ export class ControlCamara {
     }
     const deseado = _v.copy(info.pos)
     deseado.y += 1.5
+    // Dentro de un edificio no se ve: la cámara se queda afuera y encuadra el edificio.
+    const caja = !info.visible && info.nivel === S ? edificioEn(info.pos.x, info.pos.z) : null
+    if (caja) deseado.set((caja.x0 + caja.x1) / 2, caja.alto * 0.45, (caja.z0 + caja.z1) / 2)
     const t = this.controles.target
     if (!this.seguirListo) {
       // Al empezar: detrás del personaje, a 9 m y unos 25° por encima.
       const atras = _v2.set(-Math.sin(info.rumbo), 0, -Math.cos(info.rumbo))
-      this.camara.position.copy(deseado).addScaledVector(atras, 8.2).add(_v3.set(0, 3.8, 0))
+      const lejos = caja ? Math.max(42, (caja.x1 - caja.x0) * 0.9) : 8.2
+      this.camara.position.copy(deseado).addScaledVector(atras, lejos).add(_v3.set(0, caja ? lejos * 0.45 : 3.8, 0))
       t.copy(deseado)
       this.seguirListo = true
       return
@@ -607,6 +621,13 @@ export class ControlCamara {
     const delta = _v2.copy(deseado).sub(t).multiplyScalar(1 - Math.exp(-6 * dt))
     t.add(delta)
     this.camara.position.add(delta)
+    if (caja) {
+      // Lejos del edificio, sin girar detrás de alguien que no se ve.
+      const min = Math.max(42, (caja.x1 - caja.x0) * 0.9)
+      const off = _v3.copy(this.camara.position).sub(t)
+      if (off.length() < min) this.camara.position.copy(t).add(off.setLength(min))
+      return
+    }
     // Sin tocar la pantalla por un rato, la cámara vuelve a ponerse detrás.
     if (!this.interactuando && this.reloj - this.ultimaInteraccion > 1.5) {
       const off = _v3.copy(this.camara.position).sub(t)
@@ -632,6 +653,10 @@ export class ControlCamara {
         t.z = 40 + (t.z - 40) * (700 / r)
       }
       if (this.camara.position.y < 1.2) this.camara.position.y = 1.2
+      // La cámara nunca entra a un edificio: si queda dentro, sube por encima del techo.
+      const p = this.camara.position
+      const dentro = edificioEn(p.x, p.z, 1.5)
+      if (dentro && p.y < dentro.alto + 2) p.y = dentro.alto + 2
     } else if (this.modo === "nivel") {
       const y = ALTURA_NIVEL[n]
       const S2 = HUELLAS.subsuelo
