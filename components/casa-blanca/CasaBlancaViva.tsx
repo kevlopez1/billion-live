@@ -423,7 +423,9 @@ export default function CasaBlancaViva() {
       const datos: DatoEtiqueta[] = []
       for (const id of IDS) {
         const e = sim.pj[id]
-        if (!e || !e.visible || e.nivel !== nv) continue
+        // A quien se sigue y está adentro se lo ve en rayos X: su etiqueta también.
+        const adentro = !!e && !e.visible && id === seleccionadoRef.current && camaraRef.current === "seguir"
+        if (!e || (!e.visible && !adentro) || e.nivel !== nv) continue
         const s = escena.pantallaDe(id)
         if (!s || !s.visible) continue
         const b = e.burbuja && e.burbuja.hasta > ahora ? e.burbuja : null
@@ -432,7 +434,7 @@ export default function CasaBlancaViva() {
           x: s.x,
           y: s.y,
           dist: Math.hypot(e.pos.x - cam.x, e.pos.z - cam.z),
-          actividad: e.actividad,
+          actividad: adentro ? `${e.actividad} · adentro` : e.actividad,
           burbuja: b ? { texto: b.texto, tipo: b.tipo } : null,
         })
       }

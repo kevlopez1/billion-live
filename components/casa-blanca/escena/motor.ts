@@ -519,6 +519,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
 
   // ── Personajes ──
   const aplicarPersonajes = (dt: number) => {
+    const seguido = camara.seguido()
     for (const [id, e] of estados) {
       const a = avatares.get(id)
       if (!a) continue
@@ -529,7 +530,10 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       const nuevo = actual + dif * (1 - Math.exp(-10 * dt))
       rumbos.set(id, nuevo)
       a.raiz.rotation.y = nuevo
-      a.raiz.visible = e.visible && nivelDeY(e.pos.y) === nivelActual
+      // A quien se sigue y está adentro se lo ve a través de las paredes.
+      const adentro = id === seguido && !e.visible && nivelDeY(e.pos.y) === nivelActual
+      a.raiz.visible = (e.visible && nivelDeY(e.pos.y) === nivelActual) || adentro
+      a.rayosX?.(adentro)
       if (!a.raiz.visible && e.estado !== "camina" && e.estado !== "corre") continue
       if (avataresRotos.has(id)) continue
       try {
@@ -923,7 +927,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
       if (!a) return null
       a.cabeza.getWorldPosition(_p)
       const r = proyectar(_p)
-      const detras = nivelActual === "superficie" && tapado(cam.position, _p)
+      // La etiqueta de quien se sigue no la tapa un edificio: se lo ve en rayos X.
+      const detras = nivelActual === "superficie" && id !== camara.seguido() && tapado(cam.position, _p)
       return { ...r, visible: r.visible && !detras && visibleEnCadena(a.raiz) }
     },
     proyectar,

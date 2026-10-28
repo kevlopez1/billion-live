@@ -79,6 +79,8 @@ export interface Avatar {
   cabeza: THREE.Object3D
   animar(estado: EstadoCuerpo, dt: number, velocidad: number): void
   resaltar(on: boolean): void
+  /** Silueta que se ve a través de las paredes: para seguir a alguien que está dentro de un edificio. */
+  rayosX?(on: boolean): void
   dispose(): void
 }
 

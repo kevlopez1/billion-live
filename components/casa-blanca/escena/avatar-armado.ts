@@ -177,11 +177,44 @@ export function crearAvatarReal(p: Personaje): Avatar {
     anillo.visible = on
   }
 
+  // Rayos X: si la cámara sigue a alguien que está dentro de un edificio (los
+  // interiores no se dibujan), se lo ve a través de las paredes, en su color.
+  const matRayos = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(p.color).lerp(new THREE.Color("#ffffff"), 0.35),
+    transparent: true,
+    opacity: 0.62,
+    depthTest: false,
+    depthWrite: false,
+  })
+  propias.push(matRayos)
+  const originales = new Map<THREE.Mesh, { mat: THREE.Material | THREE.Material[]; orden: number }>()
+  let enRayos = false
+  function rayosX(on: boolean) {
+    if (on === enRayos) return
+    enRayos = on
+    const todas: THREE.Mesh[] = [...mallas, ...(utileria ? [utileria] : []), ...(balon ? [balon] : [])]
+    for (const m of todas) {
+      if (on) {
+        originales.set(m, { mat: m.material, orden: m.renderOrder })
+        m.material = matRayos
+        m.renderOrder = 10
+      } else {
+        const o = originales.get(m)
+        if (o) {
+          m.material = o.mat
+          m.renderOrder = o.orden
+        }
+      }
+    }
+    sombra.visible = !on
+    if (particulas) particulas.visible = !on
+  }
+
   function dispose() {
     raiz.removeFromParent()
     for (const x of propias) x.dispose()
   }
 
   animar("quieto", 0, 0)
-  return { raiz, altura: cu.H, cabeza, animar, resaltar, dispose }
+  return { raiz, altura: cu.H, cabeza, animar, resaltar, rayosX, dispose }
 }

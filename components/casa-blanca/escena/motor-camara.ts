@@ -44,6 +44,13 @@ function edificioEn(x: number, z: number, margen = 0): { x0: number; x1: number;
   return null
 }
 
+/** Desde (x, z) en la dirección (ux, uz), cuántos metros faltan para salir de la huella del edificio. */
+function salidaDeCaja(x: number, z: number, ux: number, uz: number, c: { x0: number; x1: number; z0: number; z1: number }): number {
+  const tx = ux > 1e-6 ? (c.x1 - x) / ux : ux < -1e-6 ? (c.x0 - x) / ux : Infinity
+  const tz = uz > 1e-6 ? (c.z1 - z) / uz : uz < -1e-6 ? (c.z0 - z) / uz : Infinity
+  return Math.max(0, Math.min(tx, tz))
+}
+
 export interface InfoPersonaje {
   pos: THREE.Vector3
   rumbo: number
@@ -595,6 +602,11 @@ export class ControlCamara {
   }
 
   // ── Modos ──
+  /** A quién sigue la cámara (null fuera del modo seguir). */
+  seguido(): string | null {
+    return this.modo === "seguir" ? this.seguirId : null
+  }
+
   setModo(modo: ModoCamara, objetivoId?: string) {
     if (modo === "intro") {
       void this.iniciarIntro()
@@ -961,16 +973,15 @@ export class ControlCamara {
     }
     const deseado = _v.copy(info.pos)
     deseado.y += 1.5
-    // Dentro de un edificio no se ve: la cámara se queda afuera y encuadra el edificio.
+    // Dentro de un edificio los interiores no se dibujan: el motor lo muestra en
+    // rayos X y la cámara se queda afuera, mirándolo a través de la pared.
     const caja = !info.visible && info.nivel === S ? edificioEn(info.pos.x, info.pos.z) : null
-    if (caja) deseado.set((caja.x0 + caja.x1) / 2, caja.alto * 0.45, (caja.z0 + caja.z1) / 2)
-    // El edificio entero y su entorno: la órbita deja alejarse más que detrás de una persona.
     this.controles.maxDistance = caja ? Math.max(60, (caja.x1 - caja.x0) * 1.45) + 25 : LIMITES.seguir.maxDistance ?? 45
     const t = this.controles.target
     if (!this.seguirListo) {
       // Al empezar: detrás del personaje, a 9 m y unos 25° por encima.
       const atras = _v2.set(-Math.sin(info.rumbo), 0, -Math.cos(info.rumbo))
-      const lejos = caja ? Math.max(60, (caja.x1 - caja.x0) * 1.45) : 8.2
+      const lejos = caja ? salidaDeCaja(deseado.x, deseado.z, -Math.sin(info.rumbo), -Math.cos(info.rumbo), caja) + 12 : 8.2
       this.camara.position.copy(deseado).addScaledVector(atras, lejos).add(_v3.set(0, caja ? lejos * 0.45 : 3.8, 0))
       t.copy(deseado)
       this.seguirListo = true
@@ -980,10 +991,15 @@ export class ControlCamara {
     t.add(delta)
     this.camara.position.add(delta)
     if (caja) {
-      // Lejos del edificio, sin girar detrás de alguien que no se ve.
-      const min = Math.max(60, (caja.x1 - caja.x0) * 1.45)
+      // Afuera del edificio, en la dirección en la que esté la cámara, y sin girar
+      // detrás de alguien que no se ve.
       const off = _v3.copy(this.camara.position).sub(t)
-      if (off.length() < min) this.camara.position.copy(t).add(off.setLength(min))
+      const lh = Math.hypot(off.x, off.z) || 1
+      const ux = off.x / lh
+      const uz = off.z / lh
+      const h = Math.max(lh, salidaDeCaja(t.x, t.z, ux, uz, caja) + 12)
+      const y = Math.max(this.camara.position.y, t.y + h * 0.45)
+      if (h !== lh || y !== this.camara.position.y) this.camara.position.set(t.x + ux * h, y, t.z + uz * h)
       return
     }
     // Sin tocar la pantalla por un rato, la cámara vuelve a ponerse detrás.

@@ -682,7 +682,7 @@ diffuseColor.rgb *= mix(vec3(1.0), vec3(0.5, 0.58, 0.82), uNoche * vTurno);`,
   })
 
   // ── Cámara de pruebas: blanco con una grilla de luz que respira ──
-  const grilla = new THREE.MeshStandardMaterial({ name: "ciudad-grilla", color: "#e7edf2", roughness: 0.35, metalness: 0 })
+  const grilla = new THREE.MeshStandardMaterial({ name: "ciudad-grilla", color: "#cdd6dd", roughness: 0.35, metalness: 0 })
   grilla.onBeforeCompile = (s) => {
     s.uniforms.uTiempo = u.tiempo
     s.vertexShader = s.vertexShader
@@ -703,7 +703,7 @@ diffuseColor.rgb *= mix(vec3(1.0), vec3(0.5, 0.58, 0.82), uNoche * vTurno);`,
   float lejos = clamp(max(fw.x, fw.y) * 3.0, 0.0, 1.0);
   float onda = 0.5 + 0.5 * sin(dot(pl, vec2(0.21, 0.13)) - uTiempo * 1.3);
   vec3 cian = vec3(0.21, 0.83, 1.0);
-  totalEmissiveRadiance += cian * (l1 * 0.18 * (1.0 - lejos) + l4 * (0.8 + 1.4 * onda)) ;
+  totalEmissiveRadiance += cian * (l1 * 0.07 * (1.0 - lejos) + l4 * (0.3 + 0.7 * onda));
 }`,
       )
   }
@@ -1853,6 +1853,10 @@ function construirComedor(k: Kit, pz: Piezas) {
   caja(k.base, pz, POZO.x1 + 0.6, CIU.x1, Y0 + 4.5, Y0 + 4.52, CONTROL.z1 + 1, S.z0 - 1, A.muroCorte)
   techoSala(k, pz, S, A.panel, 3, "#fff1dc", 2.6, 0.3)
   letrero(k, pz, "comedor", S.x0 + 0.05, Y0 + 3.5, 62, Math.PI / 2, 0.45)
+  // Revestimiento de madera en el muro del fondo: la única zona tibia de la instalación.
+  caja(k.base, pz, S.x1 - 0.06, S.x1, Y0, Y0 + 2.8, S.z0 + 1.2, S.z1 - 0.2, acabado("#8a6a4e", 0.55, 0))
+  for (let z = S.z0 + 1.6; z < S.z1 - 0.2; z += 0.4) caja(k.base, pz, S.x1 - 0.1, S.x1 - 0.06, Y0, Y0 + 2.8, z - 0.05, z + 0.05, acabado("#6e523b", 0.6, 0))
+  k.luz.agregar(pz.caja, M(S.x1 - 0.12, Y0 + 2.82, cz(S) + 0.5, 0, 0.04, 0.03, S.z1 - S.z0 - 1.6), luz("#ffcf8a", 2.4, 0.2))
   // Barra de café contra el muro norte.
   caja(k.base, pz, 17, 25.6, Y0, Y0 + 1.05, S.z0 + 0.1, S.z0 + 0.9, acabado("#8a6a4e", 0.5, 0))
   caja(k.base, pz, 16.9, 25.7, Y0 + 1.05, Y0 + 1.1, S.z0 + 0.05, S.z0 + 1.0, A.blanco)
@@ -1941,7 +1945,7 @@ type Vista = { pos: [number, number, number]; mira: [number, number, number]; fo
  * piso y mirando un poco hacia abajo (la órbita no pasa de 83° desde arriba).
  */
 export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea" | "torres" | "anden" | "control" | "comedor" | "jardin" | "camara", Vista> = {
-  mirador: { pos: [-6.5, Y0 + 5.5, 15.6], mira: [4, Y0 + 0.5, 40], fov: 64 },
+  mirador: { pos: [5.5, Y0 + 9.6, 15.3], mira: [-2.5, Y0 + 0.5, 36], fov: 62 },
   plaza: { pos: [7, Y0 + 5, 42], mira: [-2, Y0 + 1.5, 22], fov: 64 },
   avenida: { pos: [1.5, Y0 + 2.9, 94.8], mira: [-0.4, Y0 + 0.1, 76], fov: 60 },
   aerea: { pos: [31, Y0 + 13.5, 107.5], mira: [-4, Y0, 52], fov: 55 },
@@ -2239,7 +2243,7 @@ export function construirCiudad(ctx: CtxEscena): void {
   poneLuz(0, Y0 + 5, 33, "#eaf4ff", 90, 30, 0.4)
   poneLuz(NUCLEO.x - 3, Y0 + 4.5, NUCLEO.z, "#56c8ff", 70, 24, -0.3)
   poneLuz(-22, Y0 + 5.5, 28, "#eef3ff", 80, 30, 0.4)
-  poneLuz(0, Y0 + 8, cz(CAMARA), "#e6f7ff", 90, 26, 0.3)
+  poneLuz(0, Y0 + 8, cz(CAMARA), "#e6f7ff", 45, 22, 0.3)
   poneLuz(20, Y0 + 3.4, cz(JARDIN), P.magenta, 45, 18, 0)
 
   // ── Lugares que se pueden tocar: cajas invisibles (no dibujan) sobre cada lugar ──
