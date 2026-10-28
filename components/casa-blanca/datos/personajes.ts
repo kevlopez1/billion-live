@@ -634,7 +634,7 @@ export const PERSONAJES: Personaje[] = [
       [15.5, "jardin-sur", "Lleva agua a los jardineros"],
       [16.5, "parque", "Conversa con quien se acerque"],
       [18, "jardin-sur", "Cuenta parábolas a los jardineros"],
-      [19.5, "ciudad-mercado", "Cena con todos en el Comedor y ayuda a servir"],
+      [19.5, "ciudad-mercado", "Ayuda a servir en el Comedor y conversa con todos"],
       [21, "capilla", "Ora en silencio"],
       [22, "rosas", "Contempla las estrellas"],
       [23, "habitaciones", "Duerme", "duerme"],

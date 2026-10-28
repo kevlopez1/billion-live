@@ -10,12 +10,11 @@
 //   --visor cine|camara    fuerza el visor de todo el episodio (por defecto, el del guion)
 //   --calidad baja|media|alta   (por defecto media)
 //   --out <archivo.mp4>    (por defecto <ep>-<formato>.mp4)
-//   --desde <s> --hasta <s>     solo un tramo (los cuadros anteriores se simulan igual: el tramo sale idéntico al del video entero)
+//   --desde <s> --hasta <s>     solo un tramo (los cuadros anteriores se simulan igual, sin dibujarlos: el tramo
+//                          sale idéntico al del video entero y llega en segundos)
 //   --url http://localhost:3110 la web (npm run dev)
 //   --alto <px>            vista previa a otro alto (720 → 1280×720 en 16:9, 960×720 en 4:3); por defecto 1080
 //   --fps <n>              vista previa a otros cuadros por segundo (24); por defecto los del guion (30)
-//   --atajo                vista previa: los cuadros antes de --desde no se dibujan (llega rápido, pero no es
-//                          idéntico al video entero; nunca para el video final)
 //   --hashes <archivo>     escribe el md5 de cada cuadro (para comprobar que dos renders son iguales)
 //   --verbose              muestra la consola de la página
 //
@@ -79,7 +78,8 @@ async function main() {
   if (o.visor) q.set("visor", o.visor)
   if (o.alto) q.set("alto", String(o.alto))
   if (o.fps) q.set("fps", String(o.fps))
-  if (o.atajo) q.set("atajo", "1")
+  // --atajo ya no hace falta: --desde llega rápido y sale idéntico.
+  if (o.atajo) console.error("--atajo ya no hace falta: --desde no dibuja los cuadros anteriores y el tramo sale idéntico.")
   const url = `${o.url.replace(/\/$/, "")}/casa-blanca/estudio?${q}`
 
   const { chromium } = cargarPlaywright()

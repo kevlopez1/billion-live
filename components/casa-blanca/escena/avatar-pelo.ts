@@ -173,7 +173,10 @@ function pelo(lote: Lote, cu: Cuerpo, ph: PeloR, filas: FilaCabeza[], sem: numbe
         // (las de afuera, casi opacas: con alfa 1,3 la silueta se deshilachaba en
         // tiras sueltas; la hebra se lee en el color de la textura, no en huecos.
         // En el borde —la línea del pelo— siguen sueltas.)
-        const a = interior ? suave(0.04, 0.55, m) * (rizado ? 8 : 2.4) : suave(0.0, 0.45, m) * (exterior ? 2.05 : 2.3) * lerp(0.62, 1, suave(0.45, 0.9, m))
+        let a = interior ? suave(0.04, 0.55, m) * (rizado ? 8 : 2.4) : suave(0.0, 0.45, m) * (exterior ? 2.05 : 2.3) * lerp(0.62, 1, suave(0.45, 0.9, m))
+        // Pelo liso peinado (laca, gel): las capas de afuera tapan como una masa;
+        // solo el borde con la piel sigue en hebras.
+        if (!interior && ph.liso > 0) a *= 1 + 1.6 * ph.liso * suave(0.35, 0.8, m)
         fila.push(lote.v(_v.x, _v.y, _v.z, u, v, [col[0] * kk, col[1] * kk, col[2] * kk, a], cu.pesosCabeza(l), [interior ? 0.6 : 0.5, 0]))
         fm.push(m)
       }
@@ -384,7 +387,9 @@ function barba(lote: Lote, cu: Cuerpo, b: BarbaR, filas: FilaCabeza[], sem: numb
         // Borde: la de adentro tapa, la de afuera deja ver hebras.
         // (la de afuera, casi opaca salvo en el borde: con 0,95 la barba era una
         // mancha oscura con hebras sueltas alrededor; con bucles, tapa la de adentro)
-        const a = interior ? suave(0.15, 0.6, m) * (rizado ? 8 : 2) * b.densidad : suave(0.02, 0.55, m) * lerp(0.95, 1.7, suave(0.5, 0.95, m)) * b.densidad
+        let a = interior ? suave(0.15, 0.6, m) * (rizado ? 8 : 2) * b.densidad : suave(0.02, 0.55, m) * lerp(0.95, 1.7, suave(0.5, 0.95, m)) * b.densidad
+        // Barba recortada y tupida: la capa de afuera es una masa (el borde sigue en hebras).
+        if (!interior && b.liso) a *= 1 + 1.4 * b.liso * suave(0.5, 0.9, m)
         fila.push(lote.v(_v.x, _v.y, _v.z, ANG[j] * (rizado ? 1.4 : 4) + c * 0.31, l.y * (rizado ? 18 : 12), [col[0], col[1], col[2], a], cu.pesosCabeza(l), [0.62, 0]))
       }
       ids.push(fila)

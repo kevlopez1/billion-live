@@ -403,25 +403,30 @@ class Sastre {
   tira(op: { filas: number; cols: number; pos: (t: number, w: number, out: THREE.Vector3) => THREE.Vector3; grosor: number; color: (t: number, w: number) => RGBA; mat: Mat2; pesos: (p: THREE.Vector3, t: number) => Pesos; normal: (t: number, w: number, out: THREE.Vector3) => THREE.Vector3 }) {
     const L = this.lote
     const caras: number[][][] = [[], []]
+    // Vectores propios: los `normal` de las prendas llaman a S.punto, que escribe
+    // en _v y _n (con _v compartido, la banda diagonal, las solapas y las
+    // tapas de los bolsillos colapsaban en una línea sobre el cuerpo).
+    const Q = new THREE.Vector3()
+    const N = new THREE.Vector3()
     for (const cara of [0, 1]) {
       for (let i = 0; i <= op.filas; i++) {
         const t = i / op.filas
         const fila: number[] = []
         for (let k = 0; k <= op.cols; k++) {
           const w = (k / op.cols) * 2 - 1
-          op.pos(t, w, _v)
-          op.normal(t, w, _n)
-          if (cara === 0) _v.addScaledVector(_n, op.grosor)
-          fila.push(L.v(_v.x, _v.y, _v.z, w * 0.03, t * 0.1, op.color(t, w), op.pesos(_v, t), op.mat))
+          op.pos(t, w, Q)
+          op.normal(t, w, N)
+          if (cara === 0) Q.addScaledVector(N, op.grosor)
+          fila.push(L.v(Q.x, Q.y, Q.z, w * 0.03, t * 0.1, op.color(t, w), op.pesos(Q, t), op.mat))
         }
         caras[cara].push(fila)
       }
     }
     // Cara de afuera mira según la normal; la de adentro al revés. Se decide con un punto de referencia.
-    op.pos(0.5, 0, _v)
-    op.normal(0.5, 0, _n)
-    const lejos = _v.clone().addScaledVector(_n, -1)
-    const cerca = _v.clone().addScaledVector(_n, 1)
+    op.pos(0.5, 0, Q)
+    op.normal(0.5, 0, N)
+    const lejos = Q.clone().addScaledVector(N, -1)
+    const cerca = Q.clone().addScaledVector(N, 1)
     L.tiras(caras[0], false, { centros: caras[0].map(() => lejos) })
     L.tiras(caras[1], false, { centros: caras[1].map(() => cerca) })
     // Cantos (los cuatro bordes).
@@ -576,9 +581,9 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     }
   }
 
-  const cinturon = (y: number, holg: number) => {
-    S.tronco({ y0: y - 0.018 * s, y1: y, paso: 0.02, holgura: () => holg, bultos: 0.5, color: () => cueroNegro, mat: MAT_CUERO, tapa: false })
-    S.punto(y - 0.009 * s, FRENTE, 0.5, holg + 0.002, _v)
+  const cinturon = (y: number, holg: number, bultos = 0.5) => {
+    S.tronco({ y0: y - 0.018 * s, y1: y, paso: 0.02, holgura: () => holg, bultos, color: () => cueroNegro, mat: MAT_CUERO, tapa: false })
+    S.punto(y - 0.009 * s, FRENTE, bultos, holg + 0.002, _v)
     S.boton(_v.clone(), new THREE.Vector3(0, 0, 1), 0.011 * s, 0.003, rgba("#b9a46a"), MAT_ORO, cu.pesosTronco(0, y, 0.1), 4)
   }
 
@@ -588,8 +593,18 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     }
   }
 
-  const sandalias = () => {
+  const sandalias = (altas = false) => {
     pieDescalzo = true
+    if (altas) {
+      // Tiras cruzadas que suben por la pantorrilla (calcei / caligae).
+      for (const lado of [1, -1] as const) {
+        const c = cu.piernas[lado > 0 ? 0 : 1]
+        for (let k = 0; k < 4; k++) {
+          const u = c.u[3] - (0.025 + k * 0.045) * s
+          S.tubo({ cadena: "pierna", lado, u0: u - 0.012 * s, u1: u, paso: 0.012, cols: 12, holgura: () => 0.003, color: () => rgba("#6a4a30"), mat: MAT_CUERO, tapa: false })
+        }
+      }
+    }
     const cuero = rgba("#6b4a2f")
     for (const lado of [1, -1] as const) {
       // Suela fina debajo del pie y dos tiras encima.
@@ -812,6 +827,10 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       } else {
         // Corbata: nudo y hoja hasta el cinturón (o más abajo si es larga).
         const yFin = (op.larga ? 0.548 : 0.585) * Hh
+        // La corbata larga cuelga por DELANTE del saco abotonado (botón a 0,598·Hh):
+        // por debajo del botón pasa a la holgura del saco; antes iba por debajo y la
+        // tela del saco la atravesaba (fragmentos rojos sueltos en la punta).
+        const yBot = 0.598 * Hh
         S.tira({
           filas: 14,
           cols: 2,
@@ -820,7 +839,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
             const y = lerp(yNudo - 0.022 * s, yFin, t)
             const ancho = lerp(0.018, 0.043, Math.pow(t, 0.8)) * s
             const punta = t > 0.94 ? (1 - Math.abs(w)) * 0.035 * s * (t - 0.94) / 0.06 : 0
-            S.punto(y - punta, FRENTE, 0.45, 0.009 + 0.003 * t, out)
+            const sobre = op.larga ? suave(yBot + 0.012 * Hh, yBot - 0.004 * Hh, y) : 0
+            S.punto(y - punta, FRENTE, lerp(0.45, 0.3, sobre), lerp(0.009 + 0.003 * t, holgTraje(y, FRENTE) + 0.005, sobre), out)
             out.x += w * ancho * (t > 0.94 ? 1 - (t - 0.94) / 0.06 * 0.2 : 1)
             return out
           },
@@ -851,7 +871,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
   }
 
   /** Banda diagonal sobre el torso (faja, manto, toga): del hombro `lado` a la cadera opuesta. */
-  const banda = (lado: 1 | -1, ancho: number, holg: number, color: (w: number) => RGBA, op: { y0?: number; y1?: number; pliegues?: number; mat?: Mat2 } = {}) => {
+  const banda = (lado: 1 | -1, ancho: number, holg: number, color: (w: number) => RGBA, op: { y0?: number; y1?: number; pliegues?: number; mat?: Mat2; t0?: number; t1?: number; filas?: number } = {}) => {
     const yAlto = op.y1 ?? 0.818 * Hh
     const yBajo = op.y0 ?? 0.56 * Hh
     // El plano inclinado pasa por arriba del hombro y por la cadera del otro lado.
@@ -859,24 +879,29 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     const xC = lado * 0.15 * s
     const k = (yAlto - yBajo) / (xH - xC)
     const yDe = (x: number) => yBajo + (x - xC) * k
-    const cols = 48
+    const cols = op.filas ?? 48
+    // t0..t1: qué parte de la vuelta (0 = espalda, 0,5 = frente); por defecto, entera.
+    const t0 = op.t0 ?? 0
+    const t1 = op.t1 ?? 1
+    const yMin = Math.min(0.48 * Hh, yBajo - ancho * 0.5)
     S.tira({
       filas: cols,
       cols: 4,
       grosor: 0.0035,
-      pos: (t, w, out) => {
+      pos: (tt, w, out) => {
+        const t = lerp(t0, t1, tt)
         const a = -Math.PI / 2 + t * DOS_PI
         let y = 0.7 * Hh
         for (let it = 0; it < 3; it++) {
           S.punto(clamp(y, 0.5 * Hh, 0.826 * Hh), a, 0.3, holg, out)
           y = yDe(out.x)
         }
-        y = clamp(y + w * ancho * 0.5, 0.48 * Hh, 0.83 * Hh)
+        y = clamp(y + w * ancho * 0.5, yMin, 0.83 * Hh)
         const pl = op.pliegues ? op.pliegues * Math.sin(w * 3 + t * 40) * 0.5 + op.pliegues * 0.5 : 0
         return S.punto(y, a, 0.3, holg + 0.004 + pl, out)
       },
-      normal: (t, w, out) => {
-        const a = -Math.PI / 2 + t * DOS_PI
+      normal: (tt, w, out) => {
+        const a = -Math.PI / 2 + lerp(t0, t1, tt) * DOS_PI
         S.punto(0.7 * Hh, a, 0.3, 0, _v)
         return out.copy(_n)
       },
@@ -887,7 +912,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
   }
 
   /** Túnica larga hasta el tobillo, con pliegues verticales que se abren hacia el ruedo. */
-  const tunica = (color: RGBA, op: { ruedo: number; escote?: number; vuelo?: number; ribete?: RGBA; manga?: number; mangaAncha?: number; soloFrente?: boolean }) => {
+  const tunica = (color: RGBA, op: { ruedo: number; escote?: number; vuelo?: number; ribete?: RGBA; manga?: number; mangaAncha?: number; soloFrente?: boolean; clavi?: RGBA }) => {
     const sem = (p.id.length * 7) % 13
     const escote = op.escote ?? 0.3
     S.tronco({
@@ -906,11 +931,149 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         return (0.012 * abajo + 0.004 * cint) * (0.6 * Math.sin(a * 11 + sem) + 0.4 * Math.sin(a * 17 + sem * 2.3 + y * 6))
       },
       tope: (a) => 0.828 * Hh - escote * 0.06 * Hh * Math.pow(Math.max(0, Math.sin(a)), 3),
-      color: (y) => (op.ribete && y < op.ruedo + 0.03 * s ? op.ribete : color),
+      color: (y, a) => {
+        if (op.ribete && y < op.ruedo + 0.03 * s) return op.ribete
+        // Clavi: dos franjas de 4 cm a cada lado del centro, del hombro al ruedo.
+        if (op.clavi) {
+          const d = Math.abs(normAng(a) - FRENTE)
+          if (d > 0.36 && d < 0.6) return op.clavi
+        }
+        return color
+      },
       mat: MAT_ALGODON,
     })
     S.tapaFalda(op.ruedo)
-    mangas(color, op.manga ?? 9, 0.016, { ancha: op.mangaAncha ?? 0.03, mat: MAT_ALGODON, cols: 16 })
+    if (op.manga !== 0) mangas(color, op.manga ?? 9, 0.016, { ancha: op.mangaAncha ?? 0.03, mat: MAT_ALGODON, cols: 16 })
+  }
+
+  /** Cinturón de la túnica: el de la ficha (faja o cordón de tela, sin hebilla), ninguno, o el de cuero. */
+  const cinturonTunica = (y: number, holg: number) => {
+    const c = vestuarioDe(p.id).cinturon
+    if (c === null) return
+    if (!c) return cinturon(y, holg)
+    const ancho = (c.ancho ?? 0.02) * s
+    S.tronco({ y0: y - ancho, y1: y, paso: Math.max(0.006, Math.min(0.02, ancho / s)), holgura: () => holg + 0.002, bultos: 0.3, color: () => rgba(c.color), mat: MAT_ALGODON, tapa: false, cols: undefined })
+  }
+
+  /** Lo que la ficha agrega encima de la túnica: manto cruzado, capa, cuello cruzado. */
+  const sobreTunica = (defecto: () => void) => {
+    const ves = vestuarioDe(p.id)
+    if (ves.manto === undefined) defecto()
+    else if (ves.manto) {
+      const m = ves.manto
+      const cm = rgba(m.color)
+      const cb = m.borde ? rgba(m.borde) : escalarRGBA(cm, 0.8)
+      // Manto (himation): banda ancha y pesada del hombro a la cadera opuesta, con borde.
+      banda(m.lado ?? 1, (m.ancho ?? 0.3) * s, 0.04, (w) => (w > 0.8 ? cb : cm), { pliegues: 0.008, y0: (m.bajo ?? 0.54) * Hh })
+    }
+    if (ves.cuelloCruzado) {
+      const cc = rgba(ves.cuelloCruzado)
+      // Solapa izquierda sobre la derecha: el ribete baja del lado izquierdo del
+      // cuello a la axila derecha (solo por delante), y rodea la nuca.
+      banda(-1, 0.05 * s, 0.022, () => cc, { y0: 0.665 * Hh, y1: 0.835 * Hh, t0: 0.3, t1: 0.75, filas: 16 })
+      S.cuello({ y0: 0.818 * Hh, y1: () => 0.818 * Hh + 0.03 * s, arco: [FRENTE + 0.55, FRENTE + DOS_PI - 0.55], holg0: 0.02, holg1: 0.012, color: cc, mat: MAT_ALGODON, filas: 2 })
+    }
+    if (ves.capa) capa(rgba(ves.capa.color), ves.capa.largo ?? 0.7)
+  }
+
+  /** Collar ancho en V (cinta del grado): de los lados del cuello al esternón, con fleco y la joya. */
+  const collarV = (color: RGBA, borde: RGBA) => {
+    const yA = 0.818 * Hh
+    const yP = 0.655 * Hh
+    for (const lado of [1, -1] as const) {
+      S.tira({
+        filas: 8,
+        cols: 3,
+        grosor: 0.002,
+        pos: (t, w, out) => {
+          const y = lerp(yA, yP, t)
+          // Del costado del cuello (ángulo ancho) a la punta en el centro.
+          const a = FRENTE + lado * (lerp(0.62, 0.05, t) + w * 0.09 * (1 - 0.6 * t))
+          return S.punto(y, a, 0.3, holgTraje(y, a) + 0.008, out)
+        },
+        normal: (t, w, out) => {
+          const y = lerp(yA, yP, t)
+          S.punto(y, FRENTE + lado * lerp(0.62, 0.05, t), 0.3, 0, _v)
+          return out.copy(_n)
+        },
+        color: (t, w) => (Math.abs(w) > 0.7 ? borde : color),
+        mat: MAT_ALGODON,
+        pesos: (pt) => cu.pesosTronco(pt.x, pt.y, pt.z),
+      })
+    }
+    // La joya: un triángulo dorado colgando de la punta.
+    S.punto(yP - 0.03 * s, FRENTE, 0.3, holgTraje(yP, FRENTE) + 0.009, _v)
+    S.boton(_v.clone(), _n.clone(), 0.028 * s, 0.004, rgba("#d4aa48"), MAT_ORO, cu.pesosTronco(0, yP, 0.1), 3)
+  }
+
+  /** Mandil (delantal) de piel blanca con ribete y solapa triangular, sobre el saco. */
+  const mandil = (color: RGBA, ribete: RGBA) => {
+    const yT = 0.6 * Hh
+    const yB = yT - 0.33 * s
+    const ancho = 0.18 * s
+    const frente = (y: number, out: THREE.Vector3) => S.punto(Math.max(y, 0.5 * Hh), FRENTE, 0.3, holgTraje(Math.max(y, 0.5 * Hh), FRENTE) + 0.012, out)
+    // (pesos de falda: se mueve con los muslos al caminar)
+    const pesos = (pt: THREE.Vector3) => S.pesosFalda(pt.x, pt.y, pt.z, yB)
+    S.tira({
+      filas: 6,
+      cols: 6,
+      grosor: 0.003,
+      pos: (t, w, out) => {
+        const y = lerp(yT, yB, t)
+        frente(y, out)
+        out.x = w * ancho
+        out.z += 0.012 * suave(0.5 * Hh, yB, y) - 0.03 * w * w * (y > 0.5 * Hh ? 1 : 0.6)
+        return out
+      },
+      normal: (t, w, out) => out.set(0, 0, 1),
+      color: (t, w) => (Math.abs(w) > 0.86 || t > 0.93 ? ribete : color),
+      mat: [0.6, 0],
+      pesos,
+    })
+    // Solapa triangular, encima.
+    S.tira({
+      filas: 3,
+      cols: 6,
+      grosor: 0.003,
+      pos: (t, w, out) => {
+        const y = lerp(yT + 0.004, yT - 0.1 * s, t)
+        frente(y, out)
+        out.x = w * ancho * (1 - t)
+        out.z += 0.006 - 0.03 * w * w * (1 - t) * (1 - t)
+        return out
+      },
+      normal: (t, w, out) => out.set(0, 0, 1),
+      color: (t, w) => (Math.abs(w) > 0.8 || t > 0.85 ? ribete : color),
+      mat: [0.6, 0],
+      pesos,
+    })
+    frente(yT - 0.19 * s, _v)
+    _v.z += 0.01
+    S.boton(_v.clone(), new THREE.Vector3(0, 0, 1), 0.026 * s, 0.002, rgba("#c9a040"), MAT_ORO, pesos(_v), 4)
+  }
+
+  /** Capa larga (paludamentum) por la espalda, prendida con una fíbula en el hombro derecho. */
+  const capa = (color: RGBA, largo: number) => {
+    const yArr = 0.826 * Hh
+    const yAb = Math.max(0.06 * Hh, yArr - largo * Hh)
+    S.tronco({
+      y0: yAb,
+      y1: yArr,
+      paso: 0.045,
+      arco: () => [-FRENTE - 1.25, -FRENTE + 1.25],
+      cols: 20,
+      holgura: (y, a) => 0.03 + 0.03 * suave(0.75 * Hh, 0.5 * Hh, y),
+      bultos: 0.3,
+      vuelo: (y) => 0.42 * Math.pow(suave(0.55 * Hh, yAb, y), 0.8),
+      pliegues: (y, a) => 0.012 * suave(0.75 * Hh, 0.4 * Hh, y) * Math.sin(a * 9 + 1.3),
+      color: (y) => (y < yAb + 0.02 * s ? escalarRGBA(color, 0.8) : color),
+      mat: MAT_LANA,
+      tapa: false,
+    })
+    // Pliegue sobre los hombros (la capa se apoya ahí) y la fíbula dorada.
+    S.cuello({ y0: 0.805 * Hh, y1: () => 0.826 * Hh + 0.012 * s, arco: [-FRENTE - 1.5, -FRENTE + 1.5], holg0: 0.035, holg1: 0.02, color, mat: MAT_LANA, filas: 2 })
+    S.punto(0.79 * Hh, FRENTE - 0.95, 0.3, 0.03, _v)
+    S.boton(_v.clone(), _n.clone(), 0.02 * s, 0.006, rgba("#c9a040"), MAT_ORO, cu.pesosTronco(_v.x, 0.79 * Hh, _v.z), 12)
   }
 
   // ── Por tipo de ropa ──
@@ -926,18 +1089,43 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       const conCorbata = !!ap.ropa.corbata
       // Los corpulentos llevan la corbata más larga, por debajo del cinturón.
       camisa(rgba(camisaColor(ap)), { corbata: ap.ropa.corbata, mono: levita, abierta: !conCorbata, larga: ap.complexion === "fuerte" })
+      // Chaleco (ficha): tapa la camisa y deja solo una franja en "V" bajo el
+      // moño (Lincoln: sin él, la levita mostraba una pechera blanca de frac).
+      const chaleco = vestuarioDe(p.id).chaleco
+      if (chaleco) {
+        S.tronco({
+          y0: 0.555 * Hh,
+          y1: 0.826 * Hh,
+          paso: 0.05,
+          arco: () => [FRENTE - 0.8, FRENTE + 0.8],
+          holgura: () => 0.0095,
+          bultos: 0.3,
+          tope: (a) => 0.826 * Hh - 0.07 * Hh * Math.max(0, 1 - Math.abs(a - FRENTE) / 0.42),
+          color: () => rgba(chaleco),
+          mat: MAT_LANA,
+          // (con 24 columnas Lincoln pasaba el tope de 25.000 triángulos)
+          cols: 18,
+        })
+      }
       pantalon(C1)
-      cinturon(0.595 * Hh, 0.016)
+      // (con 1,6 cm de holgura el cinturón atravesaba el saco —1,4 cm— y se veía
+      // por encima: va entre el pantalón y el saco)
+      cinturon(0.595 * Hh, 0.0115, 0.3)
       saco(C1, { ruedo: (levita ? 0.3 : 0.425) * Hh, boton: 0.598 * Hh, paso: levita ? 0.034 : 0.03 })
       mangas(C1, 9, 0.015, { puno: rgba(camisaColor(ap)) })
       zapatos(rgba("#100c0a"))
+      const vesT = vestuarioDe(p.id)
+      if (vesT.collarV) collarV(rgba(vesT.collarV.color), rgba(vesT.collarV.borde))
+      if (vesT.mandil) mandil(rgba(vesT.mandil.color), rgba(vesT.mandil.ribete))
       break
     }
     case "uniforme_militar": {
       const rojo = rgba("#9e1b26")
       const blanco = C2
-      // Chaleco blanco al frente, calzón blanco, botas altas negras.
-      S.tronco({ y0: 0.52 * Hh, y1: 0.828 * Hh, arco: () => [FRENTE - 0.95, FRENTE + 0.95], holgura: () => 0.008, bultos: 0.4, color: () => blanco, mat: MAT_ALGODON, cols: 24 })
+      // Chaleco al frente (blanco, o el de la ficha: el rojo de los Cazadores de
+      // Napoleón), calzón blanco, botas altas negras.
+      const chalecoU = vestuarioDe(p.id).chaleco
+      S.tronco({ y0: 0.52 * Hh, y1: 0.828 * Hh, arco: () => [FRENTE - 0.95, FRENTE + 0.95], holgura: () => 0.008, bultos: 0.4, color: () => (chalecoU ? rgba(chalecoU) : blanco), mat: chalecoU ? MAT_LANA : MAT_ALGODON, cols: 24 })
       pantalon(blanco, { holg: 0.006, hasta: cu.piernas[0].u[2] + 0.07 * s })
       saco(C1, { ruedo: 0.31 * Hh, boton: 0.62 * Hh, colas: true, paso: 0.034, solapa: escalarRGBA(C1, 1.05), botones: rgba("#d8b04a"), matBoton: MAT_ORO, cruzado: true })
       S.cuello({ y0: 0.82 * Hh, y1: (a) => 0.82 * Hh + 0.045 * s, arco: [FRENTE + 0.35, FRENTE + DOS_PI - 0.35], holg0: 0.014, holg1: 0.012, color: rojo, mat: MAT_LANA, filas: 2, tapa: true })
@@ -969,22 +1157,28 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     case "tunica":
     case "tunica_renacentista": {
       const ren = tipo === "tunica_renacentista"
-      tunica(C1, { ruedo: 0.035 * Hh, ribete: ren ? undefined : C2, escote: ren ? 0.15 : 0.35, mangaAncha: ren ? 0.012 : 0.035, soloFrente: ren })
-      cinturon(0.6 * Hh, 0.024)
-      if (!ren) banda(1, 0.2 * s, 0.036, () => C2, { pliegues: 0.004 })
+      const ves = vestuarioDe(p.id)
+      const ribete = ves.ribete === null ? undefined : ves.ribete ? rgba(ves.ribete) : ren ? undefined : C2
+      tunica(C1, { ruedo: (ves.ruedo ?? 0.035) * Hh, ribete, escote: ren ? 0.15 : 0.35, mangaAncha: ves.mangaAncha ?? (ren ? 0.012 : 0.035), manga: ves.manga, soloFrente: ren, clavi: ves.clavi ? rgba(ves.clavi) : undefined })
+      cinturonTunica(0.6 * Hh, 0.024)
+      if (!ren) sobreTunica(() => banda(1, 0.2 * s, 0.036, () => C2, { pliegues: 0.004 }))
       else {
         // Sobretodo oscuro abierto al frente.
         S.tronco({ y0: 0.25 * Hh, y1: 0.826 * Hh, paso: 0.034, arco: (y) => [FRENTE + 0.32, FRENTE + DOS_PI - 0.32], holgura: (y) => 0.028 + 0.008 * suave(0.6 * Hh, 0.3 * Hh, y), bultos: 0.25, vuelo: (y) => 0.25 * suave(0.5 * Hh, 0.25 * Hh, y), color: () => C2, mat: MAT_LANA, cols: 52 })
       }
       if (ren) zapatos(rgba("#2a1c14"))
+      else if (ves.descalzo) pieDescalzo = true
       else sandalias()
       break
     }
     case "toga": {
-      tunica(C1, { ruedo: 0.04 * Hh, escote: 0.25, mangaAncha: 0.02, manga: 0.17 * s })
+      const ves = vestuarioDe(p.id)
+      tunica(C1, { ruedo: (ves.ruedo ?? 0.04) * Hh, escote: 0.25, mangaAncha: ves.mangaAncha ?? 0.02, manga: (ves.manga ?? 0.17) * s, ribete: ves.ribete ? rgba(ves.ribete) : undefined, clavi: ves.clavi ? rgba(ves.clavi) : undefined })
+      if (ves.cinturon) cinturonTunica(0.6 * Hh, 0.02)
       // La toga: banda ancha cruzada con la franja púrpura en el borde.
-      banda(1, 0.32 * s, 0.04, (w) => (w > 0.75 ? C2 : escalarRGBA(C1, 0.97)), { pliegues: 0.006 })
-      sandalias()
+      sobreTunica(() => banda(1, 0.32 * s, 0.04, (w) => (w > 0.75 ? C2 : escalarRGBA(C1, 0.97)), { pliegues: 0.006 }))
+      if (ves.descalzo) pieDescalzo = true
+      else sandalias((ves.ruedo ?? 0) > 0.15)
       break
     }
     case "vestido_egipcio": {
@@ -1003,16 +1197,18 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       })
       S.tapaFalda(0.035 * Hh)
       // Collar ancho (usekh): franjas de oro, lapislázuli y cornalina.
-      const franjas = [rgba("#d4aa48"), rgba("#1f4ea3"), rgba("#d4aa48"), rgba("#a8322a"), rgba("#d4aa48")]
+      // (oro dominante y piedras en hileras finas y apagadas: con cinco franjas
+      // anchas y saturadas se leía como un arcoíris de cotillón)
+      const franjas = [rgba("#d09a3c"), rgba("#23407c"), rgba("#d09a3c"), rgba("#8e2f24"), rgba("#d09a3c"), rgba("#2f857c"), rgba("#d09a3c")]
       S.tronco({
         y0: 0.765 * Hh,
         y1: 0.83 * Hh,
-        paso: 0.008,
+        paso: 0.0045,
         holgura: (y, a) => 0.009 + 0.006 * suave(0.81 * Hh, 0.77 * Hh, y),
         bultos: 0.5,
         tope: (a) => 0.83 * Hh,
-        color: (y) => franjas[clamp(Math.floor(((y - 0.765 * Hh) / (0.065 * Hh)) * 5), 0, 4)],
-        mat: (y) => (Math.floor(((y - 0.765 * Hh) / (0.065 * Hh)) * 5) % 2 ? [0.4, 0.1] : MAT_ORO),
+        color: (y) => franjas[clamp(Math.floor(((y - 0.765 * Hh) / (0.065 * Hh)) * 7), 0, 6)],
+        mat: (y) => (Math.floor(((y - 0.765 * Hh) / (0.065 * Hh)) * 7) % 2 ? [0.45, 0] : MAT_ORO),
       })
       // Brazaletes
       for (const lado of [1, -1] as const) {
@@ -1101,23 +1297,41 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     case "casual":
     case "holograma": {
       tejido = "algodon"
-      const remera = ap.complexion === "fuerte" || ap.complexion === "atletico" || tipo === "deportivo" || tipo === "holograma"
+      const ves = vestuarioDe(p.id)
+      const remera = ves.remera ?? (ap.complexion === "fuerte" || ap.complexion === "atletico" || tipo === "deportivo" || tipo === "holograma")
       if (!remera) tejido = "punto"
+      // Escote: redondo, o en V (el suéter de Pichai y de Amodei) con la camisa o
+      // la camiseta de abajo a la vista.
+      const enV = !!ves.cuelloV
+      const escote = (a: number) => 0.016 * Hh * Math.pow(Math.max(0, Math.sin(a)), 3)
+      const ve = (a: number) => (enV ? 0.07 * Hh * Math.max(0, 1 - Math.abs(normAng(a) - FRENTE) / 0.5) : 0)
+      const topeSueter = (a: number) => 0.836 * Hh - Math.max(escote(a), ve(a))
       S.tronco({
         y0: 0.5 * Hh,
         y1: 0.836 * Hh,
         holgura: (y) => 0.009 + 0.007 * suave(0.6 * Hh, 0.5 * Hh, y),
         bultos: remera ? 0.6 : 0.4,
-        tope: (a) => 0.836 * Hh - 0.016 * Hh * Math.pow(Math.max(0, Math.sin(a)), 3),
-        color: (y) => (y < 0.51 * Hh && !remera ? escalarRGBA(C1, 0.9) : C1),
+        tope: topeSueter,
+        color: (y, a) => (y < 0.51 * Hh && !remera ? escalarRGBA(C1, 0.9) : enV && y > topeSueter(a) - 0.012 * s && ve(a) > 0.01 * Hh ? escalarRGBA(C1, 0.85) : C1),
         mat: remera ? MAT_ALGODON : [0.92, 0],
       })
-      S.cuello({ y0: 0.826 * Hh, y1: (a) => 0.84 * Hh - 0.016 * Hh * Math.pow(Math.max(0, Math.sin(a)), 3), holg0: 0.009, holg1: 0.004, color: escalarRGBA(C1, 0.92), mat: MAT_ALGODON, filas: 1 })
+      if (enV) {
+        // Lo de abajo: camisa (con su cuello) o camiseta clara.
+        const abajo = rgba(ves.cuelloCamisa ?? "#d8d5cf")
+        S.tronco({ y0: 0.836 * Hh - 0.08 * Hh, y1: 0.836 * Hh, holgura: () => 0.0045, bultos: 0.4, tope: (a) => 0.836 * Hh - escote(a), color: () => abajo, mat: MAT_ALGODON })
+        if (ves.cuelloCamisa) {
+          // Cuello de camisa: banda alta, abierta adelante, con las puntas sobre el escote.
+          S.cuello({ y0: 0.822 * Hh, y1: (a) => 0.85 * Hh - 0.024 * Hh * Math.pow(Math.max(0, Math.sin(a)), 4), holg0: 0.011, holg1: 0.005, color: abajo, mat: MAT_ALGODON, filas: 2 })
+        } else S.cuello({ y0: 0.818 * Hh, y1: (a) => 0.84 * Hh - escote(a), holg0: 0.006, holg1: 0.003, color: escalarRGBA(abajo, 0.92), mat: MAT_ALGODON, filas: 1 })
+      // (y0 por debajo del escote: con 0,826 la banda quedaba invertida adelante, donde el
+      // escote baja a 0,824, y dibujaba una línea oscura suelta sobre el pecho)
+      } else S.cuello({ y0: 0.818 * Hh, y1: (a) => 0.84 * Hh - escote(a), holg0: 0.0095, holg1: 0.004, color: escalarRGBA(C1, 0.92), mat: MAT_ALGODON, filas: 1 })
       if (remera) mangas(C1, 0.15 * s, 0.01, { mat: MAT_ALGODON })
       else mangas(C1, 9, 0.011, { mat: [0.92, 0], puno: escalarRGBA(C1, 0.9) })
-      const mezclilla = new THREE.Color(ap.ropa.color2 ?? "#2f3e55").b > 0.25
+      const mezclilla = ves.mezclilla ?? new THREE.Color(ap.ropa.color2 ?? "#2f3e55").b > 0.25
       if (tipo === "deportivo") pantalon(C2, { corto: cu.piernas[0].u[2] - 0.05 * s })
-      else pantalon(C2, { mezclilla, holg: 0.007 })
+      // (en el holograma, el color 2 es el del borde de luz: el pantalón va del color base)
+      else pantalon(tipo === "holograma" ? C1 : C2, { mezclilla: mezclilla && tipo !== "holograma", holg: 0.007 })
       zapatos(remera ? rgba("#1d1d1f") : rgba("#2b2119"), { suela: rgba(remera ? "#e9e9e9" : "#1a1410"), deportivo: remera })
       break
     }
@@ -1131,6 +1345,126 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
   // que tapa la frente y deja ver solo el tercio de abajo de la cara (la nariz,
   // la boca y el mentón); cae como cuello sobre los hombros. Dos caras (afuera y
   // adentro, que se ve por la abertura) y un ribete en el borde.
+  // ── Hologramas: silueta y emblema propios (Claude y ChatGPT no son el mismo maniquí) ──
+  if (tipo === "holograma") {
+    const ves = vestuarioDe(p.id)
+    // En el holograma solo cuenta la luminancia del color: lo claro se ve más opaco y brillante.
+    const claro = rgba(ap.ropa.color2 ?? "#ffffff")
+    const blanco = rgba("#ffffff")
+    if (ves.abrigo) {
+      // Abrigo largo literario: abierto adelante, hasta la rodilla, suelto, con cuello chal.
+      const yR = 0.27 * Hh
+      const abre = (y: number) => 0.32 + 0.22 * suave(0.62 * Hh, yR, y)
+      S.tronco({
+        y0: yR,
+        y1: 0.836 * Hh,
+        // (con 40 columnas y paso 3,4 cm Claude pasaba el tope de 25.000 triángulos)
+        paso: 0.042,
+        arco: (y) => [FRENTE + abre(y), FRENTE + DOS_PI - abre(y)],
+        cols: 32,
+        holgura: (y) => 0.02 + 0.012 * suave(0.6 * Hh, 0.45 * Hh, y),
+        bultos: 0.3,
+        vuelo: (y) => 0.3 * Math.pow(suave(0.52 * Hh, yR, y), 0.85),
+        pliegues: (y, a) => 0.008 * suave(0.55 * Hh, yR, y) * Math.sin(a * 7 + y * 9),
+        color: (y, a) => {
+          const d = Math.abs(normAng(a) - FRENTE)
+          return d < abre(y) + 0.09 || y < yR + 0.02 * s ? blanco : claro
+        },
+        mat: MAT_LANA,
+      })
+      S.tapaFalda(yR)
+      mangas(claro, 9, 0.02, { mat: MAT_LANA, ancha: 0.012, puno: blanco })
+      // Cuello chal: una banda que sube por detrás del cuello y baja por los bordes hasta la cintura.
+      S.cuello({ y0: 0.815 * Hh, y1: () => 0.84 * Hh + 0.03 * s, arco: [FRENTE + 0.4, FRENTE + DOS_PI - 0.4], holg0: 0.03, holg1: 0.02, color: blanco, mat: MAT_LANA, filas: 2 })
+      for (const lado of [1, -1] as const) {
+        S.tira({
+          filas: 8,
+          cols: 2,
+          grosor: 0.004,
+          pos: (t, w, out) => {
+            const y = lerp(0.835 * Hh, 0.6 * Hh, t)
+            const a = FRENTE + lado * (abre(y) + 0.04 + ((w + 1) / 2) * 0.32 * (1 - 0.7 * t))
+            return S.punto(y, a, 0.3, 0.03 + 0.006 * (1 - t), out)
+          },
+          normal: (t, w, out) => {
+            const y = lerp(0.835 * Hh, 0.6 * Hh, t)
+            S.punto(y, FRENTE + lado * (abre(y) + 0.15), 0.3, 0, _v)
+            return out.copy(_n)
+          },
+          color: () => blanco,
+          mat: MAT_LANA,
+          pesos: (pt) => cu.pesosTronco(pt.x, Math.min(pt.y, 0.83 * Hh), pt.z),
+        })
+      }
+    }
+    if (ves.chaquetaMao) {
+      // Chaqueta corta entallada, cuello alto, cierre en diagonal y hombreras rectas.
+      const yR = 0.5 * Hh
+      const cierre = (y: number) => FRENTE - 0.55 + 0.75 * clamp((y - yR) / (0.83 * Hh - yR), 0, 1)
+      S.tronco({
+        y0: yR,
+        y1: 0.836 * Hh,
+        paso: 0.03,
+        holgura: (y, a) => {
+          const hombro = suave(0.775 * Hh, 0.815 * Hh, y) * suave(0.45, 0.85, Math.abs(Math.cos(a)))
+          return 0.014 + 0.004 * suave(0.6 * Hh, 0.5 * Hh, y) + 0.016 * hombro
+        },
+        bultos: 0.35,
+        tope: (a) => 0.836 * Hh - 0.012 * Hh * Math.pow(Math.max(0, Math.sin(a)), 3),
+        color: (y, a) => (Math.abs(normAng(a) - cierre(y)) < 0.045 || y < yR + 0.012 * s || Math.abs(Math.abs(Math.cos(a)) - 0.62) < 0.02 ? blanco : claro),
+        mat: MAT_LANA,
+      })
+      mangas(claro, 9, 0.016, { mat: MAT_LANA, puno: blanco })
+      S.cuello({ y0: 0.825 * Hh, y1: (a) => 0.85 * Hh + 0.035 * s - 0.01 * s * Math.pow(Math.max(0, Math.sin(a)), 4), holg0: 0.014, holg1: 0.01, color: blanco, mat: MAT_LANA, filas: 3, tapa: true })
+    }
+    if (ves.emblema === "chispa") {
+      // La chispa de Claude: asterisco de diez rayos de punta redonda, detrás de la cabeza (35 cm).
+      const N = 10
+      // (más grande que la cabeza: con 22 cm quedaba tapado por ella)
+      const cz = -0.2
+      const cy = 0.035
+      for (let i = 0; i < N; i++) {
+        const fi = (i / N) * DOS_PI + 0.12
+        const dx = Math.cos(fi)
+        const dy = Math.sin(fi)
+        S.tira({
+          filas: 4,
+          cols: 2,
+          grosor: 0.006,
+          pos: (t, w, out) => {
+            const r = lerp(0.03, 0.175, t)
+            const ancho = 0.014 * (1 - 0.3 * t) * (t > 0.85 ? Math.sqrt(Math.max(0, 1 - ((t - 0.85) / 0.15) ** 2)) * 0.9 + 0.1 : 1)
+            return cab.aAvatar(dx * r - dy * w * ancho, cy + dy * r + dx * w * ancho, cz, out)
+          },
+          normal: (t, w, out) => out.set(0, 0, -1),
+          color: () => blanco,
+          mat: MAT_LANA,
+          pesos: pesoCab,
+        })
+      }
+    }
+    if (ves.emblema === "nudo") {
+      // El nudo de ChatGPT: seis lazos entrelazados (14 cm), flotando delante del pecho.
+      S.punto(0.715 * Hh, FRENTE, 0.3, 0.04, _v)
+      const c0 = _v.clone()
+      const pw = cu.pesosTronco(0, 0.715 * Hh, 0.1)
+      for (let i = 0; i < 6; i++) {
+        const th = (i / 6) * DOS_PI
+        const pts: THREE.Vector3[] = []
+        for (let k = 0; k < 16; k++) {
+          const g = (k / 16) * DOS_PI
+          const ex = 0.036 * s * Math.cos(g)
+          const ey = 0.014 * s * Math.sin(g)
+          const ox = 0.022 * s
+          const x = (ox + ex) * Math.cos(th) - ey * Math.sin(th)
+          const y = (ox + ex) * Math.sin(th) + ey * Math.cos(th)
+          pts.push(new THREE.Vector3(c0.x + x, c0.y + y, c0.z + 0.004 * Math.sin(g * 2 + i)))
+        }
+        S.cordon(pts, 0.0055 * s, blanco, MAT_LANA, () => pw, true, 4)
+      }
+    }
+  }
+
   const capucha = vestuarioDe(p.id).capucha
   if (capucha) {
     const L = S.lote
@@ -1143,51 +1477,60 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     const pt = new THREE.Vector3()
     const FR = Math.PI / 2
     const hueco = (y: number) => {
-      // Medio ancho (rad) de la abertura de la cara a la altura y (local).
-      // De la línea de los ojos (y ≈ 0) al cuello: la frente y los ojos quedan en la sombra.
-      const e = (y + 0.07) / 0.068
-      return e >= 1 || e <= -1.5 ? 0 : 0.8 * Math.sqrt(Math.max(0, 1 - Math.min(1, e * e)))
+      // Medio ancho (rad) de la abertura de la cara a la altura y (local): una
+      // ojiva con la punta sobre la línea de los ojos, que se abre hasta el
+      // mentón (la frente y los ojos quedan en la sombra de la tela).
+      const yTop = -0.012
+      const yBot = -0.16
+      if (y > yTop || y < yBot) return 0
+      const u = (yTop - y) / (yTop - yBot)
+      return 0.62 * Math.pow(Math.sin(Math.min(1, u * 1.3) * Math.PI * 0.5), 0.9) * (1 - 0.3 * suave(0.8, 1, u))
     }
     const ext: number[][] = []
     const int: number[][] = []
-    const abierto: boolean[][] = []
+    // Punto de la capucha en la dirección (th, a), en coordenadas de la cabeza.
+    const puntoCap = (th: number, a: number, out: THREE.Vector3) => {
+      dir.set(Math.sin(th) * Math.cos(a), Math.cos(th), Math.sin(th) * Math.sin(a))
+      const t = cab.rayo(centro.x, centro.y, centro.z, dir.x, dir.y, dir.z, 0.2)
+      // Holgura: más arriba y adelante (el pico de la capucha sobresale sobre la frente).
+      const adelante = Math.pow(Math.max(0, Math.sin(a)), 2) * suave(2.0, 1.0, th)
+      // Punta blanda que cae hacia atrás (no un cono de mago arriba).
+      const atras = Math.pow(Math.max(0, -Math.sin(a)), 3) * campana(th, 0.75, 0.38)
+      const r = Math.max(t, 0.07) + 0.03 + 0.04 * adelante + 0.045 * atras + 0.012 * suave(1.6, 2.6, th) - 0.012 * suave(0.5, 0.0, th) + 0.016 * Math.abs(Math.cos(a)) * campana(th, 0.65, 0.35)
+      out.copy(dir).multiplyScalar(r).add(centro)
+      out.y -= 0.02 * atras
+      // Abajo, la tela cae hacia los hombros (se abre).
+      const caida = suave(2.0, 2.75, th)
+      out.x *= 1 + 0.55 * caida
+      out.z = out.z * (1 + 0.25 * caida) - 0.01 * caida
+      out.y -= 0.035 * caida
+      return out
+    }
     for (let i = 0; i <= NT; i++) {
       const th = (i / NT) * (158 * Math.PI) / 180
+      // La abertura de esta fila: las columnas cubren solo el arco cerrado, así
+      // el borde de la cara es limpio (cortar cuadriláteros lo dejaba en escalones).
+      const h = hueco(puntoCap(th, FR, pt).y)
       const fe: number[] = []
       const fi: number[] = []
-      const fa: boolean[] = []
-      for (let k = 0; k < NA; k++) {
-        const a = FR + (k / NA) * DOS_PI
-        dir.set(Math.sin(th) * Math.cos(a), Math.cos(th), Math.sin(th) * Math.sin(a))
-        const t = cab.rayo(centro.x, centro.y, centro.z, dir.x, dir.y, dir.z, 0.2)
-        // Holgura: más arriba y adelante (el pico de la capucha sobresale sobre la frente).
-        const adelante = Math.pow(Math.max(0, Math.sin(a)), 2) * suave(2.0, 1.0, th)
-        const r = Math.max(t, 0.07) + 0.026 + 0.05 * adelante + 0.012 * suave(1.6, 2.6, th)
-        pt.copy(dir).multiplyScalar(r).add(centro)
-        // Abajo, la tela cae hacia los hombros (se abre).
-        const caida = suave(2.0, 2.75, th)
-        pt.x *= 1 + 0.55 * caida
-        pt.z = pt.z * (1 + 0.25 * caida) - 0.01 * caida
-        pt.y -= 0.035 * caida
-        const da = Math.abs(Math.atan2(Math.sin(a - FR), Math.cos(a - FR)))
-        const h = hueco(pt.y)
-        fa.push(da < h)
-        const borde = h > 0.12 && da < h + 0.14
+      for (let k = 0; k <= NA; k++) {
+        const a = FR + h + (k / NA) * (DOS_PI - 2 * h)
+        puntoCap(th, a, pt)
+        const borde = h > 0.02 && (k === 0 || k === NA)
         const col = borde ? cr : ct
         const wCuello = suave(-0.07, -0.16, pt.y)
         const pw: Pesos = wCuello > 0 ? [[H.cabeza, 1 - wCuello], [H.cuello, wCuello * 0.6], [H.pecho, wCuello * 0.4]] : pesoCab()
         cab.aAvatar(pt.x, pt.y, pt.z, _v)
         fe.push(L.v(_v.x, _v.y, _v.z, k / NA, i / NT, col, pw, [0.95, 0]))
-        // Adentro: 4 mm hacia el centro, más oscuro (la sombra de la tela).
+        // Adentro: 4 mm hacia el centro, casi negro (la sombra de la tela).
         pt.sub(centro).multiplyScalar(1 - 0.004 / Math.max(0.05, pt.length())).add(centro)
         cab.aAvatar(pt.x, pt.y, pt.z, _v)
-        fi.push(L.v(_v.x, _v.y, _v.z, k / NA, i / NT, borde ? cr : escalarRGBA(ct, 0.55), pw, [0.95, 0]))
+        fi.push(L.v(_v.x, _v.y, _v.z, k / NA, i / NT, borde ? cr : escalarRGBA(ct, 0.3), pw, [0.95, 0]))
       }
       ext.push(fe)
       int.push(fi)
-      abierto.push(fa)
     }
-    // Orientación: la cara de afuera mira lejos del centro de la cabeza.
+    // Orientación: la cara de afuera mira lejos del centro de la cabeza (se mira atrás, sin abertura).
     const P = L.pos
     const iA = ext[10][NA >> 1], iB = ext[10][(NA >> 1) + 1], iD = ext[11][NA >> 1]
     const e1 = new THREE.Vector3(P[iB * 3] - P[iA * 3], P[iB * 3 + 1] - P[iA * 3 + 1], P[iB * 3 + 2] - P[iA * 3 + 2])
@@ -1195,13 +1538,9 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     const cAv = cab.aAvatar(centro.x, centro.y, centro.z, new THREE.Vector3())
     const rad = new THREE.Vector3(P[iA * 3] - cAv.x, P[iA * 3 + 1] - cAv.y, P[iA * 3 + 2] - cAv.z)
     const afuera = e1.cross(e2).dot(rad) > 0
-    const emitir = (i: number, j: number) => {
-      const j2 = (j + 1) % NA
-      return !(abierto[i][j] || abierto[i][j2] || abierto[i + 1][j] || abierto[i + 1][j2])
-    }
-    L.tiras(ext, true, { invertir: !afuera, emitir })
+    L.tiras(ext, false, { invertir: !afuera })
     L.pieza()
-    L.tiras(int, true, { invertir: afuera, emitir })
+    L.tiras(int, false, { invertir: afuera })
     L.pieza()
   }
   if (acc.has("faja")) banda(-1, 0.075 * s, holgTraje(0.7 * Hh, 0) + 0.004, (w) => (Math.abs(w) > 0.7 ? rgba("#d4aa48") : rgba(ap.ropa.corbata ?? "#1e3a8a")))
@@ -1468,7 +1807,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         break
       }
       case "corona_egipcia": {
-        const oro = rgba("#d4aa48")
+        // (#d4aa48 metálico reflejaba el cielo azul y salía verde limón)
+        const oro = rgba("#d09a3c")
         cilindro([[yB - 0.002, rx + 0.002, rz + 0.002], [yB + 0.016, rx + 0.002, rz + 0.002]], oro, MAT_ORO, false)
         // Ureo (cobra) al frente.
         const base = cab.aAvatar(0, yB + 0.012, rz + 0.002 - 0.004, new THREE.Vector3())

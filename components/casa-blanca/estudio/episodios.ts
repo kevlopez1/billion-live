@@ -133,7 +133,7 @@ export const CALENDARIO: EntradaCalendario[] = [
           ],
         },
         { dur: 9, camara: { tipo: "toma", toma: "bajada" }, hora: "10:30", titulo: "Abajo: tres pisos inventados.", rotulo: "Bajo el Jardín Sur · ficción" },
-        { dur: 8, camara: { tipo: "toma", toma: "departamento" }, hora: "14:05", titulo: "22 departamentos × 100 puestos", rotulo: "Un departamento por dentro · Subsuelo 1" },
+        { dur: 8, camara: { tipo: "lugar", lugar: "dep-hormozi" }, hora: "14:05", titulo: "22 departamentos × 100 puestos", rotulo: "Un departamento por dentro · Subsuelo 1" },
         { dur: 8, camara: { tipo: "toma", toma: "sala-guerra" }, hora: "15:05", reunir: ["napoleon", "suntzu", "marco", "socrates", "claude", "chatgpt"], titulo: "Subsuelo 2: la sala de guerra", rotulo: "Aquí se reúne el consejo cada tarde" },
         { dur: 6.5, camara: { tipo: "seguir", personaje: "suntzu" }, reunir: ["suntzu", "napoleon", "marco", "socrates", "claude", "chatgpt"], visor: "camara",
           dialogo: [
@@ -154,7 +154,7 @@ export const CALENDARIO: EntradaCalendario[] = [
             { quien: "marco", texto: "Todo lo que ves cambiará pronto. Tú también." },
           ],
         },
-        { dur: 7, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "20:35", titulo: "{RECAUDADO} de {META}", rotulo: "Sala de Control · la pantalla muestra el contador real del reto" },
+        { dur: 7, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "20:35", tituloEn: "arriba", titulo: "{RECAUDADO} de {META}", rotulo: "Sala de Control · la pantalla muestra el contador real del reto" },
         { dur: 7, camara: { tipo: "seguir", personaje: "mason" }, hora: "22:05", reunir: ["mason", "claude"], visor: "camara", titulo: "Martes: Claude contra ChatGPT",
           dialogo: [
             { quien: "claude", texto: "¿Y debajo de todo esto qué hay?" },
@@ -345,7 +345,7 @@ export const CALENDARIO: EntradaCalendario[] = [
       formato: "16:9",
       visor: "cine",
       planos: [
-        { dur: 5, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:00", titulo: "Este número es real: {RECAUDADO}", rotulo: "Sala de Control · el contador del reto, a 60 metros" },
+        { dur: 5, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:00", tituloEn: "arriba", titulo: "Este número es real: {RECAUDADO}", rotulo: "Sala de Control · el contador del reto, a 60 metros" },
         { dur: 7, camara: { tipo: "toma", toma: "portico-norte" }, hora: "16:55", titulo: "Capítulo 2 · El consejo", rotulo: "Objetivo 1: un Mercedes Mansory con ingresos reales" },
         { dur: 8, camara: { tipo: "toma", toma: "bajada" }, hora: "15:00", rotulo: "Subsuelo 2 · 15:00" },
         { dur: 7, camara: { tipo: "toma", toma: "sala-guerra" }, hora: "15:05", reunir: ["suntzu", "napoleon", "marco", "socrates", "claude", "chatgpt"], titulo: "Tarea: el ritmo que necesita el contador", rotulo: "Estrategia · tarea real del departamento de Sun Tzu" },
@@ -379,7 +379,7 @@ export const CALENDARIO: EntradaCalendario[] = [
             { quien: "claude", texto: "No me lo creas a mí: los comprobantes están publicados." },
           ],
         },
-        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:05", titulo: "{RECAUDADO} de {META}", rotulo: "Contador real · Sala de Control" },
+        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:05", tituloEn: "arriba", titulo: "{RECAUDADO} de {META}", rotulo: "Contador real · Sala de Control" },
         { dur: 6.5, camara: { tipo: "seguir", personaje: "mason" }, hora: "18:35", reunir: ["mason", "claude"], visor: "camara", rotulo: "Biblioteca · Subsuelo 3",
           dialogo: [
             { quien: "claude", texto: "¿Y cuál es la jugada de esta semana?" },
@@ -477,7 +477,7 @@ export const CALENDARIO: EntradaCalendario[] = [
             { quien: "chatgpt", texto: "¡Porque alguien tiene que cuidar la casa!" },
           ],
         },
-        { dur: 5, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "01:40", titulo: "La pantalla nunca se apaga.", rotulo: "Sala de Control · el contador real del reto" },
+        { dur: 5, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "01:40", tituloEn: "arriba", titulo: "La pantalla nunca se apaga.", rotulo: "Sala de Control · el contador real del reto" },
         { dur: 5, camara: { tipo: "seguir", personaje: "claude" }, hora: "02:05", titulo: "02:05. Claude se queda solo.", rotulo: "Balcón del Pozo · escucha el silencio" },
         { dur: 5, camara: { tipo: "lugar", lugar: "cancha-basquet" }, hora: "04:05", titulo: "04:05. Alguien llega a la cancha.", rotulo: "Parte 2: sábado" },
       ],
@@ -613,7 +613,7 @@ export const CALENDARIO: EntradaCalendario[] = [
           ],
         },
         { dur: 5, camara: { tipo: "lugar", lugar: "dep-cleopatra" }, hora: "10:30", titulo: "Alianzas Internacionales", rotulo: "Tarea real: «Negocios hispanos en Estados Unidos»" },
-        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:10", titulo: "{RECAUDADO} de {META}", rotulo: "Contador real · Silicon Valley todavía es un objetivo, no un hecho" },
+        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:10", tituloEn: "arriba", titulo: "{RECAUDADO} de {META}", rotulo: "Contador real · Silicon Valley todavía es un objetivo, no un hecho" },
         { dur: 6, camara: { tipo: "seguir", personaje: "mason" }, hora: "18:35", reunir: ["mason", "cleopatra"], visor: "camara", rotulo: "Biblioteca · Subsuelo 3",
           dialogo: [
             { quien: "cleopatra", texto: "¿Y quién nos presenta allá?" },
@@ -838,7 +838,7 @@ export const CALENDARIO: EntradaCalendario[] = [
             { quien: "jobs", texto: "Hazlo más simple." },
           ],
         },
-        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "20:40", titulo: "{RECAUDADO} de {META}", rotulo: "El único número real de hoy. Lo demás se construye." },
+        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "20:40", tituloEn: "arriba", titulo: "{RECAUDADO} de {META}", rotulo: "El único número real de hoy. Lo demás se construye." },
         { dur: 3, camara: { tipo: "seguir", personaje: "iluminado" }, hora: "21:35", reunir: ["iluminado", "claude"], visor: "camara",
           dialogo: [
             { quien: "iluminado", texto: "Mira más arriba." },
@@ -1044,7 +1044,7 @@ export const CALENDARIO: EntradaCalendario[] = [
       formato: "16:9",
       visor: "cine",
       planos: [
-        { dur: 5, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:00", titulo: "Un mes después: {RECAUDADO}", rotulo: "Sala de Control · contador real del reto" },
+        { dur: 5, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:00", tituloEn: "arriba", titulo: "Un mes después: {RECAUDADO}", rotulo: "Sala de Control · contador real del reto" },
         { dur: 8, camara: { tipo: "toma", toma: "maqueta" }, hora: "17:10", maqueta: true, titulo: "Capítulo 5 · Un mes en la casa", rotulo: "24 residentes · 22 departamentos · 2.200 puestos de IA" },
         { dur: 7, camara: { tipo: "toma", toma: "sala-guerra" }, hora: "15:05", reunir: ["suntzu", "napoleon", "marco", "socrates", "claude", "chatgpt", "lincoln", "cleopatra"], titulo: "Récord: 30 de diciembre. Quedan 31 días.", rotulo: "Tarea real de Estrategia: «Escenarios para el 30 de diciembre»" },
         { dur: 4.5, camara: { tipo: "seguir", personaje: "napoleon" }, reunir: ["napoleon", "suntzu", "marco", "socrates", "claude", "chatgpt", "lincoln", "cleopatra"], visor: "camara",
@@ -1087,7 +1087,7 @@ export const CALENDARIO: EntradaCalendario[] = [
             { quien: "chatgpt", texto: "¡Y si se llega, tengo tres celebraciones listas!" },
           ],
         },
-        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:05", titulo: "{RECAUDADO} de {META}", rotulo: "Contador real · faltan 31 días para el récord" },
+        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:05", tituloEn: "arriba", titulo: "{RECAUDADO} de {META}", rotulo: "Contador real · faltan 31 días para el récord" },
         { dur: 5.5, camara: { tipo: "seguir", personaje: "mason" }, hora: "18:35", reunir: ["mason", "claude"], visor: "camara", rotulo: "Biblioteca · Subsuelo 3",
           dialogo: [
             { quien: "claude", texto: "¿Llegamos al récord?" },

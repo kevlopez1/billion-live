@@ -17,7 +17,7 @@ import { vestir, holguraDe } from "./avatar-ropa"
 import { armarPelo } from "./avatar-pelo"
 import { Animador } from "./avatar-anim"
 import { hashTexto } from "./avatar-geo"
-import { conFicha } from "./avatar-fichas"
+import { conFicha, vestuarioDe } from "./avatar-fichas"
 import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra } from "./avatar-materiales"
 import { texBalon, texPunto, texSombra } from "./avatar-texturas"
 
@@ -79,9 +79,14 @@ export function crearAvatarReal(original: Personaje): Avatar {
       g.deleteAttribute("uv1")
       g.deleteAttribute("aArr")
     }
+    // El pelo de luz es una masa esculpida: sin el alfa de las hebras (que el
+    // holograma descartaba, y las cabezas salían calvas).
+    const cPelo = partes[2].getAttribute("color") as THREE.BufferAttribute | undefined
+    if (cPelo && cPelo.itemSize === 4) for (let i = 0; i < cPelo.count; i++) cPelo.setW(i, 1)
     const g = mergeGeometries(partes, false)!
     for (const x of partes) x.dispose()
-    holoMats = matHolograma(ap.ropa.color, ap.ropa.color2 ?? "#ffffff", cu.H)
+    const ves = vestuarioDe(p.id)
+    holoMats = matHolograma(ap.ropa.color, ap.ropa.color2 ?? "#ffffff", cu.H, { hex: !!ves.chaquetaMao, fundir: !!ves.abrigo })
     propias.push(holoMats.color, holoMats.prepaso)
     const pre = piel(g, holoMats.prepaso, false)
     pre.renderOrder = 10

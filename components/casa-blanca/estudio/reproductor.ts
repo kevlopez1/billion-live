@@ -9,10 +9,11 @@
 //   mismo episodio = mismos cuadros.
 // - en vivo: el mismo paso, con el dt que pasó de verdad.
 //
-// Cortes: cada plano empieza con un corte seco. Las tomas del motor entran con
-// un fundido a negro (≈0,6 s) y los lugares, con un viaje de cámara: esos
-// tramos se corren ANTES de mostrar el plano ("preparación"), con la
-// simulación quieta, y no salen en el video.
+// Cortes: cada plano empieza con un corte seco. El motor lo hace en el acto
+// (opción `corte`: nivel y pose sin fundido ni viaje), y una toma fija más
+// corta que su plano se queda en su última pose (`sostener`). Los cuadros que
+// no se ven (la apertura tapada, los anteriores a --desde) avanzan con
+// depurar.avanzar: todo igual, sin dibujar.
 // ──────────────────────────────────────────────────────────────
 
 import { crearEscena, type EscenaMotor } from "../escena/motor"
@@ -58,12 +59,6 @@ export interface OpcionesEstudio {
   alto?: number
   /** Cuadros por segundo (vista previa: 24). Sin él, los del guion (30). */
   fps?: number
-  /**
-   * Vista previa: al saltar cuadros, la escena no los dibuja (la simulación sí
-   * avanza). Llega en segundos a cualquier punto, pero el cuadro no es idéntico
-   * al del video entero. Nunca para el video final.
-   */
-  atajo?: boolean
 }
 
 export interface Estudio {
@@ -98,13 +93,13 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
   const ctx = salida.getContext("2d", { alpha: false })
   if (!ctx) throw new Error("el navegador no da un contexto 2D para el canvas de salida")
 
-  // El canvas de la escena mide exactamente la salida (en CSS y en píxeles: devicePixelRatio = 1 lo fija Estudio.tsx).
+  // El canvas de la escena mide exactamente la salida, en CSS y en píxeles (pixelRatio 1).
   const lienzo = document.createElement("canvas")
   lienzo.style.width = `${W}px`
   lienzo.style.height = `${H}px`
   lienzo.style.display = "block"
   contenedor.appendChild(lienzo)
-  const escena: EscenaMotor = crearEscena(lienzo, { personajes: PERSONAJES, calidad: op.calidad })
+  const escena: EscenaMotor = crearEscena(lienzo, { personajes: PERSONAJES, calidad: op.calidad, pixelRatio: 1, letreros: false })
   escena.redimensionar()
 
   const primera = ep.planos[0]?.hora
@@ -119,7 +114,6 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
   let plano = -1
   let actual = -1
   let camaraTexto = ""
-  let dtTapado = 0
 
   const pasarAEscena = () => {
     escena.setHora(sim.reloj.minutos / 60)
@@ -133,10 +127,8 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
 
   const dondeEsta = (id: string) => sim.pj[id]?.lugarId ?? sim.pj[id]?.destinoId ?? null
 
-  /** El corte: hora, quiénes están, maqueta y cámara; después, la preparación fuera de cuadro. */
+  /** El corte seco: hora, quiénes están, maqueta y cámara, todo en el acto. */
   const prepararPlano = (i: number) => {
-    // Lo que quedó sin dibujar del plano anterior no pasa al nuevo (hay un corte).
-    dtTapado = 0
     const p: Plano = ep.planos[i]
     const c = p.camara
     if (p.hora) sim.saltarA(minutosDe(p.hora))
@@ -148,55 +140,39 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
       nombreDeCamara(c, lugar, { toma: (id) => nombresToma.get(id), personaje: (id) => PJ[id]?.corto }),
     )
 
-    escena.modoMaqueta(false)
-    const pasos: number[] = []
+    const corte = { corte: true }
+    escena.modoMaqueta(false, corte)
     if (c.tipo === "toma") {
       // Como aplicarToma de la página viva: primero a quién, después la toma.
-      if (c.personaje) escena.modoCamara("seguir", c.personaje)
-      escena.modoCamara("cine", c.toma)
-      pasos.push(0.25, 0.4) // sale el fundido (y arranca la toma) · entra
+      if (c.personaje) escena.modoCamara("seguir", c.personaje, corte)
+      escena.modoCamara("cine", c.toma, { corte: true, sostener: true })
     } else if (c.tipo === "seguir") {
-      escena.modoCamara("seguir", c.personaje)
-      pasos.push(0.25, 0.4) // si está en otro nivel, la cámara baja con un fundido
+      // techos: bajo la Columnata, la cámara mira entre las columnas (no el techo).
+      // choques: en una sala cerrada, la cámara no queda detrás de una pared.
+      escena.modoCamara("seguir", c.personaje, { corte: true, techos: true, choques: true })
     } else {
       const e = encuadreDe(c.lugar)
-      if (e) {
-        const otroNivel = e.nivel !== escena.nivel()
-        if (escena.encuadrar) escena.encuadrar(e.centro, e.distancia, c.lugar)
-        else escena.enfocar(e.centro, e.distancia)
-        // Un viaje por el ascensor dura hasta 3,9 s; el encuadre en el mismo nivel, 1,1 s.
-        pasos.push(otroNivel ? 4.2 : 1.2)
-      }
+      if (e) escena.encuadrar(e.centro, e.distancia, c.lugar, corte)
     }
-    for (const dt of pasos) escena.depurar.cuadro(dt)
-    if (p.maqueta !== undefined) {
-      escena.modoMaqueta(p.maqueta)
-      // El tilt-shift entra suave (5/s): se deja entrar fuera de cuadro.
-      if (p.maqueta) escena.depurar.cuadro(0.9)
-    }
+    if (p.maqueta !== undefined) escena.modoMaqueta(p.maqueta, corte)
     plano = i
   }
 
   /** Llega al segundo del cuadro i avanzando `dt` (simulación y escena). */
-  const avanzar = (i: number, dt: number) => {
+  const avanzar = (i: number, dt: number, dibujar = true) => {
     const t = i / fps
     const m = momentoEn(linea, t)
     if (m.tramo.indice !== plano) prepararPlano(m.tramo.indice)
     sim.avanzar(dt, t * 1000)
     pasarAEscena()
-    // En la apertura la escena está tapada del todo hasta 0,4 s antes del final:
-    // no se dibuja (por software cuesta segundos por cuadro); su tiempo se suma al
-    // primer cuadro que sí se ve. Siempre igual, así que el video sigue siendo repetible.
-    if ((m.fase === "apertura" && t <= linea.apertura - 0.4) || saltando) dtTapado += dt
-    else {
-      // En el atajo, un salto largo se recorta: la toma no llega a su final (que la reiniciaría con un fundido).
-      escena.depurar.cuadro(dt + (op.atajo ? Math.min(dtTapado, 2) : dtTapado))
-      dtTapado = 0
-    }
+    // Lo que no se ve (la apertura tapada del todo hasta 0,4 s antes del final, y
+    // los cuadros salteados) avanza igual pero sin dibujar: por software dibujar
+    // cuesta segundos por cuadro, y el estado queda idéntico al del video entero.
+    if (dibujar && !(m.fase === "apertura" && t <= linea.apertura - 0.4)) escena.depurar.cuadro(dt)
+    else escena.depurar.avanzar(dt)
     actual = i
     return m
   }
-  let saltando = false
 
   /** Un paso completo: avanza y compone el cuadro en la salida. */
   const paso = (i: number, dt: number) => {
@@ -226,10 +202,11 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
       ficcion: fase === "plano",
     }
     if (fase === "apertura") {
-      // Negro con el nombre; la escena aparece en los últimos 0,4 s.
+      // El logo desde el cuadro 0 (la miniatura del video es la marca); en los
+      // últimos 0,4 s se va y aparece la escena.
       const a = linea.apertura
       capas.velo = Math.min(1, Math.max(0, (a - t) / 0.4))
-      capas.apertura = { alfa: opacidad(t, 0, a - 0.05, 0.3), subtitulo: ep.titulo }
+      capas.apertura = { alfa: Math.min(1, Math.max(0, (a - 0.05 - t) / 0.35)), subtitulo: ep.titulo, avance: Math.min(1, t / a) }
       return capas
     }
     if (fase === "cierre") {
@@ -238,7 +215,9 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
       capas.cierre = { alfa: Math.min(1, Math.max(0, (tc - 0.2) / 0.4)), negro: Math.max(0, (tc - (linea.cierre - 0.35)) / 0.35) }
       return capas
     }
-    if (p.titulo) capas.titulo = { texto: textoFinal(p.titulo), alfa: opacidad(local, 0.1, p.dur - 0.1, 0.3) }
+    // Siguiendo a alguien, el seguido está al centro del cuadro: el título va arriba (salvo que el guion diga otra cosa).
+    const arriba = p.tituloEn ? p.tituloEn === "arriba" : p.camara.tipo === "seguir"
+    if (p.titulo) capas.titulo = { texto: textoFinal(p.titulo), alfa: opacidad(local, 0.1, p.dur - 0.1, 0.3), arriba }
     if (p.rotulo) capas.rotulo = { texto: textoFinal(p.rotulo), alfa: opacidad(local, 0.25, p.dur - 0.1, 0.3) }
     const l = lineaActiva(p, local)
     if (l) {
@@ -280,10 +259,8 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
     cuadro(i: number) {
       if (!Number.isInteger(i) || i < 0 || i >= linea.cuadros) throw new Error(`cuadro ${i} fuera de 0…${linea.cuadros - 1}`)
       if (i <= actual) throw new Error(`el cuadro ${i} ya pasó (el último fue ${actual}): el estudio solo avanza`)
-      // Cuadros salteados: se recorren igual, de a 1/fps, para que el resultado sea idéntico.
-      saltando = !!op.atajo
-      for (let k = actual + 1; k < i; k++) avanzar(k, 1 / fps)
-      saltando = false
+      // Cuadros salteados: se recorren igual, de a 1/fps y sin dibujar, para que el resultado sea idéntico.
+      for (let k = actual + 1; k < i; k++) avanzar(k, 1 / fps, false)
       paso(i, 1 / fps)
     },
     vivo(i: number) {

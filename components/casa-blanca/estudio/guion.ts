@@ -46,6 +46,12 @@ export interface Plano {
   hora?: string
   /** Texto grande en pantalla: el gancho o el título del bloque. Corto. */
   titulo?: string
+  /**
+   * Dónde va el título: al centro o arriba, cuando el centro del cuadro ya
+   * dice algo (la pantalla del contador de la Sala de Control). Sin él: arriba
+   * si la cámara sigue a alguien (está al centro), al centro en lo demás.
+   */
+  tituloEn?: "centro" | "arriba"
   /** Texto chico (lugar, dato, quién es quién). */
   rotulo?: string
   /** Lo que dicen. Se ve como burbuja sobre el personaje y como subtítulo. */
@@ -96,6 +102,7 @@ export function guionValido(ep: Episodio, ids: { personajes: Set<string>; lugare
     if (!(p.dur > 0 && p.dur <= 60)) errores.push(`${n}: dur ${p.dur} (va de 0 a 60 s)`)
     if (p.hora !== undefined && !HORA.test(p.hora)) errores.push(`${n}: hora "${p.hora}" (va "HH:MM")`)
     if (p.visor !== undefined && p.visor !== "cine" && p.visor !== "camara") errores.push(`${n}: visor "${p.visor}": va cine o camara`)
+    if (p.tituloEn !== undefined && p.tituloEn !== "centro" && p.tituloEn !== "arriba") errores.push(`${n}: tituloEn "${p.tituloEn}": va centro o arriba`)
     const c = p.camara
     if (c.tipo === "toma") {
       if (!ids.tomas.has(c.toma)) errores.push(`${n}: la toma "${c.toma}" no existe`)

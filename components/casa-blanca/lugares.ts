@@ -286,7 +286,7 @@ NC("c-av-3", 0, 90)
 NC("c-torres-n", -10, 56)
 NC("c-torres-s", -10, 84)
 NC("c-mercado", 14, 58)
-NC("c-parque", 12, 81)
+NC("c-parque", 10, 81)
 NC("c-arena", 0, 103)
 E("n3-asc", "ciudad-asc", { ascensor: true })
 E("ciudad-asc", "c-plaza")
@@ -411,9 +411,9 @@ const CIUDAD: Lugar[] = [
   lc("ciudad-estacion", "Andén del Tren", "servicio", [-27, -13, 14, 43], "c-estacion", "Ficción: el tren que une la instalación con la Casa Blanca."),
   lc("ciudad-club", "Sala de Control", "edificio", [13, 20, 14, 39], "c-club", "Ficción: la sala que vigila la instalación, con el contador real del reto."),
   lc("ciudad-avenida", "Corredor Central", "servicio", [-3, 3, 46, 96], "c-av-2", "Ficción: el pasillo principal, con control de acceso por escaneo."),
-  lc("ciudad-torres", "Laboratorios", "edificio", [-16, -5, 48, 92], "c-torres-n", "Ficción: laboratorios de vidrio donde se prueban los agentes de IA."),
-  lc("ciudad-mercado", "Comedor", "ocio", [5, 16, 48, 67], "c-mercado", "Ficción: el comedor, abierto las 24 horas."),
-  lc("ciudad-parque", "Jardín Hidropónico", "jardin", [5, 16, 70, 92], "c-parque", "Ficción: un huerto bajo luz artificial."),
+  lc("ciudad-torres", "Laboratorios", "edificio", [-12.5, -6.5, 48, 92], "c-torres-n", "Ficción: laboratorios de vidrio donde se prueban los agentes de IA."),
+  lc("ciudad-mercado", "Comedor", "ocio", [6.5, 15.5, 48, 67], "c-mercado", "Ficción: el comedor, abierto las 24 horas."),
+  lc("ciudad-parque", "Jardín Hidropónico", "jardin", [6, 13, 70, 92], "c-parque", "Ficción: un huerto bajo luz artificial."),
   lc("ciudad-arena", "Cámara de Pruebas", "deporte", [-13, 13, 98, 111], "c-arena", "Ficción: la sala donde se prueban robots y drones."),
 ]
 

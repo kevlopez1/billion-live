@@ -161,7 +161,8 @@ export function matPelo(color: string, rizado = false): THREE.MeshPhysicalMateri
   // el tono del pelo solo tiñe el brillo.
   m = new THREE.MeshPhysicalMaterial({
     // Canas y rubios: un poco más cálidos (bajo el cielo azul el blanco se iba a celeste).
-    color: new THREE.Color(1, 1 - 0.08 * hsl.l, 1 - 0.3 * hsl.l),
+    // (más todavía: a la sombra, con la luz del cielo, el rubio salía verde oliva y las canas turquesa)
+    color: new THREE.Color(1, 1 - 0.14 * hsl.l, 1 - 0.45 * hsl.l),
     map: t,
     vertexColors: true,
     alphaTest: 0.42,
@@ -196,9 +197,12 @@ export function matOjo(iris: string, esclera = "#ece6de"): THREE.MeshPhysicalMat
     vertexColors: true,
     roughness: 0.3,
     metalness: 0,
-    clearcoat: 1,
+    // El barniz reflejaba el cielo entero y los iris oscuros se leían azules
+    // (Kobe, Tate, Cleopatra): menos barniz (el envMapIntensity no cuenta con
+    // scene.environment); el punto de brillo del sol queda.
+    clearcoat: 0.45,
     clearcoatRoughness: 0.03,
-    specularIntensity: 0.4,
+    specularIntensity: 0.3,
   })
   m.name = `ojo-${iris}`
   ojos.set(clave, m)
@@ -247,6 +251,7 @@ const HOLO_VERT = /* glsl */ `
 varying vec3 vN;
 varying vec3 vV;
 varying float vY;
+varying vec3 vP;
 void main() {
 	#include <color_vertex>
 	#include <skinbase_vertex>
@@ -258,6 +263,7 @@ void main() {
 	vN = normalize( normalMatrix * objectNormal );
 	vV = -mv.xyz;
 	vY = transformed.y;
+	vP = transformed;
 	gl_Position = projectionMatrix * mv;
 }`
 
@@ -267,10 +273,21 @@ uniform vec3 uColor;
 uniform vec3 uColor2;
 uniform float uTiempo;
 uniform float uAlto;
+uniform float uPatron;
+uniform float uFundir;
 varying vec3 vN;
 varying vec3 vV;
 varying float vY;
+varying vec3 vP;
 float hash( float n ) { return fract( sin( n ) * 43758.5453 ); }
+// Celda hexagonal más cercana (p en unidades de celda) y distancia hexagonal a su centro (0,5 = borde).
+vec2 celdaHex( vec2 p ) {
+	const vec2 s = vec2( 1.0, 1.7320508 );
+	vec2 a = mod( p, s ) - s * 0.5;
+	vec2 b = mod( p - s * 0.5, s ) - s * 0.5;
+	return dot( a, a ) < dot( b, b ) ? a : b;
+}
+float bordeHex( vec2 p ) { p = abs( p ); return max( dot( p, vec2( 0.8660254, 0.5 ) ), p.y ); }
 void main() {
 	#ifdef USE_COLOR_ALPHA
 		if ( vColor.a < 0.45 ) discard;
@@ -281,24 +298,43 @@ void main() {
 	// Líneas de escaneo finas que suben y una banda ancha que barre el cuerpo.
 	// Líneas finas (130 por metro) y suaves: a 1080p se leen como textura, no como rayas.
 	float lineas = 0.78 + 0.22 * smoothstep( 0.2, 0.8, abs( fract( vY * 130.0 - uTiempo * 0.9 ) - 0.5 ) * 2.0 );
+	// ChatGPT: retícula hexagonal (celdas de 2 cm) en vez de líneas de escaneo.
+	if ( uPatron > 0.5 ) {
+		vec2 q = vec2( atan( vP.x, vP.z ) * 0.16, vY - uTiempo * 0.02 ) / 0.02;
+		float e = bordeHex( celdaHex( q ) );
+		lineas = 0.8 + 0.2 * ( 1.0 - smoothstep( 0.38, 0.47, e ) );
+	}
+	// Luminancia del color del vértice respecto del color base: la ropa más clara
+	// (abrigo, chaqueta, costuras, emblema) se ve más opaca y brillante.
+	const vec3 LUM = vec3( 0.3, 0.59, 0.11 );
+	#ifdef USE_COLOR_ALPHA
+		float kc = clamp( dot( vColor.rgb, LUM ) / max( dot( uColor, LUM ), 0.01 ), 0.6, 3.0 );
+	#else
+		float kc = 1.0;
+	#endif
 	float barrido = smoothstep( 0.12, 0.0, abs( fract( uTiempo * 0.18 ) * ( uAlto + 0.6 ) - 0.3 - vY ) );
 	float parpadeo = 0.92 + 0.08 * sin( uTiempo * 31.0 ) * sin( uTiempo * 7.3 );
 	float falla = step( 0.985, hash( floor( uTiempo * 9.0 ) ) ) * step( abs( fract( vY * 3.0 + uTiempo ) - 0.5 ), 0.06 );
 	vec3 col = mix( uColor, uColor2, fr * 0.8 + barrido * 0.5 );
 	float brillo = ( 0.85 + 3.2 * fr + 1.2 * barrido ) * lineas * parpadeo + falla * 1.5;
-	float a = clamp( 0.34 + 0.6 * fr + 0.2 * barrido + falla * 0.3, 0.0, 1.0 ) * ( 0.85 + 0.15 * lineas );
+	brillo *= 0.75 + 0.25 * kc;
+	float a = clamp( ( 0.34 + 0.6 * fr + 0.2 * barrido + falla * 0.3 ) * ( 0.8 + 0.2 * kc ), 0.0, 1.0 ) * ( 0.85 + 0.15 * lineas );
+	// Claude: las piernas se funden en luz desde media pantorrilla hacia el suelo.
+	a *= mix( 1.0, smoothstep( 0.02 * uAlto, 0.24 * uAlto, vY ), uFundir );
 	gl_FragColor = vec4( col * brillo, a );
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
 }`
 
 /** Material de holograma (color y prepaso de profundidad: solo se ve la cara más cercana). */
-export function matHolograma(color: string, color2: string, alto: number): { color: THREE.ShaderMaterial; prepaso: THREE.ShaderMaterial } {
+export function matHolograma(color: string, color2: string, alto: number, op: { hex?: boolean; fundir?: boolean } = {}): { color: THREE.ShaderMaterial; prepaso: THREE.ShaderMaterial } {
   const uniforms = {
     uColor: { value: new THREE.Color(color) },
     uColor2: { value: new THREE.Color(color2) },
     uTiempo: { value: 0 },
     uAlto: { value: alto },
+    uPatron: { value: op.hex ? 1 : 0 },
+    uFundir: { value: op.fundir ? 1 : 0 },
   }
   const col = new THREE.ShaderMaterial({
     uniforms,

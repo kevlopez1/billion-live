@@ -228,7 +228,7 @@ export function pulsoDeMano(t: number, alto: number): { dx: number; dy: number; 
 
 /**
  * Lo que va a salir raro aunque el guion sea válido. `tomas` = escena.tomas().
- * - Una toma fija que dura menos que el plano se repite con un fundido a negro.
+ * - Una toma fija que dura menos que el plano termina antes: la cámara queda quieta en su última pose.
  * - "reunir" en una toma que no muestra un lugar no tiene dónde reunir.
  * - Más de 17 caracteres por segundo no se alcanza a leer.
  */
@@ -241,10 +241,11 @@ export function avisosDelEpisodio(ep: Episodio, tomas: ReadonlyArray<{ id: strin
     const c = p.camara
     if (c.tipo === "toma") {
       const toma = tomas.find((t) => t.id === c.toma)
-      // Lo que corre la toma: el plano, más la apertura (primero) o el cierre (último), más ~0,4 s de preparación.
-      const corre = p.dur + (i === 0 ? linea.apertura : 0) + (i === linea.tramos.length - 1 ? linea.cierre : 0) + 0.4
-      if (toma && c.toma !== "seguir" && corre > toma.duracion)
-        avisos.push(`${n}: la toma "${c.toma}" dura ${toma.duracion} s y aquí corre ${corre.toFixed(1)} s: se repite con un fundido a negro`)
+      // Lo que corre la toma: el plano, más la apertura (primero) o el cierre (último). El motor
+      // la sostiene en su última pose (opción `sostener`): medio segundo quieta no se nota.
+      const corre = p.dur + (i === 0 ? linea.apertura : 0) + (i === linea.tramos.length - 1 ? linea.cierre : 0)
+      if (toma && c.toma !== "seguir" && corre > toma.duracion + 0.5)
+        avisos.push(`${n}: la toma "${c.toma}" dura ${toma.duracion} s y aquí corre ${corre.toFixed(1)} s: los últimos ${(corre - toma.duracion).toFixed(1)} s la cámara queda quieta`)
       if (p.reunir?.length && !lugarDelPlano(c, () => "x")) avisos.push(`${n}: la toma "${c.toma}" no muestra un lugar; "reunir" no tiene dónde reunir`)
     }
     for (const l of horarioDialogo(p)) {

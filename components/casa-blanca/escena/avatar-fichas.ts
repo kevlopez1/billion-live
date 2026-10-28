@@ -195,6 +195,8 @@ export interface FichaPelo {
   remolino?: "coronilla" | "frente" | "raya"
   /** Moño en la coronilla: alto y radio (m). */
   mono?: { alto: number; radio: number } | null
+  /** Pelo liso y peinado (laca, gel): las capas de afuera sin huecos entre hebras, silueta lisa (0..1). */
+  liso?: number
 }
 
 export interface FichaBarba {
@@ -221,6 +223,8 @@ export interface FichaBarba {
   rizo?: number
   /** Borde de la mejilla: 0 = recto y limpio, 1 = se degrada. */
   borde?: number
+  /** Barba recortada y tupida: la capa de afuera tapa como una masa, sin escoba de hebras (0..1). */
+  liso?: number
 }
 
 export interface FichaCejas {
@@ -285,6 +289,20 @@ export interface FichaVestuario {
   gafasSinAro?: boolean
   /** Cuello alto de la casaca o pechera más angosta (uniforme). */
   pecheraAngosta?: boolean
+  /** Ribete del ruedo de la túnica (color); null = sin ribete. */
+  ribete?: string | null
+  /** Dos franjas verticales (clavi) del hombro al ruedo, por delante (color). */
+  clavi?: string
+  /** Cuello cruzado (hanfu): el ribete del cuello baja del hombro izquierdo a la axila derecha (color). */
+  cuelloCruzado?: string
+  /** Collar ancho en V sobre el pecho (cinta del grado masónico): color y fleco. */
+  collarV?: { color: string; borde: string } | null
+  /** Abrigo largo abierto hasta la rodilla, con cuello chal (holograma de Claude). */
+  abrigo?: boolean
+  /** Chaqueta corta entallada de cuello alto, con hombros rectos (holograma de ChatGPT). */
+  chaquetaMao?: boolean
+  /** Emblema flotante: "chispa" (asterisco radial detrás de la cabeza) o "nudo" (seis lazos sobre el pecho). */
+  emblema?: "chispa" | "nudo"
 }
 
 export interface Ficha {
@@ -321,15 +339,15 @@ export const FICHAS: Record<string, Ficha> = {
     ap: { piel: "#E6A97E", ropa: { color: "#1B2340", color2: "#F4F4F2", corbata: "#C8102E" } },
     cuerpo: { anchoHombros: 0.5, pecho: 1.12, profundidad: 1.1, cintura: 1.3, panza: 0.07, panzaAlta: 0.85, cuello: { grosor: 1.25, largo: 0.7 }, piernas: 0.97, muslo: 0.95 },
     cara: {
-      ancho: 1.1, largo: 1.03, mandibula: 1.12, menton: 1.05, mejillas: 0.8, papada: 0.75, arcoCejas: 1.1,
-      ojos: { abierto: 0.62, parpado: 0.9, tam: 0.92, bolsas: 0.7 },
+      ancho: 1.1, largo: 1.03, mandibula: 1.12, menton: 1.05, mejillas: 0.45, papada: 0.75, arcoCejas: 1.1,
+      ojos: { abierto: 0.7, parpado: 0.9, tam: 0.95, bolsas: 0.7 },
       nariz: { ancho: 1.1, punta: 1.18 },
-      labios: { superior: 0.7, inferior: 1.15, avanceInferior: 0.6, ancho: 0.92 },
+      labios: { superior: 0.85, inferior: 1.15, avanceInferior: 0.6, ancho: 0.9, comisuras: -0.05 },
       orejas: { tam: 1.15, lobulo: 1.35 },
     },
     piel: { base: "#E6A97E", ojos: ["#EDBF9C", 0.25], rubor: ["#D98F70", 0.3], cuerpo: "#EBBC98" },
     iris: "#6f8aa0",
-    pelo: { color: "#DDAC66", puntas: "#EFCD92", bajo: "#B5874C", volumen: { base: 0.004, arriba: 0.012, lados: 0 }, copete: { alto: 0.032, avance: 0.03 }, linea: { alto: 0.6, entradas: 0.5, nuca: -0.3, cubreOrejas: 0 }, borde: 0.15, remolino: "coronilla", largo: 0 },
+    pelo: { color: "#E2AC62", puntas: "#F2CF8E", bajo: "#B9834A", volumen: { base: 0.006, arriba: 0.012, lados: 0.005 }, copete: { alto: 0.026, avance: 0.036 }, linea: { alto: 0.6, entradas: 0.5, nuca: -0.3, cubreOrejas: 0 }, borde: 0.15, remolino: "coronilla", largo: 0, liso: 0.85 },
     barba: { densidad: 0 },
     cejas: { color: "#CDAE78", grosor: 0.6, densidad: 0.45, largo: 0.85, arco: 0.25 },
   },
@@ -340,7 +358,7 @@ export const FICHAS: Record<string, Ficha> = {
     estatura: 1.7,
     edad: 55,
     ap: { piel: "#DDB98F", pelo: { estilo: "peinado_atras", color: "#1C1A18" }, ropa: { color: "#34452F", color2: "#B08D57" } },
-    vestuario: { cinturon: { color: "#6B1E1E", ancho: 0.05 }, mangaAncha: 0.06 },
+    vestuario: { cinturon: { color: "#6B1E1E", ancho: 0.05 }, mangaAncha: 0.06, manto: null, ribete: "#B08D57", cuelloCruzado: "#B08D57" },
     cuerpo: { anchoHombros: 0.38, anchoCintura: 0.27, musculo: { brazos: 0.85, piernas: 0.9 } },
     cara: {
       ancho: 0.94, largo: 1.06, frente: 0.8, pomulos: 1.2, mejillas: -0.1, mandibula: 0.95, menton: 0.95,
@@ -350,9 +368,11 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#DDB98F" },
     iris: "#2a1d15",
-    pelo: { color: "#1C1A18", canasSienes: 0.2, largo: 0, mono: { alto: 0.06, radio: 0.026 }, volumen: { base: 0.003, arriba: 0.003, lados: 0.001, frente: 0, atras: 0 }, raya: null, remolino: "frente", linea: { entradas: 0, recta: 0.5, alto: 0.6, cubreOrejas: 0 }, borde: 0.6, ondas: 0, adelante: 0 },
-    barba: { color: "#2A2724", canas: 0.3, densidad: 0.9, largo: 0.004, bigote: 0.7, perilla: 0.8, mandibula: 0, mejillas: 0, cuello: 0, anchoPerilla: 0.6, colgante: 0.15, anchoColgante: 0.035, bigoteCaido: 0.08, borde: 0.2 },
-    cejas: { color: "#1E1A17", grosor: 0.75, largo: 1.15, arco: 0.1, inclinacion: -0.2 },
+    pelo: { color: "#2A2119", canasSienes: 0.2, largo: 0, mono: { alto: 0.06, radio: 0.026 }, volumen: { base: 0.003, arriba: 0.003, lados: 0.001, frente: 0, atras: 0 }, raya: null, remolino: "frente", linea: { entradas: 0, recta: 0.5, alto: 0.6, cubreOrejas: 0 }, borde: 0.6, ondas: 0, adelante: 0 },
+    // Barba de tres mechones: bigote fino y perilla larga y angosta (el bigote
+    // caído salía como dos alambres negros).
+    barba: { color: "#3A2E24", canas: 0.15, densidad: 0.9, largo: 0.004, bigote: 0.55, perilla: 0.8, mandibula: 0, mejillas: 0, cuello: 0, anchoPerilla: 0.55, colgante: 0.11, anchoColgante: 0.022, bigoteCaido: 0, borde: 0.2, liso: 1 },
+    cejas: { color: "#2A2119", grosor: 0.75, largo: 1.15, arco: 0.1, inclinacion: -0.2 },
   },
 
   // Peter Thiel: frente alta con entradas en M, raya al costado, cara larga
@@ -360,17 +380,17 @@ export const FICHAS: Record<string, Ficha> = {
   thiel: {
     estatura: 1.78,
     edad: 59,
-    ap: { piel: "#EAC4A4", ropa: { color: "#1E2A44", color2: "#DCE3EC" } },
+    ap: { piel: "#EAC4A4", ropa: { color: "#1E2A44", color2: "#C2D2E6" } },
     cuerpo: { anchoHombros: 0.43, panza: 0.012 },
     cara: {
       ancho: 0.95, largo: 1.08, frente: 1.2, mandibula: 1.05, anguloMandibula: 0.6, menton: 1.2, mentonAvance: 0.3, mentonCuadrado: 0.5, mejillas: -0.3, pomulos: 1.1,
       ojos: { abierto: 0.85, parpado: 0.5, tam: 0.95 },
       nariz: { largo: 1.08, puente: 0.6 },
-      labios: { superior: 0.6, inferior: 0.8, comisuras: -0.1 },
+      labios: { superior: 0.78, inferior: 0.88, ancho: 0.94, comisuras: -0.05 },
     },
     piel: { base: "#EAC4A4", rubor: ["#E0AE90", 0.25] },
     iris: "#7C8C9A",
-    pelo: { color: "#9C7B5B", canas: 0.3, volumen: { base: 0.004, arriba: 0.008, frente: 0.004 }, linea: { entradas: 0.85, alto: 0.8 }, raya: 1, remolino: "raya", borde: 0.5 },
+    pelo: { color: "#8E7154", puntas: "#A88B6C", canas: 0.2, volumen: { base: 0.004, arriba: 0.008, frente: 0.004 }, linea: { entradas: 0.85, alto: 0.8 }, raya: 1, remolino: "raya", borde: 0.5, liso: 0.6 },
     barba: { densidad: 0 },
     cejas: { color: "#8A6E52", grosor: 0.75, arco: 0.15 },
   },
@@ -383,7 +403,7 @@ export const FICHAS: Record<string, Ficha> = {
     ap: { piel: "#EFC8A8", ropa: { color: "#8A8F96", color2: "#2F3E55" } },
     cuerpo: { anchoHombros: 0.4, anchoCintura: 0.28, cuello: { grosor: 0.9, largo: 0.85 }, musculo: { brazos: 0.85, piernas: 0.88 }, cabeza: 1.04 },
     cara: {
-      ancho: 0.96, largo: 0.97, mandibula: 0.9, menton: 0.85, mejillas: 0.1, papada: 0, pomulos: 0.95,
+      ancho: 0.93, largo: 0.98, mandibula: 0.85, menton: 0.82, mejillas: -0.1, papada: 0, pomulos: 0.95,
       ojos: { tam: 1.15, abierto: 1.15, parpado: 0.1, bolsas: 0.25, hundidos: -0.1 },
       nariz: { largo: 0.92, ancho: 0.9, puente: 0.4 },
       labios: { superior: 0.75, inferior: 0.85, ancho: 0.92 },
@@ -391,7 +411,7 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#EFC8A8", ojos: ["#D9AE92", 0.2] },
     iris: "#6E7C5A",
-    pelo: { color: "#5E4A3A", canasSienes: 0.3, volumen: { base: 0.005, arriba: 0.012, frente: 0.006, lados: 0.001 }, linea: { entradas: 0.4 }, remolino: "coronilla", rizo: 0.2, borde: 0.5 },
+    pelo: { color: "#6B5442", puntas: "#8C735C", canasSienes: 0.3, volumen: { base: 0.0035, arriba: 0.008, frente: 0.005, lados: 0.0005 }, linea: { entradas: 0.45, alto: 0.35 }, remolino: "coronilla", rizo: 0.25, borde: 0.75 },
     barba: { densidad: 0.1 },
     cejas: { color: "#5A4A3C", grosor: 0.8, arco: 0.3, alto: 0.15 },
   },
@@ -412,7 +432,7 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#EDC6A8", rubor: ["#E4B394", 0.25] },
     iris: "#5f7a80",
-    pelo: { color: "#3B2C22", puntas: "#5A4636", canasSienes: 0.25, volumen: { base: 0.0028, arriba: 0.02, frente: 0.01, lados: 0, atras: 0.001 }, copete: { alto: 0.014, avance: 0.004 }, linea: { entradas: 0.45, alto: 0.3, flequillo: 0 }, raya: null, remolino: "frente", borde: 0.4, rizo: 0.15 },
+    pelo: { color: "#45342A", puntas: "#66503E", canasSienes: 0.25, volumen: { base: 0.0025, arriba: 0.013, frente: 0.009, lados: 0, atras: 0.001 }, copete: { alto: 0.014, avance: 0.0 }, liso: 0.4, linea: { entradas: 0.7, alto: 0.7, flequillo: 0 }, raya: null, remolino: "frente", borde: 0.4, rizo: 0.15 },
     barba: { densidad: 0.15, color: "#6A5A50" },
     cejas: { color: "#3E2E24", grosor: 1.05, arco: 0.15, alto: -0.15 },
   },
@@ -429,7 +449,7 @@ export const FICHAS: Record<string, Ficha> = {
     piel: { base: "#D6A47E", brillo: 0.6 },
     iris: "#2E2018",
     pelo: { rapado: 0.18, color: "#3A2E26", linea: { entradas: 0.3 } },
-    barba: { color: "#231A14", densidad: 1, largo: 0.016, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.6, cuello: 0.55, borde: 0.05 },
+    barba: { color: "#1A1310", densidad: 1, largo: 0.014, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.6, cuello: 0.55, borde: 0.05, liso: 0.8 },
     cejas: { color: "#1E1612", grosor: 1.3, arco: 0.1, densidad: 1 },
   },
 
@@ -468,9 +488,9 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#A6724F", labios: "#8A5544" },
     iris: "#3A2A20",
-    pelo: { color: "#262322", canas: 0.2, canasSienes: 0.5, volumen: { base: 0.004, arriba: 0.008, frente: 0.003 }, linea: { entradas: 0.85, alto: 0.9, coronilla: 0.2 }, remolino: "frente", raya: null },
+    pelo: { color: "#2B231E", canas: 0.05, canasSienes: 0.45, volumen: { base: 0.004, arriba: 0.007, frente: 0.003 }, linea: { entradas: 0.85, alto: 0.9, coronilla: 0.2 }, remolino: "frente", raya: null, liso: 0.3 },
     barba: { densidad: 0.1, color: "#4a3a30" },
-    cejas: { color: "#2A2420", grosor: 1.2, arco: 0.55, densidad: 1 },
+    cejas: { color: "#2B221C", grosor: 1.2, arco: 0.55, densidad: 1 },
   },
 
   // El Gran Maestro: anciano distinguido, pelo blanco hacia atrás, barba blanca
@@ -478,8 +498,8 @@ export const FICHAS: Record<string, Ficha> = {
   mason: {
     estatura: 1.78,
     edad: 74,
-    ap: { piel: "#E6C2A4", pelo: { estilo: "peinado_atras", color: "#E4E1DA" }, barba: { estilo: "completa", color: "#ECE8E0" }, ropa: { color: "#111111", color2: "#F2EFE6", corbata: "#0E0E10" }, accesorios: ["faja", "collar_oro"] },
-    vestuario: { mandil: { color: "#F4F1EA", ribete: "#C9A040" }, faja: { color: "#F2EFE6", borde: "#C9A040" } },
+    ap: { piel: "#E6C2A4", pelo: { estilo: "peinado_atras", color: "#E4E1DA" }, barba: { estilo: "completa", color: "#ECE8E0" }, ropa: { color: "#111111", color2: "#F2EFE6", corbata: "#0E0E10" }, accesorios: [] },
+    vestuario: { mandil: { color: "#F4F1EA", ribete: "#C9A040" }, collarV: { color: "#F2EFE6", borde: "#C9A040" } },
     cuerpo: { anchoHombros: 0.43, panza: 0.03, panzaAlta: 0.45, encorvado: 0.35 },
     cara: {
       ancho: 1.0, largo: 1.06, frente: 1.0, mandibula: 1.05, mentonCuadrado: 0.4, mejillas: -0.1, papada: 0.25,
@@ -489,9 +509,9 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#E6C2A4", rubor: ["#D9A58C", 0.3], manchas: 0.35 },
     iris: "#5f6f7a",
-    pelo: { color: "#E4E1DA", puntas: "#EEECE6", bajo: "#C8C4BC", volumen: { base: 0.006, arriba: 0.012, frente: 0.008, atras: 0.006 }, linea: { entradas: 0.75, coronilla: 0.35, nuca: 1.2 }, ondas: 0.4, remolino: "frente", raya: null, borde: 0.4 },
-    barba: { color: "#ECE8E0", canas: 0.1, densidad: 1, largo: 0.02, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.6, colgante: 0.04, anchoColgante: 0.1, borde: 0.5 },
-    cejas: { color: "#E8E4DC", grosor: 1.3, pobladas: 0.9, densidad: 1 },
+    pelo: { color: "#E2DACB", puntas: "#ECE6DA", bajo: "#C8C4BC", volumen: { base: 0.006, arriba: 0.012, frente: 0.008, atras: 0.006 }, linea: { entradas: 0.75, coronilla: 0.35, nuca: 1.2 }, ondas: 0.4, remolino: "frente", raya: null, borde: 0.4 },
+    barba: { color: "#E6DDCC", canas: 0.1, densidad: 1, largo: 0.02, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.6, colgante: 0.04, anchoColgante: 0.1, borde: 0.5 },
+    cejas: { color: "#E2DACB", grosor: 1.3, pobladas: 0.9, densidad: 1 },
   },
 
   // El Iluminado: alto y delgado, hábito negro con capucha profunda; de la cara
@@ -500,15 +520,17 @@ export const FICHAS: Record<string, Ficha> = {
     estatura: 1.84,
     edad: 45,
     ap: { piel: "#D6C0AE", pelo: { estilo: "peinado_atras", color: "#121212" }, ropa: { tipo: "tunica", color: "#17151D", color2: "#C9A43A" }, accesorios: [], sombrero: null },
-    vestuario: { capucha: { color: "#17151D", ribete: "#C9A43A" }, cinturon: { color: "#C9A43A", ancho: 0.012 }, mangaAncha: 0.08, manto: null },
+    vestuario: { capucha: { color: "#17151D", ribete: "#C9A43A" }, cinturon: { color: "#C9A43A", ancho: 0.01 }, mangaAncha: 0.08, manto: null, ruedo: 0.012, ribete: "#C9A43A" },
     cuerpo: { anchoHombros: 0.4, anchoCintura: 0.28 },
     cara: {
       ancho: 0.9, largo: 1.08, mandibula: 0.95, anguloMandibula: 0.75, menton: 1.0, mentonAvance: 0.1, mejillas: -0.3,
       nariz: { largo: 1.12, ancho: 0.88 },
       labios: { superior: 0.6, inferior: 0.7 },
     },
-    piel: { base: "#D6C0AE" },
-    pelo: { color: "#121212", volumen: { base: 0.003, arriba: 0.004 } },
+    // Piel en la sombra de la capucha (la tela no siempre la sombrea con el sol alto).
+    piel: { base: "#8C7A70", cuerpo: "#C9B6A8", ojos: ["#2a2226", 0.9] },
+    // Bajo la capucha no hay pelo (rapado = sin geometría: ~3.800 triángulos menos).
+    pelo: { color: "#121212", rapado: 0.4 },
     barba: { densidad: 0 },
   },
 
@@ -518,7 +540,7 @@ export const FICHAS: Record<string, Ficha> = {
     estatura: 1.7,
     edad: 33,
     ap: { piel: "#C49C78", ropa: { color: "#ECE4D2", color2: "#8E2B2B" } },
-    vestuario: { cinturon: { color: "#8C6A4A", ancho: 0.02 }, manto: { color: "#8E2B2B", ancho: 0.34, lado: 1 } },
+    vestuario: { cinturon: { color: "#8C6A4A", ancho: 0.018 }, manto: { color: "#8E2B2B", ancho: 0.34, lado: 1, borde: "#6E1F1F", bajo: 0.52 }, ribete: null, mangaAncha: 0.03 },
     cuerpo: { anchoHombros: 0.42, anchoCintura: 0.28, musculo: { brazos: 0.95 } },
     cara: {
       ancho: 0.93, largo: 1.08, pomulos: 1.15, mejillas: -0.15, mandibula: 0.95,
@@ -548,7 +570,7 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#E7C09E", rubor: ["#DDB08C", 0.25] },
     iris: "#4A3E36",
-    pelo: { color: "#CBC5BA", bajo: "#9A948A", puntas: "#DCD6CB", rizo: 0.55, frecRizo: 1.3, volumen: { base: 0.022, arriba: 0.042, lados: 0.04, atras: 0.03, frente: 0.018 }, linea: { cubreOrejas: 0.7, entradas: 0.3 }, borde: 0.2 },
+    pelo: { color: "#B2AA9C", bajo: "#8E877C", puntas: "#D2C9B8", canas: 0.25, rizo: 0.9, frecRizo: 1.6, volumen: { base: 0.016, arriba: 0.026, lados: 0.024, atras: 0.02, frente: 0.012 }, linea: { cubreOrejas: 0.7, entradas: 0.3 }, borde: 0.2 },
     barba: { densidad: 0 },
     cejas: { color: "#4A4440", grosor: 1.3, densidad: 1, arco: 0.45, alto: 0.15, pobladas: 0.3 },
   },
@@ -558,8 +580,10 @@ export const FICHAS: Record<string, Ficha> = {
   marco: {
     estatura: 1.72,
     edad: 52,
-    ap: { piel: "#E2BC98", ropa: { color: "#EDE6D6", color2: "#5B1E4E" } },
-    vestuario: { ruedo: 0.27, manga: 0.15, manto: { color: "#5B1E4E", ancho: 0.3, lado: 1 }, cinturon: { color: "#9a7a3a", ancho: 0.012 } },
+    // Sin laurel: con hojas sueltas se leía como una línea punteada verde, no
+    // como una corona (los bustos de Marco Aurelio lo muestran sin ella).
+    ap: { piel: "#E2BC98", ropa: { color: "#EDE6D6", color2: "#5B1E4E" }, sombrero: null },
+    vestuario: { ruedo: 0.27, manga: 0.15, mangaAncha: 0.012, manto: null, clavi: "#5B1A4A", capa: { color: "#5B1E4E", largo: 0.66 }, cinturon: { color: "#9a7a3a", ancho: 0.012 } },
     cuerpo: { anchoHombros: 0.42, musculo: { antebrazos: 1.05, pantorrillas: 1.1 } },
     cara: {
       ancho: 0.94, largo: 1.1, frente: 0.5, pomulos: 0.95,
@@ -568,8 +592,8 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#E2BC98" },
     iris: "#4a3828",
-    pelo: { color: "#5A4330", canas: 0.2, rizo: 1, frecRizo: 1.6, volumen: { base: 0.014, arriba: 0.03, frente: 0.02, lados: 0.02, atras: 0.012 }, linea: { cubreOrejas: 0.5, entradas: 0, recta: 0.4 }, borde: 0.2 },
-    barba: { color: "#5A4330", canas: 0.3, densidad: 1, largo: 0.022, rizo: 1, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.6, partida: 0.4, colgante: 0.04, anchoColgante: 0.09, borde: 0.5 },
+    pelo: { color: "#6E5038", canas: 0.2, rizo: 1, frecRizo: 1.6, volumen: { base: 0.014, arriba: 0.018, frente: 0.004, lados: 0.019, atras: 0.012 }, linea: { cubreOrejas: 0.5, entradas: 0, recta: 0.4, alto: -0.3 }, borde: 0.2, liso: 0.5, remolino: "coronilla" },
+    barba: { color: "#664A34", canas: 0.3, densidad: 1, largo: 0.02, rizo: 0.8, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.6, partida: 0.4, colgante: 0.04, anchoColgante: 0.09, borde: 0.5 },
     cejas: { inclinacion: 0.35, arco: 0.6, grosor: 1.05 },
   },
 
@@ -578,16 +602,16 @@ export const FICHAS: Record<string, Ficha> = {
   napoleon: {
     estatura: 1.69,
     edad: 36,
-    ap: { piel: "#E4C3A2", ropa: { color: "#2E4A32", color2: "#EDEAE0" } },
-    vestuario: { pecheraAngosta: true },
+    ap: { piel: "#DDB896", ropa: { color: "#2E4A32", color2: "#EDEAE0" } },
+    vestuario: { pecheraAngosta: true, chaleco: "#A3202A" },
     cuerpo: { anchoHombros: 0.41, panza: 0.015, piernas: 0.97, manos: 0.92 },
     cara: {
-      ancho: 1.0, largo: 0.98, frente: 0.9, mejillas: 0.15, mandibula: 1.0, anguloMandibula: 0.3, menton: 1.1, papada: 0.15, pomulos: 0.95,
-      ojos: { tam: 1.02, abierto: 0.95, parpado: 0.25 },
-      nariz: { puente: 0.85, largo: 1.05, proy: 1.08 },
-      labios: { superior: 0.7, inferior: 0.85, ancho: 0.9 },
+      ancho: 0.97, largo: 1.0, frente: 1.0, mejillas: -0.1, mandibula: 1.0, anguloMandibula: 0.35, menton: 1.15, mentonAvance: 0, papada: 0, pomulos: 1.0,
+      ojos: { tam: 1.05, abierto: 0.95, parpado: 0.3, hundidos: 0.1 },
+      nariz: { puente: 1.0, largo: 1.1, proy: 1.18, ancho: 0.95 },
+      labios: { superior: 0.8, inferior: 0.9, ancho: 0.85, comisuras: -0.15 },
     },
-    piel: { base: "#E4C3A2" },
+    piel: { base: "#DDB896" },
     iris: "#6E7E8C",
     pelo: { color: "#3A2A1E", volumen: { base: 0.004, arriba: 0.006, frente: 0.006 }, linea: { flequillo: 0.35, entradas: 0.35 }, remolino: "coronilla", rizo: 0.1, borde: 0.6 },
     barba: { densidad: 0 },
@@ -599,7 +623,7 @@ export const FICHAS: Record<string, Ficha> = {
   tate: {
     estatura: 1.9,
     edad: 39,
-    ap: { piel: "#C4916A", barba: { estilo: "corta", color: "#1E1A18" }, ropa: { color: "#121212", color2: "#1A1A1A" } },
+    ap: { piel: "#C4916A", barba: { estilo: "corta", color: "#2B2119" }, ropa: { color: "#121212", color2: "#1A1A1A" } },
     cuerpo: { anchoHombros: 0.5, anchoCintura: 0.34, pecho: 1.12, profundidad: 1.08, panza: 0, cuello: { grosor: 1.3, largo: 0.85 }, manos: 1.08, musculo: { brazos: 1.35, antebrazos: 1.25, pecho: 1.4, espalda: 1.4, deltoides: 1.35, trapecio: 0.9, piernas: 1.12 } },
     cara: {
       ancho: 1.04, largo: 1.05, mandibula: 1.18, anguloMandibula: 0.95, mentonCuadrado: 0.75, menton: 1.1, mentonAvance: 0.25, arcoCejas: 1.15, mejillas: -0.1,
@@ -608,9 +632,9 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#C4916A", brillo: 0.5 },
     iris: "#3A2416",
-    pelo: { rapado: 0.1, color: "#2A2522" },
-    barba: { color: "#1E1A18", densidad: 0.95, largo: 0.006, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.55, cuello: 0.4, borde: 0.05 },
-    cejas: { color: "#1E1A18", grosor: 1.25, arco: 0.1 },
+    pelo: { rapado: 0.03, color: "#2A2522" },
+    barba: { color: "#2B2119", densidad: 1, largo: 0.003, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.5, cuello: 0.35, borde: 0.3, liso: 1 },
+    cejas: { color: "#241C16", grosor: 1.25, arco: 0.1 },
   },
 
   // Iman Gadzhi: 25 años, delgado y erguido, cara alargada de pómulos altos,
@@ -618,18 +642,20 @@ export const FICHAS: Record<string, Ficha> = {
   gadzhi: {
     estatura: 1.8,
     edad: 25,
-    ap: { piel: "#E6C2A0", ropa: { color: "#151515", color2: "#CBB89E" }, accesorios: ["reloj"] },
+    ap: { piel: "#D9AE88", ropa: { color: "#151515", color2: "#CBB89E" }, accesorios: ["reloj"] },
     vestuario: { remera: true, mezclilla: false },
     cuerpo: { anchoHombros: 0.42, anchoCintura: 0.28, piernas: 1.02, cuello: { grosor: 0.95 }, musculo: { brazos: 0.95, antebrazos: 1.0 } },
     cara: {
-      ancho: 0.93, largo: 1.07, pomulos: 1.25, mejillas: -0.3, mandibula: 0.98, anguloMandibula: 0.75, menton: 0.95, papada: 0,
+      ancho: 0.94, largo: 1.03, pomulos: 1.12, mejillas: -0.12, mandibula: 1.0, anguloMandibula: 0.85, menton: 0.95, papada: 0,
       ojos: { abierto: 0.92, parpado: 0.3, bolsas: 0 },
       nariz: { ancho: 0.88, puente: 0.7, largo: 1.02 },
       labios: { superior: 0.75, inferior: 0.9 },
     },
-    piel: { base: "#E6C2A0" },
+    piel: { base: "#D9AE88" },
     iris: "#3B2A1E",
-    pelo: { color: "#3E2B1F", puntas: "#5A4030", volumen: { base: 0.0045, arriba: 0.018, frente: 0.012, lados: 0.001, atras: 0.006 }, copete: { alto: 0.01, avance: 0 }, ondas: 0.3, rizo: 0.15, remolino: "frente", linea: { recta: 0.4, entradas: 0.05 }, borde: 0.35, raya: null },
+    // (con el remolino al frente, de frente se leía como un casco con flequillo:
+    // va peinado hacia atrás desde la coronilla, frente libre y algo de volumen)
+    pelo: { color: "#3E2B1F", puntas: "#5A4030", volumen: { base: 0.0045, arriba: 0.015, frente: 0.006, lados: 0.001, atras: 0.006 }, copete: { alto: 0.006, avance: -0.005 }, ondas: 0.3, rizo: 0.15, remolino: "coronilla", linea: { recta: 0.2, entradas: 0.05, alto: 0.8 }, borde: 0.35, raya: null, liso: 0.7 },
     barba: { color: "#3A2A1E", densidad: 0.3 },
     cejas: { color: "#2E2018", grosor: 1.2, arco: 0.15 },
   },
@@ -639,7 +665,7 @@ export const FICHAS: Record<string, Ficha> = {
   kobe: {
     estatura: 1.98,
     edad: 34,
-    ap: { piel: "#7A4E34", barba: { estilo: "candado", color: "#141414" } },
+    ap: { piel: "#6E4A36", barba: { estilo: "candado", color: "#141414" } },
     vestuario: { cuelloV: true },
     cuerpo: { anchoHombros: 0.48, anchoCintura: 0.31, brazos: 1.065, piernas: 1.02, cuello: { grosor: 1.1, largo: 0.85 }, manos: 1.12, musculo: { brazos: 1.2, antebrazos: 1.2, deltoides: 1.25, pecho: 1.15, piernas: 1.15, pantorrillas: 1.2 } },
     cara: {
@@ -649,11 +675,11 @@ export const FICHAS: Record<string, Ficha> = {
       labios: { superior: 1.25, inferior: 1.3, ancho: 1.05 },
       orejas: { despegadas: 0.55 },
     },
-    piel: { base: "#7A4E34", brillo: 0.3 },
+    piel: { base: "#6E4A36", brillo: 0.12 },
     iris: "#2A1A12",
     esclera: "#E8E0D6",
     pelo: { rapado: 0.85, color: "#141414", linea: { recta: 1, entradas: 0 } },
-    barba: { color: "#141414", densidad: 0.9, largo: 0.003, bigote: 0.9, perilla: 1, mandibula: 0.1, mejillas: 0, cuello: 0, borde: 0.2, anchoPerilla: 0.9 },
+    barba: { color: "#231A14", densidad: 0.9, largo: 0.003, bigote: 0.9, perilla: 1, mandibula: 0.1, mejillas: 0, cuello: 0, borde: 0.2, anchoPerilla: 0.9 },
     cejas: { color: "#141414", grosor: 1.0, arco: 0.3 },
   },
 
@@ -664,7 +690,7 @@ export const FICHAS: Record<string, Ficha> = {
     estatura: 1.66,
     edad: 68,
     ap: { piel: "#CDA27C", ropa: { color: "#C4B08C", color2: "#9C8A68" } },
-    vestuario: { manga: 0.06, manto: { color: "#B8A47E", ancho: 0.4, lado: 1, borde: "#9C8A68" }, cinturon: null, descalzo: true },
+    vestuario: { manga: 0.1, mangaAncha: 0.01, ribete: null, manto: { color: "#B8A47E", ancho: 0.42, lado: 1, borde: "#9C8A68", bajo: 0.5 }, cinturon: null, descalzo: true },
     cuerpo: { anchoHombros: 0.45, pecho: 1.1, profundidad: 1.12, cintura: 1.2, panza: 0.05, panzaAlta: 0.5, cuello: { grosor: 1.2, largo: 0.75 }, piernas: 0.95, encorvado: 0.2, musculo: { brazos: 1.1, piernas: 1.1 } },
     cara: {
       ancho: 1.14, largo: 0.96, frente: 1.3, mejillas: 0.6, pomulos: 1.1, papada: 0.2,
@@ -674,8 +700,10 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#CDA27C", rubor: ["#C08A68", 0.3] },
     iris: "#4a3828",
-    pelo: { color: "#C9C3B8", volumen: { lados: 0.015, atras: 0.012 }, rizo: 0.7, linea: { calvo: 1 } },
-    barba: { color: "#D8D2C6", canas: 0.3, densidad: 1, largo: 0.024, rizo: 0.9, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.85, cuello: 0.6, colgante: 0.06, anchoColgante: 0.12, borde: 0.8 },
+    // Rizo < 0,6: material de hebras (con la textura de bucles la barba blanca
+    // parecía pochoclo azulado).
+    pelo: { color: "#CFC7BA", volumen: { lados: 0.02, atras: 0.017 }, rizo: 0.5, linea: { calvo: 0.82 } },
+    barba: { color: "#D2C9BA", canas: 0.3, densidad: 1, largo: 0.024, rizo: 0.45, liso: 0.6, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.85, cuello: 0.6, colgante: 0.06, anchoColgante: 0.12, borde: 0.8 },
     cejas: { color: "#D8D2C6", grosor: 1.3, pobladas: 0.5 },
   },
 
@@ -685,15 +713,15 @@ export const FICHAS: Record<string, Ficha> = {
     estatura: 1.6,
     edad: 32,
     fem: true,
-    ap: { piel: "#C99A70" },
-    cuerpo: { anchoHombros: 0.36, cintura: 0.84, cadera: 1.04, cuello: { grosor: 0.8, largo: 0.75 } },
+    ap: { piel: "#B3835A" },
+    cuerpo: { anchoHombros: 0.36, cintura: 0.84, cadera: 1.04, cuello: { grosor: 0.8, largo: 0.88 } },
     cara: {
-      ancho: 0.92, largo: 1.0, menton: 0.95, mentonAvance: 0.15, pomulos: 1.25, mejillas: -0.05, mandibula: 0.88, anguloMandibula: 0.3, papada: 0,
-      ojos: { tam: 1.12, abierto: 1.0, incl: 0.1, parpado: 0.15 },
-      nariz: { largo: 1.02, puente: 0.75, gancho: 0.2, ancho: 0.92, proy: 1.05 },
-      labios: { superior: 1.15, inferior: 1.2 },
+      ancho: 0.88, largo: 0.96, menton: 0.92, mentonAvance: 0.15, pomulos: 1.25, mejillas: -0.15, mandibula: 0.8, anguloMandibula: 0.3, papada: 0,
+      ojos: { tam: 1.2, abierto: 1.05, incl: 0.12, parpado: 0.15 },
+      nariz: { largo: 1.0, puente: 0.75, gancho: 0.2, ancho: 0.85, proy: 1.05 },
+      labios: { superior: 1.3, inferior: 1.35, ancho: 0.95 },
     },
-    piel: { base: "#C99A70", labios: "#A85A4E", delineado: 1, sombraOjos: ["#2F6B4F", 0.6] },
+    piel: { base: "#B3835A", labios: "#9A5244", delineado: 1, sombraOjos: ["#2F6B4F", 0.6] },
     iris: "#2E1E14",
     pelo: { color: "#121212", puntas: "#2a2a2e", largo: 0.15, linea: { flequillo: 1, cubreOrejas: 1 }, borde: 0.1, raya: null, volumen: { base: 0.009, arriba: 0.006, lados: 0.008 } },
     cejas: { color: "#141414", grosor: 0.9, arco: 0.55 },
@@ -704,18 +732,18 @@ export const FICHAS: Record<string, Ficha> = {
   leonardo: {
     estatura: 1.73,
     edad: 65,
-    ap: { piel: "#E3BB9A", ropa: { color: "#A84A55", color2: "#3A2A20" } },
+    ap: { piel: "#D9AD8A", ropa: { color: "#A84A55", color2: "#3A2A20" }, sombrero: null },
     cuerpo: { anchoHombros: 0.4, encorvado: 0.3, musculo: { brazos: 0.9 } },
     cara: {
       ancho: 0.96, largo: 1.08, frente: 1.4, pomulos: 1.15, mejillas: -0.4, arcoCejas: 1.2,
       ojos: { hundidos: 0.45, parpado: 0.7, abierto: 0.85 },
-      nariz: { largo: 1.15, gancho: 0.45, puente: 0.85, proy: 1.1 },
+      nariz: { largo: 1.18, gancho: 0.7, puente: 0.95, proy: 1.15 },
       labios: { comisuras: -0.4 },
     },
-    piel: { base: "#E3BB9A", manchas: 0.3 },
+    piel: { base: "#D9AD8A", manchas: 0.3 },
     iris: "#5a5040",
-    pelo: { color: "#D8D4CC", puntas: "#E4E0D8", bajo: "#B8B2A8", largo: 0.22, ondas: 0.7, adelante: 0.7, raya: 0, linea: { entradas: 0.8, alto: 1.2, cubreOrejas: 1 }, volumen: { base: 0.005, arriba: 0.004 }, remolino: "raya", borde: 0.45 },
-    barba: { color: "#E0DCD4", canas: 0.2, densidad: 0.95, largo: 0.016, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.7, colgante: 0.26, anchoColgante: 0.11, partida: 0.15, bigoteCaido: 0.03, rizo: 0.6, borde: 0.7 },
+    pelo: { color: "#DCD2C2", puntas: "#E6DED0", bajo: "#B8AE9E", largo: 0.22, ondas: 0.7, adelante: 0.7, raya: 0, linea: { entradas: 0.8, alto: 1.2, cubreOrejas: 1 }, volumen: { base: 0.005, arriba: 0.004 }, remolino: "raya", borde: 0.45 },
+    barba: { color: "#E2D8C8", canas: 0.2, densidad: 0.95, largo: 0.016, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.75, cuello: 0.7, colgante: 0.26, anchoColgante: 0.11, partida: 0.15, bigoteCaido: 0.03, rizo: 0.6, borde: 0.7 },
     cejas: { color: "#CFCAC0", grosor: 1.4, pobladas: 0.7, densidad: 1 },
   },
 
@@ -736,8 +764,8 @@ export const FICHAS: Record<string, Ficha> = {
     },
     piel: { base: "#C9A07C" },
     iris: "#4a4a48",
-    pelo: { color: "#1E1A17", canas: 0.12, volumen: { base: 0.008, arriba: 0.012, lados: 0.01 }, raya: 0.6, rizo: 0.25, linea: { cubreOrejas: 0.5 }, remolino: "raya" },
-    barba: { color: "#1E1A17", densidad: 0.95, largo: 0.014, bigote: 0, perilla: 1, mandibula: 1, mejillas: 0.12, cuello: 0.35, borde: 0.3 },
+    pelo: { color: "#2A2119", canas: 0.12, volumen: { base: 0.008, arriba: 0.012, lados: 0.01 }, raya: 0.6, rizo: 0.25, linea: { cubreOrejas: 0.5 }, remolino: "raya" },
+    barba: { color: "#2A2119", densidad: 0.95, largo: 0.014, bigote: 0, perilla: 1, mandibula: 1, mejillas: 0.12, cuello: 0.35, borde: 0.3 },
     cejas: { grosor: 1.35, densidad: 1, arco: 0.2 },
   },
 
@@ -747,7 +775,7 @@ export const FICHAS: Record<string, Ficha> = {
   jobs: {
     estatura: 1.88,
     edad: 52,
-    ap: { piel: "#E2B897", ropa: { color: "#101010", color2: "#4A6A92" } },
+    ap: { piel: "#D8A988", ropa: { color: "#101010", color2: "#5A6676" } },
     vestuario: { gafasSinAro: true },
     cuerpo: { anchoHombros: 0.4, anchoCintura: 0.28, piernas: 1.03, brazos: 1.03, encorvado: 0.25, cuello: { grosor: 0.88 }, musculo: { brazos: 0.82, piernas: 0.85 } },
     cara: {
@@ -756,9 +784,9 @@ export const FICHAS: Record<string, Ficha> = {
       nariz: { largo: 1.12, punta: 1.12, puente: 0.6 },
       labios: { ancho: 1.08, superior: 0.65, inferior: 0.8, comisuras: 0.15 },
     },
-    piel: { base: "#E2B897", rubor: ["#D9A080", 0.25] },
+    piel: { base: "#D8A988", rubor: ["#D09478", 0.25] },
     iris: "#3A2A20",
-    pelo: { color: "#6E6A66", canas: 0.4, canasSienes: 0.6, volumen: { base: 0.003, arriba: 0.005, frente: 0.002 }, linea: { entradas: 0.9, alto: 1.4, coronilla: 0.4, flequillo: 0 }, raya: null, remolino: "coronilla", borde: 0.6 },
+    pelo: { color: "#7A6D60", canas: 0.12, canasSienes: 0.3, volumen: { base: 0.0012, arriba: 0.002, frente: 0.001, lados: 0, atras: 0 }, linea: { entradas: 0.95, alto: 1.5, coronilla: 0.45, flequillo: 0, nuca: -1 }, raya: null, remolino: "coronilla", borde: 1, liso: 1 },
     barba: { color: "#7A7672", densidad: 0.32 },
     cejas: { color: "#3E3A36", grosor: 0.95, arco: 0.2 },
   },
@@ -767,8 +795,10 @@ export const FICHAS: Record<string, Ficha> = {
   claude: {
     estatura: 1.78,
     edad: 30,
+    vestuario: { abrigo: true, emblema: "chispa" },
+    cuerpo: { anchoHombros: 0.41, musculo: { brazos: 0.9, deltoides: 0.85 } },
     cara: { ancho: 0.95, mejillas: 0.1, mandibula: 0.9, anguloMandibula: 0.1, labios: { comisuras: 0.25 }, ojos: { tam: 1.05 } },
-    pelo: { volumen: { base: 0.008, arriba: 0.014, frente: 0.006 }, ondas: 0.5, raya: 0.6, remolino: "raya" },
+    pelo: { color: "#F2A68A", volumen: { base: 0.008, arriba: 0.014, frente: 0.006 }, ondas: 0.5, raya: 0.6, remolino: "raya", liso: 1 },
     barba: { densidad: 0 },
   },
 
@@ -776,9 +806,10 @@ export const FICHAS: Record<string, Ficha> = {
   chatgpt: {
     estatura: 1.73,
     edad: 28,
-    cuerpo: { anchoHombros: 0.46, anchoCintura: 0.29 },
+    vestuario: { chaquetaMao: true, emblema: "nudo" },
+    cuerpo: { anchoHombros: 0.46, anchoCintura: 0.27 },
     cara: { mandibula: 1.1, anguloMandibula: 1, mentonCuadrado: 0.8, pomulos: 1.2 },
-    pelo: { volumen: { base: 0.004, arriba: 0.016, frente: 0.01, lados: 0 }, copete: { alto: 0.012, avance: 0.004 }, remolino: "frente" },
+    pelo: { color: "#5FD3B0", volumen: { base: 0.004, arriba: 0.018, frente: 0.012, lados: 0, atras: 0.002 }, copete: { alto: 0.014, avance: 0.004 }, remolino: "frente", liso: 1, linea: { patillas: -0.6 } },
     barba: { densidad: 0 },
   },
 }
@@ -870,6 +901,7 @@ export interface PeloR {
   rapado: number
   remolino: "coronilla" | "frente" | "raya"
   mono: { alto: number; radio: number } | null
+  liso: number
 }
 
 export interface BarbaR {
@@ -889,6 +921,7 @@ export interface BarbaR {
   bigoteCaido: number
   rizo: number
   borde: number
+  liso?: number
 }
 
 export interface CejasR {
@@ -1174,6 +1207,7 @@ export function resolverFicha(p: Personaje): FichaR {
     rapado: fpe.rapado ?? preset.rapado ?? 0,
     remolino: fpe.remolino ?? preset.remolino ?? "coronilla",
     mono: fpe.mono ?? null,
+    liso: clamp(fpe.liso ?? 0, 0, 1),
   }
   // Calvo sin barba de sabio: nada de pelo (solo una sombra muy leve en los lados).
   if (calvoAp && !barbaLargaAp && pl.calvo === undefined) {
@@ -1204,6 +1238,7 @@ export function resolverFicha(p: Personaje): FichaR {
       bigoteCaido: b.bigoteCaido ?? 0,
       rizo: b.rizo ?? pb.rizo ?? 0.2,
       borde: b.borde ?? pb.borde ?? 0.4,
+      liso: clamp(b.liso ?? 0, 0, 1),
     }
   }
 

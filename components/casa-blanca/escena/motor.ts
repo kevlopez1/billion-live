@@ -412,8 +412,29 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     return { pos: a.raiz.position, rumbo: rumbos.get(id) ?? e.rumbo, visible: e.visible, nivel: nivelDeY(e.pos.y) }
   }
 
+  // Para la cámara de seguir con choques (estudio): lo sólido del nivel visible.
+  const rayoCamara = new THREE.Raycaster()
+  const solido = (o: THREE.Object3D) => {
+    const m = o as THREE.Mesh
+    if (!m.isMesh) return false
+    for (let p: THREE.Object3D | null = o; p; p = p.parent) if (!p.visible || p.userData.letreroFlotante) return false
+    const mats = Array.isArray(m.material) ? m.material : [m.material]
+    return mats.some((mt) => {
+      const f = mt as THREE.MeshPhysicalMaterial
+      return mt.visible && !(mt.transparent && mt.opacity < 0.7) && mt.blending !== THREE.AdditiveBlending && !(f.transmission > 0.3)
+    })
+  }
+  const libreEnNivel = (desde: THREE.Vector3, dir: THREE.Vector3, max: number) => {
+    rayoCamara.set(desde, dir)
+    rayoCamara.near = 0
+    rayoCamara.far = max
+    for (const h of rayoCamara.intersectObject(niveles[nivelActual], true)) if (solido(h.object)) return h.distance
+    return max
+  }
+
   const camara = new ControlCamara(canvas, {
     nivel: () => nivelActual,
+    libre: libreEnNivel,
     fundir,
     aplicarNivel,
     setMaqueta: (on) => {

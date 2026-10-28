@@ -44,6 +44,26 @@ function edificioEn(x: number, z: number, margen = 0): { x0: number; x1: number;
   return null
 }
 
+/**
+ * Pasillos techados y abiertos de un lado: la cámara de seguir no cabe detrás
+ * (quedaría sobre el techo). Medidas de arquitectura.ts (columnataOeste): muro
+ * al norte, columnas al sur en z1 - 0,6, viga a 3,7 m.
+ */
+const TECHADOS = [{ ...HUELLAS.columnataOeste, zCol: HUELLAS.columnataOeste.z1 - 0.6, viga: 3.7 }]
+function techadoEn(x: number, z: number) {
+  for (const t of TECHADOS) if (x > t.x0 - 0.5 && x < t.x1 + 0.5 && z > t.z0 - 0.5 && z < t.z1 + 0.5) return t
+  return null
+}
+
+/** Cámara de seguir con choques: distancias (radio, alto) y giros desde atrás, en orden de preferencia. */
+const DISTANCIAS_SEGUIR: Array<[number, number]> = [
+  [8.2, 3.8],
+  [6, 2.6],
+  [4.2, 1.5],
+  [3, 0.7],
+]
+const GIROS_SEGUIR = [0, 0.45, -0.45, 0.9, -0.9, 1.4, -1.4, 2.1, -2.1, Math.PI]
+
 /** Desde (x, z) en la dirección (ux, uz), cuántos metros faltan para salir de la huella del edificio. */
 function salidaDeCaja(x: number, z: number, ux: number, uz: number, c: { x0: number; x1: number; z0: number; z1: number }): number {
   const tx = ux > 1e-6 ? (c.x1 - x) / ux : ux < -1e-6 ? (c.x0 - x) / ux : Infinity
@@ -61,6 +81,18 @@ function salidaDeCaja(x: number, z: number, ux: number, uz: number, c: { x0: num
 export interface OpcionesCamara {
   corte?: boolean
   sostener?: boolean
+  /**
+   * seguir: bajo un pasillo techado (la Columnata Oeste) la cámara se queda
+   * debajo del techo, del lado abierto de las columnas, en vez de quedar
+   * encima del techo mirándolo (sin esto, igual que siempre).
+   */
+  techos?: boolean
+  /**
+   * seguir: la cámara no queda detrás de una pared. Si algo sólido tapa al
+   * seguido, prueba de costado, más cerca o más baja hasta verlo (salas
+   * cerradas del subsuelo y de la ciudad). Sin esto, igual que siempre.
+   */
+  choques?: boolean
 }
 
 export interface InfoPersonaje {
@@ -83,6 +115,11 @@ export interface DepsCamara {
   personaje(id: string): InfoPersonaje | null
   /** Un personaje a la vista para las tomas que siguen a alguien. */
   elegirPersonaje(): string | null
+  /**
+   * Metros libres desde `desde` en la dirección `dir` (unitaria) hasta lo
+   * primero sólido del nivel visible, como mucho `max` (sin vidrio ni letreros).
+   */
+  libre?(desde: THREE.Vector3, dir: THREE.Vector3, max: number): number
 }
 
 interface CtxToma {
@@ -174,8 +211,13 @@ const CORTE_CIUDAD = ALTURA_NIVEL.n3 - LOSA - 0.6
 
 // ── Descenso a la ciudad (toma de cine) ──────────────────────
 const PAB = PABELLON_ASCENSOR
-/** Tramos de la toma (fracción de su duración). */
-const DC = { tubo: 0.3, negro: 0.52, ciudad: 0.56, mirador: 0.85 }
+/**
+ * Tramos de la toma (fracción de sus 16 s). La caída por el pozo es lo
+ * principal (~9,6 s); el jardín (2,2 s) y el tubo (2,6 s) la presentan, y el
+ * negro sobre la roca dura medio segundo: cierra en `cierre`, se queda hasta
+ * `ciudad` y abre en `apertura` (0,3 s cada uno), con la caída ya empezada.
+ */
+const DC = { tubo: 0.14, negro: 0.3, ciudad: 0.31, mirador: 0.91, cierre: 0.02, apertura: 0.02 }
 /** Altura de la cámara en la parte del ascensor de la toma (t de 0 a 1 dentro del tramo). */
 const alturaBajada = (k: number) => lerp(ALTO_TUBO.superficie, CORTE_CIUDAD, muySuave(k))
 const _pc = { pos: new THREE.Vector3(), mira: new THREE.Vector3(), fov: 50 } as Pose
@@ -185,8 +227,9 @@ function poseDescensoCiudad(t: number, o: Pose) {
   if (t < DC.tubo) {
     const k = muySuave(tramo(t, 0, DC.tubo))
     poseTubo(ALTO_TUBO.superficie, _pc)
-    o.pos.set(lerp(-14, _pc.pos.x, k), lerp(26, _pc.pos.y, k), lerp(PAB.z + 64, _pc.pos.z, k))
-    o.mira.set(lerp(0, _pc.mira.x, k), lerp(4, _pc.mira.y, k), lerp(PAB.z - 6, _pc.mira.z, k))
+    // Desde más cerca que el jardín entero: el acercamiento dura poco y no puede ser un latigazo.
+    o.pos.set(lerp(-10, _pc.pos.x, k), lerp(17, _pc.pos.y, k), lerp(PAB.z + 36, _pc.pos.z, k))
+    o.mira.set(lerp(0, _pc.mira.x, k), lerp(3, _pc.mira.y, k), lerp(PAB.z - 6, _pc.mira.z, k))
     o.fov = lerp(46, _pc.fov, k)
   } else if (t < DC.negro) {
     poseTubo(alturaBajada(tramo(t, DC.tubo, DC.negro)), o)
@@ -208,10 +251,10 @@ function nivelDescensoCiudad(t: number): NivelId {
 }
 /** Negro de la toma: sube al final del tubo, se queda en la roca y se abre sobre la ciudad. */
 function veloDescensoCiudad(t: number): number {
-  if (t < DC.negro - 0.03) return 0
-  if (t < DC.negro) return tramo(t, DC.negro - 0.03, DC.negro)
+  if (t < DC.negro - DC.cierre) return 0
+  if (t < DC.negro) return tramo(t, DC.negro - DC.cierre, DC.negro)
   if (t < DC.ciudad) return 1
-  return 1 - suave(tramo(t, DC.ciudad, DC.ciudad + 0.05))
+  return 1 - suave(tramo(t, DC.ciudad, DC.ciudad + DC.apertura))
 }
 
 /** Centro de un lugar (para las tomas que lo usan), o un punto de respaldo. */
@@ -506,6 +549,10 @@ export class ControlCamara {
   private cine: { i: number; t: number; fija: boolean; cambiando: boolean; sostener: boolean } | null = null
   private seguirId: string | null = null
   private seguirListo = false
+  /** Opción del estudio: bajo un pasillo techado, la cámara debajo del techo (OpcionesCamara.techos). */
+  private seguirTechos = false
+  /** Opción del estudio: la cámara de seguir esquiva paredes (OpcionesCamara.choques). */
+  private seguirChoques = false
   private readonly seguirPose = nuevaPose()
   private enfoque: { t: number; dur: number; p0: THREE.Vector3; m0: THREE.Vector3; p1: THREE.Vector3; m1: THREE.Vector3 } | null = null
   private poseSuperficie: Pose | null = null
@@ -643,13 +690,19 @@ export class ControlCamara {
       }
       this.seguirId = id
       this.seguirListo = false
+      this.seguirTechos = !!op.techos
+      this.seguirChoques = !!op.choques
       this.modo = "seguir"
       this.controles.enabled = true
       this.controles.autoRotate = false
       this.aplicarLimites("seguir")
-      // Corte seco: si está en otro nivel, la cámara aparece allí (sin el fundido de actualizarSeguir).
+      // Corte seco: un fundido pendiente corre ya y, si está en otro nivel, la cámara
+      // aparece allí (sin el fundido de actualizarSeguir).
       const n = this.deps.personaje(id)?.nivel
-      if (op.corte && n && n !== this.deps.nivel()) this.deps.fundir(() => this.deps.aplicarNivel(n), true)
+      if (op.corte)
+        this.deps.fundir(() => {
+          if (n && n !== this.deps.nivel()) this.deps.aplicarNivel(n)
+        }, true)
     } else if (modo === "cine") {
       const fija = objetivoId ? TOMAS.findIndex((t) => t.id === objetivoId) : -1
       if (fija < 0 && objetivoId && this.deps.personaje(objetivoId)) this.seguirId = objetivoId
@@ -1024,6 +1077,35 @@ export class ControlCamara {
     const caja = !info.visible && info.nivel === S ? edificioEn(info.pos.x, info.pos.z) : null
     this.controles.maxDistance = caja ? Math.max(60, (caja.x1 - caja.x0) * 1.45) + 25 : LIMITES.seguir.maxDistance ?? 45
     const t = this.controles.target
+    const techado = this.seguirTechos && !caja && info.nivel === S ? techadoEn(info.pos.x, info.pos.z) : null
+    if (techado) {
+      // Bajo el techo, desde el lado de las columnas: a la altura de los ojos,
+      // un poco atrás en el sentido en que camina y 2,4 m afuera (los árboles
+      // del jardín empiezan a 2 m de la huella: más lejos, la cámara queda en una copa).
+      const atrasX = -Math.sin(info.rumbo)
+      const lado = _v3.set(deseado.x + Math.sign(atrasX || 1) * 2.5, Math.min(techado.viga - 1.3, deseado.y + 0.6), techado.zCol + 2.4)
+      if (!this.seguirListo) {
+        this.camara.position.copy(lado)
+        t.copy(deseado)
+        this.seguirListo = true
+        return
+      }
+      t.add(_v2.copy(deseado).sub(t).multiplyScalar(1 - Math.exp(-6 * dt)))
+      this.camara.position.lerp(lado, 1 - Math.exp(-2.5 * dt))
+      return
+    }
+    if (this.seguirChoques && !caja && this.deps.libre) {
+      const pos = this.poseDespejada(deseado, info.rumbo)
+      if (!this.seguirListo) {
+        this.camara.position.copy(pos)
+        t.copy(deseado)
+        this.seguirListo = true
+        return
+      }
+      t.add(_v2.copy(deseado).sub(t).multiplyScalar(1 - Math.exp(-6 * dt)))
+      this.camara.position.lerp(pos, 1 - Math.exp(-2.5 * dt))
+      return
+    }
     if (!this.seguirListo) {
       // Al empezar: detrás del personaje, a 9 m y unos 25° por encima.
       const atras = _v2.set(-Math.sin(info.rumbo), 0, -Math.cos(info.rumbo))
@@ -1060,6 +1142,34 @@ export class ControlCamara {
       this.camara.position.copy(t).add(off)
     }
   }
+
+  /**
+   * Dónde poner la cámara de seguir para ver a quien se sigue (`ojo` = su cabeza):
+   * detrás a 8,2 m y 3,8 m arriba si está libre; si no, de costado, después más
+   * cerca y más baja. Sin ningún lugar libre, lo más lejos que deje la pared.
+   */
+  private poseDespejada(ojo: THREE.Vector3, rumbo: number): THREE.Vector3 {
+    const libre = this.deps.libre!
+    const out = this._despejada
+    let mejor = -1
+    const dir = new THREE.Vector3()
+    for (const [radio, alto] of DISTANCIAS_SEGUIR) {
+      for (const giro of GIROS_SEGUIR) {
+        const a = rumbo + giro
+        dir.set(-Math.sin(a) * radio, alto, -Math.cos(a) * radio)
+        const d = dir.length()
+        dir.divideScalar(d)
+        const l = libre(ojo, dir, d + 0.6)
+        if (l >= d + 0.5) return out.copy(ojo).addScaledVector(dir, d)
+        if (l > mejor) {
+          mejor = l
+          out.copy(ojo).addScaledVector(dir, Math.max(1.4, l - 0.5))
+        }
+      }
+    }
+    return out
+  }
+  private readonly _despejada = new THREE.Vector3()
 
   /** Que la cámara no atraviese el suelo y el pivote no se escape del mapa. */
   private limitar() {

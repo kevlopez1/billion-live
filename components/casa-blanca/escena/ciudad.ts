@@ -74,8 +74,8 @@ const TUNEL = { x: -30.4, y: Y0 + 1.2, radio: 2.4, z0: 12, z1: -58 }
 const CONTROL: Sala = { x0: 10, x1: 36, z0: 12, z1: 40, alto: 7 }
 const CORREDOR: Sala = { x0: -3, x1: 3, z0: 46, z1: 96, alto: 4.2 }
 const LABS: Sala = { x0: -30, x1: -4, z0: 47, z1: 93, alto: 4.5 }
-/** El frente de vidrio de los cuatro módulos de laboratorio. */
-const FRENTE_LABS = -17
+/** El frente de vidrio de los cuatro módulos de laboratorio (el pasillo queda de 10 m, no de 13 m vacíos). */
+const FRENTE_LABS = -13.5
 const COMEDOR: Sala = { x0: 4, x1: 26, z0: 47, z1: 68, alto: 4.5 }
 const JARDIN: Sala = { x0: 4, x1: 26, z0: 69, z1: 93, alto: 4.5 }
 const CAMARA: Sala = { x0: -14, x1: 14, z0: 97, z1: 112, alto: 10 }
@@ -88,9 +88,9 @@ const R_MIRADOR = rectDe("ciudad-mirador", { x0: -9, x1: 9, z0: 13, z1: 20 })
 const R_ESTACION = rectDe("ciudad-estacion", { x0: -27, x1: -13, z0: 14, z1: 43 })
 const R_CLUB = rectDe("ciudad-club", { x0: 13, x1: 20, z0: 14, z1: 39 })
 const R_AVENIDA = rectDe("ciudad-avenida", { x0: -3, x1: 3, z0: 46, z1: 96 })
-const R_TORRES = rectDe("ciudad-torres", { x0: -16, x1: -5, z0: 48, z1: 92 })
-const R_MERCADO = rectDe("ciudad-mercado", { x0: 5, x1: 16, z0: 48, z1: 67 })
-const R_PARQUE = rectDe("ciudad-parque", { x0: 5, x1: 16, z0: 70, z1: 92 })
+const R_TORRES = rectDe("ciudad-torres", { x0: -12.5, x1: -6.5, z0: 48, z1: 92 })
+const R_MERCADO = rectDe("ciudad-mercado", { x0: 6.5, x1: 15.5, z0: 48, z1: 67 })
+const R_PARQUE = rectDe("ciudad-parque", { x0: 6, x1: 13, z0: 70, z1: 92 })
 const R_ARENA = rectDe("ciudad-arena", { x0: -13, x1: 13, z0: 98, z1: 111 })
 
 const dentro = (r: Rect, x: number, z: number, m = 0) => x >= r.x0 - m && x <= r.x1 + m && z >= r.z0 - m && z <= r.z1 + m
@@ -149,9 +149,17 @@ const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)))
   return t * t * (3 - 2 * t)
 }
-const _ca = new THREE.Color()
-const _cb = new THREE.Color()
-const mezcla = (out: THREE.Color, a: string, b: string, t: number) => out.copy(_ca.set(a)).lerp(_cb.set(b), t)
+// Colores del ambiente, precalculados (Color.set con un texto corre expresiones regulares y aloca).
+const C_AMB = {
+  solD: new THREE.Color("#fff3e4"),
+  solN: new THREE.Color("#c6d6ff"),
+  cieloD: new THREE.Color("#e4edf5"),
+  cieloN: new THREE.Color("#a9bde4"),
+  sueloD: new THREE.Color("#5a616b"),
+  sueloN: new THREE.Color("#363e4c"),
+  niebla: new THREE.Color(P.niebla),
+}
+const mezcla = (out: THREE.Color, a: THREE.Color, b: THREE.Color, t: number) => out.copy(a).lerp(b, t)
 const DIR_TECHO = new THREE.Vector3(0.32, 1, 0.22).normalize()
 
 /**
@@ -174,14 +182,14 @@ export function ambienteCiudad(hora: number, out?: AmbienteCiudad): AmbienteCiud
   const noche = 1 - smooth(5.5, 7.5, h) * (1 - smooth(18.5, 20.5, h))
   a.hora = h
   a.noche = noche
-  mezcla(a.sol.color, "#fff3e4", "#c6d6ff", noche)
+  mezcla(a.sol.color, C_AMB.solD, C_AMB.solN, noche)
   a.sol.intensidad = THREE.MathUtils.lerp(0.6, 0.38, noche)
   a.sol.dir.copy(DIR_TECHO)
-  mezcla(a.hemi.cielo, "#e4edf5", "#a9bde4", noche)
-  mezcla(a.hemi.suelo, "#5a616b", "#363e4c", noche)
+  mezcla(a.hemi.cielo, C_AMB.cieloD, C_AMB.cieloN, noche)
+  mezcla(a.hemi.suelo, C_AMB.sueloD, C_AMB.sueloN, noche)
   a.hemi.intensidad = THREE.MathUtils.lerp(0.36, 0.26, noche)
   a.entorno = THREE.MathUtils.lerp(0.4, 0.3, noche)
-  a.niebla.color.set(P.niebla)
+  a.niebla.color.copy(C_AMB.niebla)
   a.niebla.densidad = THREE.MathUtils.lerp(0.0095, 0.0115, noche)
   a.exposicion = THREE.MathUtils.lerp(0.95, 1.0, noche)
   a.bloom.fuerza = THREE.MathUtils.lerp(0.3, 0.42, noche)
@@ -330,7 +338,8 @@ const A = {
   concretoOsc: acabado("#4f5357", 0.9, 0),
   grafito: acabado(P.grafito, 0.5, 0.1, 1.2),
   grafitoPiso: acabado("#20272e", 0.32, 0.1, 1.2),
-  epoxi: acabado(P.epoxi, 0.2, 0, 2.4),
+  // Rugosidad 0,28: con 0,2 la luz del atrio dejaba un punto blanco quemado en el piso, sin lámpara que lo explique.
+  epoxi: acabado(P.epoxi, 0.28, 0, 2.4),
   acero: acabado(P.acero, 0.35, 0.8),
   aceroOsc: acabado("#4a525a", 0.4, 0.7),
   blanco: acabado("#f2f5f7", 0.4, 0),
@@ -471,6 +480,10 @@ interface MaterialesCiudad {
   oficinas: THREE.MeshStandardMaterial
   luz: THREE.MeshBasicMaterial
   vidrio: THREE.MeshStandardMaterial
+  /** Piso de vidrio sobre el foso: tinte cian esmerilado (con el vidrio común se leía como un agujero negro). */
+  vidrioPiso: THREE.MeshStandardMaterial
+  /** Barandas de las galerías y cajas de los ascensores: más presente que el vidrio común. */
+  vidrioBaranda: THREE.MeshStandardMaterial
   esmerilado: THREE.MeshStandardMaterial
   grilla: THREE.MeshStandardMaterial
   chevron: THREE.MeshStandardMaterial
@@ -671,6 +684,26 @@ diffuseColor.rgb *= mix(vec3(1.0), vec3(0.5, 0.58, 0.82), uNoche * vTurno);`,
     depthWrite: false,
     side: THREE.DoubleSide,
   })
+  const vidrioPiso = new THREE.MeshStandardMaterial({
+    name: "ciudad-vidrio-piso",
+    color: "#86d8ee",
+    metalness: 0.1,
+    roughness: 0.28,
+    transparent: true,
+    opacity: 0.3,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+  const vidrioBaranda = new THREE.MeshStandardMaterial({
+    name: "ciudad-vidrio-baranda",
+    color: "#cfeaf3",
+    metalness: 0.2,
+    roughness: 0.12,
+    transparent: true,
+    opacity: 0.24,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
   const esmerilado = new THREE.MeshStandardMaterial({
     name: "ciudad-esmerilado",
     color: "#eef4f8",
@@ -745,6 +778,9 @@ diffuseColor.rgb *= mix(0.55, 1.08, smoothstep(0.3, 0.6, hojas)) * (0.75 + 0.35 
     uniforms: { uTiempo: u.tiempo, uEscala: u.escalaPuntos },
     transparent: true,
     depthWrite: false,
+    // El color ya viene escalado por la fuerza (es una intensidad): se SUMA. Con mezcla normal
+    // cada bocanada pintaba una mancha casi negra (jardín y foso).
+    blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */ `
 attribute float aFase;
 attribute float aVel;
@@ -853,11 +889,11 @@ void main() {
   const pantallaMat = new THREE.MeshBasicMaterial({ name: "ciudad-pantalla", map: pantalla, color: new THREE.Color(1.35, 1.35, 1.35) })
 
   // Todo refleja la instalación (no el estudio del motor).
-  for (const m of [base, oficinas, vidrio, esmerilado, grilla, chevron, robot]) {
+  for (const m of [base, oficinas, vidrio, vidrioPiso, vidrioBaranda, esmerilado, grilla, chevron, robot]) {
     m.envMap = entorno
-    m.envMapIntensity = m === vidrio ? 1.2 : 0.55
+    m.envMapIntensity = m === vidrio ? 1.2 : m === vidrioBaranda ? 1.5 : m === vidrioPiso ? 1 : 0.55
   }
-  return { base, oficinas, luz: luzMat, vidrio, esmerilado, grilla, chevron, follaje, robot, brillo, vapor, reflejos, escaneo, senal, pantalla: pantallaMat, u }
+  return { base, oficinas, luz: luzMat, vidrio, vidrioPiso, vidrioBaranda, esmerilado, grilla, chevron, follaje, robot, brillo, vapor, reflejos, escaneo, senal, pantalla: pantallaMat, u }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -873,10 +909,13 @@ function miles(n: number): string {
     .replace(/\B(?=(\d{3})+(?!\d))/g, ".")
 }
 
-/** El día del reto (el día 1 es el del lanzamiento). */
-function diaDelReto(): number {
-  const ms = Date.now() - Date.parse(`${CHALLENGE_LAUNCH}T00:00:00`)
-  return Math.max(1, Math.floor(ms / 86_400_000) + 1)
+/**
+ * El día del reto (el día 1 es el del lanzamiento), con la MISMA regla que
+ * lib/centro.ts (fecha de lanzamiento en UTC). Se calcula una sola vez al
+ * construir: un render largo no cambia de día a mitad del video.
+ */
+function diaDelReto(ahora: number): number {
+  return Math.max(1, Math.floor((ahora - Date.parse(CHALLENGE_LAUNCH)) / 86_400_000) + 1)
 }
 
 const PANT_W = 1448
@@ -887,7 +926,7 @@ const PANT_H = 400
  * (RECAUDADO de CHALLENGE_TARGET, de lib/contador.ts) y el plano de la
  * instalación, dibujado con los lugares del mapa. Ningún otro número.
  */
-function dibujarPantalla(g: CanvasRenderingContext2D, reloj: string, barrido: number) {
+function dibujarPantalla(g: CanvasRenderingContext2D, reloj: string, barrido: number, dia: number) {
   const W = PANT_W
   const H = PANT_H
   const monto = `$${miles(RECAUDADO)}`
@@ -953,7 +992,7 @@ function dibujarPantalla(g: CanvasRenderingContext2D, reloj: string, barrido: nu
   g.textAlign = "left"
   g.font = `700 28px ${FUENTE}`
   g.fillStyle = "#9cc4ff"
-  g.fillText(`DÍA ${diaDelReto()} DEL RETO`, IZQ, 362)
+  g.fillText(`DÍA ${dia} DEL RETO`, IZQ, 362)
 
   // A la derecha: el plano de la instalación (los lugares del mapa, a escala).
   const X0 = 920
@@ -1036,29 +1075,72 @@ interface Celda {
   aspecto: number
 }
 
+// 1024 x 2048: los 24 letreros ocupan ~1440 px de alto (con 1024 desbordaban y
+// 13 letreros leían fuera de la imagen: cuadros blancos y flechas corridas).
 const ATLAS_W = 1024
-const ATLAS_H = 1024
+const ATLAS_H = 2048
 
-function dibujarAtlas(g: CanvasRenderingContext2D): Record<string, Celda> {
-  g.clearRect(0, 0, ATLAS_W, ATLAS_H)
+/** Ancho natural de un letrero (texto, márgenes y flecha) con la fuente que haya. */
+function anchoLetrero(g: CanvasRenderingContext2D, l: Letrero): { tw: number; pad: number; fw: number; w: number } {
+  g.font = `800 ${l.px}px ${FUENTE}`
+  const tw = g.measureText(l.texto).width
+  const pad = Math.round(l.px * 0.4)
+  const fw = l.flecha ? l.px * 1.1 : 0
+  return { tw, pad, fw, w: Math.ceil(tw + pad * 2 + fw) }
+}
+
+/**
+ * Reparte los letreros en el atlas. Se llama UNA vez: las UV de cada letrero
+ * quedan fundidas en el lote de señales, así que las celdas no se mueven más.
+ * Un letrero que no entra no recibe celda (no se dibuja) y queda en la consola.
+ */
+function repartirAtlas(g: CanvasRenderingContext2D): Record<string, Celda> {
   const celdas: Record<string, Celda> = {}
   let x = 0
   let y = 0
   let fila = 0
   for (const l of LETREROS) {
-    g.font = `800 ${l.px}px ${FUENTE}`
-    const tw = g.measureText(l.texto).width
-    const pad = Math.round(l.px * 0.4)
-    const fw = l.flecha ? l.px * 1.1 : 0
-    const w = Math.ceil(tw + pad * 2 + fw)
+    const w = anchoLetrero(g, l).w
     const h = Math.ceil(l.px * 1.45)
     if (x + w > ATLAS_W) {
       x = 0
       y += fila + 4
       fila = 0
     }
+    if (y + h > ATLAS_H || w > ATLAS_W) {
+      console.error("[casa-blanca] atlas de letreros desbordado:", l.id)
+      continue
+    }
+    celdas[l.id] = { u0: x / ATLAS_W, u1: (x + w) / ATLAS_W, v0: 1 - (y + h) / ATLAS_H, v1: 1 - y / ATLAS_H, aspecto: w / h }
+    x += w + 4
+    fila = Math.max(fila, h)
+  }
+  return celdas
+}
+
+/**
+ * Pinta cada letrero dentro de SU celda. Si la fuente cambió desde el reparto
+ * (la de la web llegó después), el texto se angosta para caber: nunca se sale
+ * de la celda ni se corre respecto de las UV ya fundidas.
+ */
+function dibujarAtlas(g: CanvasRenderingContext2D, celdas: Record<string, Celda>) {
+  g.clearRect(0, 0, ATLAS_W, ATLAS_H)
+  for (const l of LETREROS) {
+    const c = celdas[l.id]
+    if (!c) continue
+    const x = c.u0 * ATLAS_W
+    const y = (1 - c.v1) * ATLAS_H
+    const wC = (c.u1 - c.u0) * ATLAS_W
+    const h = (c.v1 - c.v0) * ATLAS_H
+    const { tw, pad, fw, w } = anchoLetrero(g, l)
+    g.save()
+    g.beginPath()
+    g.rect(x, y, wC, h)
+    g.clip()
+    g.translate(x, 0)
+    g.scale(Math.min(1, wC / w), 1)
     const base = y + h * 0.5 + l.px * 0.36
-    const tx = l.flecha === "izq" ? x + pad + fw : x + pad
+    const tx = l.flecha === "izq" ? pad + fw : pad
     g.textAlign = "left"
     g.textBaseline = "alphabetic"
     g.shadowColor = l.color
@@ -1068,9 +1150,8 @@ function dibujarAtlas(g: CanvasRenderingContext2D): Record<string, Celda> {
     g.shadowBlur = 0
     if (l.flecha) {
       const s = l.px * 0.42
-      const fx = l.flecha === "izq" ? x + pad + s : x + pad + tw + l.px * 0.25 + s
+      const fx = l.flecha === "izq" ? pad + s : pad + tw + l.px * 0.25 + s
       const fy = y + h * 0.5
-      g.save()
       g.translate(fx, fy)
       g.rotate(l.flecha === "der" ? 0 : l.flecha === "izq" ? Math.PI : -Math.PI / 2)
       g.fillStyle = l.color
@@ -1084,13 +1165,9 @@ function dibujarAtlas(g: CanvasRenderingContext2D): Record<string, Celda> {
       g.lineTo(0, s * 0.8)
       g.closePath()
       g.fill()
-      g.restore()
     }
-    celdas[l.id] = { u0: x / ATLAS_W, u1: (x + w) / ATLAS_W, v0: 1 - (y + h) / ATLAS_H, v1: 1 - y / ATLAS_H, aspecto: w / h }
-    x += w + 4
-    fila = Math.max(fila, h)
+    g.restore()
   }
-  return celdas
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1146,6 +1223,8 @@ interface Kit {
   oficinas: Lote
   luz: Lote
   vidrio: Lote
+  vidrioPiso: Lote
+  vidrioBaranda: Lote
   esmerilado: Lote
   grilla: Lote
   chevron: Lote
@@ -1165,6 +1244,8 @@ interface Piezas {
   cil16: THREE.BufferGeometry
   cil24: THREE.BufferGeometry
   esfera: THREE.BufferGeometry
+  /** Esfera baja (8 x 6) para las figuras del personal. */
+  bola: THREE.BufferGeometry
   plano: THREE.BufferGeometry
   /** Una mata: bolitas deformadas, fusionadas (una instancia por planta). */
   mata: THREE.BufferGeometry
@@ -1192,6 +1273,7 @@ function crearPiezas(): Piezas {
     cil16: new THREE.CylinderGeometry(1, 1, 1, 16),
     cil24: new THREE.CylinderGeometry(1, 1, 1, 24),
     esfera: new THREE.SphereGeometry(1, 12, 8),
+    bola: new THREE.SphereGeometry(1, 8, 6),
     plano: new THREE.PlaneGeometry(1, 1),
   }
 }
@@ -1312,6 +1394,103 @@ function lineaPiso(k: Kit, pz: Piezas, puntos: V2[], color: string) {
   }
 }
 
+// ── El personal de la instalación ──
+//
+// Figuras de escenografía, sin nombre ni ficha: no son residentes y no llevan
+// ningún dato. Están donde la gente que camina no llega (en las mesadas de los
+// laboratorios, en los escritorios de control, en las mesas del comedor, en
+// los pasillos de cultivo), así que nunca tapan un lugar ni un camino.
+
+type Pose = "pie" | "trabaja" | "sentado"
+interface Ropa {
+  /** Saco, mameluco o uniforme. */
+  torso: string
+  piernas: string
+  /** Franja (chaleco, reflectivo). */
+  franja?: string
+  /** Bata larga de laboratorio (cubre hasta la rodilla). */
+  bata?: boolean
+}
+const PIELES = ["#c68c6a", "#8d5a3c", "#e0b08f", "#a8704f", "#6a432c", "#d9a07c"]
+const PELOS = ["#1b1410", "#2c1d14", "#4a3424", "#121212", "#6b5a4a", "#3a2a1e"]
+const ROPA: Record<"bata" | "operador" | "tecnico" | "anden" | "civil" | "cocina", Ropa> = {
+  bata: { torso: "#f2f5f7", piernas: "#2d3640", bata: true },
+  operador: { torso: "#1f2a38", piernas: "#161c24", franja: P.cian },
+  tecnico: { torso: "#4b5560", piernas: "#3a424b", franja: P.amarillo },
+  anden: { torso: "#22303f", piernas: "#1a222c", franja: P.ambar },
+  civil: { torso: "#7a8796", piernas: "#2a2f36" },
+  cocina: { torso: "#f4f4f2", piernas: "#33383e" },
+}
+
+/**
+ * Una persona del personal, con los pies en `y` y mirando hacia `giro`
+ * (0 = +z). "pie": de pie con los brazos al costado; "trabaja": de pie con las
+ * manos sobre una mesada a 0,9 m; "sentado": en una silla de 0,46 m con las
+ * manos sobre una mesa a 0,75 m. Va al lote "base" (no suma llamadas de dibujo).
+ */
+function figura(k: Kit, pz: Piezas, x: number, y: number, z: number, giro: number, pose: Pose, ropa: Ropa, n: number) {
+  const R = M(x, y, z, giro)
+  const piel = acabado(PIELES[n % PIELES.length], 0.6, 0)
+  const pelo = acabado(PELOS[(n * 7 + 3) % PELOS.length], 0.7, 0)
+  const torso = acabado(ropa.torso, 0.75, 0)
+  const piernas = acabado(ropa.piernas, 0.8, 0)
+  const zapato = acabado("#1a1c1f", 0.5, 0.1)
+  const pon = (geo: THREE.BufferGeometry, m: THREE.Matrix4, v: Valores) => k.base.agregar(geo, R.clone().multiply(m), v)
+  const barra = (a: THREE.Vector3, b: THREE.Vector3, r: number, v: Valores) => {
+    const d = new THREE.Vector3().subVectors(b, a)
+    const largo = d.length()
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize())
+    pon(pz.cil8, new THREE.Matrix4().compose(new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5), q, new THREE.Vector3(r, largo, r)), v)
+    pon(pz.bola, M(b.x, b.y, b.z, 0, r, r, r), v)
+  }
+  const V = (a: number, b: number, c: number) => new THREE.Vector3(a, b, c)
+  const sentado = pose === "sentado"
+  // Cadera, hombros y cabeza.
+  const yC = sentado ? 0.5 : 0.9
+  const yH = yC + 0.5
+  // Piernas (pantalón) y zapatos.
+  for (const s of [-1, 1]) {
+    const lx = s * 0.1
+    if (sentado) {
+      barra(V(lx, yC, 0.02), V(lx, yC - 0.02, 0.42), 0.075, piernas)
+      barra(V(lx, yC - 0.02, 0.42), V(lx, 0.1, 0.46), 0.065, piernas)
+      pon(pz.caja, M(lx, 0.045, 0.52, 0, 0.11, 0.09, 0.26), zapato)
+    } else {
+      barra(V(lx, 0.1, 0.0), V(lx * 0.95, yC, 0.0), 0.075, piernas)
+      pon(pz.caja, M(lx, 0.045, 0.05, 0, 0.11, 0.09, 0.27), zapato)
+    }
+  }
+  // Torso (y la bata, que baja hasta la rodilla cuando está de pie).
+  pon(pz.cil16, M(0, yC + 0.27, 0, 0, 0.19, 0.56, 0.125), torso)
+  if (ropa.bata && !sentado) pon(pz.cil16, M(0, yC - 0.2, 0, 0, 0.215, 0.42, 0.15), torso)
+  pon(pz.bola, M(0, yH, 0, 0, 0.22, 0.09, 0.13), torso)
+  if (ropa.franja) {
+    const f = acabado(ropa.franja, 0.5, 0, 0, ropa.franja, 0.35)
+    pon(pz.cil16, M(0, yC + 0.33, 0, 0, 0.197, 0.05, 0.132), f)
+  }
+  // Cuello, cabeza y pelo.
+  pon(pz.cil8, M(0, yH + 0.06, 0, 0, 0.05, 0.12, 0.05), piel)
+  pon(pz.bola, M(0, yH + 0.2, 0.01, 0, 0.095, 0.115, 0.105), piel)
+  pon(pz.bola, M(0, yH + 0.25, -0.012, 0, 0.1, 0.08, 0.108), pelo)
+  // Brazos: al costado, o hacia adelante con las manos sobre la mesada o la mesa.
+  for (const s of [-1, 1]) {
+    const hombro = V(s * 0.21, yH - 0.02, 0)
+    let codo: THREE.Vector3
+    let mano: THREE.Vector3
+    if (pose === "pie") {
+      codo = V(s * 0.25, yH - 0.3, -0.02)
+      mano = V(s * 0.24, yH - 0.58, 0.04)
+    } else {
+      const yMesa = sentado ? 0.79 : 0.96
+      codo = V(s * 0.24, yH - 0.3, 0.12)
+      mano = V(s * 0.15, yMesa, 0.42)
+    }
+    barra(hombro, codo, 0.055, torso)
+    barra(codo, mano, 0.048, ropa.bata || pose === "pie" ? torso : piel)
+    pon(pz.bola, M(mano.x, mano.y, mano.z + 0.03, 0, 0.045, 0.035, 0.07), piel)
+  }
+}
+
 // ── 6.1 El pozo: planta baja, galerías, oficinas, foso, balcón y ascensores ──
 
 function construirPozo(k: Kit, pz: Piezas) {
@@ -1325,20 +1504,28 @@ function construirPozo(k: Kit, pz: Piezas) {
     { x0: FOSO.x0, x1: FOSO.x1, z0: POZO.z0, z1: FOSO.z0 },
   ])
     k.base.agregar(horizontal(r, Y0), null, A.epoxi)
-  k.vidrio.agregar(horizontal(FOSO, Y0 + 0.01))
+  k.vidrioPiso.agregar(horizontal(FOSO, Y0 + 0.01))
   for (const z of [15.5, 17.5]) caja(k.base, pz, FOSO.x0, FOSO.x1, Y0 - 0.22, Y0 - 0.01, z - 0.06, z + 0.06, A.acero)
   for (const x of [-4, 0, 4]) caja(k.base, pz, x - 0.06, x + 0.06, Y0 - 0.22, Y0 - 0.01, FOSO.z0, FOSO.z1, A.acero)
+  // Marco de acero cepillado de 10 cm alrededor del vidrio, con una línea de luz fría: se lee como piso, no como hueco.
+  for (const [x0, x1, z0, z1] of [
+    [FOSO.x0 - 0.1, FOSO.x1 + 0.1, FOSO.z0 - 0.1, FOSO.z0],
+    [FOSO.x0 - 0.1, FOSO.x1 + 0.1, FOSO.z1, FOSO.z1 + 0.1],
+    [FOSO.x0 - 0.1, FOSO.x0, FOSO.z0, FOSO.z1],
+    [FOSO.x1, FOSO.x1 + 0.1, FOSO.z0, FOSO.z1],
+  ])
+    caja(k.base, pz, x0, x1, Y0 - 0.2, Y0 + 0.025, z0, z1, acabado("#b4bcc4", 0.3, 0.85))
+  for (const z of [FOSO.z0 + 0.05, FOSO.z1 - 0.05]) k.luz.agregar(pz.caja, M(0, Y0 - 0.06, z, 0, FOSO.x1 - FOSO.x0 - 0.2, 0.03, 0.04), luz(P.frio, 2.4, 0.5))
   // El foso: las oficinas siguen dos pisos más abajo, con su propia luz.
   for (const g of carasInteriores(FOSO, Y0 - FOSO.fondo, Y0, Y0 - FOSO.fondo)) k.oficinas.agregar(g)
   k.base.agregar(horizontal(FOSO, Y0 - FOSO.fondo), null, A.grafitoPiso)
-  k.luz.agregar(pz.caja, M(0, Y0 - FOSO.fondo + 0.02, cz(FOSO), 0, 12, 0.02, 0.12), luz(P.cian, 3, 0))
-  for (let y = Y0 - 4; y > Y0 - FOSO.fondo; y -= 4)
-    for (const [a, b, c2, d] of [
-      [FOSO.x0, FOSO.z0, FOSO.x1, FOSO.z0],
-      [FOSO.x0, FOSO.z1, FOSO.x1, FOSO.z1],
-    ])
-      k.luz.agregar(pz.caja, M((a + c2) / 2, y, (b + d) / 2, 0, c2 - a, 0.05, 0.08), luz(P.frio, 2.2))
-  k.vapores.push({ x: 0, y: Y0 - FOSO.fondo + 0.5, z: cz(FOSO), rx: 6, rz: 2, n: 18, tam: 3, alto: 6, vel: 0.05, color: "#bfe8ff", fuerza: 0.1 })
+  k.luz.agregar(pz.caja, M(0, Y0 - FOSO.fondo + 0.02, cz(FOSO), 0, 12, 0.02, 0.12), luz(P.cian, 4, 0))
+  // Franjas de luz en cada piso de oficinas del foso, en las cuatro caras (los pisos de abajo se leen).
+  for (let y = Y0 - 4; y > Y0 - FOSO.fondo; y -= 4) {
+    for (const z of [FOSO.z0 + 0.04, FOSO.z1 - 0.04]) k.luz.agregar(pz.caja, M(0, y, z, 0, FOSO.x1 - FOSO.x0, 0.05, 0.08), luz(P.frio, 3.2))
+    for (const x of [FOSO.x0 + 0.04, FOSO.x1 - 0.04]) k.luz.agregar(pz.caja, M(x, y, cz(FOSO), 0, 0.08, 0.05, FOSO.z1 - FOSO.z0), luz(P.frio, 3.2))
+  }
+  k.vapores.push({ x: 0, y: Y0 - FOSO.fondo + 0.5, z: cz(FOSO), rx: 6, rz: 2, n: 18, tam: 3, alto: 6, vel: 0.05, color: "#bfe8ff", fuerza: 0.05 })
 
   // Muros de la planta baja (los del andén, la sala de control y el corredor los ponen ellos).
   const yPB = Y0 + PB
@@ -1382,12 +1569,19 @@ function construirPozo(k: Kit, pz: Piezas) {
       const tramos: Array<[number, number]> = az === bz && az === VACIO.z0 ? [[ax, -ELEV.dx - ELEV.medio], [-ELEV.dx + ELEV.medio, ELEV.dx - ELEV.medio], [ELEV.dx + ELEV.medio, bx]] : [[ax === bx ? az : ax, ax === bx ? bz : bx]]
       for (const [a, b] of tramos) {
         if (b - a < 0.1) continue
-        if (ax === bx) {
-          vidrioPlano(k, pz, "z", ax, a, b, y, y + 1.05)
-          tubo(k.base, pz, new THREE.Vector3(ax, y + 1.08, a), new THREE.Vector3(ax, y + 1.08, b), 0.03, A.acero)
-        } else {
-          vidrioPlano(k, pz, "x", az, a, b, y, y + 1.05)
-          tubo(k.base, pz, new THREE.Vector3(a, y + 1.08, az), new THREE.Vector3(b, y + 1.08, az), 0.03, A.acero)
+        const enZ = ax === bx
+        const fijo = enZ ? ax : az
+        vidrioPlano(k, pz, enZ ? "z" : "x", fijo, a, b, y + 0.12, y + 1.02, k.vidrioBaranda)
+        if (enZ) tubo(k.base, pz, new THREE.Vector3(ax, y + 1.08, a), new THREE.Vector3(ax, y + 1.08, b), 0.03, A.acero)
+        else tubo(k.base, pz, new THREE.Vector3(a, y + 1.08, az), new THREE.Vector3(b, y + 1.08, az), 0.03, A.acero)
+        // Zócalo de acero y parantes cada ~1,5 m: la baranda tiene escala (antes era un caño flotando).
+        if (enZ) caja(k.base, pz, fijo - 0.03, fijo + 0.03, y, y + 0.12, a, b, A.acero)
+        else caja(k.base, pz, a, b, y, y + 0.12, fijo - 0.03, fijo + 0.03, A.acero)
+        const n = Math.max(1, Math.round((b - a) / 1.5))
+        for (let j = 0; j <= n; j++) {
+          const c2 = a + ((b - a) * j) / n
+          if (enZ) caja(k.base, pz, fijo - 0.035, fijo + 0.035, y, y + 1.06, c2 - 0.03, c2 + 0.03, A.acero)
+          else caja(k.base, pz, c2 - 0.03, c2 + 0.03, y, y + 1.06, fijo - 0.035, fijo + 0.035, A.acero)
         }
       }
     }
@@ -1395,8 +1589,23 @@ function construirPozo(k: Kit, pz: Piezas) {
     for (const s of [-1, 1]) {
       const x = s * ELEV.dx
       caja(k.base, pz, x - ELEV.medio + 0.1, x + ELEV.medio - 0.1, y - 0.3, y, VACIO.z0, ASC.z - ELEV.medio, acabado("#dfe5ea", 0.5, 0, 1.2))
-      for (const sx of [-1, 1]) vidrioPlano(k, pz, "z", x + sx * (ELEV.medio - 0.12), VACIO.z0, ASC.z - ELEV.medio, y, y + 1.05)
+      for (const sx of [-1, 1]) {
+        const xb = x + sx * (ELEV.medio - 0.12)
+        vidrioPlano(k, pz, "z", xb, VACIO.z0, ASC.z - ELEV.medio, y + 0.12, y + 1.02, k.vidrioBaranda)
+        caja(k.base, pz, xb - 0.03, xb + 0.03, y, y + 0.12, ASC.z - ELEV.medio, VACIO.z0, A.acero)
+        tubo(k.base, pz, new THREE.Vector3(xb, y + 1.08, ASC.z - ELEV.medio), new THREE.Vector3(xb, y + 1.08, VACIO.z0), 0.03, A.acero)
+      }
     }
+    // Personal en la galería, con las manos en la baranda mirando al vacío (fuera de la caída de la cámara).
+    const enGaleria: Array<[number, number, number]> = [
+      [-7.95, 31 + i * 3, Math.PI / 2],
+      [7.95, 36 - i * 7, -Math.PI / 2],
+      [-2.5 + i * 3.5, 41.95, Math.PI],
+    ]
+    enGaleria.forEach(([x, z, g], j) => {
+      if ((i + j) % 3 === 2) return
+      figura(k, pz, x, y, z, g, "trabaja", j === 1 ? ROPA.bata : j === 2 ? ROPA.civil : ROPA.operador, 70 + i * 3 + j)
+    })
     // El número del nivel en el muro, sobre la galería, en las caras norte y sur.
     letrero(k, pz, nombres[i], -6.5, y + 2.6, POZO.z1 - 0.05, Math.PI, 1.3)
     letrero(k, pz, nombres[i], 6.5, y + 2.6, POZO.z0 + 0.05, 0, 1.3)
@@ -1416,7 +1625,7 @@ function construirPozo(k: Kit, pz: Piezas) {
   // Muros de la planta baja: norte (detrás del balcón).
   muro(k, pz, "x", POZO.x0, POZO.x1, POZO.z0 - 1, POZO.z0, Y0, yPB)
   k.luz.agregar(pz.caja, M(0, Y0 + 3.4, POZO.z0 + 0.03, 0, 16, 0.08, 0.04), luz(P.frio, 2.4))
-  letrero(k, pz, "balcon", 0, Y0 + 4.4, POZO.z0 + 0.05, 0, 0.6)
+  // Sin placa "BALCÓN" propia: navegacion.ts ya cuelga "BALCÓN DEL POZO" del canto de la galería (eran dos rótulos iguales).
   // Sur: la compuerta al corredor (el muro es más alto que el corredor: cierra el pozo).
   muro(k, pz, "x", POZO.x0, POZO.x1, POZO.z1, CORREDOR.z0, Y0, yPB, [{ a: -2.1, b: 2.1, alto: 4.2 }])
   k.compuertas.push({ x: 0, z: POZO.z1 + 1, eje: "x", ancho: 4.2, alto: 4.2, grosor: 2, abierta: 0 })
@@ -1432,6 +1641,10 @@ function construirPozo(k: Kit, pz: Piezas) {
     caja(k.base, pz, POZO.x0 + 0.25, POZO.x0 + 0.65, Y0, Y0 + 0.42, z - 1.3, z + 1.3, A.aceroOsc)
   }
   k.reflejos.push({ x: 0, z: POZO.z0 + 0.2, h: 3.4, color: P.frio, fuerza: 0.5, ancho: 6 })
+  // Un guardia de turno junto a la compuerta del corredor, y un atril con su consola.
+  figura(k, pz, -3.4, Y0, 43.1, Math.PI, "pie", ROPA.operador, 1)
+  caja(k.base, pz, -4.55, -4.05, Y0, Y0 + 1.05, 42.7, 43.4, A.grafito)
+  k.base.agregar(pz.caja, M(-4.3, Y0 + 1.08, 43.0, 0, 0.42, 0.02, 0.55, -0.35), acabado("#0b1015", 0.2, 0.3, 0, P.cian, 0.8))
 }
 
 interface Cabinas {
@@ -1446,10 +1659,10 @@ function construirAscensores(k: Kit, pz: Piezas, mats: MaterialesCiudad, sombras
     const x = ASC.x + s * ELEV.dx
     const z = ASC.z
     // Caja de vidrio de punta a punta del pozo, aristas de acero y marcos en cada galería.
-    vidrioPlano(k, pz, "x", z - m, x - m, x + m, Y0, TOPE)
-    vidrioPlano(k, pz, "x", z + m, x - m, x + m, Y0 + 2.6, TOPE)
-    vidrioPlano(k, pz, "z", x - m, z - m, z + m, Y0, TOPE)
-    vidrioPlano(k, pz, "z", x + m, z - m, z + m, Y0, TOPE)
+    vidrioPlano(k, pz, "x", z - m, x - m, x + m, Y0, TOPE, k.vidrioBaranda)
+    vidrioPlano(k, pz, "x", z + m, x - m, x + m, Y0 + 2.6, TOPE, k.vidrioBaranda)
+    vidrioPlano(k, pz, "z", x - m, z - m, z + m, Y0, TOPE, k.vidrioBaranda)
+    vidrioPlano(k, pz, "z", x + m, z - m, z + m, Y0, TOPE, k.vidrioBaranda)
     for (const [ex, ez] of [
       [-1, -1],
       [1, -1],
@@ -1605,6 +1818,14 @@ function construirAnden(k: Kit, pz: Piezas) {
   }
   k.luz.agregar(pz.caja, M(S.x1 - 0.03, Y0 + 0.25, 41.5, 0, 0.04, 0.05, 3), luz(P.rojo, 2.4, 0))
   letrero(k, pz, "salida", S.x1 - 0.05, Y0 + 2.6, 41.5, -Math.PI / 2, 0.3)
+  // Tachas de luz en el borde del andén: marcan dónde termina el piso y se ve el foso de la vía.
+  for (let z = S.z0 + 0.8; z < S.z1; z += 1.5) k.luz.agregar(pz.caja, M(VIA.x1 + 0.6, Y0 + 0.014, z, 0, 0.12, 0.01, 0.3), luz(P.cian, 2.4, 0.3))
+  k.luz.agregar(pz.caja, M(VIA.x1 - 0.03, Y0 - 0.12, cz(S), 0, 0.03, 0.04, S.z1 - S.z0), luz(P.ambar, 1.6, 0.3))
+  // Personal del andén (fuera del área del Andén: x < -25,8 o z < 15,2).
+  figura(k, pz, -26.7, Y0, 40.2, -Math.PI / 2, "pie", ROPA.anden, 3)
+  caja(k.base, pz, -25.5, -24.3, Y0 + 0.6, Y0 + 2.2, S.z0 + 0.02, S.z0 + 0.22, acabado("#1b2228", 0.5, 0.3))
+  for (let i = 0; i < 4; i++) k.luz.agregar(pz.caja, M(-25.2 + i * 0.22, Y0 + 1.8, S.z0 + 0.23, 0, 0.08, 0.05, 0.01), luz(i % 2 ? "#7dffb0" : P.ambar, 2.6, 0, 1.2 + i))
+  figura(k, pz, -24.9, Y0, S.z0 + 0.75, Math.PI, "trabaja", ROPA.tecnico, 4)
 }
 
 interface Tren {
@@ -1617,22 +1838,62 @@ interface Tren {
 
 function construirTren(mats: MaterialesCiudad, pz: Piezas, sombras: boolean): Tren {
   const largo = 10.6
-  const r = 1.35
+  /** Medio ancho de la caja: las hojas de las puertas (x = 1,33) quedan apenas por fuera. */
+  const ma = 1.3
+  const alto = 2.9
   const cuerpo = new Lote(PBR)
-  // Aluminio cepillado, nariz redondeada, franja de ventanas con luz blanca azulada.
-  const cap = new THREE.CapsuleGeometry(r, largo - 2 * r, 6, 16)
-  cap.rotateX(Math.PI / 2)
-  cuerpo.agregar(cap, M(0, 0, 0, 0, 1, 1.1, 1), acabado("#c5ccd2", 0.3, 0.85))
-  cap.dispose()
-  for (const s of [-1, 1]) {
-    cuerpo.agregar(pz.caja, M(s * (r - 0.02), 0.45, 0, 0, 0.08, 0.7, largo - 3.4), acabado("#0d1216", 0.1, 0.4, 0, "#dbe9ff", 0.75))
-    cuerpo.agregar(pz.caja, M(s * (r - 0.05), -0.35, 0, 0, 0.06, 0.08, largo - 3), acabado(P.cian, 0.3, 0, 0, P.cian, 2.5))
+  const alu = acabado("#c5ccd2", 0.3, 0.85)
+  // La caja: un perfil de esquinas redondeadas extruido a lo largo.
+  {
+    const f = new THREE.Shape()
+    const rr = 0.55
+    const x0 = -ma
+    const x1 = ma
+    const y0 = -alto / 2
+    const y1 = alto / 2
+    f.moveTo(x0 + rr, y0)
+    f.lineTo(x1 - rr, y0)
+    f.quadraticCurveTo(x1, y0, x1, y0 + rr)
+    f.lineTo(x1, y1 - rr)
+    f.quadraticCurveTo(x1, y1, x1 - rr, y1)
+    f.lineTo(x0 + rr, y1)
+    f.quadraticCurveTo(x0, y1, x0, y1 - rr)
+    f.lineTo(x0, y0 + rr)
+    f.quadraticCurveTo(x0, y0, x0 + rr, y0)
+    const largoCaja = largo - 2.2
+    const g = new THREE.ExtrudeGeometry(f, { depth: largoCaja, bevelEnabled: false, curveSegments: 4 })
+    g.translate(0, 0, -largoCaja / 2)
+    cuerpo.agregar(g, null, alu)
+    g.dispose()
+    // Narices: medio elipsoide en cada punta, con el parabrisas oscuro.
+    for (const s of [-1, 1]) {
+      const n = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)
+      n.rotateX((s * Math.PI) / 2)
+      cuerpo.agregar(n, M(0, 0, (s * largoCaja) / 2, 0, ma, alto / 2, 1.1), alu)
+      n.dispose()
+      cuerpo.agregar(pz.esfera, M(0, 0.55, s * (largoCaja / 2 + 0.62), 0, 0.95, 0.5, 0.42), acabado("#0d1216", 0.08, 0.5, 0, "#9fc3ff", 0.5))
+    }
   }
-  cuerpo.agregar(pz.caja, M(0, -1.35, 0, 0, 2.0, 0.3, largo - 2.6), A.aceroOsc)
+  for (const s of [-1, 1]) {
+    const xs = s * (ma + 0.012)
+    // Banda de ventanas: vidrio oscuro con el interior iluminado arriba (el techo del coche) y parantes.
+    cuerpo.agregar(pz.caja, M(xs, 0.5, 0, 0, 0.02, 0.85, largo - 3.0), acabado("#0d1216", 0.08, 0.4, 0, "#2a3a4c", 0.6))
+    cuerpo.agregar(pz.caja, M(s * (ma + 0.018), 0.86, 0, 0, 0.012, 0.09, largo - 3.1), acabado("#ffffff", 0.3, 0, 0, "#e6f0ff", 2.2))
+    for (let z = -(largo - 3.0) / 2; z <= (largo - 3.0) / 2 + 0.01; z += (largo - 3.0) / 6) cuerpo.agregar(pz.caja, M(s * (ma + 0.022), 0.5, z, 0, 0.02, 0.88, 0.07), alu)
+    // Franja cian y zócalo.
+    cuerpo.agregar(pz.caja, M(s * (ma + 0.012), -0.3, 0, 0, 0.02, 0.07, largo - 2.6), acabado(P.cian, 0.3, 0, 0, P.cian, 2.5))
+    cuerpo.agregar(pz.caja, M(s * (ma - 0.05), -1.25, 0, 0, 0.1, 0.22, largo - 2.4), A.aceroOsc)
+    // Juntas de las puertas (dos por lado) y la luz sobre cada una.
+    for (const dz of [-2.4, 2.4]) {
+      for (const e of [-0.8, 0.8]) cuerpo.agregar(pz.caja, M(s * (ma + 0.02), -0.15, dz + e, 0, 0.02, 2.3, 0.035), acabado("#3a4148", 0.5, 0.6))
+      cuerpo.agregar(pz.caja, M(s * (ma + 0.02), 1.08, dz, 0, 0.02, 0.035, 1.6), acabado("#3a4148", 0.5, 0.6))
+      cuerpo.agregar(pz.caja, M(s * (ma + 0.03), 1.16, dz, 0, 0.02, 0.05, 0.4), acabado("#ffffff", 0.3, 0, 0, P.ambar, 1.8))
+    }
+  }
+  cuerpo.agregar(pz.caja, M(0, -1.45, 0, 0, 2.0, 0.2, largo - 2.6), A.aceroOsc)
   // Bogies sobre los rieles.
   for (const s of [-1, 1]) cuerpo.agregar(pz.caja, M(0, -1.75, s * (largo / 2 - 2.2), 0, 1.9, 0.5, 2.4), acabado("#2b3036", 0.6, 0.6))
   // Parabrisas delante y detrás.
-  for (const s of [-1, 1]) cuerpo.agregar(pz.esfera, M(0, 0.5, s * (largo / 2 - 0.55), 0, 0.85, 0.42, 0.5), acabado("#0d1216", 0.08, 0.5, 0, "#9fc3ff", 0.6))
   const coches = new THREE.InstancedMesh(cuerpo.geometria()!, mats.base, 2)
   coches.name = "ciudad-tren"
   coches.castShadow = sombras
@@ -1698,7 +1959,10 @@ function construirControl(k: Kit, pz: Piezas) {
     [6.2, 0, 7],
     [9.2, 0.45, 9],
   ]
-  for (const [r, sube, n] of arcos) {
+  // Cuatro puestos ocupados por operadores (personal, sin nombre).
+  const ocupados = new Set(["0-1", "0-4", "1-2", "1-6"])
+  let nFig = 0
+  arcos.forEach(([r, sube, n], arco) => {
     for (let i = 0; i < n; i++) {
       const a = THREE.MathUtils.lerp(-0.62, 0.62, n === 1 ? 0.5 : i / (n - 1))
       const x = NUCLEO.x + Math.cos(a) * r
@@ -1720,8 +1984,31 @@ function construirControl(k: Kit, pz: Piezas) {
       k.base.agregar(pz.cil8, M(sx, y + 0.46, sz, 0, 0.26, 0.08, 0.26), A.grafito)
       k.base.agregar(pz.caja, M(sx - Math.cos(a) * 0.24, y + 0.8, sz - Math.sin(a) * 0.24, giro, 0.48, 0.6, 0.06), A.grafito)
       k.base.agregar(pz.cil8, M(sx, y + 0.22, sz, 0, 0.04, 0.44, 0.04), A.acero)
+      if (ocupados.has(`${arco}-${i}`)) figura(k, pz, sx + Math.cos(a) * 0.05, y, sz + Math.sin(a) * 0.05, Math.atan2(Math.cos(a), Math.sin(a)), "sentado", ROPA.operador, 11 + nFig++)
     }
+  })
+  // Racks de servidores contra los muros norte y sur de la mitad oeste (antes un vacío negro):
+  // grafito con tiras cian verticales y luces de estado. Fuera del área de la Sala de Control.
+  for (const [z0, z1, cara] of [
+    [S.z0, S.z0 + 0.9, 1],
+    [S.z1 - 0.9, S.z1, -1],
+  ]) {
+    for (let x = 11.2; x < 21.5; x += 1.25) {
+      caja(k.base, pz, x, x + 1.15, Y0, Y0 + 2.3, z0, z1, acabado("#161c22", 0.45, 0.35))
+      const zf = cara > 0 ? z1 + 0.01 : z0 - 0.01
+      for (const dx of [0.18, 0.97]) k.luz.agregar(pz.caja, M(x + dx, Y0 + 1.15, zf, 0, 0.03, 2.0, 0.02), luz(P.cian, 2.2, 0))
+      for (let h = 0.35; h < 2.1; h += 0.32) k.luz.agregar(pz.caja, M(x + 0.35 + ((h * 7.3) % 0.5), Y0 + h, zf, 0, 0.05, 0.03, 0.02), luz(h % 0.64 < 0.32 ? "#7dffb0" : P.ambar, 2.6, 0, 1.5 + ((x * 3.1) % 2)))
+      k.reflejos.push({ x: x + 0.58, z: zf + cara * 0.3, h: 1.2, color: P.cian, fuerza: 0.22, ancho: 0.8 })
+    }
+    // Bandeja de cables sobre la fila.
+    caja(k.base, pz, 11.2, 21.6, Y0 + 2.55, Y0 + 2.62, z0 + 0.1, z1 - 0.1, A.aceroOsc)
   }
+  // Paneles con tiras cian en el muro este, a los lados de la pantalla, y una línea de luz al pie de la pared de vidrio.
+  for (const z of [S.z0 + 1.5, S.z1 - 1.5]) {
+    caja(k.base, pz, S.x1 - 0.12, S.x1, Y0 + 0.4, Y0 + 5.6, z - 0.9, z + 0.9, acabado("#1a2129", 0.5, 0.2))
+    k.luz.agregar(pz.caja, M(S.x1 - 0.13, Y0 + 3, z, 0, 0.02, 5.0, 0.04), luz(P.cian, 2.4, 0))
+  }
+  k.luz.agregar(pz.caja, M(S.x0 + 0.3, Y0 + 0.02, cz(S), 0, 0.06, 0.02, S.z1 - S.z0 - 1), luz(P.cian, 1.6, 0))
   // El núcleo de IA: un cilindro de vidrio con una columna de luz (los anillos se animan aparte).
   k.base.agregar(pz.cil24, M(NUCLEO.x, Y0 + 0.15, NUCLEO.z, 0, 1.6, 0.3, 1.6), A.grafito)
   k.luz.agregar(new THREE.TorusGeometry(1.55, 0.03, 4, 40).rotateX(Math.PI / 2), M(NUCLEO.x, Y0 + 0.31, NUCLEO.z), luz(P.cian, 3, 0))
@@ -1759,8 +2046,13 @@ function construirCorredor(k: Kit, pz: Piezas) {
   letrero(k, pz, "f-comedor", S.x1 - 0.02, Y0 + 3.6, 56.5, -Math.PI / 2, 0.38)
   letrero(k, pz, "f-jardin", S.x1 - 0.02, Y0 + 3.6, 76, -Math.PI / 2, 0.38)
   letrero(k, pz, "f-labs", S.x0 - 0.5, Y0 + 3.6, 56, Math.PI / 2, 0.38)
-  // Zócalo de acero al pie del muro blanco.
-  caja(k.base, pz, S.x1 - 0.03, S.x1, Y0, Y0 + 0.15, S.z0, S.z1, A.acero)
+  // Zócalo de acero al pie del muro blanco (cortado en las dos puertas: antes cruzaba los umbrales).
+  for (const [a, b] of [
+    [S.z0, 54.5],
+    [58.5, 74],
+    [78, S.z1],
+  ])
+    caja(k.base, pz, S.x1 - 0.03, S.x1, Y0, Y0 + 0.15, a, b, A.acero)
   // Techo con dos tiras de luz lineal empotradas.
   k.techo.agregar(horizontal(S, yT, true), null, acabado(P.panel, 0.55, 0, 1.2))
   for (const x of [-1.25, 1.25]) {
@@ -1835,6 +2127,36 @@ function construirLabs(k: Kit, pz: Piezas, rnd: () => number) {
     tubo(k.base, pz, codo, pinza, 0.055, A.blanco)
     k.luz.agregar(pz.esfera, M(codo.x, codo.y, codo.z, 0, 0.06, 0.06, 0.06), luz(P.cian, 4, 0))
   }
+  // El personal: dos por laboratorio, en las mesadas (dentro de los módulos, lejos del pasillo).
+  for (let i = 0; i < n; i++) {
+    const zc = S.z0 + i * paso + paso / 2
+    figura(k, pz, -25.2 + (i % 2) * 1.4, Y0, zc - 1.55, Math.PI, "trabaja", ROPA.bata, 50 + i * 2)
+    figura(k, pz, -21.0 - (i % 2) * 1.8, Y0, zc + 1.55, 0, "trabaja", i === 2 ? ROPA.tecnico : ROPA.bata, 51 + i * 2)
+  }
+  // Franja oeste del pasillo (contra el vidrio, entre puertas): heladeras de muestras y un carro.
+  for (const z of [57.4, 80.4]) {
+    caja(k.base, pz, FRENTE_LABS + 0.15, FRENTE_LABS + 0.95, Y0, Y0 + 1.95, z, z + 1.6, acabado("#e9eef2", 0.35, 0.1))
+    k.base.agregar(pz.caja, M(FRENTE_LABS + 0.96, Y0 + 1.0, z + 0.8, 0, 0.02, 1.6, 1.4), acabado("#0d1216", 0.1, 0.3, 0, "#cfe8ff", 0.9))
+    for (let h = 0.4; h < 1.8; h += 0.35) caja(k.base, pz, FRENTE_LABS + 0.2, FRENTE_LABS + 0.9, Y0 + h, Y0 + h + 0.02, z + 0.1, z + 1.5, A.acero)
+    k.luz.agregar(pz.caja, M(FRENTE_LABS + 0.97, Y0 + 1.85, z + 0.8, 0, 0.02, 0.04, 0.3), luz("#7dffb0", 3, 0))
+  }
+  const carro = (x: number, z: number) => {
+    for (const h of [0.2, 0.85]) caja(k.base, pz, x - 0.35, x + 0.35, Y0 + h, Y0 + h + 0.03, z - 0.5, z + 0.5, A.acero)
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) caja(k.base, pz, x + sx * 0.33 - 0.015, x + sx * 0.33 + 0.015, Y0 + 0.05, Y0 + 0.9, z + sz * 0.48 - 0.015, z + sz * 0.48 + 0.015, A.acero)
+    caja(k.base, pz, x - 0.25, x + 0.2, Y0 + 0.88, Y0 + 1.05, z - 0.4, z + 0.05, acabado("#cfe2ff", 0.4, 0))
+    caja(k.base, pz, x - 0.2, x + 0.25, Y0 + 0.23, Y0 + 0.45, z - 0.1, z + 0.4, A.blanco)
+  }
+  carro(FRENTE_LABS + 1.2, 70)
+  // Franja este (contra el vidrio del corredor, fuera de los caminos a las puertas): analizador de pie, carro y bancas.
+  caja(k.base, pz, -6.9, -5.7, Y0, Y0 + 1.35, 62.6, 64.0, A.blanco)
+  caja(k.base, pz, -6.95, -5.65, Y0 + 1.35, Y0 + 1.42, 62.55, 64.05, A.acero)
+  k.base.agregar(pz.caja, M(-6.92, Y0 + 1.05, 63.3, 0, 0.02, 0.36, 0.6), acabado("#0b1015", 0.2, 0.3, 0, P.cian, 0.9))
+  k.luz.agregar(pz.caja, M(-6.92, Y0 + 0.5, 63.3, 0, 0.02, 0.04, 1.1), luz(P.azul, 2.6, 0, 0.8))
+  carro(-5.6, 67.5)
+  for (const z of [71.5, 76.5]) {
+    caja(k.base, pz, -5.0, -4.55, Y0 + 0.42, Y0 + 0.47, z - 1.4, z + 1.4, A.blanco)
+    caja(k.base, pz, -4.95, -4.6, Y0, Y0 + 0.42, z - 1.2, z + 1.2, A.aceroOsc)
+  }
   // Una línea azul guía por el pasillo de los laboratorios.
   lineaPiso(k, pz, [[-6, 56.4], [-10.6, 56.4], [-10.6, 88]], P.azul)
   letrero(k, pz, "labs", CORREDOR.x0 - 1, Y0 + 3.85, 70, -Math.PI / 2, 0.42)
@@ -1855,7 +2177,8 @@ function construirComedor(k: Kit, pz: Piezas) {
   // Entre la sala de control y el comedor.
   caja(k.base, pz, POZO.x1 + 0.6, CIU.x1, Y0, Y0 + 4.5, CONTROL.z1 + 1, S.z0 - 1, A.concretoOsc)
   caja(k.base, pz, POZO.x1 + 0.6, CIU.x1, Y0 + 4.5, Y0 + 4.52, CONTROL.z1 + 1, S.z0 - 1, A.muroCorte)
-  techoSala(k, pz, S, A.panel, 3, "#fff1dc", 2.6, 0.3)
+  // Paneles del techo más suaves (con 2,6 el techo se lavaba de blanco).
+  techoSala(k, pz, S, A.panel, 3, "#fff1dc", 1.8, 0.3)
   letrero(k, pz, "comedor", S.x0 + 0.05, Y0 + 3.5, 62, Math.PI / 2, 0.45)
   // Revestimiento de madera en el muro del fondo: la única zona tibia de la instalación.
   caja(k.base, pz, S.x1 - 0.06, S.x1, Y0, Y0 + 2.8, S.z0 + 1.2, S.z1 - 0.2, acabado("#8a6a4e", 0.55, 0))
@@ -1866,15 +2189,71 @@ function construirComedor(k: Kit, pz: Piezas) {
   caja(k.base, pz, 16.9, 25.7, Y0 + 1.05, Y0 + 1.1, S.z0 + 0.05, S.z0 + 1.0, A.blanco)
   k.luz.agregar(pz.caja, M(21.3, Y0 + 1.0, S.z0 + 0.92, 0, 8.5, 0.03, 0.02), luz("#ffcf8a", 2.6, 0.2))
   for (const x of [18.5, 21, 23.5]) caja(k.base, pz, x - 0.3, x + 0.3, Y0 + 1.1, Y0 + 1.55, S.z0 + 0.3, S.z0 + 0.7, A.acero)
-  // Dos mesas largas con bancas y lámparas tibias encima.
-  for (const x of [19, 23]) {
+  // Tres mesas largas con bancas y lámparas tibias encima (fuera del área del Comedor, x > 14,3).
+  for (const x of [16, 19.5, 23.5]) {
     caja(k.base, pz, x - 0.6, x + 0.6, Y0 + 0.72, Y0 + 0.78, 51, 65, acabado("#a07850", 0.45, 0))
     for (const z of [52, 58, 64]) caja(k.base, pz, x - 0.06, x + 0.06, Y0, Y0 + 0.72, z - 0.06, z + 0.06, A.aceroOsc)
-    for (const s of [-1, 1]) caja(k.base, pz, x + s * 1.0 - 0.18, x + s * 1.0 + 0.18, Y0 + 0.42, Y0 + 0.47, 51.2, 64.8, acabado("#a07850", 0.5, 0))
+    for (const s of [-1, 1]) {
+      caja(k.base, pz, x + s * 1.0 - 0.18, x + s * 1.0 + 0.18, Y0 + 0.42, Y0 + 0.47, 51.2, 64.8, acabado("#a07850", 0.5, 0))
+      for (const z of [52, 58, 64]) caja(k.base, pz, x + s * 1.0 - 0.05, x + s * 1.0 + 0.05, Y0, Y0 + 0.42, z - 0.14, z + 0.14, A.aceroOsc)
+    }
     for (let z = 52.5; z < 65; z += 3) {
       k.base.agregar(pz.cil8, M(x, yT - 0.6, z, 0, 0.012, 1.2, 0.012), A.aceroOsc)
       k.luz.agregar(pz.esfera, M(x, yT - 1.25, z, 0, 0.16, 0.16, 0.16), luz("#ffcf8a", 5, 0.2))
       k.reflejos.push({ x, z, h: S.alto - 1.25, color: "#ffcf8a", fuerza: 0.3, ancho: 0.8 })
+    }
+    // Bandejas, vasos y platos sobre la mesa.
+    for (let z = 52; z < 65; z += 2.3) {
+      const lado = (Math.round(z * 10 + x) % 2) * 2 - 1
+      caja(k.base, pz, x + lado * 0.32 - 0.2, x + lado * 0.32 + 0.2, Y0 + 0.78, Y0 + 0.795, z - 0.15, z + 0.15, acabado("#4a5a68", 0.5, 0))
+      k.base.agregar(pz.cil8, M(x + lado * 0.32, Y0 + 0.81, z, 0, 0.11, 0.02, 0.11), A.blanco)
+      k.base.agregar(pz.cil8, M(x + lado * 0.32 + 0.14, Y0 + 0.85, z + 0.1, 0, 0.035, 0.1, 0.035), acabado("#d8e6ee", 0.2, 0))
+    }
+  }
+  // Gente comiendo: personal sentado en las bancas, de cara a la mesa.
+  const comensales: Array<[number, number, number]> = [
+    [17, 53.5, -1],
+    [18.5, 59.2, 1],
+    [20.5, 55.0, -1],
+    [22.5, 62.3, 1],
+    [15, 63.0, 1],
+  ]
+  comensales.forEach(([x, z, s2], i) => figura(k, pz, x, Y0, z, s2 > 0 ? Math.PI / 2 : -Math.PI / 2, "sentado", i % 2 ? ROPA.bata : ROPA.civil, 30 + i))
+  // Franja oeste (entre la puerta del corredor y el área de paso): heladera de bebidas, carro de bandejas,
+  // contenedores de reciclaje, macetas y dos pantallas de menú (solo íconos de color, sin precios).
+  caja(k.base, pz, S.x0 + 0.05, S.x0 + 0.8, Y0, Y0 + 2.0, 49.2, 51.8, acabado("#cfd6dc", 0.4, 0.5))
+  k.base.agregar(pz.caja, M(S.x0 + 0.81, Y0 + 1.1, 50.5, 0, 0.02, 1.5, 2.3), acabado("#0d1216", 0.1, 0.3, 0, "#dff1ff", 1.1))
+  for (let h = 0.55; h < 1.8; h += 0.38) caja(k.base, pz, S.x0 + 0.2, S.x0 + 0.78, Y0 + h, Y0 + h + 0.02, 49.4, 51.6, A.acero)
+  // Carro de bandejas (acero, cuatro niveles con bandejas).
+  for (const h of [0.15, 0.55, 0.95, 1.35]) {
+    caja(k.base, pz, S.x0 + 0.15, S.x0 + 0.85, Y0 + h, Y0 + h + 0.025, 60.4, 61.6, A.acero)
+    caja(k.base, pz, S.x0 + 0.2, S.x0 + 0.8, Y0 + h + 0.03, Y0 + h + 0.06, 60.5, 61.5, acabado("#4a5a68", 0.5, 0))
+  }
+  for (const [dx, dz] of [
+    [0.15, 60.4],
+    [0.85, 60.4],
+    [0.15, 61.6],
+    [0.85, 61.6],
+  ])
+    caja(k.base, pz, S.x0 + dx - 0.02, S.x0 + dx + 0.02, Y0, Y0 + 1.5, dz - 0.02, dz + 0.02, A.acero)
+  // Reciclaje: verde, azul y gris.
+  ;["#3f9b48", "#1e6bff", "#6f7880"].forEach((c, i) => {
+    const z = 63.2 + i * 0.62
+    caja(k.base, pz, S.x0 + 0.1, S.x0 + 0.65, Y0, Y0 + 0.9, z, z + 0.55, acabado(c, 0.5, 0))
+    caja(k.base, pz, S.x0 + 0.08, S.x0 + 0.67, Y0 + 0.9, Y0 + 0.95, z - 0.02, z + 0.57, A.aceroOsc)
+  })
+  for (const z of [48, 66.9]) {
+    k.base.agregar(pz.cil16, M(S.x0 + 0.55, Y0 + 0.3, z, 0, 0.32, 0.6, 0.32), acabado("#e9eef2", 0.4, 0))
+    k.plantas.push({ x: S.x0 + 0.55, y: Y0 + 0.55, z, s: 0.55, color: "#3f9b48" })
+    k.plantas.push({ x: S.x0 + 0.5, y: Y0 + 0.95, z: z + 0.05, s: 0.42, color: "#5fbf5a" })
+  }
+  for (const z of [50.5, 62.2]) {
+    caja(k.base, pz, S.x0 + 0.02, S.x0 + 0.08, Y0 + 2.2, Y0 + 3.2, z - 0.9, z + 0.9, A.grafito)
+    const colores = ["#ffb347", "#9be7a6", "#ff8a65", "#ffd9a8", "#7fb2ff", "#ffcf8a"]
+    for (let i = 0; i < 6; i++) {
+      const fz = z - 0.6 + (i % 3) * 0.6
+      const fy = Y0 + 2.48 + Math.floor(i / 3) * 0.45
+      k.base.agregar(pz.caja, M(S.x0 + 0.09, fy, fz, 0, 0.01, 0.32, 0.46), acabado("#0b1015", 0.3, 0, 0, colores[i], 0.9))
     }
   }
 }
@@ -1899,7 +2278,41 @@ function construirJardin(k: Kit, pz: Piezas, rnd: () => number) {
       for (let x = 17.35; x < 24.8; x += 0.62) k.plantas.push({ x: x + (rnd() - 0.5) * 0.1, y: Y0 + h, z: z + (rnd() - 0.5) * 0.25, s: 0.17 + rnd() * 0.09, color: verdes[Math.floor(rnd() * verdes.length)] })
     }
   }
-  k.vapores.push({ x: 21, y: Y0 + 0.4, z: cz(S), rx: 4, rz: 10, n: 40, tam: 2.4, alto: 2.4, vel: 0.04, color: "#ffc7f1", fuerza: 0.06 })
+  k.vapores.push({ x: 21, y: Y0 + 0.4, z: cz(S), rx: 4, rz: 10, n: 40, tam: 3.2, alto: 2.4, vel: 0.04, color: "#ffc7f1", fuerza: 0.045 })
+  // Canteros elevados entre el paseo y los racks (fuera del área del jardín), con su barra de luz de cultivo.
+  for (const [z0, z1] of [
+    [71.5, 79.8],
+    [81.8, 90.6],
+  ]) {
+    caja(k.base, pz, 13.6, 15.0, Y0, Y0 + 0.62, z0, z1, acabado("#dfe5ea", 0.5, 0.1))
+    caja(k.base, pz, 13.7, 14.9, Y0 + 0.62, Y0 + 0.64, z0 + 0.1, z1 - 0.1, acabado("#3b2a1e", 0.95, 0))
+    for (let z = z0 + 0.35; z < z1 - 0.2; z += 0.45)
+      for (const x of [13.95, 14.65]) k.plantas.push({ x: x + (rnd() - 0.5) * 0.12, y: Y0 + 0.64, z: z + (rnd() - 0.5) * 0.15, s: 0.22 + rnd() * 0.12, color: verdes[Math.floor(rnd() * verdes.length)] })
+    for (const z of [z0 + 0.3, z1 - 0.3]) caja(k.base, pz, 14.27, 14.33, Y0 + 0.62, Y0 + 1.75, z - 0.03, z + 0.03, A.acero)
+    k.luz.agregar(pz.caja, M(14.3, Y0 + 1.75, (z0 + z1) / 2, 0, 0.08, 0.04, z1 - z0 - 0.6), luz(P.magenta, 3.6, 0.2))
+  }
+  // Muro verde: plantas sobre el muro del corredor (a ambos lados de la puerta), sin ocupar piso.
+  for (const [z0, z1] of [
+    [69.4, 73.6],
+    [78.4, 92.6],
+  ]) {
+    caja(k.base, pz, S.x0, S.x0 + 0.08, Y0 + 0.4, Y0 + 3.4, z0, z1, acabado("#2a3a2c", 0.9, 0))
+    for (let y = Y0 + 0.6; y < Y0 + 3.3; y += 0.36)
+      for (let z = z0 + 0.25; z < z1 - 0.1; z += 0.42) k.plantas.push({ x: S.x0 + 0.1, y: y - 0.12, z: z + (rnd() - 0.5) * 0.12, s: 0.17 + rnd() * 0.07, color: verdes[Math.floor(rnd() * verdes.length)] })
+    k.luz.agregar(pz.caja, M(S.x0 + 0.35, Y0 + 3.5, (z0 + z1) / 2, 0, 0.06, 0.04, z1 - z0), luz(P.magenta, 2.6, 0.2))
+  }
+  // Personal de cultivo en los pasillos entre racks (fuera del área del jardín) y un carro de cosecha.
+  figura(k, pz, 20.2, Y0, 72.4, Math.PI, "trabaja", ROPA.tecnico, 41)
+  figura(k, pz, 22.6, Y0, 85.7, 0, "trabaja", ROPA.bata, 42)
+  caja(k.base, pz, 18.2, 19.3, Y0 + 0.2, Y0 + 0.75, 80.6, 81.4, acabado("#e4e9ec", 0.45, 0.2))
+  for (const [dx, dz] of [
+    [18.3, 80.7],
+    [19.2, 80.7],
+    [18.3, 81.3],
+    [19.2, 81.3],
+  ])
+    k.base.agregar(pz.cil8, M(dx, Y0 + 0.08, dz, 0, 0.07, 0.04, 0.07), A.grafito)
+  for (let i = 0; i < 4; i++) k.plantas.push({ x: 18.4 + i * 0.25, y: Y0 + 0.75, z: 81, s: 0.16, color: i % 2 ? "#5fbf5a" : "#7ccf6a" })
   for (let z = 72; z < 92; z += 5) k.reflejos.push({ x: 16.6, z, h: 1.4, color: P.magenta, fuerza: 0.25, ancho: 1.2 })
 }
 
@@ -1909,7 +2322,39 @@ function construirCamara(k: Kit, pz: Piezas) {
   const S = CAMARA
   const yT = Y0 + S.alto
   // Muros: el norte (con la puerta desde el corredor), los lados y el fondo.
-  muro(k, pz, "x", S.x0 - 1, S.x1 + 1, CORREDOR.z1, S.z0, Y0, yT, [{ a: -2.1, b: 2.1, alto: 3.4 }])
+  const VENT = { x0: -6, x1: 6, y0: Y0 + 5, y1: Y0 + 7.4 }
+  muro(k, pz, "x", S.x0 - 1, S.x1 + 1, CORREDOR.z1, S.z0, Y0, VENT.y0, [{ a: -2.1, b: 2.1, alto: 3.4 }])
+  muro(k, pz, "x", S.x0 - 1, VENT.x0, CORREDOR.z1, S.z0, VENT.y0, VENT.y1)
+  muro(k, pz, "x", VENT.x1, S.x1 + 1, CORREDOR.z1, S.z0, VENT.y0, VENT.y1)
+  muro(k, pz, "x", S.x0 - 1, S.x1 + 1, CORREDOR.z1, S.z0, VENT.y1, yT)
+  // La cabina de observación detrás de la ventana (encima del corredor): piso, fondo, techo, consola y dos técnicos.
+  {
+    const zF = CORREDOR.z1 - 0.8
+    caja(k.base, pz, VENT.x0, VENT.x1, VENT.y0 - 0.12, VENT.y0, zF, S.z0, A.grafitoPiso)
+    caja(k.base, pz, VENT.x0, VENT.x1, VENT.y0, VENT.y1 + 0.4, zF - 0.1, zF, acabado("#2a333b", 0.6, 0.1))
+    caja(k.base, pz, VENT.x0 - 0.1, VENT.x0, VENT.y0, VENT.y1 + 0.4, zF, S.z0, acabado("#2a333b", 0.6, 0.1))
+    caja(k.base, pz, VENT.x1, VENT.x1 + 0.1, VENT.y0, VENT.y1 + 0.4, zF, S.z0, acabado("#2a333b", 0.6, 0.1))
+    k.techo.agregar(horizontal({ x0: VENT.x0, x1: VENT.x1, z0: zF, z1: S.z0 }, VENT.y1 + 0.4, true), null, A.grafito)
+    k.luz.agregar(pz.caja, M(0, VENT.y1 + 0.37, zF + 0.5, 0, VENT.x1 - VENT.x0 - 0.6, 0.02, 0.12), luz(P.frio, 2.8, 0.3))
+    // Pantallas en el fondo de la cabina.
+    for (const x of [-4.2, -1.4, 1.4, 4.2]) k.base.agregar(pz.caja, M(x, VENT.y0 + 1.5, zF + 0.02, 0, 2.2, 0.8, 0.02), acabado("#0b1015", 0.2, 0.3, 0, x < 0 ? P.cian : P.azul, 0.8))
+    // Consola bajo la ventana y los técnicos sentados, mirando la cámara.
+    caja(k.base, pz, VENT.x0 + 0.4, VENT.x1 - 0.4, VENT.y0, VENT.y0 + 0.74, S.z0 - 0.75, S.z0 - 0.15, A.grafito)
+    k.luz.agregar(pz.caja, M(0, VENT.y0 + 0.75, S.z0 - 0.45, 0, VENT.x1 - VENT.x0 - 1, 0.01, 0.4), luz(P.cian, 0.9, 0))
+    for (const [x, n, ropa] of [
+      [-2.2, 61, ROPA.operador],
+      [2.6, 62, ROPA.bata],
+    ] as const) {
+      k.base.agregar(pz.cil8, M(x, VENT.y0 + 0.44, S.z0 - 1.3, 0, 0.25, 0.07, 0.25), A.grafito)
+      k.base.agregar(pz.cil8, M(x, VENT.y0 + 0.2, S.z0 - 1.3, 0, 0.04, 0.4, 0.04), A.acero)
+      k.base.agregar(pz.caja, M(x, VENT.y0 + 0.78, S.z0 - 1.55, 0, 0.46, 0.6, 0.06), A.grafito)
+      figura(k, pz, x, VENT.y0, S.z0 - 1.25, 0, "sentado", ropa, n)
+    }
+    // El vidrio y su marco.
+    vidrioPlano(k, pz, "x", S.z0 - 0.02, VENT.x0, VENT.x1, VENT.y0, VENT.y1, k.vidrioBaranda)
+    for (const y of [VENT.y0, VENT.y1]) caja(k.base, pz, VENT.x0 - 0.08, VENT.x1 + 0.08, y - 0.06, y + 0.06, S.z0 - 0.04, S.z0 + 0.06, A.acero)
+    for (const x of [VENT.x0, 0, VENT.x1]) caja(k.base, pz, x - 0.06, x + 0.06, VENT.y0, VENT.y1, S.z0 - 0.04, S.z0 + 0.06, A.acero)
+  }
   k.compuertas.push({ x: 0, z: (CORREDOR.z1 + S.z0) / 2, eje: "x", ancho: 4.2, alto: 3.4, grosor: 1, abierta: 0 })
   muro(k, pz, "z", S.z0, S.z1, S.x0 - 1, S.x0, Y0, yT)
   muro(k, pz, "z", S.z0, S.z1, S.x1, S.x1 + 1, Y0, yT)
@@ -1932,8 +2377,61 @@ function construirCamara(k: Kit, pz: Piezas) {
   // El interior: un cubo blanco con la grilla de luz.
   k.grilla.agregar(horizontal(S, Y0 + 0.004))
   k.grilla.agregar(horizontal(S, yT - 0.004, true))
-  for (const g of carasInteriores({ x0: S.x0 + 0.004, x1: S.x1 - 0.004, z0: S.z0 + 0.004, z1: S.z1 - 0.004 }, Y0, yT)) k.grilla.agregar(g)
-  letrero(k, pz, "camara", 0, Y0 + 5.2, S.z0 + 0.02, 0, 0.5)
+  const caras = carasInteriores({ x0: S.x0 + 0.004, x1: S.x1 - 0.004, z0: S.z0 + 0.004, z1: S.z1 - 0.004 }, Y0, yT)
+  // La cara norte lleva el hueco de la ventana de observación: va en cuatro paños.
+  const Zv = new THREE.Vector3(0, 0, 1)
+  const zN = S.z0 + 0.004
+  caras[0].dispose()
+  for (const g of [
+    cara(S.x0, zN, S.x1, zN, Y0, VENT.y0, Zv),
+    cara(S.x0, zN, S.x1, zN, VENT.y1, yT, Zv, 0, Y0),
+    cara(S.x0, zN, VENT.x0, zN, VENT.y0, VENT.y1, Zv, 0, Y0),
+    cara(VENT.x1, zN, S.x1, zN, VENT.y0, VENT.y1, Zv, VENT.x1 - S.x0, Y0),
+    caras[1],
+    caras[2],
+    caras[3],
+  ])
+    k.grilla.agregar(g)
+  letrero(k, pz, "camara", 0, Y0 + 4.3, S.z0 + 0.02, 0, 0.5)
+  // Estaciones de carga de los robots contra el muro este (los robots no pasan de |x| = 12).
+  for (const z of [100.5, 104.5, 108.5]) {
+    caja(k.base, pz, S.x1 - 0.7, S.x1, Y0, Y0 + 1.4, z - 0.7, z + 0.7, acabado("#e9eef2", 0.4, 0.1))
+    caja(k.base, pz, S.x1 - 1.4, S.x1 - 0.7, Y0, Y0 + 0.06, z - 0.6, z + 0.6, A.aceroOsc)
+    k.luz.agregar(pz.caja, M(S.x1 - 0.71, Y0 + 1.1, z, 0, 0.02, 0.05, 0.9), luz(P.cian, 3, 0, 1.1))
+    k.luz.agregar(pz.caja, M(S.x1 - 1.05, Y0 + 0.065, z, 0, 0.5, 0.005, 1.0), luz(P.cian, 1.0, 0))
+  }
+  // Un brazo industrial de pruebas en la esquina suroeste, sobre su pedestal.
+  {
+    const bx = S.x0 + 1.3
+    const bz = S.z1 - 1.3
+    k.base.agregar(pz.cil16, M(bx, Y0 + 0.4, bz, 0, 0.55, 0.8, 0.55), A.grafito)
+    k.base.agregar(pz.cil16, M(bx, Y0 + 0.92, bz, 0, 0.42, 0.24, 0.42), acabado(P.ambar, 0.45, 0.2))
+    const hombro = new THREE.Vector3(bx, Y0 + 1.1, bz)
+    const codo = new THREE.Vector3(bx + 0.5, Y0 + 2.5, bz - 0.4)
+    const muneca = new THREE.Vector3(bx + 1.0, Y0 + 2.1, bz - 0.8)
+    tubo(k.base, pz, hombro, codo, 0.17, acabado(P.ambar, 0.45, 0.2))
+    tubo(k.base, pz, codo, muneca, 0.12, acabado(P.ambar, 0.45, 0.2))
+    k.base.agregar(pz.esfera, M(codo.x, codo.y, codo.z, 0, 0.22, 0.22, 0.22), A.grafito)
+    k.base.agregar(pz.esfera, M(muneca.x, muneca.y, muneca.z, 0, 0.15, 0.15, 0.15), A.grafito)
+    k.luz.agregar(pz.esfera, M(muneca.x + 0.12, muneca.y - 0.12, muneca.z - 0.1, 0, 0.05, 0.05, 0.05), luz(P.cian, 5, 0, 2))
+    // Cerco de seguridad pintado alrededor del brazo.
+    lineaPiso(k, pz, [[S.x0 + 0.1, S.z1 - 3.4], [S.x0 + 3.4, S.z1 - 3.4], [S.x0 + 3.4, S.z1 - 0.1]], P.amarillo)
+  }
+  // Pistas pintadas en el piso: dos plataformas de aterrizaje para drones (anillos), al ras.
+  for (const [x, z] of [
+    [-6.5, 102],
+    [6.5, 107.5],
+  ]) {
+    const aro = new THREE.TorusGeometry(1.4, 0.07, 3, 40)
+    aro.rotateX(Math.PI / 2)
+    k.base.agregar(aro, M(x, Y0 + 0.012, z, 0, 1, 0.08, 1), acabado(P.amarillo, 0.5, 0, 0, P.amarillo, 0.25))
+    aro.dispose()
+    k.base.agregar(pz.caja, M(x, Y0 + 0.008, z, 0, 0.9, 0.01, 0.12), acabado(P.amarillo, 0.5, 0))
+    k.base.agregar(pz.caja, M(x, Y0 + 0.008, z, Math.PI / 2, 0.9, 0.01, 0.12), acabado(P.amarillo, 0.5, 0))
+  }
+  // Un técnico con una tableta junto a la puerta (fuera del área de la cámara).
+  figura(k, pz, 3.6, Y0, S.z0 + 0.7, 0, "trabaja", ROPA.tecnico, 63)
+  caja(k.base, pz, 3.42, 3.78, Y0 + 0.93, Y0 + 0.96, S.z0 + 0.98, S.z0 + 1.2, acabado("#0b1015", 0.2, 0.3, 0, P.cian, 0.7))
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1949,18 +2447,23 @@ type Vista = { pos: [number, number, number]; mira: [number, number, number]; fo
  * piso y mirando un poco hacia abajo (la órbita no pasa de 83° desde arriba).
  */
 export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea" | "torres" | "anden" | "control" | "comedor" | "jardin" | "camara", Vista> = {
-  // Desde el pie del pozo hacia arriba: el ascensor, el balcón y las galerías (el final del Descenso).
-  mirador: { pos: [5.2, Y0 + 2.0, 41.2], mira: [-0.5, Y0 + 8.6, 24], fov: 60 },
+  // Desde el pie del pozo (esquina suroeste, fuera del área del Atrio) hacia arriba: el ascensor, el balcón,
+  // las galerías y, a la derecha, la sala de control encendida detrás del vidrio (el final del Descenso).
+  mirador: { pos: [-9.3, Y0 + 2.2, 42.9], mira: [1.0, Y0 + 8.4, 24], fov: 60 },
   // Desde la primera galería (lado oeste, por fuera de las cajas de los ascensores): el atrio abajo y las galerías de enfrente.
   plaza: { pos: [-8.8, Y0 + 10, 25], mira: [2.5, Y0 + 0.5, 41], fov: 64 },
-  avenida: { pos: [1.5, Y0 + 2.9, 94.8], mira: [-0.4, Y0 + 0.1, 76], fov: 60 },
+  // El corredor mide 6 m: la cámara va al fondo, contra la puerta de la cámara de pruebas y cerca del techo.
+  avenida: { pos: [2.6, Y0 + 3.6, 95.8], mira: [-0.4, Y0 + 0.1, 76], fov: 60 },
   aerea: { pos: [31, Y0 + 13.5, 107.5], mira: [-4, Y0, 52], fov: 55 },
-  torres: { pos: [-5.6, Y0 + 3.6, 91], mira: [-18, Y0 + 0.5, 74], fov: 62 },
-  anden: { pos: [-13.2, Y0 + 4.6, 42.8], mira: [-27, Y0 + 0.5, 22], fov: 62 },
+  // Desde el fondo del laboratorio 4: la mesada con el personal adelante y, detrás del vidrio, el pasillo y los otros módulos.
+  torres: { pos: [-28.6, Y0 + 2.9, 92.4], mira: [-12, Y0 + 0.9, 80], fov: 62 },
+  anden: { pos: [-15.2, Y0 + 4.2, 43.4], mira: [-27, Y0 + 0.5, 22], fov: 62 },
   // La pantalla curva con el contador, de frente y por el costado del núcleo (que no la tapa).
-  control: { pos: [16, Y0 + 3.2, 34.5], mira: [33.5, Y0 + 3.6, 21.5], fov: 58 },
-  comedor: { pos: [5.5, Y0 + 3.6, 66.8], mira: [19, Y0 + 0.6, 54], fov: 62 },
-  jardin: { pos: [6.2, Y0 + 3.3, 70.2], mira: [21, Y0 + 0.9, 83], fov: 62 },
+  // Los ojos de las vistas quedan a 1,5 m o más del área por donde camina la gente (si no, una cabeza tapa el cuadro).
+  control: { pos: [21.2, Y0 + 3.4, 38.6], mira: [33.5, Y0 + 3.4, 21.5], fov: 58 },
+  // Desde la esquina sureste, por encima de las mesas: la gente comiendo adelante, la barra y la franja oeste atrás.
+  comedor: { pos: [25.4, Y0 + 3.5, 67.4], mira: [12, Y0 + 0.6, 52], fov: 62 },
+  jardin: { pos: [4.6, Y0 + 3.4, 92.5], mira: [20, Y0 + 0.9, 76], fov: 62 },
   camara: { pos: [-12.6, Y0 + 7, 110.6], mira: [4, Y0 + 1.5, 101], fov: 64 },
 }
 
@@ -1978,10 +2481,11 @@ export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea" | "
 const DESCENSO = {
   /** Del centro del vacío (al sur de los ascensores) al pie del pozo. */
   desde: { x: -1.5, z: 30 },
-  hasta: { x: 3.2, z: 40.5 },
+  hasta: { x: -8.9, z: 42.5 },
   /** Rumbo (0 = +z) y cabeceo (grados; negativo = hacia abajo). */
-  rumbo: [0.15 * Math.PI, Math.PI],
-  cabeceo: [-78, 20],
+  // Termina con el rumbo de VISTAS_CIUDAD.mirador (hacia el ascensor y la sala de control, no contra el muro oeste).
+  rumbo: [0.15 * Math.PI, 2.64],
+  cabeceo: [-78, 17],
   fov: [70, 60],
 }
 export function tomaDescensoCiudad(t: number, pos: THREE.Vector3, mira: THREE.Vector3): number {
@@ -2000,6 +2504,53 @@ export function tomaDescensoCiudad(t: number, pos: THREE.Vector3, mira: THREE.Ve
   return THREE.MathUtils.lerp(D.fov[0], D.fov[1], k)
 }
 
+/**
+ * Solo para verificar (scripts de prueba, sin navegador): arma lo FIJO de la
+ * instalación igual que construirCiudad y devuelve las mallas que ocupan
+ * lugar (lote base, chevrones, vidrios). El verificador las cruza con las
+ * áreas donde camina la gente y con las aristas del grafo: así no depende de
+ * una copia a mano de los muebles.
+ */
+export function geometriaFijaCiudad(): THREE.BufferGeometry[] {
+  const pz = crearPiezas()
+  const rnd = semilla(1792)
+  const k: Kit = {
+    base: new Lote(PBR),
+    techo: new Lote(PBR),
+    oficinas: new Lote(),
+    luz: new Lote([
+      ["color", 3],
+      ["aPulso", 1],
+      ["aTurno", 1],
+    ]),
+    vidrio: new Lote(),
+    vidrioPiso: new Lote(),
+    vidrioBaranda: new Lote(),
+    esmerilado: new Lote(),
+    grilla: new Lote(),
+    chevron: new Lote(),
+    senal: new Lote(),
+    pantalla: new Lote(),
+    reflejos: [],
+    vapores: [],
+    plantas: [],
+    compuertas: [],
+    balizas: [],
+    celdas: {},
+  }
+  const stub = new THREE.MeshBasicMaterial()
+  construirPozo(k, pz)
+  construirAscensores(k, pz, { base: stub, vidrio: stub } as unknown as MaterialesCiudad, false)
+  construirAnden(k, pz)
+  construirControl(k, pz)
+  construirCorredor(k, pz)
+  construirLabs(k, pz, rnd)
+  construirComedor(k, pz)
+  construirJardin(k, pz, rnd)
+  construirCamara(k, pz)
+  return [k.base, k.chevron, k.vidrio, k.vidrioBaranda, k.esmerilado].map((l) => l.geometria()).filter((g): g is THREE.BufferGeometry => !!g)
+}
+
 export function construirCiudad(ctx: CtxEscena): void {
   const grupo = ctx.niveles.ciudad
   if (!grupo) {
@@ -2014,7 +2565,11 @@ export function construirCiudad(ctx: CtxEscena): void {
   lienzoP.width = PANT_W
   lienzoP.height = PANT_H
   const gP = lienzoP.getContext("2d")!
-  dibujarPantalla(gP, "12:00", 0)
+  // El día del reto se fija al construir. El estudio puede pasar la fecha del episodio en ctx.ahora (ms)
+  // para que el mismo episodio dé los mismos cuadros cualquier día que se grabe.
+  const ahora = (ctx as CtxEscena & { ahora?: number }).ahora ?? Date.now()
+  const dia = diaDelReto(ahora)
+  dibujarPantalla(gP, "12:00", 0, dia)
   const texP = new THREE.CanvasTexture(lienzoP)
   texP.colorSpace = THREE.SRGBColorSpace
   texP.anisotropy = 4
@@ -2022,13 +2577,14 @@ export function construirCiudad(ctx: CtxEscena): void {
   lienzoA.width = ATLAS_W
   lienzoA.height = ATLAS_H
   const gA = lienzoA.getContext("2d")!
-  const celdas = dibujarAtlas(gA)
+  const celdas = repartirAtlas(gA)
+  dibujarAtlas(gA, celdas)
   const texA = new THREE.CanvasTexture(lienzoA)
   texA.colorSpace = THREE.SRGBColorSpace
   texA.anisotropy = 4
-  // Si la fuente de la web todavía no cargó, los letreros se redibujan cuando llegue.
+  // Si la fuente de la web todavía no cargó, los letreros se repintan cuando llegue, en las MISMAS celdas.
   document.fonts?.ready.then(() => {
-    dibujarAtlas(gA)
+    dibujarAtlas(gA, celdas)
     texA.needsUpdate = true
   })
 
@@ -2046,6 +2602,8 @@ export function construirCiudad(ctx: CtxEscena): void {
       ["aTurno", 1],
     ]),
     vidrio: new Lote(),
+    vidrioPiso: new Lote(),
+    vidrioBaranda: new Lote(),
     esmerilado: new Lote(),
     grilla: new Lote(),
     chevron: new Lote(),
@@ -2107,6 +2665,8 @@ export function construirCiudad(ctx: CtxEscena): void {
   poner(k.luz, mats.luz, "ciudad-luces")
   poner(k.pantalla, mats.pantalla, "ciudad-pantalla")
   poner(k.vidrio, mats.vidrio, "ciudad-vidrio", { orden: 3 })
+  poner(k.vidrioPiso, mats.vidrioPiso, "ciudad-vidrio-piso", { orden: 2 })
+  poner(k.vidrioBaranda, mats.vidrioBaranda, "ciudad-vidrio-baranda", { orden: 3 })
   poner(k.esmerilado, mats.esmerilado, "ciudad-esmerilado", { orden: 3 })
   poner(k.senal, mats.senal, "ciudad-senales", { orden: 4 })
 
@@ -2121,7 +2681,7 @@ export function construirCiudad(ctx: CtxEscena): void {
   const geoBaliza = new THREE.ConeGeometry(0.16, 0.5, 10)
   geoBaliza.rotateZ(-Math.PI / 2)
   geoBaliza.translate(0.25, 0, 0)
-  const balizas = new THREE.InstancedMesh(geoBaliza, new THREE.MeshBasicMaterial({ name: "ciudad-balizas", color: new THREE.Color(P.ambar).multiplyScalar(5) }), Math.max(1, k.balizas.length))
+  const balizas = new THREE.InstancedMesh(geoBaliza, new THREE.MeshBasicMaterial({ name: "ciudad-balizas", color: new THREE.Color(P.ambar).multiplyScalar(2.5) }), Math.max(1, k.balizas.length))
   balizas.name = "ciudad-balizas"
   balizas.frustumCulled = false
   grupo.add(balizas)
@@ -2146,6 +2706,12 @@ export function construirCiudad(ctx: CtxEscena): void {
   escaneo.renderOrder = 6
   escaneo.position.set(0, Y0 + CORREDOR.alto / 2, CORREDOR.z0 + 2)
   grupo.add(escaneo)
+  // Desde la vista en corte (cámara por encima del techo del corredor) el arco asomaba por encima del muro
+  // como un triángulo cian suelto: solo se ve desde adentro.
+  let alfaEscaneo = 0
+  escaneo.onBeforeRender = (_r, _s, cam) => {
+    ;(mats.escaneo.uniforms.uAlfa as THREE.IUniform<number>).value = cam.position.y > Y0 + CORREDOR.alto + 0.2 ? 0 : alfaEscaneo
+  }
 
   // ── Núcleo de IA: anillos de luz apilados que pulsan en cian ──
   const N_ANILLOS = 12
@@ -2266,10 +2832,10 @@ export function construirCiudad(ctx: CtxEscena): void {
     grupo.add(l)
     luces.push({ l, base: intensidad, turno })
   }
-  poneLuz(0, Y0 + 5, 33, "#eaf4ff", 90, 30, 0.4)
+  poneLuz(0, Y0 + 6.5, 33, "#eaf4ff", 90, 32, 0.4)
   poneLuz(NUCLEO.x - 3, Y0 + 4.5, NUCLEO.z, "#56c8ff", 70, 24, -0.3)
   poneLuz(-22, Y0 + 5.5, 28, "#eef3ff", 80, 30, 0.4)
-  poneLuz(0, Y0 + 8, cz(CAMARA), "#e6f7ff", 45, 22, 0.3)
+  poneLuz(0, Y0 + 6, cz(CAMARA), "#e6f7ff", 32, 22, 0.3)
   poneLuz(20, Y0 + 3.4, cz(JARDIN), P.magenta, 45, 18, 0)
 
   // ── Lugares que se pueden tocar: cajas invisibles (no dibujan) sobre cada lugar ──
@@ -2303,7 +2869,9 @@ export function construirCiudad(ctx: CtxEscena): void {
   const _m = new THREE.Matrix4()
   const _e = new THREE.Euler()
   const _c = new THREE.Color()
+  const C_CIAN = new THREE.Color(P.cian)
   let ultimaPantalla = -99
+  let ultimoMinuto = -1
   // Los personajes que están en la instalación (para abrir las compuertas a su paso).
   let avatares: THREE.Object3D | null = null
   const buscarAvatares = () => {
@@ -2330,23 +2898,30 @@ export function construirCiudad(ctx: CtxEscena): void {
   const T_SALE = 10
   const T_FUERA = 9
   const CICLO_TREN = T_ENTRA + 2 * T_PUERTA + T_ESPERA + T_SALE + T_FUERA
+  const _tren = { z: 0, puerta: 0 }
+  const fija = (z: number, puerta: number) => {
+    _tren.z = z
+    _tren.puerta = puerta
+    return _tren
+  }
+  /** Dónde está el frente del tren y cuánto abren las puertas (escribe en un objeto reusado). */
   const frenteTren = (c: number): { z: number; puerta: number } => {
     if (c < T_ENTRA) {
       const s = c / T_ENTRA
-      return { z: PARADA - RECORRIDO * (1 - s) * (1 - s), puerta: 0 }
+      return fija(PARADA - RECORRIDO * (1 - s) * (1 - s), 0)
     }
     c -= T_ENTRA
-    if (c < T_PUERTA) return { z: PARADA, puerta: smooth(0, 1, c / T_PUERTA) }
+    if (c < T_PUERTA) return fija(PARADA, smooth(0, 1, c / T_PUERTA))
     c -= T_PUERTA
-    if (c < T_ESPERA) return { z: PARADA, puerta: 1 }
+    if (c < T_ESPERA) return fija(PARADA, 1)
     c -= T_ESPERA
-    if (c < T_PUERTA) return { z: PARADA, puerta: 1 - smooth(0, 1, c / T_PUERTA) }
+    if (c < T_PUERTA) return fija(PARADA, 1 - smooth(0, 1, c / T_PUERTA))
     c -= T_PUERTA
     if (c < T_SALE) {
       const s = c / T_SALE
-      return { z: PARADA - RECORRIDO * s * s, puerta: 0 }
+      return fija(PARADA - RECORRIDO * s * s, 0)
     }
-    return { z: PARADA - RECORRIDO, puerta: 0 }
+    return fija(PARADA - RECORRIDO, 0)
   }
 
   const actualizar = (tick: TickEscena) => {
@@ -2358,12 +2933,15 @@ export function construirCiudad(ctx: CtxEscena): void {
     u.noche.value = noche
     u.reflejo.value = 0.7 + 0.3 * noche
 
-    // La pantalla se redibuja cada 2 s (la hora y el brillo que la barre).
-    if (t - ultimaPantalla > 2 || ultimaPantalla < 0) {
+    // La pantalla se redibuja cuando cambia el minuto (la hora del mundo, desde el primer cuadro)
+    // y cada 2 s por el brillo que la barre.
+    const minuto = Math.floor((((tick.hora % 24) + 24) % 24) * 60)
+    if (minuto !== ultimoMinuto || t - ultimaPantalla > 2 || t < ultimaPantalla) {
       ultimaPantalla = t
-      const hh = Math.floor(tick.hora)
-      const mm = Math.floor((tick.hora - hh) * 60)
-      dibujarPantalla(gP, `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`, (t % 8) / 8)
+      ultimoMinuto = minuto
+      const hh = Math.floor(minuto / 60)
+      const mm = minuto % 60
+      dibujarPantalla(gP, `${hh < 10 ? "0" : ""}${hh}:${mm < 10 ? "0" : ""}${mm}`, (t % 8) / 8, dia)
       texP.needsUpdate = true
     }
 
@@ -2406,7 +2984,8 @@ export function construirCiudad(ctx: CtxEscena): void {
 
     // Compuertas: se abren (0,6 s) cuando alguien pasa cerca, y se cierran solas.
     if (!avatares || !avatares.parent) avatares = buscarAvatares()
-    k.compuertas.forEach((c, i) => {
+    for (let i = 0; i < k.compuertas.length; i++) {
+      const c = k.compuertas[i]
       const objetivo = alguienCerca(c.x, c.z, 5) ? 1 : 0
       const paso = Math.min(tick.dt, 0.1) / 0.6
       c.abierta = Math.min(1, Math.max(0, c.abierta + Math.max(-paso, Math.min(paso, objetivo - c.abierta))))
@@ -2419,15 +2998,15 @@ export function construirCiudad(ctx: CtxEscena): void {
         else _m.compose(_p.set(c.x, Y0 + c.alto / 2, c.z + corr), _q.identity(), _s.set(0.6, c.alto, medio))
         hojas.setMatrixAt(i * 2 + h, _m)
       }
-    })
+    }
     hojas.instanceMatrix.needsUpdate = true
 
     // Balizas: giran siempre (la instalación está en marcha).
-    k.balizas.forEach((b, i) => {
+    for (let i = 0; i < k.balizas.length; i++) {
       _e.set(0, t * 4 + i * 1.7, 0)
-      _m.compose(b, _q.setFromEuler(_e), _s.set(1, 1, 1))
+      _m.compose(k.balizas[i], _q.setFromEuler(_e), _s.set(1, 1, 1))
       balizas.setMatrixAt(i, _m)
-    })
+    }
     balizas.instanceMatrix.needsUpdate = true
 
     // El arco de escaneo recorre el corredor despacio cada 14 s.
@@ -2435,13 +3014,13 @@ export function construirCiudad(ctx: CtxEscena): void {
       const c = t % 14
       const s = smooth(0, 11, c)
       escaneo.position.z = THREE.MathUtils.lerp(CORREDOR.z0 + 2, CORREDOR.z1 - 0.5, s)
-      ;(mats.escaneo.uniforms.uAlfa as THREE.IUniform<number>).value = smooth(0, 0.8, c) * (1 - smooth(10.2, 11.2, c))
+      alfaEscaneo = smooth(0, 0.8, c) * (1 - smooth(10.2, 11.2, c))
     }
 
     // Núcleo: una onda de luz sube por los anillos.
     for (let i = 0; i < N_ANILLOS; i++) {
       const w = 0.5 + 0.5 * Math.sin(t * 2.2 - i * 0.55)
-      anillos.setColorAt(i, _c.set(P.cian).multiplyScalar(1.2 + 5 * w * w))
+      anillos.setColorAt(i, _c.copy(C_CIAN).multiplyScalar(1.2 + 5 * w * w))
     }
     if (anillos.instanceColor) anillos.instanceColor.needsUpdate = true
 
@@ -2495,5 +3074,5 @@ export function construirCiudad(ctx: CtxEscena): void {
   actualizar({ dt: 0, tiempo: 0, hora: 12, noche: 0 })
 
   // ── Limpieza de piezas temporales (la caja la usan los tocables; la mata, las plantas) ──
-  for (const g of [pz.cil8, pz.cil16, pz.cil24, pz.esfera, pz.plano]) g.dispose()
+  for (const g of [pz.cil8, pz.cil16, pz.cil24, pz.esfera, pz.bola, pz.plano]) g.dispose()
 }

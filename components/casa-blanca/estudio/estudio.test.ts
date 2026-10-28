@@ -88,12 +88,24 @@ async function main() {
 
   seccion("El calendario (episodios.ts)")
   {
+    // Con las tomas de verdad (las del motor), no las de repuesto: si no, una toma inventada pasaría.
+    ok(TOMAS.some((t) => t.id === "ciudad" && t.duracion === 16), "las tomas salen del motor (motor-camara.ts), no de la lista de repuesto")
     const vistos = new Set<string>()
     for (const e of CALENDARIO) {
       const errores = guionValido(e.episodio, ids)
       ok(errores.length === 0, `${e.episodio.id}: guion válido (${errores.join(" | ")})`)
       ok(!vistos.has(e.episodio.id), `${e.episodio.id}: id único`)
       vistos.add(e.episodio.id)
+      const av = avisosDelEpisodio(e.episodio, TOMAS)
+      ok(av.length === 0, `${e.episodio.id}: sin avisos del estudio (${av.join(" | ")})`)
+      // Quien habla tiene que estar en cuadro: es el seguido o lo reúne el plano (si no, la burbuja no tiene a quién apuntar).
+      e.episodio.planos.forEach((p, i) => {
+        const c = p.camara
+        const en = new Set([...(c.tipo !== "lugar" && c.personaje ? [c.personaje] : []), ...(p.reunir ?? [])])
+        const fuera = (p.dialogo ?? []).filter((l) => !en.has(l.quien)).map((l) => l.quien)
+        ok(fuera.length === 0, `${e.episodio.id} plano ${i + 1}: habla quien está en cuadro (fuera: ${fuera.join(", ")})`)
+      })
+      ok(e.episodio.formato === "16:9" || e.episodio.formato === "4:3", `${e.episodio.id}: horizontal (16:9 o 4:3)`)
     }
     ok(!vistos.has("muestra"), "ningún episodio del calendario se llama \"muestra\"")
     console.log(`  (${CALENDARIO.length} episodios en el calendario)`)
@@ -109,11 +121,11 @@ async function main() {
       planos: [
         { dur: 0, camara: { tipo: "toma", toma: "no-existe" }, hora: "25:00", visor: "tele" as never },
         { dur: 3, camara: { tipo: "seguir", personaje: "nadie" }, reunir: ["fantasma"], dialogo: [{ quien: "otro", texto: " " }] },
-        { dur: 3, camara: { tipo: "lugar", lugar: "marte" } },
+        { dur: 3, camara: { tipo: "lugar", lugar: "marte" }, tituloEn: "abajo" as never },
       ],
     }
     const e = guionValido(malo, ids)
-    for (const parte of ["id", "formato", "dur 0", "hora", "visor \"tele\"", "no-existe", "\"nadie\"", "fantasma", "\"otro\"", "vacía", "marte"])
+    for (const parte of ["id", "formato", "dur 0", "hora", "visor \"tele\"", "no-existe", "\"nadie\"", "fantasma", "\"otro\"", "vacía", "marte", "tituloEn"])
       ok(e.some((x) => x.includes(parte)), `marca: ${parte}`)
   }
 
@@ -234,7 +246,7 @@ async function main() {
   {
     const largo: Episodio = { ...MUESTRA, id: "largo", planos: [{ dur: 20, camara: { tipo: "toma", toma: "sala-guerra" } }] }
     const av = avisosDelEpisodio(largo, TOMAS)
-    ok(av.some((a) => a.includes("se repite")), "una toma más corta que el plano avisa que se repite")
+    ok(av.some((a) => a.includes("queda quieta")), "una toma más corta que el plano avisa que la cámara queda quieta")
     const rapido: Episodio = { ...MUESTRA, id: "rapido", planos: [{ dur: 1, camara: { tipo: "lugar", lugar: "rosas" }, dialogo: [{ quien: "trump", texto: "Una línea demasiado larga para un segundo de pantalla." }] }] }
     ok(avisosDelEpisodio(rapido, TOMAS).some((a) => a.includes("caracteres por segundo")), "una línea que no se alcanza a leer avisa")
     const sinLugar: Episodio = { ...MUESTRA, id: "sin-lugar", planos: [{ dur: 3, camara: { tipo: "toma", toma: "dron" }, reunir: ["trump"] }] }

@@ -6,7 +6,8 @@
 // - Subsuelos: letreros flotantes sobre cada celda (departamento y líder) y
 //   sobre el núcleo de ascensores; pasillos rotulados en el piso y una línea
 //   dorada que lleva del ascensor a cada pasillo.
-// - Ciudad: un letrero flotante sobre cada lugar y otro sobre el ascensor.
+// - Ciudad: un letrero flotante sobre cada lugar; en el pozo, placas montadas
+//   (sobre la puerta del ascensor y en el canto de las galerías).
 //
 // Los letreros flotantes son "billboards": siempre de frente a la cámara y con
 // un tamaño que crece con la distancia (dentro de un rango), para que se lean
@@ -166,7 +167,8 @@ void main() {
  * Una malla con todos los letreros de un nivel. `ref`: distancia (m) a la
  * que el letrero mide su ancho; más lejos crece hasta `max` veces.
  */
-function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max: number; cerca: [number, number]; brillo: number; nombre: string; encima?: boolean }) {
+/** Atlas de letreros: dos casillas por fila; `uv(i)` da u0, u1, v0, v1 de la casilla i. */
+function atlasLetreros(letreros: Letrero[]) {
   const filas = Math.ceil(letreros.length / 2)
   const W = SLOT_W * 2
   const H = Math.max(SLOT_H, THREE.MathUtils.ceilPowerOfTwo(filas * SLOT_H))
@@ -189,6 +191,18 @@ function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max:
     dibujar()
     tex.needsUpdate = true
   })
+  const uv = (i: number) => {
+    const u0 = ((i % 2) * SLOT_W) / W
+    const v1 = 1 - (Math.floor(i / 2) * SLOT_H) / H
+    return { u0, u1: u0 + SLOT_W / W, v0: v1 - SLOT_H / H, v1 }
+  }
+  return { tex, uv }
+}
+
+function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max: number; cerca: [number, number]; brillo: number; nombre: string; encima?: boolean }) {
+  const atlas = atlasLetreros(letreros)
+  if (!atlas) return null
+  const tex = atlas.tex
 
   const n = letreros.length
   const pos = new Float32Array(n * 4 * 3)
@@ -197,10 +211,7 @@ function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max:
   const uv = new Float32Array(n * 4 * 2)
   const idx: number[] = []
   letreros.forEach((l, i) => {
-    const u0 = ((i % 2) * SLOT_W) / W
-    const u1 = u0 + SLOT_W / W
-    const v1 = 1 - (Math.floor(i / 2) * SLOT_H) / H
-    const v0 = v1 - SLOT_H / H
+    const { u0, u1, v0, v1 } = atlas.uv(i)
     const alto = (l.ancho * SLOT_H) / SLOT_W
     const esquinas: Array<[number, number, number, number]> = [
       [-0.5, 0, u0, v0],
@@ -253,6 +264,78 @@ function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max:
   // Son de juego, no del mundo: el motor los oculta en las tomas de cine y en el estudio.
   m.userData.letreroFlotante = true
   return m
+}
+
+const VERT_PLACA = /* glsl */ `
+varying vec2 vUv;
+varying float vAlfa;
+void main() {
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vUv = uv;
+  vAlfa = 1.0;
+}`
+
+/** Un letrero montado (no flota): de frente según `giro` (0 = mira a +z), con su caja oscura detrás. */
+interface Placa extends Letrero {
+  giro: number
+}
+
+/**
+ * Placas fijas, como la señalética de un edificio de verdad: no giran con la
+ * cámara ni cambian de tamaño. (x, y, z) es el centro de abajo de la placa,
+ * apoyada en la cara de lo que la sostiene; la placa sale 0,14 m hacia `giro`.
+ * Un solo grupo marcado como letrero de juego: el motor lo oculta en el cine y
+ * en el estudio, igual que los flotantes.
+ */
+function placasFijas(placas: Placa[], op: { brillo: number; nombre: string }) {
+  const atlas = atlasLetreros(placas.map((p) => ({ ...p, forma: "placa" as const })))
+  if (!atlas) return null
+  const planos: THREE.BufferGeometry[] = []
+  const cajas: THREE.BufferGeometry[] = []
+  const m4 = new THREE.Matrix4()
+  const q = new THREE.Quaternion()
+  const eje = new THREE.Vector3(0, 1, 0)
+  placas.forEach((p, i) => {
+    const alto = (p.ancho * SLOT_H) / SLOT_W
+    const nx = Math.sin(p.giro)
+    const nz = Math.cos(p.giro)
+    q.setFromAxisAngle(eje, p.giro)
+    const plano = new THREE.PlaneGeometry(p.ancho, alto)
+    const { u0, u1, v0, v1 } = atlas.uv(i)
+    const uv = plano.getAttribute("uv") as THREE.BufferAttribute
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k) < 0.5 ? u0 : u1, uv.getY(k) < 0.5 ? v0 : v1)
+    m4.compose(new THREE.Vector3(p.x + nx * 0.14, p.y + alto / 2, p.z + nz * 0.14), q, new THREE.Vector3(1, 1, 1))
+    planos.push(plano.applyMatrix4(m4))
+    // La caja de la placa (lo dibujado ocupa de 10 a 238 de los 256 px de alto).
+    const caja = new THREE.BoxGeometry(p.ancho * 0.96, alto * 0.84, 0.12)
+    m4.compose(new THREE.Vector3(p.x + nx * 0.07, p.y + alto * (1 - 124 / 256), p.z + nz * 0.07), q, new THREE.Vector3(1, 1, 1))
+    cajas.push(caja.applyMatrix4(m4))
+  })
+  const grupo = new THREE.Group()
+  grupo.name = op.nombre
+  const mat = new THREE.ShaderMaterial({
+    name: op.nombre,
+    uniforms: {
+      uMapa: { value: atlas.tex },
+      uBrillo: { value: op.brillo },
+      uOpacidad: { value: 1 },
+    },
+    vertexShader: VERT_PLACA,
+    fragmentShader: FRAG_LETRERO,
+    transparent: true,
+    depthWrite: false,
+  })
+  const caras = new THREE.Mesh(mergeGeometries(planos), mat)
+  caras.name = `${op.nombre}-caras`
+  caras.renderOrder = 20
+  caras.raycast = () => {}
+  const fondo = new THREE.Mesh(mergeGeometries(cajas), new THREE.MeshStandardMaterial({ name: `${op.nombre}-cajas`, color: 0x0b0e13, roughness: 0.55, metalness: 0.3 }))
+  fondo.name = `${op.nombre}-cajas`
+  fondo.raycast = () => {}
+  for (const g of [...planos, ...cajas]) g.dispose()
+  grupo.add(fondo, caras)
+  grupo.userData.letreroFlotante = true
+  return grupo
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -451,22 +534,64 @@ function construirSubsuelos(ctx: CtxEscena, piso: ReturnType<typeof atlasPiso>) 
 // Ciudad
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * El pozo de la ciudad (medidas de escena/ciudad.ts: POZO, VACIO, GALERIAS y
+ * ELEV). Ahí un letrero flotante quedaba colgado en el vacío, delante de los
+ * ascensores de vidrio: los del pozo van montados donde los pondría la
+ * instalación de verdad.
+ */
+const POZO_CIUDAD = {
+  /** El canto de las galerías del lado del vacío (norte y sur). */
+  cantoNorte: 14.5,
+  cantoSur: 41.5,
+  /** Lo de abajo de la losa de la primera galería, sobre el piso. */
+  losa: 7.6,
+  /** Las dos cajas de vidrio de los ascensores: ±dx del eje, de ±medio de lado. */
+  elevDx: 2.2,
+  elevMedio: 1.3,
+  /** El letrero "ascensor" que ciudad.ts pone sobre las puertas termina a esta altura. */
+  sobrePuerta: 3.55,
+}
+
+/** Dónde se montan los letreros de los lugares del pozo (por id de lugares.ts). */
+function montajePozo(id: string, y0: number): Array<Omit<Placa, "titulo" | "color" | "sub">> | null {
+  const P = POZO_CIUDAD
+  // Colgados del canto de la primera galería, con el borde de arriba sobre la losa.
+  const colgado = (ancho: number) => y0 + P.losa + 0.32 - (ancho * SLOT_H) / SLOT_W
+  // El atrio: en el canto sur, de cara al ascensor (que es por donde llega la gente).
+  if (id === "ciudad-plaza") return [{ x: 0, y: colgado(5.6), z: P.cantoSur, giro: Math.PI, ancho: 5.6 }]
+  // El balcón: en el canto norte, sobre el piso de vidrio, a los dos lados de los ascensores (que lo tapan al centro).
+  if (id === "ciudad-mirador") {
+    const x = P.elevDx + P.elevMedio + 2.05
+    return [-1, 1].map((s) => ({ x: s * x, y: colgado(3.9), z: P.cantoNorte, giro: 0, ancho: 3.9 }))
+  }
+  return null
+}
+
 function construirCiudadLetreros(ctx: CtxEscena) {
   const grupo = ctx.niveles.ciudad
   if (!grupo) return
   const y0 = ALTURA_NIVEL.ciudad
   const colores = ["#ffc35a", "#3fd6ff", "#ff4fae", "#9a6bff", "#7fd67f"]
-  const letreros: Letrero[] = LUGARES.filter((l) => l.nivel === "ciudad").map((l, i) => {
+  const letreros: Letrero[] = []
+  const placas: Placa[] = []
+  LUGARES.filter((l) => l.nivel === "ciudad").forEach((l, i) => {
     const x = (l.x0 + l.x1) / 2
     const z = (l.z0 + l.z1) / 2
+    const titulo = l.nombre.toUpperCase()
+    const color = colores[i % colores.length]
+    const montaje = montajePozo(l.id, y0)
+    if (montaje) for (const m of montaje) placas.push({ ...m, titulo, color })
     // Bajo el techo y por encima de la cabeza de la gente.
-    const y = Math.min(techoCiudad(x, z) - 3, y0 + 9)
-    return { x, y, z, titulo: l.nombre.toUpperCase(), color: colores[i % colores.length], ancho: 11 }
+    else letreros.push({ x, y: Math.min(techoCiudad(x, z) - 3, y0 + 9), z, titulo, color, ancho: 11 })
   })
+  // El ascensor: sobre sus puertas (lado sur), encima del letrero chico de la instalación.
   const asc = ejeAscensor("ciudad")
-  letreros.push({ x: asc.x, y: Math.min(techoCiudad(asc.x, asc.z) - 3, y0 + 11), z: asc.z, titulo: "ASCENSOR", sub: "SUBSUELOS Y SUPERFICIE ↑", color: CIAN, ancho: 11 })
+  placas.push({ x: asc.x, y: y0 + POZO_CIUDAD.sobrePuerta + 0.15, z: asc.z + POZO_CIUDAD.elevMedio, giro: 0, titulo: "ASCENSOR", sub: "SUBSUELOS Y SUPERFICIE ↑", color: CIAN, ancho: 4.6 })
   const m = mallaLetreros(letreros, { ref: 70, min: 0.7, max: 2.4, cerca: [10, 26], brillo: 1.2, nombre: "navegacion-ciudad-letreros" })
   if (m) grupo.add(m)
+  const p = placasFijas(placas, { brillo: 1.2, nombre: "navegacion-ciudad-placas" })
+  if (p) grupo.add(p)
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -12,9 +12,15 @@
 //
 // "PRIME" nunca se escribe: se dibuja el logo (el mismo archivo que usa
 // components/prime-mark.tsx, dentro del chip celeste #31abc4).
+//
+// La marca del proyecto (la "A con frontón") son imágenes, no texto:
+// public/casa-blanca/marca/video/titulo-16x9.png y titulo-4x3.png en la
+// apertura y en el cierre, y marca-de-agua-600.png arriba durante el video.
+// Se cargan antes del cuadro 0 (Estudio.tsx); si alguna no carga, se escribe
+// el nombre como antes y el estudio lo avisa.
 // ──────────────────────────────────────────────────────────────
 
-import type { Visor } from "./guion"
+import type { Formato, Visor } from "./guion"
 
 export interface Fuentes {
   /** La condensada de la Casa Blanca (cb-cond). */
@@ -23,11 +29,28 @@ export interface Fuentes {
   texto: string
 }
 
+/** Un cuadro de título de la marca: imagen opaca sobre tinta #0A0A0A, del tamaño del video. */
+export interface TituloMarca {
+  img: HTMLImageElement
+  /** Dónde está el logo (con "PROJECT") en la imagen, en fracción de su alto. */
+  arriba: number
+  abajo: number
+}
+
 export interface Recursos {
   fuentes: Fuentes
   /** public/logos/prime-wordmark.png (blanco sobre transparente). */
   logoPrime: HTMLImageElement | null
+  /** public/casa-blanca/marca/video/titulo-16x9.png y titulo-4x3.png. */
+  titulo: Record<Formato, TituloMarca | null>
+  /** public/casa-blanca/marca/video/marca-de-agua-600.png (blanca sobre transparente). */
+  marcaAgua: HTMLImageElement | null
 }
+
+/** Colores de la marca (marca/LEEME.md). */
+export const TINTA = "#0A0A0A"
+export const MARFIL = "#F3EFE6"
+export const DORADO = "#B39668"
 
 export interface DialogoEnCuadro {
   nombre: string
@@ -47,14 +70,15 @@ export interface Capas {
   velo: number
   /** Temblor de mano (solo visor "camara"). */
   pulso: { dx: number; dy: number; giro: number; escala: number } | null
-  titulo: { texto: string; alfa: number } | null
+  titulo: { texto: string; alfa: number; arriba?: boolean } | null
   rotulo: { texto: string; alfa: number } | null
   dialogo: DialogoEnCuadro | null
   /** "CAM 03 · SALA DE GUERRA" (visor "camara"). */
   camara: string | null
   /** Código de tiempo del visor "camara" ("00:00:05:12"). */
   codigo: string | null
-  apertura: { alfa: number; subtitulo: string } | null
+  /** `avance` 0..1 a lo largo de la apertura (el logo se acerca apenas). */
+  apertura: { alfa: number; subtitulo: string; avance: number } | null
   cierre: { alfa: number; negro: number } | null
   /** Etiqueta chica de ficción (todo el video menos la apertura y el cierre). */
   ficcion: boolean
@@ -219,6 +243,34 @@ export function ajustar(
 }
 
 /**
+ * Como ajustar, pero respeta los saltos de línea del texto: cada renglón se
+ * parte solo si no entra. Misma letra para todos (la que hace entrar a todos).
+ */
+export function ajustarRenglones(
+  ctx: CanvasRenderingContext2D,
+  texto: string,
+  base: Omit<Estilo, "tam">,
+  op: { max: number; min: number; ancho: number; maxLineas: number; interlinea?: number },
+): Bloque {
+  const partes = texto.split("\n").filter((s) => s.trim())
+  if (partes.length <= 1) return ajustar(ctx, texto, base, op)
+  let tam = op.max
+  for (;;) {
+    const bloques = partes.map((t) => ajustar(ctx, t, base, { ...op, max: tam, min: tam, maxLineas: op.maxLineas }))
+    const lineas = bloques.reduce((n, b) => n + b.lineas.length, 0)
+    if (lineas <= op.maxLineas || tam <= op.min) {
+      if (lineas > op.maxLineas) return ajustar(ctx, partes.join(" "), base, op)
+      const b0 = bloques[0]
+      const todas = bloques.flatMap((b) => b.lineas)
+      const anchos = bloques.flatMap((b) => b.anchos)
+      const interlinea = tam * (op.interlinea ?? 1.18)
+      return { estilo: b0.estilo, lineas: todas, anchos, ancho: Math.max(0, ...anchos), interlinea, alto: interlinea * (todas.length - 1) + tam, espacio: b0.espacio }
+    }
+    tam = Math.max(op.min, Math.floor(tam * 0.92))
+  }
+}
+
+/**
  * Dibuja un bloque. (x, yArriba) = esquina de arriba; alinear = "izq" | "centro".
  * La primera línea tiene la base en yArriba + 0,8 × tam.
  */
@@ -307,6 +359,30 @@ function sinSombra(ctx: CanvasRenderingContext2D) {
   ctx.shadowOffsetY = 0
 }
 
+/** El cuadro de título que corresponde a W×H (el del otro formato si falta el propio). */
+export function tituloPara(rec: Recursos, W: number, H: number): TituloMarca | null {
+  const propio: Formato = W / H > 1.55 ? "16:9" : "4:3"
+  const t = rec.titulo[propio] ?? rec.titulo[propio === "16:9" ? "4:3" : "16:9"]
+  return t && t.img.complete && t.img.naturalWidth ? t : null
+}
+
+/**
+ * Pinta el cuadro de título: fondo de tinta y la imagen al alto del video,
+ * centrada, corrida `dy` píxeles y con `escala` alrededor del logo.
+ * Devuelve dónde quedó el logo (y de arriba y de abajo, en píxeles).
+ */
+function dibujarTitulo(ctx: CanvasRenderingContext2D, t: TituloMarca, W: number, H: number, dy: number, escala = 1) {
+  const h = H * escala
+  const w = (h * t.img.naturalWidth) / t.img.naturalHeight
+  // El centro del logo queda fijo al escalar.
+  const cLogo = ((t.arriba + t.abajo) / 2) * H
+  const y = cLogo - ((t.arriba + t.abajo) / 2) * h + dy
+  ctx.fillStyle = TINTA
+  ctx.fillRect(0, 0, W, H)
+  ctx.drawImage(t.img, (W - w) / 2, y, w, h)
+  return { arriba: y + t.arriba * h, abajo: y + t.abajo * h }
+}
+
 // ── El cuadro ─────────────────────────────────────────────────
 
 export function componer(ctx: CanvasRenderingContext2D, escena: CanvasImageSource, capas: Capas, rec: Recursos) {
@@ -357,19 +433,16 @@ export function componer(ctx: CanvasRenderingContext2D, escena: CanvasImageSourc
   // 3. Burbuja sobre quien habla.
   // En el visor de cámara, arriba están REC, la cámara y la marca: la burbuja no sube hasta ahí.
   const techo = my + (capas.visor === "camara" ? 100 : 40) * k
-  if (enEscena && capas.dialogo && capas.dialogo.cabeza && capas.dialogo.alfa > 0) burbuja(ctx, capas.dialogo, rec, W, H, k, mx, techo)
+  // El título se mide antes: la burbuja no se mete debajo de él.
+  const tit = enEscena && capas.titulo && capas.titulo.alfa > 0 ? medirTitulo(ctx, capas, W, H, k, mx, my, cond) : null
+  const evitar = tit ? { x0: W / 2 - tit.b.ancho / 2, x1: W / 2 + tit.b.ancho / 2, y0: tit.y - 10 * k, y1: tit.y + tit.b.alto + 24 * k } : null
+  if (enEscena && capas.dialogo && capas.dialogo.cabeza && capas.dialogo.alfa > 0) burbuja(ctx, capas.dialogo, rec, W, H, k, mx, techo, evitar)
 
   // 4. Título grande, al centro.
-  if (enEscena && capas.titulo && capas.titulo.alfa > 0) {
-    const b = ajustar(ctx, capas.titulo.texto.toLocaleUpperCase("es"), { familia: cond, peso: 800, espaciado: 0.02 }, {
-      max: Math.round(124 * k),
-      min: Math.round(56 * k),
-      ancho: W - 2 * mx,
-      maxLineas: 3,
-      interlinea: 0.98,
-    })
+  if (tit && capas.titulo) {
+    const b = tit.b
     const subir = (1 - capas.titulo.alfa) * 14 * k
-    const y = Math.max(my, H * 0.42 - b.alto / 2) + subir
+    const y = tit.y + subir
     // Una franja oscura y difusa detrás: el título se lee aunque la escena sea blanca (la fachada).
     const cy = y + b.alto / 2
     const franja = ctx.createLinearGradient(0, cy - b.alto, 0, cy + b.alto)
@@ -490,6 +563,34 @@ export function componer(ctx: CanvasRenderingContext2D, escena: CanvasImageSourc
   }
 
   // 8. La marca arriba al centro y la etiqueta de ficción abajo a la derecha.
+  const agua = rec.marcaAgua && rec.marcaAgua.complete && rec.marcaAgua.naturalWidth ? rec.marcaAgua : null
+  if (enEscena && agua) {
+    // El logo blanco: en cine arriba al centro; en el visor de cámara arriba a la derecha, bajo "CAM 0N".
+    // marca-de-agua-600.png: la tinta va de x 17 a 582 y de y 16 a 95 (sobre 600×112).
+    const h = 58 * k
+    const w = (h * agua.naturalWidth) / agua.naturalHeight
+    const tinta = { x0: (17 / 600) * w, x1: (583 / 600) * w, y0: (16 / 112) * h, y1: (96 / 112) * h }
+    const padX = 20 * k
+    const padY = 9 * k
+    // La pastilla (no solo la tinta) queda dentro de la zona segura; en cámara, debajo de "CAM 0N".
+    const x = capas.visor === "camara" ? W - mx - padX - tinta.x1 : W / 2 - w / 2
+    const y = (capas.visor === "camara" ? my + 42 * k : my) + padY - tinta.y0
+    // Sobre una pastilla oscura, como antes el nombre escrito: el logo es blanco y de trazo
+    // fino, y detrás puede estar la fachada blanca o el cielo.
+    ctx.save()
+    ctx.fillStyle = "rgba(10,10,10,0.46)"
+    const altoP = tinta.y1 - tinta.y0 + 2 * padY
+    redondeado(ctx, x + tinta.x0 - padX, y + tinta.y0 - padY, tinta.x1 - tinta.x0 + 2 * padX, altoP, 10 * k)
+    ctx.fill()
+    ctx.restore()
+    ctx.save()
+    ctx.shadowColor = "rgba(0,0,0,0.6)"
+    ctx.shadowBlur = 6 * k
+    ctx.shadowOffsetY = 1 * k
+    ctx.globalAlpha = 0.94
+    ctx.drawImage(agua, x, y, w, h)
+    ctx.restore()
+  }
   if (enEscena) {
     const tam = Math.round(22 * k)
     aplicarEstilo(ctx, { familia: cond, peso: 700, tam, espaciado: 0.42 })
@@ -504,13 +605,16 @@ export function componer(ctx: CanvasRenderingContext2D, escena: CanvasImageSourc
     // en cine, arriba al centro. Siempre sobre una pastilla oscura: la escena puede tener letreros detrás.
     const xMarca = capas.visor === "camara" ? W - mx - w : W / 2 - w / 2
     const yMarca = capas.visor === "camara" ? my + 30 * k + 14 * k + 0.8 * tam : my + 0.8 * tam
-    sinSombra(ctx)
-    ctx.fillStyle = "rgba(0,0,0,0.32)"
-    redondeado(ctx, xMarca - 12 * k, yMarca - 0.8 * tam - 7 * k, w + 24 * k, tam + 14 * k, (tam + 14 * k) / 2)
-    ctx.fill()
-    sombra(ctx, k)
-    ctx.fillStyle = "rgba(255,255,255,0.88)"
-    ctx.fillText(marca, xMarca, yMarca)
+    if (!agua) {
+      // Sin la imagen de la marca de agua: el nombre escrito, como antes.
+      sinSombra(ctx)
+      ctx.fillStyle = "rgba(0,0,0,0.32)"
+      redondeado(ctx, xMarca - 12 * k, yMarca - 0.8 * tam - 7 * k, w + 24 * k, tam + 14 * k, (tam + 14 * k) / 2)
+      ctx.fill()
+      sombra(ctx, k)
+      ctx.fillStyle = "rgba(255,255,255,0.88)"
+      ctx.fillText(marca, xMarca, yMarca)
+    }
     if (capas.ficcion) {
       const t2 = Math.round(20 * k)
       aplicarEstilo(ctx, { familia: cond, peso: 600, tam: t2, espaciado: 0.16 })
@@ -530,8 +634,25 @@ export function componer(ctx: CanvasRenderingContext2D, escena: CanvasImageSourc
     ctx.globalAlpha = 1
   }
 
-  // 10. Apertura: el nombre del proyecto.
-  if (capas.apertura && capas.apertura.alfa > 0) {
+  // 10. Apertura: el logo (cuadro de título de la marca) y el título del episodio.
+  const titulo = tituloPara(rec, W, H)
+  if (capas.apertura && capas.apertura.alfa > 0 && titulo) {
+    const a = capas.apertura
+    ctx.globalAlpha = a.alfa
+    const caja = dibujarTitulo(ctx, titulo, W, H, 0, 1 + 0.025 * a.avance)
+    if (a.subtitulo) {
+      const sub = ajustar(ctx, a.subtitulo, { familia: texto, peso: 600 }, {
+        max: Math.round(30 * k),
+        min: Math.round(22 * k),
+        ancho: Math.min(W - 2 * mx, 1100 * k),
+        maxLineas: 2,
+        interlinea: 1.25,
+      })
+      const y = Math.min(H - my - sub.alto, caja.abajo + 64 * k)
+      dibujarBloque(ctx, sub, W / 2, y, "centro", "rgba(243,239,230,0.74)", rec.logoPrime)
+    }
+    ctx.globalAlpha = 1
+  } else if (capas.apertura && capas.apertura.alfa > 0) {
     const a = capas.apertura
     ctx.globalAlpha = a.alfa
     const b = ajustar(ctx, MARCA.toLocaleUpperCase("es"), { familia: cond, peso: 800, espaciado: 0.16 }, {
@@ -566,25 +687,43 @@ export function componer(ctx: CanvasRenderingContext2D, escena: CanvasImageSourc
         maxLineas: 1,
       })
       const web = ajustar(ctx, WEB, { familia: cond, peso: 800, espaciado: 0.01 }, { max: Math.round(84 * k), min: Math.round(40 * k), ancho: W - 2 * mx, maxLineas: 1 })
-      const aviso = ajustar(ctx, AVISO, { familia: texto, peso: 600 }, {
+      // Una oración por renglón si entran ("…con IA." / "No son…"): el corte cae donde termina la idea.
+      const avisoTexto = AVISO.replace(/\. (?=\S)/g, ".\n")
+      const aviso = ajustarRenglones(ctx, avisoTexto, { familia: texto, peso: 600 }, {
         max: Math.round(30 * k),
         min: Math.round(22 * k),
         ancho: Math.min(W - 2 * mx, 1100 * k),
         maxLineas: 3,
         interlinea: 1.3,
       })
-      const g1 = 22 * k
       const g2 = 40 * k
-      const total = marca.alto + g1 + web.alto + g2 + aviso.alto
-      let y = H / 2 - total / 2
-      dibujarBloque(ctx, marca, W / 2 + 0.16 * marca.estilo.tam, y, "centro", "rgba(255,255,255,0.8)", rec.logoPrime)
-      y += marca.alto + g1
-      dibujarBloque(ctx, web, W / 2, y, "centro", "#ffffff", rec.logoPrime)
-      y += web.alto + g2 / 2
-      ctx.fillStyle = "#fbbf24"
-      ctx.fillRect(W / 2 - 40 * k, y - 1.5 * k, 80 * k, 3 * k)
-      y += g2 / 2
-      dibujarBloque(ctx, aviso, W / 2, y, "centro", "rgba(255,255,255,0.82)", rec.logoPrime)
+      if (titulo) {
+        // El logo arriba (el cuadro de título corrido hacia arriba), la web y el aviso debajo.
+        const altoLogo = (titulo.abajo - titulo.arriba) * H
+        const g1 = 60 * k
+        const total = altoLogo + g1 + web.alto + g2 + aviso.alto
+        const arriba = Math.max(my, H / 2 - total / 2)
+        const caja = dibujarTitulo(ctx, titulo, W, H, arriba - titulo.arriba * H)
+        let y = caja.abajo + g1
+        dibujarBloque(ctx, web, W / 2, y, "centro", MARFIL, rec.logoPrime)
+        y += web.alto + g2 / 2
+        ctx.fillStyle = DORADO
+        ctx.fillRect(W / 2 - 40 * k, y - 1.5 * k, 80 * k, 3 * k)
+        y += g2 / 2
+        dibujarBloque(ctx, aviso, W / 2, y, "centro", "rgba(243,239,230,0.8)", rec.logoPrime)
+      } else {
+        const g1 = 22 * k
+        const total = marca.alto + g1 + web.alto + g2 + aviso.alto
+        let y = H / 2 - total / 2
+        dibujarBloque(ctx, marca, W / 2 + 0.16 * marca.estilo.tam, y, "centro", "rgba(255,255,255,0.8)", rec.logoPrime)
+        y += marca.alto + g1
+        dibujarBloque(ctx, web, W / 2, y, "centro", "#ffffff", rec.logoPrime)
+        y += web.alto + g2 / 2
+        ctx.fillStyle = "#fbbf24"
+        ctx.fillRect(W / 2 - 40 * k, y - 1.5 * k, 80 * k, 3 * k)
+        y += g2 / 2
+        dibujarBloque(ctx, aviso, W / 2, y, "centro", "rgba(255,255,255,0.82)", rec.logoPrime)
+      }
       ctx.globalAlpha = 1
     }
     if (c.negro > 0) {
@@ -595,6 +734,21 @@ export function componer(ctx: CanvasRenderingContext2D, escena: CanvasImageSourc
     }
   }
   ctx.restore()
+}
+
+/** El bloque del título y su y de arriba (sin la entrada animada). */
+function medirTitulo(ctx: CanvasRenderingContext2D, capas: Capas, W: number, H: number, k: number, mx: number, my: number, cond: string) {
+  const t = capas.titulo!
+  const b = ajustar(ctx, t.texto.toLocaleUpperCase("es"), { familia: cond, peso: 800, espaciado: 0.02 }, {
+    max: Math.round(124 * k),
+    min: Math.round(56 * k),
+    ancho: W - 2 * mx,
+    maxLineas: 3,
+    interlinea: 0.98,
+  })
+  // Arriba: debajo de la marca (y de REC/CAM en el visor de cámara), con aire.
+  const yArriba = my + (capas.visor === "camara" ? 118 : 86) * k
+  return { b, y: t.arriba ? yArriba : Math.max(my, H * 0.42 - b.alto / 2) }
 }
 
 /** Los colores de los residentes son para fondo oscuro; sobre negro algunos quedan apagados: se aclaran un poco. */
@@ -609,7 +763,17 @@ function aclarar(hex: string): string {
   return `rgb(${r},${g},${b})`
 }
 
-function burbuja(ctx: CanvasRenderingContext2D, d: DialogoEnCuadro, rec: Recursos, W: number, H: number, k: number, mx: number, techo: number) {
+function burbuja(
+  ctx: CanvasRenderingContext2D,
+  d: DialogoEnCuadro,
+  rec: Recursos,
+  W: number,
+  H: number,
+  k: number,
+  mx: number,
+  techo: number,
+  evitar: { x0: number; x1: number; y0: number; y1: number } | null,
+) {
   const cab = d.cabeza!
   const pad = 16 * k
   const anchoMax = Math.min(W * 0.34, 560 * k)
@@ -633,6 +797,11 @@ function burbuja(ctx: CanvasRenderingContext2D, d: DialogoEnCuadro, rec: Recurso
   x = Math.max(mx, Math.min(W - mx - ancho, x))
   let y = cab.y - 34 * k - pico - alto
   y = Math.max(techo, Math.min(H * 0.7 - alto, y))
+  // Si cae sobre el título, se va arriba de él (o debajo, si arriba no entra).
+  if (evitar && x < evitar.x1 && x + ancho > evitar.x0 && y < evitar.y1 && y + alto > evitar.y0) {
+    if (evitar.y0 - alto >= techo) y = evitar.y0 - alto
+    else if (evitar.y1 + alto <= H * 0.7) y = evitar.y1
+  }
   ctx.globalAlpha = d.alfa
   ctx.save()
   ctx.shadowColor = "rgba(0,0,0,0.55)"

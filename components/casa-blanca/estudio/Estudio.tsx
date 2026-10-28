@@ -65,8 +65,6 @@ interface Params {
   visor: Visor | null
   calidad: Calidad
   render: boolean
-  /** ?atajo=1 (solo vista previa): saltar cuadros sin dibujarlos. */
-  atajo: boolean
   /** ?alto=720 (vista previa): otro alto de salida, mismo formato. */
   alto: number | null
   /** ?fps=24 (vista previa): otros cuadros por segundo. */
@@ -90,22 +88,56 @@ function leerParams(): Params {
     visor: v === "cine" || v === "camara" ? v : null,
     calidad: c === "baja" || c === "media" || c === "alta" ? c : "alta",
     render: q.get("render") === "1",
-    atajo: q.get("atajo") === "1",
     alto: entero(q.get("alto"), 360, 2160),
     fps: entero(q.get("fps"), 12, 60),
   }
 }
 
-/** La salida mide exactamente W×H: un píxel CSS = un píxel de video. */
-function fijarPixelRatio() {
+/** Carga una imagen y espera a que esté decodificada (antes del cuadro 0: el video no cambia según la red). */
+async function imagen(src: string, faltan: string[]): Promise<HTMLImageElement | null> {
+  const img = new Image()
+  img.src = src
   try {
-    Object.defineProperty(window, "devicePixelRatio", { get: () => 1, configurable: true })
+    await img.decode()
   } catch {
-    // Si el navegador no deja, el motor renderiza a más resolución y el compositor la reduce.
+    // decode() falla también si la imagen ya estaba; lo que importa es si tiene tamaño.
   }
+  if (img.naturalWidth) return img
+  faltan.push(src)
+  return null
 }
 
-async function cargarRecursos(raiz: HTMLElement): Promise<Recursos> {
+/**
+ * Dónde está el logo en un cuadro de título (fondo de tinta #0A0A0A): las filas
+ * con algún píxel claro, en fracción del alto. Se mide en vez de escribirse a
+ * mano: si la marca cambia la imagen, el cierre se acomoda solo.
+ */
+function cajaDelLogo(img: HTMLImageElement): { arriba: number; abajo: number } {
+  const h = 270
+  const w = Math.round((h * img.naturalWidth) / img.naturalHeight)
+  const c = document.createElement("canvas")
+  c.width = w
+  c.height = h
+  const ctx = c.getContext("2d", { willReadFrequently: true })
+  if (!ctx) return { arriba: 0.41, abajo: 0.59 }
+  ctx.drawImage(img, 0, 0, w, h)
+  const datos = ctx.getImageData(0, 0, w, h).data
+  let arriba = -1
+  let abajo = -1
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      if (Math.max(datos[i], datos[i + 1], datos[i + 2]) > 48) {
+        if (arriba < 0) arriba = y
+        abajo = y
+        break
+      }
+    }
+  }
+  return arriba < 0 ? { arriba: 0.41, abajo: 0.59 } : { arriba: arriba / h, abajo: (abajo + 1) / h }
+}
+
+async function cargarRecursos(raiz: HTMLElement): Promise<{ recursos: Recursos; faltan: string[] }> {
   const css = getComputedStyle(raiz)
   const cond = css.getPropertyValue("--font-condensada").trim() || "'Barlow Condensed'"
   const manrope = css.getPropertyValue("--font-manrope").trim() || "Manrope"
@@ -113,14 +145,26 @@ async function cargarRecursos(raiz: HTMLElement): Promise<Recursos> {
   for (const w of ["600", "700", "800"]) {
     cargas.push(document.fonts.load(`${w} 40px ${cond}`), document.fonts.load(`${w} 40px ${manrope}`))
   }
-  const logo = new Image()
-  logo.src = "/logos/prime-wordmark.png"
-  cargas.push(logo.decode().catch(() => console.warn("[estudio] no cargó el logo de PRIME")))
-  await Promise.all(cargas.map((p) => p.catch(() => null)))
+  const faltan: string[] = []
+  const marca = "/casa-blanca/marca/video"
+  const [logo, t169, t43, agua] = await Promise.all([
+    imagen("/logos/prime-wordmark.png", faltan),
+    imagen(`${marca}/titulo-16x9.png`, faltan),
+    imagen(`${marca}/titulo-4x3.png`, faltan),
+    imagen(`${marca}/marca-de-agua-600.png`, faltan),
+    ...cargas.map((p) => p.catch(() => null)),
+  ])
   await document.fonts.ready
+  if (faltan.length) console.warn("[estudio] no cargaron:", faltan.join(", "))
+  const titulo = (img: HTMLImageElement | null) => (img ? { img, ...cajaDelLogo(img) } : null)
   return {
-    fuentes: { cond: `${cond}, system-ui, sans-serif`, texto: `${manrope}, system-ui, sans-serif` },
-    logoPrime: logo.naturalWidth ? logo : null,
+    recursos: {
+      fuentes: { cond: `${cond}, system-ui, sans-serif`, texto: `${manrope}, system-ui, sans-serif` },
+      logoPrime: logo,
+      titulo: { "16:9": titulo(t169), "4:3": titulo(t43) },
+      marcaAgua: agua,
+    },
+    faltan,
   }
 }
 
@@ -226,13 +270,14 @@ export default function Estudio() {
       })
       if (errores.length) return fallar(`El guion de "${ep.id}" tiene errores:\n· ${errores.join("\n· ")}`)
       const av = avisosDelEpisodio(ep, TOMAS_CINE)
+      const { recursos, faltan } = await cargarRecursos(raiz)
+      // Sin el logo el video sale igual (con el nombre escrito), pero no como debe: se avisa.
+      for (const f of faltan) av.push(`no cargó ${f}: el video sale con el nombre escrito en vez del logo`)
       setAvisos(av)
-      fijarPixelRatio()
-      const recursos = await cargarRecursos(raiz)
       if (!vivo) return
       let motor: Motor
       try {
-        motor = crearEstudio(oculto, salida, { ep, formato: fmt, visor: visorRef.current, calidad, recursos, atajo: !!params?.atajo, alto: params?.alto ?? undefined, fps: params?.fps ?? undefined })
+        motor = crearEstudio(oculto, salida, { ep, formato: fmt, visor: visorRef.current, calidad, recursos, alto: params?.alto ?? undefined, fps: params?.fps ?? undefined })
       } catch (e) {
         console.error("[estudio] no se pudo crear:", e)
         return fallar(`No se pudo crear la escena: ${e instanceof Error ? e.message : String(e)}`)

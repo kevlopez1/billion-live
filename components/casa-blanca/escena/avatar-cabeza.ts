@@ -251,7 +251,9 @@ export class Cabeza {
     const o = this.ojo
     const lleno = Math.max(0, Mj)
     // Cráneo y frente (medidas desde el centro entre los oídos: frente ~10 cm, nuca ~10 cm)
-    let d = elip(x, y, z, 0, 0.026 + this.Fr * 0.3, -0.006, 0.0762 * W, 0.099 + this.Fr * 0.3, 0.096)
+    // (el cráneo, lo más ancho de la cabeza por encima de las orejas: con 7,6 cm los
+    // pómulos sobresalían y la cabeza se leía como una pera, angosta arriba)
+    let d = elip(x, y, z, 0, 0.026 + this.Fr * 0.3, -0.006, 0.079 * W, 0.099 + this.Fr * 0.3, 0.096)
     d = smin(d, elip(x, y, z, 0, 0.036 + this.Fr * 0.5, 0.034, 0.064 * W, 0.066 + this.Fr * 0.6, 0.066), 0.022)
     // Base de la cara: cráneo ensanchado hacia los pómulos (sin borde de "máscara").
     d = smin(d, elip(x, y, z, 0, -0.012, 0.012, 0.07 * W, 0.07, 0.085), 0.03)
@@ -260,7 +262,7 @@ export class Cabeza {
     if (!lejos(ax, y, z, 0.05, -0.03, 0.05, 0.065, d, 0.026)) {
       d = smin(d, elip(ax, y, z, 0.049 * W, -0.005 + 0.003 * (Pm - 1), 0.063, 0.021 * Pm, 0.014, 0.021), 0.02)
       // Arco cigomático: del pómulo a la oreja
-      d = smin(d, cono(ax, y, z, 0.05 * W, -0.004, 0.06, 0.068 * W, 0.0, 0.012, 0.009, 0.006), 0.02)
+      d = smin(d, cono(ax, y, z, 0.05 * W, -0.004, 0.06, 0.064 * W, 0.0, 0.012, 0.009, 0.006), 0.02)
       // Carrillos: más con grasa, caen con la papada.
       // (la grasa ensancha y baja el carrillo entero, no una bola junto a la boca)
       // (más adentro que antes: con el carrillo tan afuera como el pómulo la cara
@@ -352,7 +354,9 @@ export class Cabeza {
     }
     // Cuello y nuez
     const k = this.cuello
-    d = smin(d, cono(x, y, z, 0, k.y0, k.z0, 0, k.y1, k.z1, k.r0, k.r1), 0.03)
+    // (mezcla corta: con 3 cm el cuello rellenaba el ángulo bajo la mandíbula y la
+    // cara se fundía con el cuello sin borde: de frente, todas eran un rectángulo)
+    d = smin(d, cono(x, y, z, 0, k.y0, k.z0, 0, k.y1, k.z1, k.r0, k.r1), 0.016)
     // Esternocleidomastoideos: la "V" del cuello, de detrás de la oreja al esternón.
     if (!lejos(ax, y, z, 0.03, -0.1, 0.0, 0.09, d, 0.02)) d = smin(d, cono(ax, y, z, 0.05 * W, -0.025, -0.022, 0.014, -0.19, 0.028, 0.0115 * NK, 0.0105 * NK), 0.022)
     if (F < 0.5 && !lejos(x, y, z, 0, -0.132, 0.03, 0.02, d, 0.01)) d = smin(d, elip(x, y, z, 0, -0.132, k.z0 + k.r0 * 0.78, 0.0065, 0.011, 0.006), 0.01)
@@ -573,7 +577,10 @@ export class Cabeza {
     // Delineado (kohl): línea negra pegada a las pestañas de arriba y de abajo,
     // con la cola que sigue hacia la sien desde la esquina de afuera.
     const del = this.f.piel.delineado
-    if (del > 0.01 && z > 0.04) {
+    // (solo cerca del ojo: el anillo es en ángulos desde el centro del globo y,
+    // sin este tope, se repetía lejos — manchas negras en la nariz y la boca)
+    const dOjo = Math.hypot(ax - o.x, y - o.y, z - o.z)
+    if (del > 0.01 && z > 0.04 && dOjo < o.r + 0.012 && z > o.z) {
       const ex = ax - o.x
       const ey = y - o.y
       const pa = this.parpado
