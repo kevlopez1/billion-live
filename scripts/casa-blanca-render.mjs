@@ -125,11 +125,23 @@ async function main() {
       ],
       { stdio: ["pipe", "inherit", "inherit"] },
     )
+    let fallaFfmpeg = null
     const terminado = new Promise((ok, mal) => {
       ffmpeg.on("error", mal)
-      ffmpeg.on("close", (c) => (c === 0 ? ok() : mal(new Error(`ffmpeg salió con código ${c}`))))
+      ffmpeg.on("close", (c, senal) => (c === 0 ? ok() : mal(new Error(`ffmpeg terminó antes de tiempo (código ${c}${senal ? `, señal ${senal}` : ""})`))))
     })
-    const escribir = (buf) => new Promise((ok) => (ffmpeg.stdin.write(buf) ? ok() : ffmpeg.stdin.once("drain", ok)))
+    // Si ffmpeg se cae a mitad (otro proceso lo mató, disco lleno…), se avisa en el próximo cuadro, sin seguir dibujando en vano.
+    terminado.catch((e) => {
+      fallaFfmpeg = e
+    })
+    ffmpeg.stdin.on("error", (e) => {
+      fallaFfmpeg ??= new Error(`no se pudo escribir a ffmpeg: ${e.message}`)
+    })
+    const escribir = (buf) =>
+      new Promise((ok, mal) => {
+        if (fallaFfmpeg) return mal(fallaFfmpeg)
+        ffmpeg.stdin.write(buf) ? ok() : ffmpeg.stdin.once("drain", ok)
+      })
 
     if (o.hashes) writeFileSync(o.hashes, "")
     const total = hasta - desde
