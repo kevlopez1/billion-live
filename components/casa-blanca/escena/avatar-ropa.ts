@@ -558,6 +558,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       S.tubo({
         cadena: "pierna",
         lado,
+        cols: 14,
         u0: -0.02 * s,
         u1: fin,
         holgura: (u, a) => {
@@ -663,7 +664,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       vuelo: (y) => 0.05 * suave(0.5 * Hh, op.ruedo, y),
       color: () => color,
       mat: MAT_LANA,
-      cols: 60,
+      cols: 40,
     })
     // Solapas: sobre el borde de la abertura, del botón al cuello.
     // La solapa refleja distinto (la tela va doblada): un tono apenas más claro.
@@ -924,7 +925,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       camisa(rgba(camisaColor(ap)), { corbata: ap.ropa.corbata, mono: levita, abierta: !conCorbata, larga: ap.complexion === "fuerte" })
       pantalon(C1)
       cinturon(0.595 * Hh, 0.016)
-      saco(C1, { ruedo: (levita ? 0.3 : 0.425) * Hh, boton: 0.598 * Hh, paso: levita ? 0.032 : 0.027 })
+      saco(C1, { ruedo: (levita ? 0.3 : 0.425) * Hh, boton: 0.598 * Hh, paso: levita ? 0.034 : 0.03 })
       mangas(C1, 9, 0.015, { puno: rgba(camisaColor(ap)) })
       zapatos(rgba("#100c0a"))
       break
@@ -935,7 +936,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       // Chaleco blanco al frente, calzón blanco, botas altas negras.
       S.tronco({ y0: 0.52 * Hh, y1: 0.828 * Hh, arco: () => [FRENTE - 0.95, FRENTE + 0.95], holgura: () => 0.008, bultos: 0.4, color: () => blanco, mat: MAT_ALGODON, cols: 24 })
       pantalon(blanco, { holg: 0.006, hasta: cu.piernas[0].u[2] + 0.07 * s })
-      saco(C1, { ruedo: 0.31 * Hh, boton: 0.62 * Hh, colas: true, solapa: escalarRGBA(C1, 1.05), botones: rgba("#d8b04a"), matBoton: MAT_ORO, cruzado: true })
+      saco(C1, { ruedo: 0.31 * Hh, boton: 0.62 * Hh, colas: true, paso: 0.034, solapa: escalarRGBA(C1, 1.05), botones: rgba("#d8b04a"), matBoton: MAT_ORO, cruzado: true })
       S.cuello({ y0: 0.82 * Hh, y1: (a) => 0.82 * Hh + 0.045 * s, arco: [FRENTE + 0.35, FRENTE + DOS_PI - 0.35], holg0: 0.014, holg1: 0.012, color: rojo, mat: MAT_LANA, filas: 2, tapa: true })
       mangas(C1, 9, 0.015, { puno: rojo })
       // Botas: caña hasta la rodilla.

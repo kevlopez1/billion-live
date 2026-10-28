@@ -77,12 +77,15 @@ export function armarPelo(cu: Cuerpo, p: Personaje, op: { holguraEspalda: number
   }
   const centros = filas.map((f) => (f.radial ? cab.c : _v.set(0, f.P[0].y, cab.c.z - 0.03).clone()))
   // Atrás, una columna de cada dos (la nuca es suave); al frente y a los lados, todas.
-  const usar = (j: number) => Math.sin(ANG[j]) > -0.35 || j % 2 === 0
-  const sub = ids.map((f) => f.filter((_, j) => usar(j)))
-  const msub = mascara.map((f) => f.filter((_, j) => usar(j)))
+  const usar = (j: number) => Math.sin(ANG[j]) > 0.2 || j % 2 === 0
+  // Melenas y rizos grandes: además, una fila de cada dos (es una masa suave; así no pasa de 25 mil triángulos).
+  const masa = estilo === "largo" || estilo === "melena_bob" || estilo === "rizado_voluminoso"
+  const fila = (i: number) => !masa || i < 7 || i % 2 === 0 || i === nF - 1
+  const sub = ids.filter((_, i) => fila(i)).map((f) => f.filter((_, j) => usar(j)))
+  const msub = mascara.filter((_, i) => fila(i)).map((f) => f.filter((_, j) => usar(j)))
   const MS = sub[0].length
   lote.tiras(sub, true, {
-    centros,
+    centros: centros.filter((_, i) => fila(i)),
     emitir: (i, j) => {
       const j2 = (j + 1) % MS
       return Math.max(msub[i][j], msub[i][j2], msub[i + 1][j], msub[i + 1][j2]) > 0.03
@@ -94,7 +97,7 @@ export function armarPelo(cu: Cuerpo, p: Personaje, op: { holguraEspalda: number
   if (estilo === "largo" || estilo === "rubio_tupe" || estilo === "rizado_voluminoso") {
     const largo = estilo === "largo" ? 0.16 : estilo === "rizado_voluminoso" ? 0.03 : 0.035
     const base = filas[0]
-    const filasExt = 5
+    const filasExt = 4
     const idsE: number[][] = [ids[0]]
     const yB = base.P[0].y
     const mk: number[][] = [mascara[0]]
