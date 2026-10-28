@@ -267,19 +267,19 @@ function genFachada(p: Pide): Juego {
     }
   }
   const h = new Float32Array(n * n)
-  for (let i = 0; i < h.length; i++) h[i] = 0.5 * grano[i] + 0.25 * nube[i] - 0.7 * junta[i]
+  for (let i = 0; i < h.length; i++) h[i] = 0.5 * grano[i] + 0.25 * nube[i] - 0.45 * junta[i]
   return {
     mapa: pintar(n, (i, _x, _y, c) => {
-      const v = 0.965 + 0.035 * (nube[i] - 0.5) + 0.012 * (grano[i] - 0.5) - 0.05 * junta[i]
+      const v = 0.97 + 0.035 * (nube[i] - 0.5) + 0.012 * (grano[i] - 0.5) - 0.022 * junta[i]
       c[0] = clamp01(v * 1.004)
       c[1] = clamp01(v)
       c[2] = clamp01(v * 0.994)
     }),
     normal: p.normal ? normalDesdeAltura(n, h, 2.2 * (n / 512)) : undefined,
-    rug: rugDe(p, 0.68, 0.92, (i) => 0.4 + 0.4 * grano[i] + 0.5 * junta[i]),
+    rug: rugDe(p, 0.68, 0.92, (i) => 0.4 + 0.4 * grano[i] + 0.3 * junta[i]),
     rugMin: 0.68,
     rugMax: 0.92,
-    fuerzaNormal: 0.45,
+    fuerzaNormal: 0.32,
   }
 }
 
@@ -756,10 +756,10 @@ export function crearMateriales(calidad: Calidad): MaterialesMotor {
   const techoMetal = mundo(genTecho(pide), { color: "#878d93", metalness: 0.55, name: "techoMetal" }, { escala: 3 })
 
   // El pasto comparte texturas; el rayado agrega las franjas del corte (4,5 m).
-  const pastoMat = mundo(pasto, { color: "#5f9a3e", name: "pasto" }, { proyeccion: "planar", escala: 7, macro: 1.1 })
+  const pastoMat = mundo(pasto, { color: "#5c9443", name: "pasto" }, { proyeccion: "planar", escala: 7, macro: 1.1 })
   const pastoRayado = mundo(
     pasto,
-    { color: "#5f9a3e", name: "pastoRayado" },
+    { color: "#5c9443", name: "pastoRayado" },
     { proyeccion: "planar", escala: 7, macro: 1.1, franjas: 4.5, contrasteFranjas: 0.11 },
   )
 

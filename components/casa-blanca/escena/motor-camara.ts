@@ -194,8 +194,8 @@ export const TOMAS_CINE: ReadonlyArray<{ id: string; nombre: string; duracion: n
 const INTRO_DURACION = 13
 const INTRO_POS = new THREE.CatmullRomCurve3(
   [
-    v3(0, 2.2, PN.z0 - 16),
-    v3(0.6, 6.5, FN.z - 1),
+    v3(0, 2.4, FN.z + FN.radio + 2),
+    v3(0.6, 7.5, FN.z - 2),
     v3(5, 16, HUELLAS.reja.z0 - 3),
     v3(34, 44, -112),
     v3(72, 96, -192),
@@ -204,7 +204,7 @@ const INTRO_POS = new THREE.CatmullRomCurve3(
   "centripetal",
 )
 const INTRO_MIRA = new THREE.CatmullRomCurve3(
-  [v3(0, 12.2, PN.z0 + 5), v3(0, 10.5, PN.z0 + 8), v3(0, 7, -4), v3(4, 2, 34), v3(10, 0, 108)],
+  [v3(0, 11, PN.z0 + 5), v3(0, 10, PN.z0 + 8), v3(0, 7, -4), v3(4, 2, 34), v3(10, 0, 108)],
   false,
   "centripetal",
 )
@@ -256,6 +256,7 @@ export class ControlCamara {
   private enfoque: { t: number; dur: number; p0: THREE.Vector3; m0: THREE.Vector3; p1: THREE.Vector3; m1: THREE.Vector3 } | null = null
   private poseSuperficie: Pose | null = null
   private readonly pose = nuevaPose()
+  private fovBase = 45
 
   constructor(canvas: HTMLCanvasElement, deps: DepsCamara) {
     this.deps = deps
@@ -293,11 +294,23 @@ export class ControlCamara {
   ponerPose(p: Pose) {
     this.camara.position.copy(p.pos)
     this.controles.target.copy(p.mira)
-    if (this.camara.fov !== p.fov) {
-      this.camara.fov = p.fov
+    this.fovBase = p.fov
+    this.aplicarFov()
+    this.camara.lookAt(p.mira)
+  }
+
+  /**
+   * En vertical (celular, modo grabación 9:16) se abre el ángulo: las tomas
+   * están pensadas en horizontal y sin esto se pierden los costados.
+   */
+  aplicarFov() {
+    const a = this.camara.aspect
+    let f = this.fovBase
+    if (a < 1) f = Math.min(75, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(f / 2)) / Math.sqrt(a))))
+    if (Math.abs(this.camara.fov - f) > 1e-3) {
+      this.camara.fov = f
       this.camara.updateProjectionMatrix()
     }
-    this.camara.lookAt(p.mira)
   }
 
   // ── Intro ──

@@ -513,6 +513,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: { personajes: P
     renderer.setSize(ancho, alto, false)
     cam.aspect = ancho / alto
     cam.updateProjectionMatrix()
+    camara.aplicarFov()
     post.setSize(ancho, alto, renderer.getPixelRatio())
   }
   redimensionar()

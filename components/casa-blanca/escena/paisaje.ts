@@ -106,6 +106,12 @@ function mtx(x: number, y: number, z: number, ry = 0, s = 1, sy = s, rx = 0, rz 
   _q.setFromEuler(_e)
   return new THREE.Matrix4().compose(_v.set(x, y, z), _q, _s.set(s, sy, s))
 }
+/** Igual que mtx pero escribe en `out` (para lo que se mueve en cada cuadro). */
+function mtxEn(out: THREE.Matrix4, x: number, y: number, z: number, ry = 0, s = 1, rz = 0) {
+  _e.set(0, ry, rz, "YXZ")
+  _q.setFromEuler(_e)
+  return out.compose(_v.set(x, y, z), _q, _s.set(s, s, s))
+}
 /** Coloca una geometría (la modifica y la devuelve). */
 function en<T extends THREE.BufferGeometry>(g: T, x: number, y: number, z: number, ry = 0, rx = 0, rz = 0): T {
   _e.set(rx, ry, rz, "YXZ")
@@ -413,14 +419,14 @@ function crearMateriales(ctx: CtxEscena, T: U, N: U) {
   })
 
   // Suelo de la ciudad (manzanas): hormigón con manchas grandes.
-  const manzana = parchar(std({ color: 0x8b8781, roughness: 0.95 }), {
+  const manzana = desplazar(parchar(std({ color: 0x8b8781, roughness: 0.95 }), {
     clave: "manzana",
     fColor: /* glsl */ `
       float n = b3f(vMundo.xz * 0.02);
       float m = b3n(vMundo.xz * 0.25);
       diffuseColor.rgb *= (0.8 + 0.35 * n) * (0.94 + 0.1 * m);
     `,
-  })
+  }), 2, 4)
 
   const asfalto = desplazar(
     parchar(std({ color: 0x2c2e31, roughness: 0.86, metalness: 0 }), {
@@ -442,7 +448,7 @@ function crearMateriales(ctx: CtxEscena, T: U, N: U) {
   )
 
   // Baldosas y piedra: juntas en grilla y un tono por pieza.
-  const pavimento = parchar(std({ color: 0xffffff, vertexColors: true, roughness: 0.82 }), {
+  const pavimento = desplazar(parchar(std({ color: 0xffffff, vertexColors: true, roughness: 0.82 }), {
     clave: "pavimento",
     fColor: /* glsl */ `
       vec2 q = vMundo.xz / 0.9;
@@ -456,7 +462,7 @@ function crearMateriales(ctx: CtxEscena, T: U, N: U) {
       c *= 1.0 - 0.3 * borde * nitido;
       diffuseColor.rgb = c;
     `,
-  })
+  }), -1, -2)
 
   const grava = desplazar(
     parchar(std({ color: 0xffffff, vertexColors: true, roughness: 0.97 }), {
@@ -683,7 +689,24 @@ function panelRed(x0: number, z0: number, x1: number, z1: number, y0: number, y1
 // El mundo que se va armando
 // ══════════════════════════════════════════════════════════════
 
-type Zona = { tipo: "rect"; x0: number; x1: number; z0: number; z1: number } | { tipo: "circ"; x: number; z: number; r: number } | { tipo: "linea"; pts: P2[]; ancho: number }
+type Zona =
+  | { tipo: "rect"; x0: number; x1: number; z0: number; z1: number }
+  | { tipo: "circ"; x: number; z: number; r: number }
+  | { tipo: "linea"; pts: P2[]; ancho: number; caja?: [number, number, number, number] }
+
+interface Chorro {
+  x: number
+  z: number
+  /** Altura de la boca del chorro. */
+  base: number
+  /** Nivel del agua del estanque. */
+  agua: number
+  alto: number
+  radio: number
+  /** Cuenco central del que rebalsa el agua (radio). */
+  cuenco?: number
+  anillo?: { r: number; n: number; alto: number }
+}
 
 type TipoArbol = "roble" | "olmo" | "magnolia" | "conifera" | "lejano" | "chico"
 interface Arbol {
@@ -697,7 +720,7 @@ interface Arbol {
 interface Mundo {
   ctx: CtxEscena
   raiz: THREE.Group
-  M: Mats
+  M: Mats & { piedraPilar: THREE.Material }
   cub: Cubetas
   factor: number
   r: Rng
@@ -710,8 +733,8 @@ interface Mundo {
   arbustos: Array<{ m: THREE.Matrix4; c: THREE.Color }>
   ocupado: Zona[]
   animar: Array<(t: TickEscena) => void>
-  /** Fuentes: centro, altura del agua y chorros (los arma `fuentes()`). */
-  chorros: Array<{ x: number; z: number; y: number; alto: number; radio: number; anillo?: { r: number; n: number; alto: number }; caida?: number }>
+  /** Chorros de las fuentes (alturas absolutas): los arma `chorrosYGotas()`. */
+  chorros: Chorro[]
 }
 
 const PALETA = {
@@ -754,6 +777,12 @@ function libre(w: Mundo, x: number, z: number, margen: number) {
       if (Math.hypot(x - o.x, z - o.z) < o.r + margen) return false
     } else {
       const lim = o.ancho / 2 + margen
+      if (!o.caja) {
+        const xs = o.pts.map((p) => p[0])
+        const zs = o.pts.map((p) => p[1])
+        o.caja = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)]
+      }
+      if (x < o.caja[0] - lim || x > o.caja[1] + lim || z < o.caja[2] - lim || z > o.caja[3] + lim) continue
       for (let i = 0; i < o.pts.length - 1; i++) {
         const [ax, az] = o.pts[i]
         const [bx, bz] = o.pts[i + 1]
@@ -991,7 +1020,9 @@ function calles(w: Mundo) {
         const s1 = o.c + lado * (m + 3.8)
         for (let q = -W / 2 + 1.2; q + 0.5 < W / 2 - 1; q += 1.1) rectEn(lin, k, Math.min(s0, s1), Math.max(s0, s1), q, q + 0.5, PALETA.blanco)
         const sp = o.c + lado * (m + 4.6)
-        const pare = lado < 0 ? [0.2, W / 2 - 1] : [-W / 2 + 1, -0.2]
+        // Se para del lado por el que se llega: +x por el sur (z mayor), +z por el oeste (x menor).
+        const llegaPositivo = k.eje === "eo" ? lado < 0 : lado > 0
+        const pare = llegaPositivo ? [0.2, W / 2 - 1] : [-W / 2 + 1, -0.2]
         rectEn(lin, k, Math.min(sp, sp + lado * 0.4), Math.max(sp, sp + lado * 0.4), pare[0], pare[1], PALETA.blanco)
       }
     }
@@ -1001,6 +1032,7 @@ function calles(w: Mundo) {
 
   // Árboles y faroles de vereda (solo cerca: lo lejano lo tapa la niebla).
   const r = w.r
+  const pozos = plano(Y.acera + 0.006)
   for (const k of CALLES_PAISAJE) {
     const W = anchoCalle(k)
     const A = k.acera ?? 5
@@ -1013,10 +1045,8 @@ function calles(w: Mundo) {
           const [x, z] = k.eje === "ns" ? [k.c + off, s] : [s, k.c + off]
           const d = Math.hypot(x, z - 150)
           if (d > 1150 || r() < 0.08) continue
-          // Pista ajardinada al pie del árbol.
-          const cuadro = plano(Y.acera + 0.006)
-          cuadro.rect(x - 0.8, x + 0.8, z - 0.8, z + 0.8, PALETA.tierra)
-          w.cub.add("superficie", cuadro.geometria())
+          // Cuadro de tierra al pie del árbol.
+          pozos.rect(x - 0.8, x + 0.8, z - 0.8, z + 0.8, PALETA.tierra)
           w.arboles.push({ x, z, s: entre(r, 0.6, 0.85), tipo: d > 380 ? "lejano" : "chico", tono: tonoCopa(r, 0.05) })
         }
         if (!principal) continue
@@ -1029,6 +1059,7 @@ function calles(w: Mundo) {
       }
     }
   }
+  w.cub.add("superficie", pozos.geometria())
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1070,8 +1101,8 @@ function jardinNorte(w: Mundo) {
   ocupaRect(w, -30, 30, R.z0, HUELLAS.residencia.z0)
 
   // Fuente norte: borde de piedra, cuenco central y chorro.
-  fuente(w, F.x, F.z, F.radio, { cuenco: 1.6, altoCuenco: 1.2 })
-  w.chorros.push({ x: F.x, z: F.z, y: 1.45, alto: 5.2, radio: 2.2, caida: 1.6 })
+  const fn = fuente(w, F.x, F.z, F.radio, { cuenco: 1.6, altoCuenco: 1.2 })
+  w.chorros.push({ x: F.x, z: F.z, base: fn.cuenco, agua: fn.agua, alto: 5.2, radio: 2.4, cuenco: 1.6 })
   // Flores alrededor de la fuente: rojas por fuera, blancas por dentro.
   cantero(w, (pl) => pl.arco(F.x, F.z, F.radio + 0.15, F.radio + 1.9, 0, Math.PI * 2, PALETA.tierra, 64))
   for (let i = 0; i < 2; i++) {
@@ -1181,7 +1212,7 @@ function sombrear(g: THREE.BufferGeometry, alto: number, base = C(0x2f5424)) {
 // Fuentes: borde de piedra, agua con ondas, chorros y gotas
 // ══════════════════════════════════════════════════════════════
 
-function fuente(w: Mundo, x: number, z: number, radio: number, op: { cuenco?: number; altoCuenco?: number; altoBorde?: number } = {}) {
+function fuente(w: Mundo, x: number, z: number, radio: number, op: { cuenco?: number; altoCuenco?: number; altoBorde?: number } = {}): { agua: number; cuenco: number } {
   const y0 = alturaSuelo(x, z)
   const hb = op.altoBorde ?? 0.55
   // Borde: perfil torneado (base, pared, remate redondeado).
@@ -1201,7 +1232,9 @@ function fuente(w: Mundo, x: number, z: number, radio: number, op: { cuenco?: nu
   // Agua.
   const agua = new THREE.CircleGeometry(radio - 0.5, 64)
   agua.rotateX(-Math.PI / 2)
-  w.cub.add("agua", en(agua, x, y0 + hb - 0.14, z))
+  const yAgua = y0 + hb - 0.14
+  w.cub.add("agua", en(agua, x, yAgua, z))
+  let yCuenco = yAgua
   // Cuenco central (pie torneado + plato) con su propia lámina de agua.
   if (op.cuenco) {
     const hc = op.altoCuenco ?? 1.2
@@ -1213,9 +1246,11 @@ function fuente(w: Mundo, x: number, z: number, radio: number, op: { cuenco?: nu
     w.cub.add("piedra", en(new THREE.LatheGeometry(pie, 40), x, y0 + hb - 0.2, z), PALETA.piedraClara)
     const ac = new THREE.CircleGeometry(rc - 0.12, 40)
     ac.rotateX(-Math.PI / 2)
-    w.cub.add("agua", en(ac, x, y0 + hb - 0.2 + hc + 0.2, z))
+    yCuenco = y0 + hb - 0.2 + hc + 0.2
+    w.cub.add("agua", en(ac, x, yCuenco, z))
   }
   ocupaCirc(w, x, z, radio + 2.5)
+  return { agua: yAgua, cuenco: yCuenco }
 }
 
 /**
@@ -1233,38 +1268,42 @@ function chorrosYGotas(w: Mundo) {
   const tam: number[] = []
   const r = azar(77)
   const g = 9.8
-  const gota = (ox: number, oy: number, oz: number, vx: number, vy: number, vz: number, yAgua: number, s: number) => {
+  const gota = (ox: number, oy: number, oz: number, vx: number, vy: number, vz: number, yAgua: number, s: number, cuenco?: { x: number; z: number; r: number; y: number }) => {
     // Tiempo hasta volver a caer al agua: así la gota desaparece justo al tocarla.
-    const t = (vy + Math.sqrt(Math.max(0, vy * vy + 2 * g * (oy - yAgua)))) / g
+    let t = (vy + Math.sqrt(Math.max(0, vy * vy + 2 * g * (oy - yAgua)))) / g
+    if (cuenco) {
+      const tc = (vy + Math.sqrt(Math.max(0, vy * vy + 2 * g * (oy - cuenco.y)))) / g
+      if (Math.hypot(ox + vx * tc - cuenco.x, oz + vz * tc - cuenco.z) < cuenco.r) t = tc
+    }
     origen.push(ox, oy, oz)
     vel.push(vx, vy, vz)
     vida.push(Math.max(0.3, t), r())
     tam.push(s)
   }
   for (const f of w.chorros) {
-    const y0 = alturaSuelo(f.x, f.z)
-    const yAgua = y0 + 0.41
-    const base = y0 + f.y
+    const yAgua = f.agua
+    const base = f.base
+    const cuenco = f.cuenco ? { x: f.x, z: f.z, r: f.cuenco - 0.1, y: base } : undefined
     // Columna central: un cono estirado y abierto.
     const alto = f.alto * 0.92
     const perfil = [new THREE.Vector2(0.09, 0), new THREE.Vector2(0.12, alto * 0.3), new THREE.Vector2(0.18, alto * 0.75), new THREE.Vector2(0.32, alto), new THREE.Vector2(0.05, alto + 0.25)]
     columnas.push(en(new THREE.LatheGeometry(perfil, 14), f.x, base, f.z))
     const esp = new THREE.CircleGeometry(f.radio, 40)
     esp.rotateX(-Math.PI / 2)
-    espumas.push(en(esp, f.x, (f.caida ? base + 0.02 : yAgua + 0.015), f.z))
+    espumas.push(en(esp, f.x, yAgua + 0.015, f.z))
     const v0 = Math.sqrt(2 * g * f.alto)
     const n = Math.round(380 * w.factor * (f.alto / 6))
     for (let i = 0; i < n; i++) {
       const a = r() * Math.PI * 2
       const abre = entre(r, 0.15, 0.95) * (f.radio / Math.max(1, f.alto)) * 2.2
-      gota(f.x, base, f.z, Math.cos(a) * abre, v0 * entre(r, 0.82, 1.0), Math.sin(a) * abre, yAgua, entre(r, 0.05, 0.11))
+      gota(f.x, base, f.z, Math.cos(a) * abre, v0 * entre(r, 0.82, 1.0), Math.sin(a) * abre, yAgua, entre(r, 0.05, 0.11), cuenco)
     }
     // Agua que rebalsa del cuenco central y cae en cortina.
-    if (f.caida) {
-      const nc = Math.round(220 * w.factor)
+    if (f.cuenco) {
+      const nc = Math.round(220 * w.factor * Math.min(1, f.cuenco / 1.6))
       for (let i = 0; i < nc; i++) {
         const a = r() * Math.PI * 2
-        const rr = f.caida + 0.05
+        const rr = f.cuenco + 0.1
         const sv = entre(r, 0.4, 0.9)
         gota(f.x + Math.cos(a) * rr, base - 0.05, f.z + Math.sin(a) * rr, Math.cos(a) * sv, entre(r, -0.1, 0.25), Math.sin(a) * sv, yAgua, entre(r, 0.04, 0.08))
       }
@@ -1392,7 +1431,6 @@ function jardinSur(w: Mundo) {
   const O = OVALO
   // El gran óvalo: el camino de grava que rodea el césped central.
   camino(w, elipse(O.cx, O.cz, O.rx, O.rz, 120), O.ancho, "grava", false)
-  ocupaCirc(w, O.cx, O.cz, 0) // marcador (el interior se protege abajo)
   // Del Pórtico Sur al óvalo.
   camino(w, [[0, HUELLAS.porticoSur.cz + HUELLAS.porticoSur.radio - 0.5], [0, O.cz - O.rz]], 4, "grava", false)
   // Caminos curvos al oeste y al este, rodeando las canchas.
@@ -1414,8 +1452,8 @@ function jardinSur(w: Mundo) {
   ocupaRect(w, -26, 26, 20, R.z1)
 
   // Fuente sur: grande, con chorro alto y un anillo de chorros en arco.
-  fuente(w, F.x, F.z, F.radio, { altoBorde: 0.6 })
-  w.chorros.push({ x: F.x, z: F.z, y: 0.45, alto: 8.5, radio: 3.2, anillo: { r: F.radio - 0.7, n: 16, alto: 1.9 } })
+  const fs = fuente(w, F.x, F.z, F.radio, { altoBorde: 0.6 })
+  w.chorros.push({ x: F.x, z: F.z, base: fs.agua, agua: fs.agua, alto: 8.5, radio: 3.2, anillo: { r: F.radio - 0.7, n: 16, alto: 1.9 } })
   // Canteros de flores alrededor de la fuente.
   cantero(w, (pl) => pl.arco(F.x, F.z, F.radio + 0.3, F.radio + 2.4, 0, Math.PI * 2, PALETA.tierra, 72))
   const coloresSur = [C(0xc4161c), C(0xf2efe6), C(0xe58a1f), C(0xd6336c)]
@@ -1506,7 +1544,7 @@ function contorno(l: Lamina, x0: number, x1: number, z0: number, z1: number, a: 
 }
 
 /** Aro de básquet con tablero de vidrio, mirando hacia +x (rotar con ry). */
-function aroBasquet(w: Mundo, x: number, z: number, ry: number, profesional = true) {
+function aroBasquet(w: Mundo, x: number, z: number, ry: number) {
   const props: THREE.BufferGeometry[] = []
   const vidrio: THREE.BufferGeometry[] = []
   const add = (g: THREE.BufferGeometry, k: THREE.Color) => props.push(pintar(g, k))
@@ -1538,11 +1576,10 @@ function aroBasquet(w: Mundo, x: number, z: number, ry: number, profesional = tr
   const uv = red.getAttribute("uv")
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 12, uv.getY(i) * 4)
   w.cub.add("red", en(red, 0.375, 2.84, 0).applyMatrix4(tr))
-  if (profesional) void 0
 }
 
 function deportes(w: Mundo) {
-  const lin = plano(0.064)
+  const lin = plano(0.115)
   const blanco = PALETA.blanco
 
   // ── Cancha de tenis (con los aros de básquet que agregó Obama) ──
@@ -1551,7 +1588,7 @@ function deportes(w: Mundo) {
     const cx = (L.x0 + L.x1) / 2
     const cz = (L.z0 + L.z1) / 2
     losaCancha(w, L.x0, L.x1, L.z0, L.z1, C(0x3f7a5a))
-    const fondo = plano(0.062)
+    const fondo = plano(0.08)
     fondo.rect(cx - 11.885 - 0.3, cx + 11.885 + 0.3, cz - 5.485 - 0.3, cz + 5.485 + 0.3, C(0x2c5f93))
     w.cub.add("superficie", fondo.geometria())
     const a = 0.08
@@ -1600,7 +1637,7 @@ function deportes(w: Mundo) {
     const cx = (L.x0 + L.x1) / 2
     const cz = (L.z0 + L.z1) / 2
     losaCancha(w, L.x0, L.x1, L.z0, L.z1, C(0x2b3440))
-    const cesped = plano(0.062)
+    const cesped = plano(0.08)
     cesped.rect(cx - 10, cx + 10, cz - 5, cz + 5, C(0x2a63b8))
     w.cub.add("superficie", cesped.geometria())
     const a = 0.06
@@ -1641,10 +1678,10 @@ function deportes(w: Mundo) {
     const cx = (L.x0 + L.x1) / 2
     const cz = (L.z0 + L.z1) / 2
     losaCancha(w, L.x0, L.x1, L.z0, L.z1, C(0x1e2b47))
-    const piso = plano(0.062)
+    const piso = plano(0.08)
     piso.rect(cx - 14, cx + 14, cz - 7.5, cz + 7.5, C(0xc8945c))
     w.cub.add("superficie", piso.geometria())
-    const pintado = plano(0.063)
+    const pintado = plano(0.1)
     const llave = C(0x8e2f2b)
     const a = 0.08
     contorno(lin, cx - 14, cx + 14, cz - 7.5, cz + 7.5, a, blanco)
@@ -1685,7 +1722,7 @@ function deportes(w: Mundo) {
     const cx = (L.x0 + L.x1) / 2
     const cz = (L.z0 + L.z1) / 2
     losaCancha(w, L.x0 + 0.5, L.x1 - 0.5, L.z0 + 0.5, L.z1 - 0.5, C(0x2a2e33), 0.05)
-    const bordes = plano(0.053)
+    const bordes = plano(0.07)
     contorno(bordes, L.x0 + 0.5, L.x1 - 0.5, L.z0 + 0.5, L.z1 - 0.5, 0.15, C(0xe0641a))
     w.cub.add("superficie", bordes.geometria())
     const ac = C(0x56606a)
@@ -1913,7 +1950,6 @@ function sombrilla(w: Mundo, x: number, z: number, y: number, k: THREE.Color) {
   const tela = new THREE.ConeGeometry(1.35, 0.45, 12, 1, true)
   w.cub.add("props", en(tela, x, y + 2.35, z), k)
   const bajo = new THREE.ConeGeometry(1.35, 0.45, 12, 1, true)
-  bajo.scale(1, 1, 1)
   const idx = bajo.index
   if (idx) for (let i = 0; i < idx.count; i += 3) {
     const a = idx.getX(i)
@@ -1967,7 +2003,7 @@ function reja(w: Mundo) {
     const s0 = L.id === "n" || L.id === "s" ? R.x0 : R.z0
     const pos = (s: number): P2 => (L.id === "n" || L.id === "s" ? [s, L.a[1]] : [L.a[0], s])
     const tramosLibres: Array<[number, number]> = []
-    let desde = s0
+    let desde: number = s0
     for (const [h0, h1] of [...huecos[L.id]].sort((p, q) => p[0] - q[0])) {
       tramosLibres.push([desde, h0])
       desde = h1
@@ -2058,13 +2094,13 @@ function reja(w: Mundo) {
     w.faroles.push({ x: x + 8, z: -88.3, y: 0.045, ry: 0 })
   }
   // Árboles chicos y bancos a lo largo del lado norte de Pennsylvania Ave.
+  const cuadros = plano(0.06)
   for (let x = -160; x <= 150; x += 11) {
     if (Math.abs(x) < 6) continue
     w.arboles.push({ x, z: -86.6, s: entre(r, 0.5, 0.62), tipo: "chico", tono: tonoCopa(r, 0.03) })
-    const cuadro = plano(0.05)
-    cuadro.rect(x - 0.9, x + 0.9, -87.5, -85.7, PALETA.tierra)
-    w.cub.add("superficie", cuadro.geometria())
+    cuadros.rect(x - 0.9, x + 0.9, -87.5, -85.7, PALETA.tierra)
   }
+  w.cub.add("superficie", cuadros.geometria())
   for (let x = -150; x <= 150; x += 22) if (Math.abs(x) > 8) w.bancos.push(mtx(x + 5.5, 0.045, -85.8, Math.PI))
   // Faroles en la vereda de E Street, junto a la reja sur.
   for (let x = -90; x <= 90; x += 18) w.faroles.push({ x, z: R.z1 + 4.2, y: 0, ry: 0 })
@@ -2098,8 +2134,8 @@ function lafayette(w: Mundo) {
     const pl = plano(Y.camino)
     pl.disco(fx, cz, 7.2, PALETA.ladrillo, 40)
     w.cub.add("caminoPiedra", pl.geometria())
-    fuente(w, fx, cz, 4.2, { cuenco: 1.0, altoCuenco: 0.9 })
-    w.chorros.push({ x: fx, z: cz, y: 1.15, alto: 2.2, radio: 1.2, caida: 1.0 })
+    const fl = fuente(w, fx, cz, 4.2, { cuenco: 1.0, altoCuenco: 0.9 })
+    w.chorros.push({ x: fx, z: cz, base: fl.cuenco, agua: fl.agua, alto: 2.2, radio: 1.4, cuenco: 1.0 })
     ocupaCirc(w, fx, cz, 8)
   }
 
@@ -2130,7 +2166,7 @@ function lafayette(w: Mundo) {
       w.cub.add("props", caja(0.6, 0.35, 0.5, cx + sx * 3.5, 0.18, cz + sz * 2.55), C(0x2a2622))
     }
   const estatua = jackson()
-  estatua.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(cx - 1.3, 3.97, cz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0)), new THREE.Vector3(1.25, 1.25, 1.25)))
+  estatua.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(cx + 0.5, 3.97, cz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0)), new THREE.Vector3(1.25, 1.25, 1.25)))
   w.cub.add("bronce", estatua)
   // Las otras cuatro estatuas en las esquinas (Lafayette, Rochambeau, Kościuszko, von Steuben).
   for (const [x, z, ry] of [[L.x0 + 6, L.z1 - 6, -0.8], [L.x1 - 6, L.z1 - 6, 0.8], [L.x0 + 6, L.z0 + 6, -2.3], [L.x1 - 6, L.z0 + 6, 2.3]] as const) {
@@ -2304,13 +2340,11 @@ function elipseYMall(w: Mundo) {
   borde.scale(60.4, 30, 40.4)
   w.cub.add("piedra", en(borde, wx, 0.3, 1000), PALETA.piedraClara)
   // Las 56 columnas del memorial en dos semicírculos.
-  for (let i = 0; i < 56; i++) {
-    const lado = i < 28 ? -1 : 1
-    const t = ((i % 28) / 27) * Math.PI * 0.8 + Math.PI * 0.1
-    const x = wx + Math.sin(t) * 70 * (lado < 0 ? -1 : 1) * 0.35 + (lado < 0 ? -0 : 0)
-    const z = 1000 - Math.cos(t) * 70 * lado
-    w.cub.add("piedra", caja(1.1, 5.2, 1.1, x, 2.6, z), PALETA.piedraCalida)
-  }
+  for (const lado of [-1, 1])
+    for (let j = 0; j < 28; j++) {
+      const t = Math.PI * (0.12 + (0.76 * j) / 27)
+      w.cub.add("piedra", caja(1.1, 5.2, 1.1, wx + Math.cos(t) * 68, 2.6, 1000 + lado * Math.sin(t) * 47), PALETA.piedraCalida)
+    }
   ocupaCirc(w, wx, 1000, 82)
   // Grupos de árboles en los terrenos del Monumento y en Constitution Gardens.
   sembrarArboles(w, r, -165, 150, 690, 1300, 26, 500, () => "lejano", 1.0, 1.5)
@@ -2413,12 +2447,6 @@ function monumento(w: Mundo) {
     const on = fase < 0.45 ? 1 : 0.06
     w.M.luzRoja.emissiveIntensity = (0.15 + tk.noche * 7) * on
   })
-  // Un reflector discreto de noche sobre el obelisco (las fachadas las ilumina el motor).
-  const foco = new THREE.SpotLight(0xfff1dc, 0, 420, 0.22, 0.6, 1)
-  foco.position.set(x - 60, 2, z - 90)
-  foco.target.position.set(x, y0 + 80, z)
-  w.raiz.add(foco, foco.target)
-  w.ctx.luzNocturna(foco, 9000)
 
   // Las 50 banderas en círculo alrededor de la base.
   const mastiles: THREE.Matrix4[] = []
@@ -2473,9 +2501,6 @@ function arbolesDelPredio(w: Mundo) {
   sembrarArboles(w, r, R.x0 + 3, R.x1 - 3, R.z0 + 3, 0, 11, 500, () => (r() < 0.55 ? "roble" : r() < 0.5 ? "olmo" : "magnolia"), 0.95, 1.5)
 }
 
-interface Copa {
-  geo: THREE.BufferGeometry
-}
 function copa(semilla: number, op: { blobs: number; detalle: number; rx: number; ry: number; base: number; radio: [number, number]; ruido: number }): THREE.BufferGeometry {
   const r = azar(semilla)
   const piezas: THREE.BufferGeometry[] = []
@@ -2524,7 +2549,6 @@ function copa(semilla: number, op: { blobs: number; detalle: number; rx: number;
   return g
 }
 function conifera(semilla: number): THREE.BufferGeometry {
-  const r = azar(semilla)
   const piezas: THREE.BufferGeometry[] = []
   const pisos = 5
   for (let i = 0; i < pisos; i++) {
@@ -2539,7 +2563,7 @@ function conifera(semilla: number): THREE.BufferGeometry {
     const p = g.getAttribute("position")
     for (let j = 0; j < p.count; j++) {
       const x = p.getX(j), y = p.getY(j), z = p.getZ(j)
-      const n = (ruido3(x * 1.3 + i * 4, y * 1.3, z * 1.3) - 0.5) * 0.5
+      const n = (ruido3(x * 1.3 + i * 4 + semilla, y * 1.3, z * 1.3) - 0.5) * 0.5
       p.setXYZ(j, x * (1 + n), y + n * 0.3, z * (1 + n))
     }
     g.computeVertexNormals()
@@ -2551,7 +2575,6 @@ function conifera(semilla: number): THREE.BufferGeometry {
     }
     g.setAttribute("color", new THREE.BufferAttribute(col, 3))
     piezas.push(g.toNonIndexed())
-    void r
   }
   const g = mergeGeometries(piezas, false)
   if (!g) throw new Error("paisaje: conífera vacía")
@@ -2779,8 +2802,8 @@ function autos(w: Mundo) {
   w.raiz.add(mSed, mSuv, faros, traseras)
   const M = new THREE.Matrix4()
   const off = new THREE.Matrix4()
-  const ofFaro = { sed: new THREE.Matrix4().makeTranslation(2.37, 0.72, 0), suv: new THREE.Matrix4().makeTranslation(2.5, 0.88, 0) }
-  const ofTras = { sed: new THREE.Matrix4().makeTranslation(-2.37, 0.84, 0), suv: new THREE.Matrix4().makeTranslation(-2.49, 1.22, 0) }
+  const ofFaro = { sed: new THREE.Matrix4().makeTranslation(2.41, 0.72, 0), suv: new THREE.Matrix4().makeTranslation(2.55, 0.88, 0) }
+  const ofTras = { sed: new THREE.Matrix4().makeTranslation(-2.42, 0.84, 0), suv: new THREE.Matrix4().makeTranslation(-2.56, 1.22, 0) }
   const mover = (t: number) => {
     let iSed = 0
     let iSuv = 0
@@ -2789,7 +2812,7 @@ function autos(w: Mundo) {
       const s = (a.s + c.vel * t) % c.largo
       const x = c.ox + c.dx * s
       const z = c.oz + c.dz * s
-      M.copy(mtx(x, Y.asfalto - 0.02, z, Math.atan2(-c.dz, c.dx)))
+      mtxEn(M, x, Y.asfalto - 0.02, z, Math.atan2(-c.dz, c.dx))
       if (a.suv) mSuv.setMatrixAt(iSuv++, M)
       else mSed.setMatrixAt(iSed++, M)
       faros.setMatrixAt(i, off.multiplyMatrices(M, a.suv ? ofFaro.suv : ofFaro.sed))
@@ -2831,6 +2854,8 @@ function pajaros(w: Mundo) {
   w.raiz.add(im)
   const pal = Array.from({ length: nPal }, () => ({ rad: entre(r, 18, 42), alt: entre(r, 16, 30), vel: entre(r, 0.32, 0.42), f: r() * 6.28, os: entre(r, 1.5, 4) }))
   const ESCALA_V = 2.4
+  const tmp = new THREE.Matrix4()
+  const oculto = mtx(0, -500, 0, 0, 0.001)
   const mover = (t: number) => {
     pal.forEach((p, i) => {
       const a = p.f + t * p.vel
@@ -2838,7 +2863,7 @@ function pajaros(w: Mundo) {
       const z = LAF.cz + Math.sin(a) * p.rad * 0.8
       const y = p.alt + Math.sin(t * 0.7 + p.f) * 2.5
       // Rumbo tangente al círculo.
-      im.setMatrixAt(i, mtx(x, y, z, -(a + Math.PI / 2), 1.5, 1.5, 0, Math.sin(t * 0.9 + p.f) * 0.25))
+      im.setMatrixAt(i, mtxEn(tmp, x, y, z, -(a + Math.PI / 2), 1.5, Math.sin(t * 0.9 + p.f) * 0.25))
     })
     // Bandada en V: cruza el cielo cada 110 s, en una dirección distinta cada vez.
     const ciclo = Math.floor(t / 110)
@@ -2859,7 +2884,7 @@ function pajaros(w: Mundo) {
       const bz = lado * fila * 2.6
       const x = cx + Math.cos(ang) * bx - Math.sin(ang) * bz
       const z = cz + Math.sin(ang) * bx + Math.cos(ang) * bz
-      im.setMatrixAt(nPal + k, visible ? mtx(x, alt + Math.sin(t * 1.3 + k) * 0.6, z, ry, ESCALA_V) : mtx(0, -500, 0, 0, 0.001))
+      im.setMatrixAt(nPal + k, visible ? mtxEn(tmp, x, alt + Math.sin(t * 1.3 + k) * 0.6, z, ry, ESCALA_V) : oculto)
     }
     im.instanceMatrix.needsUpdate = true
   }

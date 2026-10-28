@@ -1,9 +1,10 @@
 // ──────────────────────────────────────────────────────────────
 // Cielo, sol, luna, estrellas, nubes, niebla y luz según la hora.
 //
-// El sol sale a las 6 por el este-noreste, pasa por el sur al mediodía y se
-// pone a las 18 por el oeste-noroeste (el arco de verano en Washington): a las
-// 17:30 la luz entra rasante y dorada por el oeste y barre la fachada norte.
+// El sol sale a las 6 por el noreste, pasa por el sur al mediodía y se pone a
+// las 18 por el noroeste (el arco de verano en Washington, un poco exagerado):
+// a las 17:30 la luz entra baja y dorada desde el oeste-noroeste y enciende la
+// fachada norte, la de la foto.
 // Todos los valores salen de tablas por elevación del sol, así que la mañana y
 // la tarde se ven igual de bien y retocar el look es cambiar números.
 // ──────────────────────────────────────────────────────────────
@@ -19,7 +20,7 @@ const GRAD = Math.PI / 180
 /** Dirección hacia el sol (unitaria) para una hora del día (0–24). */
 export function direccionSol(hora: number, out: THREE.Vector3): THREE.Vector3 {
   const a = (hora - 6) / 12
-  const az = (60 + a * 240) * GRAD
+  const az = (45 + a * 270) * GRAD
   const elev = Math.sin(Math.PI * a) * 66 * GRAD
   return out.set(Math.cos(elev) * Math.sin(az), Math.sin(elev), -Math.cos(elev) * Math.cos(az))
 }
@@ -65,20 +66,20 @@ function tablaColor(t: TablaColor, e: number, out: THREE.Color): THREE.Color {
 
 // ── El look, por elevación del sol (grados) ──────────────────
 const T = {
-  turbidez: [[-10, 4], [0, 7], [10, 6], [25, 3.6], [60, 3]] as Tabla,
-  rayleigh: [[-10, 1.5], [0, 2.9], [8, 2.4], [25, 1.45], [60, 1.15]] as Tabla,
-  mie: [[0, 0.0065], [10, 0.005], [40, 0.0035]] as Tabla,
+  turbidez: [[-10, 3.5], [0, 5], [10, 3.8], [25, 2.9], [60, 2.5]] as Tabla,
+  rayleigh: [[-10, 1.4], [0, 2.6], [8, 1.9], [25, 1.3], [60, 1.1]] as Tabla,
+  mie: [[0, 0.006], [10, 0.0042], [40, 0.003]] as Tabla,
   mieG: [[0, 0.9], [10, 0.86], [40, 0.8]] as Tabla,
   /** Escala del brillo del cielo para que conviva con las luces de la escena. */
   escalaCielo: [[-10, 1], [0, 0.95], [8, 0.7], [25, 0.46], [60, 0.38]] as Tabla,
-  intensidadSol: [[-2, 0], [0, 0.35], [3, 2.6], [8, 4.6], [20, 5.6], [45, 6.3], [70, 6.6]] as Tabla,
+  intensidadSol: [[-2, 0], [0, 0.4], [3, 3.0], [8, 5.3], [20, 6.0], [45, 6.4], [70, 6.6]] as Tabla,
   colorSol: [[0, "#ff5a1e"], [3, "#ff8236"], [8, "#ffa04f"], [14, "#ffbf7c"], [25, "#ffdcb0"], [45, "#fff0dc"], [70, "#fff6ea"]] as TablaColor,
   hemiCielo: [[-12, "#2a4378"], [-4, "#3e5590"], [2, "#6f86b8"], [8, "#86a5d8"], [25, "#a3c0ea"], [60, "#b3ccf0"]] as TablaColor,
   hemiSuelo: [[-12, "#0b0d12"], [0, "#2c261f"], [10, "#4b3d2b"], [40, "#5b5040"]] as TablaColor,
   hemiIntensidad: [[-12, 0.62], [-4, 0.52], [2, 0.42], [8, 0.36], [30, 0.42], [60, 0.48]] as Tabla,
   entorno: [[-12, 0.5], [0, 0.65], [8, 0.62], [30, 0.72], [60, 0.78]] as Tabla,
   exposicion: [[-12, 1.85], [-6, 1.65], [0, 1.3], [6, 1.08], [15, 1.0], [40, 0.96]] as Tabla,
-  niebla: [[-12, 0.00055], [0, 0.0007], [10, 0.00058], [40, 0.00046]] as Tabla,
+  niebla: [[-12, 0.00048], [0, 0.00052], [10, 0.0004], [40, 0.00034]] as Tabla,
   bloomFuerza: [[-12, 0.9], [-4, 0.75], [2, 0.42], [8, 0.3], [25, 0.2]] as Tabla,
   bloomUmbral: [[-12, 0.62], [0, 0.95], [8, 1.35], [25, 1.7]] as Tabla,
   bloomRadio: [[-12, 0.6], [8, 0.48], [25, 0.42]] as Tabla,
@@ -188,16 +189,21 @@ function radiancia(d: THREE.Vector3, s: THREE.Vector3, p: ParamsCielo, out: numb
 }
 
 // ── Nubes: carteles lejanos con textura procedural ──────────
+// La textura guarda en R cuánto le da el sol a cada punto (cima de cada copo)
+// y en A la densidad; el shader mezcla dos colores que cambian con la hora:
+// la luz del sol y la sombra azulada del cielo.
 function texturaNube(semilla: number, ancho: number): THREE.CanvasTexture {
   const alto = ancho / 2
   const r = azar(semilla)
-  const det = fbm(ancho, 8, 8, 5, semilla + 3)
+  const det = fbm(ancho, 6, 6, 5, semilla + 3)
   const bolas: Array<[number, number, number]> = []
-  const k = 5 + Math.floor(r() * 4)
+  const k = 7 + Math.floor(r() * 5)
+  const base = 0.74
   for (let i = 0; i < k; i++) {
-    const u = 0.18 + 0.64 * (i / (k - 1)) + (r() - 0.5) * 0.08
-    const rad = (0.13 + r() * 0.12) * (1 - Math.abs(u - 0.5) * 0.9)
-    bolas.push([u, 0.66 - rad * 0.55 - r() * 0.08, rad])
+    const u = 0.14 + 0.72 * (i / (k - 1)) + (r() - 0.5) * 0.06
+    const centro = 1 - Math.abs(u - 0.5) * 1.7
+    const rad = (0.07 + r() * 0.07) * (0.55 + centro * 0.9)
+    bolas.push([u, base - rad * (0.9 + r() * 1.1) - centro * 0.12 * r(), rad])
   }
   const lienzo = document.createElement("canvas")
   lienzo.width = ancho
@@ -209,37 +215,42 @@ function texturaNube(semilla: number, ancho: number): THREE.CanvasTexture {
     for (let x = 0; x < ancho; x++) {
       const u = x / ancho
       let dens = 0
-      let cima = 0
+      let luz = 0
       for (const [bu, bv, br] of bolas) {
         const dx = (u - bu) / br
-        const dy = ((v - bv) / br) * 2
+        const dy = ((v - bv) / br) * 0.5
         const d = Math.sqrt(dx * dx + dy * dy)
-        const f = Math.max(0, 1 - d)
+        const f = 1 - d
         if (f > dens) {
           dens = f
-          cima = Math.max(0, -dy) * 0.5 + 0.5
+          luz = 0.5 - dy * 0.55 - dx * 0.12
         }
       }
-      const base = suave(0.72, 0.62, v)
       const ruido = det[(Math.floor(v * ancho) % ancho) * ancho + x]
-      const a = Math.min(1, Math.max(0, (dens * 1.6 + (ruido - 0.5) * 0.9 - 0.18) * base))
-      // Arriba iluminada, abajo en sombra azulada.
-      const luz = Math.min(1, 0.55 + 0.45 * cima + 0.15 * (ruido - 0.5) + (1 - v) * 0.15)
+      const corte = suave(base + 0.02, base - 0.05, v)
+      const a = Math.min(1, Math.max(0, (dens * 2.2 + (ruido - 0.5) * 1.1 - 0.12) * corte))
+      const l = Math.min(1, Math.max(0, luz + (ruido - 0.5) * 0.35 + (1 - v / base) * 0.15))
       const o = (y * ancho + x) * 4
-      img.data[o] = 255 * luz
-      img.data[o + 1] = 255 * (0.03 + 0.97 * luz)
-      img.data[o + 2] = 255 * (0.1 + 0.9 * luz)
+      img.data[o] = 255 * l
+      img.data[o + 1] = 255 * l
+      img.data[o + 2] = 255 * l
       img.data[o + 3] = 255 * a * a * (3 - 2 * a)
     }
   }
   ctx.putImageData(img, 0, 0)
   const t = new THREE.CanvasTexture(lienzo)
-  t.colorSpace = THREE.SRGBColorSpace
+  t.colorSpace = THREE.NoColorSpace
   return t
 }
 
+const NUBE_FRAG = /* glsl */ `vec4 nubeT = texture2D( map, vMapUv );
+diffuseColor.rgb *= mix( uSombra, uLuz, smoothstep( 0.05, 0.95, nubeT.r ) );
+diffuseColor.a *= nubeT.a;`
+
 interface Nube {
   sprite: THREE.Sprite
+  luz: THREE.Color
+  sombra: THREE.Color
   angulo: number
   radio: number
   altura: number
@@ -317,29 +328,40 @@ export class Cielo {
 
   private crearNubes(calidad: Calidad) {
     const ancho = calidad === "alta" ? 512 : 256
-    for (let i = 0; i < 4; i++) this.texNubes.push(texturaNube(900 + i * 37, ancho))
+    for (let i = 0; i < 5; i++) this.texNubes.push(texturaNube(900 + i * 37, ancho))
     const r = azar(4242)
-    const cuantas = calidad === "baja" ? 8 : 14
+    const cuantas = calidad === "baja" ? 10 : 18
     for (let i = 0; i < cuantas; i++) {
+      const luz = new THREE.Color(1, 1, 1)
+      const sombra = new THREE.Color(0.5, 0.55, 0.65)
       const mat = new THREE.SpriteMaterial({
         map: this.texNubes[i % this.texNubes.length],
         transparent: true,
         depthWrite: false,
         fog: false,
       })
+      mat.onBeforeCompile = (sh) => {
+        sh.uniforms.uLuz = { value: luz }
+        sh.uniforms.uSombra = { value: sombra }
+        sh.fragmentShader = sh.fragmentShader
+          .replace("uniform float opacity;", "uniform float opacity;\nuniform vec3 uLuz;\nuniform vec3 uSombra;")
+          .replace("#include <map_fragment>", NUBE_FRAG)
+      }
       const sprite = new THREE.Sprite(mat)
-      const radio = 1700 + r() * 1300
-      const elev = (4 + r() * 11) * GRAD
-      const ancho = radio * (0.22 + r() * 0.2)
+      const radio = 1900 + r() * 1500
+      const elev = (2.5 + r() * 9) * GRAD
+      const ancho = radio * (0.3 + r() * 0.32)
       sprite.scale.set(ancho, ancho / 2, 1)
       sprite.renderOrder = -900
       this.nubes.add(sprite)
       this.lista.push({
         sprite,
-        angulo: (i / cuantas) * Math.PI * 2 + (r() - 0.5) * 0.4,
+        luz,
+        sombra,
+        angulo: (i / cuantas) * Math.PI * 2 + (r() - 0.5) * 0.3,
         radio,
         altura: Math.tan(elev) * radio + ancho * 0.12,
-        velocidad: 0.0025 + r() * 0.002,
+        velocidad: 0.0022 + r() * 0.0018,
       })
     }
   }
@@ -411,20 +433,24 @@ export class Cielo {
     let r = 0
     let g = 0
     let b = 0
+    let suma = 0
     const m = [0, 0, 0]
     const k = 12
+    const sh = Math.max(1e-3, Math.hypot(s.x, s.z))
     for (let i = 0; i < k; i++) {
       const az = (i / k) * Math.PI * 2
       _d.set(Math.cos(az) * 0.995, 0.05, Math.sin(az) * 0.995).normalize()
       radiancia(_d, s, this.params, m)
-      // Sin el resplandor del sol: la niebla es uniforme y no debe teñir todo de naranja.
+      // Pesa más el lado contrario al sol: la niebla es uniforme y no debe teñir todo de naranja.
+      const w = 1 - 0.75 * Math.max(0, (_d.x * s.x + _d.z * s.z) / sh)
       const tope = 2.2 * this.params.escala * 3
-      r += Math.min(m[0], tope)
-      g += Math.min(m[1], tope)
-      b += Math.min(m[2], tope)
+      r += Math.min(m[0], tope) * w
+      g += Math.min(m[1], tope) * w
+      b += Math.min(m[2], tope) * w
+      suma += w
     }
     const noche = this.ambiente.noche
-    out.setRGB(r / k, g / k, b / k).multiplyScalar(0.92)
+    out.setRGB(r / suma, g / suma, b / suma).multiplyScalar(0.82)
     _c0.copy(NOCHE_HORIZONTE).multiplyScalar(noche)
     out.add(_c0)
     return out
@@ -433,20 +459,22 @@ export class Cielo {
   private colorearNubes() {
     const e = this.ambiente.elevacion
     const noche = this.ambiente.noche
-    const sol = this.sol.color
     const iSol = tabla(T.intensidadSol, e)
     const escala = this.params.escala
+    const sh = Math.max(0.05, Math.hypot(this.solDir.x, this.solDir.z))
     for (const n of this.lista) {
-      const mat = n.sprite.material
       _d.set(Math.cos(n.angulo), 0, Math.sin(n.angulo))
-      const hacia = Math.max(0, _d.x * this.solDir.x + _d.z * this.solDir.z) / Math.max(0.05, Math.hypot(this.solDir.x, this.solDir.z))
-      const luz = 0.4 + 0.6 * hacia * hacia
-      // Sol sobre la nube + luz del cielo; de noche apenas la luna.
-      mat.color.copy(sol).multiplyScalar(iSol * 0.32 * luz * (escala / 0.5))
-      _c0.copy(this.hemi.color).multiplyScalar(0.55 * escala + 0.25)
-      mat.color.add(_c0)
-      if (noche > 0) mat.color.lerp(_c1.setRGB(0.035, 0.045, 0.08), noche)
-      mat.opacity = 0.95 - 0.35 * noche
+      const hacia = Math.max(0, (_d.x * this.solDir.x + _d.z * this.solDir.z) / sh)
+      // Del lado del sol, la cara iluminada brilla más (dispersión hacia adelante).
+      n.luz.copy(this.sol.color).multiplyScalar(iSol * (0.2 + 0.22 * hacia * hacia) * (escala / 0.5))
+      n.sombra.copy(this.hemi.color).multiplyScalar(0.42 * escala + 0.12)
+      _c0.copy(this.sol.color).multiplyScalar(0.12 * iSol * escala)
+      n.sombra.add(_c0)
+      if (noche > 0) {
+        n.luz.lerp(_c1.setRGB(0.05, 0.06, 0.1), noche)
+        n.sombra.lerp(_c1.setRGB(0.012, 0.016, 0.03), noche)
+      }
+      n.sprite.material.opacity = 0.95 - 0.4 * noche
     }
   }
 
