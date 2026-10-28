@@ -1,13 +1,17 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { autorizado, quien, soloKev } from "@/lib/auth-admin"
 import {
   SIN_CLAVE_IA,
   consejo,
   consumirCupo,
   conversar,
+  esPersonaje,
   hablar,
+  interior,
   marcarPublico,
   noticia,
+  quienPide,
+  reflexionarSiToca,
   tablero,
   trabajar,
   validarPedido,
@@ -18,7 +22,11 @@ import {
 // ──────────────────────────────────────────────────────────────
 // /api/casa-blanca — la IA de LA CASA BLANCA PROJECT
 //
-//   GET    el tablero: entregables, progreso por departamento y el reto.
+//   GET    el tablero: entregables, progreso por departamento y el reto, más
+//          el ánimo y el pensamiento de cada residente (conciencias).
+//          ?personaje=<id> suma su conciencia completa y sus 10 recuerdos.
+//          La primera visita del día despierta la reflexión de todos (después
+//          de responder: nadie la espera).
 //   POST   { accion: "hablar" | "conversar" | "consejo" | "noticia" } público, con límite.
 //          { accion: "trabajar" } solo Kev: cada entrega cuesta y se guarda.
 //   PATCH  { id, publico } solo Kev: muestra (o esconde) un entregable.
@@ -71,7 +79,12 @@ function exigirKev(req: Request, motivo: string): NextResponse | null {
 
 export async function GET(req: Request) {
   try {
-    return json(await tablero(autorizado(req) === true))
+    const personaje = new URL(req.url).searchParams.get("personaje")
+    if (personaje !== null && !esPersonaje(personaje)) return json({ error: "Personaje desconocido." }, 400)
+    const [t, int] = await Promise.all([tablero(autorizado(req) === true), interior(personaje)])
+    // Corre después de mandar la respuesta, dentro del tiempo de la función.
+    if (int.reflexionar) after(() => reflexionarSiToca())
+    return json({ ...t, ...int.datos })
   } catch (e) {
     console.error("[api/casa-blanca] GET falló:", (e as Error).message)
     return json({ error: "No se pudo leer el tablero." }, 500)
@@ -110,7 +123,7 @@ export async function POST(req: Request) {
 
     switch (pedido.accion) {
       case "hablar":
-        return responder(await hablar(pedido), extra)
+        return responder(await hablar(pedido, quienPide(req)), extra)
       case "conversar":
         return responder(await conversar(pedido), extra)
       case "consejo":

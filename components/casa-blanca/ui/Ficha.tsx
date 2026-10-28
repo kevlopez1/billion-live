@@ -2,7 +2,9 @@
 
 // ──────────────────────────────────────────────────────────────
 // La ficha de un personaje: quién es (datos reales), qué hace ahora en la
-// simulación, qué recuerda, a quién aprecia, y un chat.
+// simulación, su conciencia del día y su memoria compartida (del servidor,
+// iguales para todos los visitantes), lo que recuerda de esta visita, a quién
+// aprecia, y un chat.
 //
 // El chat le pide la respuesta a la IA con el contexto real del momento
 // (hora, lugar, actividad, recuerdos, quién está cerca). Si la IA no
@@ -10,18 +12,45 @@
 // presenta una línea de guion como si fuera de la IA, ni al revés.
 // ──────────────────────────────────────────────────────────────
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Crosshair, Send } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
 import { leerClave } from "@/lib/clave"
 import { LUGAR } from "../lugares"
 import type { Departamento, Personaje } from "../tipos"
 import type { Simulacion } from "../motor/simulacion"
-import { pedir, motivoSinIa } from "./api"
+import { leerInterior, motivoSinIa, pedir, type InteriorServidor, type RecuerdoServidor } from "./api"
 import { Barra, EtiquetaFiccion, FOCO, Hoja, Retrato, Rotulo } from "./base"
-import { recortar, relojTexto } from "./formato"
+import { cuandoFue, recortar, relojTexto } from "./formato"
 import { detectarTema, lineaDeGuion } from "./guion"
 import { useLatido } from "./latido"
+
+const TIPO_RECUERDO: Record<RecuerdoServidor["tipo"], string> = {
+  charla: "Charla",
+  conversacion: "Conversación",
+  consejo: "Consejo",
+  noticia: "Noticia",
+  trabajo: "Trabajo",
+  diario: "Diario",
+}
+
+/** El día de hoy en Bolivia, "2026-10-28": la reflexión es de un día de Bolivia. */
+const hoyEnBolivia = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/La_Paz", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
+
+/** "2026-10-27" → "27 oct.". */
+const diaCorto = (dia: string) => {
+  const t = Date.parse(`${dia}T12:00:00Z`)
+  return Number.isFinite(t) ? new Intl.DateTimeFormat("es", { timeZone: "UTC", day: "numeric", month: "short" }).format(t) : dia
+}
+
+/** Un código al azar por charla: el servidor guarda UN recuerdo por charla y lo reescribe. */
+const nuevaCharla = () => {
+  try {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID()
+  } catch {}
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
 
 export interface MensajeChat {
   de: "tu" | "el"
@@ -63,7 +92,23 @@ export function Ficha({
   const finRef = useRef<HTMLDivElement>(null)
   const histRef = useRef(historial)
   histRef.current = historial
+  const charlaRef = useRef<string>("")
+  if (!charlaRef.current) charlaRef.current = nuevaCharla()
+  // La conciencia y la memoria compartida: undefined mientras carga, null si no se pudo leer.
+  const [interior, setInterior] = useState<InteriorServidor | null | undefined>(undefined)
+  const interiorRef = useRef<AbortController | null>(null)
+  const cargarInterior = useCallback(async () => {
+    interiorRef.current?.abort()
+    const ac = new AbortController()
+    interiorRef.current = ac
+    const r = await leerInterior(p.id, { signal: ac.signal })
+    if (!ac.signal.aborted) setInterior((prev) => r ?? (prev === undefined ? null : prev))
+  }, [p.id])
 
+  useEffect(() => {
+    void cargarInterior()
+    return () => interiorRef.current?.abort()
+  }, [cargarInterior])
   useEffect(() => () => abortRef.current?.abort(), [])
   useEffect(() => {
     finRef.current?.scrollIntoView({ block: "nearest" })
@@ -110,6 +155,7 @@ export function Ficha({
         mensaje: msg,
         historial: previo.slice(-10).map(({ de, texto }) => ({ de, texto: texto.slice(0, 600) })),
         contexto,
+        charla: charlaRef.current,
       },
       { signal: ac.signal, clave: leerClave() },
     )
@@ -117,6 +163,8 @@ export function Ficha({
     let respuesta: MensajeChat
     if (r.ok && typeof r.datos.texto === "string" && r.datos.texto.trim()) {
       respuesta = { de: "el", texto: r.datos.texto.trim() }
+      // El servidor ya guardó el recuerdo de esta charla: se ve en su memoria.
+      void cargarInterior()
     } else {
       const g = lineaDeGuion(p, detectarTema(msg))
       respuesta = { de: "el", texto: g.texto, cita: g.cita, guion: true, nota: motivoSinIa(r.ok ? 500 : r.status) }
@@ -200,9 +248,34 @@ export function Ficha({
         <p className="mt-1 text-[13px] font-semibold text-white">{conPrime(ahora)}</p>
       </div>
 
+      {interior?.conciencia && <Conciencia c={interior.conciencia} p={p} personajes={personajes} />}
+
+      {interior && (
+        <div className="mt-4">
+          <Rotulo>Memoria compartida</Rotulo>
+          <p className="mb-2 mt-1 text-[11px] leading-snug text-white/40">Lo que vivió en esta casa con todos los visitantes. Sin datos personales.</p>
+          {interior.recuerdos.length === 0 ? (
+            <p className="text-[12px] text-white/45">Todavía no hay recuerdos guardados.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {interior.recuerdos.map((m, i) => (
+                <li key={`${m.creado}-${i}`} className="text-[12px] leading-snug text-white/70">
+                  <span className="cb-cond mr-1.5 font-semibold text-white/40">{cuandoFue(m.creado)}</span>
+                  <span className="mr-1.5 inline-block rounded-full bg-white/[0.07] px-1.5 py-px align-[1px] text-[9.5px] font-bold uppercase tracking-[0.1em] text-white/55">
+                    {TIPO_RECUERDO[m.tipo] ?? m.tipo}
+                  </span>
+                  {conPrime(m.texto)}
+                  {m.con.length > 0 && <span className="text-white/35"> · {conQuienes(m.con, personajes)}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {recuerdos.length > 0 && (
         <div className="mt-4">
-          <Rotulo className="mb-1.5">Recuerdos</Rotulo>
+          <Rotulo className="mb-1.5">En esta visita</Rotulo>
           <ul className="space-y-1">
             {recuerdos.map((m, i) => (
               <li key={i} className="text-[12px] leading-snug text-white/65">
@@ -268,5 +341,72 @@ export function Ficha({
         <div ref={finRef} />
       </div>
     </Hoja>
+  )
+}
+
+/** "con Musk, Thiel y 4 más". */
+function conQuienes(ids: string[], personajes: Record<string, Personaje>) {
+  const nombres = ids.map((id) => personajes[id]?.corto).filter((n): n is string => !!n)
+  if (nombres.length <= 3) return `con ${nombres.join(", ").replace(/, ([^,]*)$/, " y $1")}`
+  return `con ${nombres.slice(0, 2).join(", ")} y ${nombres.length - 2} más`
+}
+
+/** Su estado interior: lo escribe su reflexión de cada día, a partir de lo que vivió. */
+function Conciencia({ c, p, personajes }: { c: NonNullable<InteriorServidor["conciencia"]>; p: Personaje; personajes: Record<string, Personaje> }) {
+  const deHoy = c.dia === hoyEnBolivia()
+  const opiniones = Object.entries(c.opiniones)
+    .filter(([id, o]) => personajes[id] && Number.isFinite(o?.valor) && o.valor !== 0)
+    .sort((a, b) => Math.abs(b[1].valor) - Math.abs(a[1].valor))
+    .slice(0, 3)
+  const etiqueta = "text-[10px] font-bold uppercase tracking-[0.16em] text-white/40"
+  return (
+    <section className="mt-4 rounded-[16px] border border-white/[0.08] bg-white/[0.03] px-3.5 py-3" style={{ boxShadow: `inset 3px 0 0 ${p.color}` }}>
+      <div className="flex items-center justify-between gap-2">
+        <Rotulo>Conciencia</Rotulo>
+        <span className="text-[10.5px] font-semibold text-white/35">{deHoy ? "Hoy" : `Reflexión del ${diaCorto(c.dia)}`}</span>
+      </div>
+      {c.animo && (
+        <p className="mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-bold text-white" style={{ background: `${p.color}33`, boxShadow: `inset 0 0 0 1px ${p.color}66` }}>
+          {c.animo}
+        </p>
+      )}
+      {c.meta && (
+        <div className="mt-2.5">
+          <p className={etiqueta}>{deHoy ? "Meta de hoy" : "Su meta"}</p>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-white/85">{conPrime(c.meta)}</p>
+        </div>
+      )}
+      {c.pensamiento && (
+        <div className="mt-2.5">
+          <p className={etiqueta}>Lo que piensa</p>
+          <p className="mt-0.5 text-[12.5px] italic leading-snug text-white/85">«{conPrime(c.pensamiento)}»</p>
+        </div>
+      )}
+      {c.diario && (
+        <div className="mt-3 border-t border-white/[0.07] pt-2.5">
+          <p className={etiqueta}>{deHoy ? "Su diario de hoy" : "Su diario"}</p>
+          <p className="mt-1 text-[14.5px] leading-[1.5] text-white/80" style={{ fontFamily: "var(--font-serif-display), Georgia, serif" }}>
+            {conPrime(c.diario)}
+          </p>
+        </div>
+      )}
+      {opiniones.length > 0 && (
+        <div className="mt-3 border-t border-white/[0.07] pt-2.5">
+          <p className={etiqueta}>Lo que opina</p>
+          <ul className="mt-1 space-y-1">
+            {opiniones.map(([id, o]) => (
+              <li key={id} className="text-[12px] leading-snug text-white/70">
+                <span className="font-semibold text-white/85">{personajes[id].corto}</span>{" "}
+                <span className={o.valor > 0 ? "font-bold text-[#6fd27c]" : "font-bold text-[#ff6b6b]"}>
+                  {o.valor > 0 ? "+" : ""}
+                  {o.valor}
+                </span>
+                {o.frase && <span> · {conPrime(o.frase)}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   )
 }

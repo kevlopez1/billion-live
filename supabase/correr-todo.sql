@@ -1,11 +1,11 @@
 -- ══════════════════════════════════════════════════════════════
--- TODO EN UNO — las ocho partes que necesita kevproject.world
+-- TODO EN UNO — las diez partes que necesita kevproject.world
 --
 -- CÓMO SE CORRE
 --   1. Abre https://supabase.com/dashboard/project/llhvnzlbnmoufilxgshv/sql/new
 --   2. Copia este archivo COMPLETO y pégalo ahí.
 --   3. Botón Run (o Ctrl+Enter).
---   4. Al final te devuelve una tabla de 10 filas. Todas tienen que decir
+--   4. Al final te devuelve una tabla de 13 filas. Todas tienen que decir
 --      "protegida". Si alguna dice "ABIERTA", algo falló: avísame.
 --
 -- Se puede correr las veces que quieras: no borra nada ni duplica nada.
@@ -17,7 +17,7 @@
 
 
 -- ──────────────────────────────────────────────────────────────
--- 1 de 8 · CUENTAS  (para que "Crear tu cuenta" funcione)
+-- 1 de 10 · CUENTAS  (para que "Crear tu cuenta" funcione)
 --
 -- La autenticación la maneja Supabase Auth (tabla auth.users): el hash de la
 -- contraseña, la verificación del correo y el reseteo los hace Supabase.
@@ -160,7 +160,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 2 de 8 · EL AUTO DE PÍXELES  (las firmas en el auto)
+-- 2 de 10 · EL AUTO DE PÍXELES  (las firmas en el auto)
 -- ──────────────────────────────────────────────────────────────
 
 create table if not exists public.car_pixels (
@@ -208,7 +208,7 @@ alter table public.car_pixels enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 3 de 8 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
+-- 3 de 10 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
 --
 -- Una sola fila con todo el contenido en jsonb. Es a propósito: el manual se
 -- edita entero de una vez desde el panel, no campo por campo, así que una
@@ -261,7 +261,7 @@ alter table public.branding_historial enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 4 de 8 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
+-- 4 de 10 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
 --
 -- Tabla aparte del manual a propósito. El manual es un documento que se
 -- guarda entero de una vez; esto son cientos de filas que crecen solas. Si
@@ -320,7 +320,7 @@ alter table public.publicaciones enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 5 de 8 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
+-- 5 de 10 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
 --
 -- Una sola fila con el árbol entero en jsonb, igual que el manual de marca.
 -- Se guarda solo (autoguardado), así que el historial NO archiva cada
@@ -376,7 +376,7 @@ alter table public.proyectos_kev_historial enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 6 de 8 · PREGUNTAS ABIERTAS  (/preguntas: una pregunta, 20 respuestas)
+-- 6 de 10 · PREGUNTAS ABIERTAS  (/preguntas: una pregunta, 20 respuestas)
 --
 -- Una sola fila con el tablero entero en jsonb, igual que el manual de marca
 -- y los proyectos. Sin historial: aquí no se reescribe un documento largo,
@@ -397,7 +397,7 @@ alter table public.preguntas enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 7 de 8 · LA CASA BLANCA PROJECT · ENTREGABLES  (/casa-blanca)
+-- 7 de 10 · LA CASA BLANCA PROJECT · ENTREGABLES  (/casa-blanca)
 --
 -- Lo que entregan de verdad los departamentos de agentes cuando Kev aprieta
 -- "Trabajar". El progreso de cada departamento se cuenta con estas filas: sin
@@ -435,7 +435,7 @@ alter table public.casa_blanca_entregables enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 8 de 8 · LA CASA BLANCA PROJECT · EL LÍMITE DIARIO DE LA IA
+-- 8 de 10 · LA CASA BLANCA PROJECT · EL LÍMITE DIARIO DE LA IA
 --
 -- Cada charla con un personaje la paga la cuenta de Anthropic de Kev. Una
 -- fila por persona y por día, y una fila '*' con el total del día (el techo
@@ -514,13 +514,186 @@ begin
 end $$;
 
 
+-- ──────────────────────────────────────────────────────────────
+-- 9 de 10 · LA CASA BLANCA PROJECT · LA MEMORIA COMPARTIDA
+--
+-- Lo que vivió cada residente con todos los visitantes: las charlas, las
+-- conversaciones entre ellos, los consejos, las noticias, lo que entregó su
+-- equipo y su diario. Antes vivía solo en el navegador de cada visitante y
+-- se perdía; ahora lo recuerdan para todos.
+--
+-- Sin datos personales: lo que se guarda es un resumen que escribe el
+-- personaje en primera persona, no lo que escribió el visitante, y antes de
+-- guardarlo el servidor le borra correos, teléfonos, enlaces y el nombre con
+-- el que se presentó el visitante.
+-- ──────────────────────────────────────────────────────────────
+
+create table if not exists public.casa_blanca_memoria (
+  id            uuid primary key default gen_random_uuid(),
+  creado        timestamptz not null default now(),
+  personaje_id  text not null,           -- el id del residente: 'hormozi', 'claude'…
+  tipo          text not null check (tipo in ('charla', 'conversacion', 'consejo', 'noticia', 'trabajo', 'diario')),
+  texto         text not null check (char_length(texto) between 1 and 400),
+  importancia   int  not null default 5 check (importancia between 1 and 10),
+  con           text[] not null default '{}'   -- los otros residentes que estaban
+);
+
+comment on table public.casa_blanca_memoria is
+  'Recuerdos de los residentes de La Casa Blanca Project, compartidos entre todos los visitantes. Sin datos personales.';
+
+create index if not exists casa_blanca_memoria_personaje_idx
+  on public.casa_blanca_memoria (personaje_id, creado desc);
+
+-- RLS activo y SIN políticas, como el resto: la API lee y escribe con la
+-- service-role y decide qué se muestra.
+alter table public.casa_blanca_memoria enable row level security;
+
+-- Lo que recuerda cada uno antes de hablar: sus p_recientes recuerdos más
+-- nuevos y, sin repetirlos, los p_importantes más importantes de los últimos
+-- p_dias días. En UNA consulta para todos: el consejo puede sentar a los 24,
+-- y con la API de tablas serían dos consultas por residente.
+create or replace function public.casa_blanca_recuerdos(p_ids text[], p_recientes int, p_importantes int, p_dias int)
+returns table (id uuid, personaje_id text, tipo text, texto text, importancia int, con text[], creado timestamptz)
+language sql
+stable
+set search_path = public
+as $$
+  select m.id, m.personaje_id, m.tipo, m.texto, m.importancia, m.con, m.creado
+  from unnest(p_ids) as p(pid)
+  cross join lateral (
+    with recientes as (
+      select r.* from public.casa_blanca_memoria r
+      where r.personaje_id = p.pid
+      order by r.creado desc
+      limit p_recientes
+    )
+    select * from recientes
+    union all
+    (
+      select i.* from public.casa_blanca_memoria i
+      where i.personaje_id = p.pid
+        and i.creado > now() - make_interval(days => p_dias)
+        and i.id not in (select recientes.id from recientes)
+      order by i.importancia desc, i.creado desc
+      limit p_importantes
+    )
+  ) m
+  order by m.personaje_id, m.creado desc;
+$$;
+
+revoke execute on function public.casa_blanca_recuerdos(text[], int, int, int) from public;
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    execute 'revoke execute on function public.casa_blanca_recuerdos(text[], int, int, int) from anon';
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    execute 'revoke execute on function public.casa_blanca_recuerdos(text[], int, int, int) from authenticated';
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    execute 'grant execute on function public.casa_blanca_recuerdos(text[], int, int, int) to service_role';
+  end if;
+end $$;
+
+
+-- ──────────────────────────────────────────────────────────────
+-- 10 de 10 · LA CASA BLANCA PROJECT · LA CONCIENCIA
+--
+-- El estado interior de cada residente: cómo amaneció, qué quiere lograr
+-- hoy, qué piensa, su diario y lo que opina de los demás. Cambia una vez por
+-- día: la primera visita del día (hora de Bolivia) despierta una reflexión de
+-- todos, en UNA llamada al modelo barato, a partir de lo que vivieron.
+-- ──────────────────────────────────────────────────────────────
+
+create table if not exists public.casa_blanca_conciencia (
+  personaje_id  text primary key,
+  dia           date not null,           -- el día (de Bolivia) de esta reflexión
+  animo         text not null default '',
+  meta          text not null default '',
+  pensamiento   text not null default '',
+  diario        text not null default '',
+  -- { "<id de otro residente>": { "valor": -100..100, "frase": "por qué" } }
+  opiniones     jsonb not null default '{}'::jsonb,
+  actualizado   timestamptz not null default now()
+);
+
+comment on table public.casa_blanca_conciencia is
+  'Estado interior de cada residente de La Casa Blanca Project. Se reescribe una vez por día.';
+
+alter table public.casa_blanca_conciencia enable row level security;
+
+-- El candado de la reflexión: una fila por día. Sin él, las primeras visitas
+-- del día llegan juntas y cada una pagaría su propia reflexión.
+--   intentos   cuántas veces se reclamó hoy (tope: si la IA falla, no se
+--              reintenta para siempre)
+--   reclamado  cuándo se reclamó por última vez (si quien la hacía murió a
+--              la mitad, el candado vence y otra visita la retoma)
+--   terminado  cuándo se guardó: con fecha, hoy ya no se vuelve a hacer
+create table if not exists public.casa_blanca_reflexion (
+  dia        date primary key,
+  intentos   int not null default 0,
+  reclamado  timestamptz not null default now(),
+  terminado  timestamptz
+);
+
+comment on table public.casa_blanca_reflexion is
+  'Candado diario de la reflexión de La Casa Blanca Project: quién la hace y si ya se hizo.';
+
+alter table public.casa_blanca_reflexion enable row level security;
+
+-- Reclamar y decidir en la MISMA sentencia, como casa_blanca_consumir: con el
+-- `where` dentro del `on conflict`, la fila del día se bloquea y la segunda
+-- visita simultánea ve la fila ya reclamada. Devuelve el día reclamado, o
+-- null si hoy ya está hecha, la está haciendo otro o se acabaron los intentos.
+create or replace function public.casa_blanca_reclamar_reflexion(p_intentos int, p_vence_min int)
+returns date
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  hoy date := (now() at time zone 'America/La_Paz')::date;
+  reclamado_dia date;
+begin
+  insert into public.casa_blanca_reflexion as r (dia, intentos, reclamado)
+  values (hoy, 1, now())
+  on conflict (dia) do update set intentos = r.intentos + 1, reclamado = now()
+    where r.terminado is null
+      and r.intentos < p_intentos
+      and r.reclamado < now() - make_interval(mins => p_vence_min)
+  returning r.dia into reclamado_dia;
+
+  -- Para decidir hoy no hace falta el pasado lejano.
+  if reclamado_dia is not null then
+    delete from public.casa_blanca_reflexion where dia < hoy - 30;
+  end if;
+
+  return reclamado_dia;
+end;
+$$;
+
+revoke execute on function public.casa_blanca_reclamar_reflexion(int, int) from public;
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    execute 'revoke execute on function public.casa_blanca_reclamar_reflexion(int, int) from anon';
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    execute 'revoke execute on function public.casa_blanca_reclamar_reflexion(int, int) from authenticated';
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    execute 'grant execute on function public.casa_blanca_reclamar_reflexion(int, int) to service_role';
+  end if;
+end $$;
+
+
 -- ══════════════════════════════════════════════════════════════
--- COMPROBACIÓN · tienen que salir 10 filas, todas "protegida"
+-- COMPROBACIÓN · tienen que salir 13 filas, todas "protegida"
 -- ══════════════════════════════════════════════════════════════
 
 select relname as tabla,
        case when relrowsecurity then 'protegida' else 'ABIERTA — avísame' end as estado
 from pg_class
 where relnamespace = 'public'::regnamespace
-  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial', 'preguntas', 'casa_blanca_entregables', 'casa_blanca_uso')
+  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial', 'preguntas', 'casa_blanca_entregables', 'casa_blanca_uso', 'casa_blanca_memoria', 'casa_blanca_conciencia', 'casa_blanca_reflexion')
 order by relname;

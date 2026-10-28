@@ -45,6 +45,28 @@ export function haceCuanto(iso: string, ahora = Date.now()) {
   return `hace ${Math.round(s / 86400)} d`
 }
 
+/**
+ * "hace un momento", "hace 5 min", "hace 2 h", "ayer", "hace 3 días". "Ayer"
+ * es el día anterior en Bolivia (UTC-4 todo el año), no "hace 24 h": algo de
+ * las 23:50 visto a las 00:10 es "hace 20 min", y algo de anoche, "ayer".
+ * Lo usan la ficha y los prompts del servidor, para que digan lo mismo.
+ */
+export function cuandoFue(iso: string, ahora = Date.now()) {
+  const t = Date.parse(iso)
+  if (!Number.isFinite(t)) return ""
+  const s = Math.max(0, (ahora - t) / 1000)
+  const DIA = 86_400_000
+  const BOLIVIA = 4 * 3_600_000
+  const dias = Math.floor((ahora - BOLIVIA) / DIA) - Math.floor((t - BOLIVIA) / DIA)
+  if (s < 60) return "hace un momento"
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`
+  if (dias <= 0 || s < 6 * 3600) return `hace ${Math.floor(s / 3600)} h`
+  if (dias === 1) return "ayer"
+  if (dias < 31) return `hace ${dias} días`
+  const meses = Math.round(dias / 30)
+  return meses <= 1 ? "hace un mes" : `hace ${meses} meses`
+}
+
 export const pct = (x: number) => `${Math.round(Math.max(0, Math.min(1, x)) * 100)} %`
 
 /** Iniciales para el retrato mientras la escena todavía no lo dibujó. */

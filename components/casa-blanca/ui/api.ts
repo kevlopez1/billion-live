@@ -10,6 +10,33 @@ export interface EstadoServidor {
   progreso: Record<string, { entregados: number; puestos: number[] }>
   recaudado: number
   meta: number
+  /** El ánimo y el pensamiento del día de cada residente (vacío si todavía no reflexionaron). */
+  conciencias?: Record<string, { animo: string; pensamiento: string }>
+}
+
+/** El estado interior de un residente: lo escribe su reflexión diaria en el servidor. */
+export interface ConcienciaServidor {
+  animo: string
+  meta: string
+  pensamiento: string
+  diario: string
+  /** id de otro residente → { valor de -100 a 100, por qué }. */
+  opiniones: Record<string, { valor: number; frase: string }>
+  /** El día de Bolivia de la reflexión, "2026-10-28". */
+  dia: string
+}
+
+/** Un recuerdo de la memoria compartida (lo que vivió con todos los visitantes). */
+export interface RecuerdoServidor {
+  texto: string
+  tipo: "charla" | "conversacion" | "consejo" | "noticia" | "trabajo" | "diario"
+  creado: string
+  con: string[]
+}
+
+export interface InteriorServidor {
+  conciencia: ConcienciaServidor | null
+  recuerdos: RecuerdoServidor[]
 }
 
 export type Respuesta<T> = { ok: true; datos: T } | { ok: false; status: number; error: string }
@@ -60,7 +87,37 @@ export async function leerEstado(clave?: string | null): Promise<EstadoServidor 
       progreso: j.progreso && typeof j.progreso === "object" ? j.progreso : {},
       recaudado: typeof j.recaudado === "number" ? j.recaudado : NaN,
       meta: typeof j.meta === "number" ? j.meta : NaN,
+      conciencias: j.conciencias && typeof j.conciencias === "object" ? j.conciencias : {},
     }
+  } catch {
+    return null
+  }
+}
+
+const esTexto = (x: unknown): x is string => typeof x === "string"
+
+/** La conciencia y la memoria compartida de un residente, para su ficha. null si no se pudo leer. */
+export async function leerInterior(id: string, opciones: { signal?: AbortSignal } = {}): Promise<InteriorServidor | null> {
+  try {
+    const r = await fetch(`${RUTA}?personaje=${encodeURIComponent(id)}`, { cache: "no-store", signal: opciones.signal })
+    if (!r.ok) return null
+    const j = (await r.json()) as { conciencia?: Partial<ConcienciaServidor> | null; recuerdos?: unknown }
+    const c = j.conciencia
+    const conciencia: ConcienciaServidor | null =
+      c && typeof c === "object"
+        ? {
+            animo: esTexto(c.animo) ? c.animo : "",
+            meta: esTexto(c.meta) ? c.meta : "",
+            pensamiento: esTexto(c.pensamiento) ? c.pensamiento : "",
+            diario: esTexto(c.diario) ? c.diario : "",
+            opiniones: c.opiniones && typeof c.opiniones === "object" ? c.opiniones : {},
+            dia: esTexto(c.dia) ? c.dia : "",
+          }
+        : null
+    const recuerdos = (Array.isArray(j.recuerdos) ? j.recuerdos : []).filter(
+      (x): x is RecuerdoServidor => !!x && typeof x === "object" && esTexto((x as RecuerdoServidor).texto) && esTexto((x as RecuerdoServidor).creado),
+    )
+    return { conciencia, recuerdos }
   } catch {
     return null
   }
