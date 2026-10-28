@@ -35,15 +35,11 @@ import {
   opacidad,
   pulsoDeMano,
   rotuloDeCamara,
+  tamanoDeSalida,
   textoFinal,
   visorDe,
   type LineaTiempo,
 } from "./linea"
-
-export const TAMANO: Record<Formato, { ancho: number; alto: number }> = {
-  "16:9": { ancho: 1920, alto: 1080 },
-  "4:3": { ancho: 1440, alto: 1080 },
-}
 
 /** Misma semilla = misma historia (la simulación no usa otro azar). */
 export const SEMILLA_ESTUDIO = 20261028
@@ -58,6 +54,10 @@ export interface OpcionesEstudio {
   visor: Visor | null
   calidad: Calidad
   recursos: Recursos
+  /** Alto de salida en píxeles (vista previa: 720). Sin él, 1080. El ancho sale del formato. */
+  alto?: number
+  /** Cuadros por segundo (vista previa: 24). Sin él, los del guion (30). */
+  fps?: number
   /**
    * Vista previa: al saltar cuadros, la escena no los dibuja (la simulación sí
    * avanza). Llega en segundos a cualquier punto, pero el cuadro no es idéntico
@@ -88,8 +88,8 @@ export interface Estudio {
 /** Lo que hace falta para que el estudio arranque (y que el canvas de la escena mida W×H). */
 export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement, op: OpcionesEstudio): Estudio {
   const { ep, recursos } = op
-  const { ancho: W, alto: H } = TAMANO[op.formato]
-  const linea = armarLinea(ep)
+  const { ancho: W, alto: H } = tamanoDeSalida(op.formato, op.alto)
+  const linea = armarLinea(ep, op.fps ?? ep.fps)
   const fps = linea.fps
   let visorForzado = op.visor
 

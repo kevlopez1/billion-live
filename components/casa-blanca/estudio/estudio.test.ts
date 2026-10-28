@@ -26,6 +26,7 @@ import {
   opacidad,
   pulsoDeMano,
   rotuloDeCamara,
+  tamanoDeSalida,
   textoFinal,
   tiempoDeCuadro,
   visorDe,
@@ -151,6 +152,19 @@ async function main() {
     ok(codigoDeTiempo(0, 30) === "00:00:00:00", "código de tiempo en 0")
     ok(codigoDeTiempo(5.4, 30) === "00:00:05:12", `5,4 s = 00:00:05:12 (${codigoDeTiempo(5.4, 30)})`)
     ok(codigoDeTiempo(3725 + 29 / 30, 30) === "01:02:05:29", `1 h 2 min 5 s 29 cuadros (${codigoDeTiempo(3725 + 29 / 30, 30)})`)
+  }
+
+  seccion("Tamaño de salida y fps (vista previa)")
+  {
+    const t = (f: "16:9" | "4:3", a?: number) => JSON.stringify(tamanoDeSalida(f, a))
+    ok(t("16:9") === JSON.stringify({ ancho: 1920, alto: 1080 }) && t("4:3") === JSON.stringify({ ancho: 1440, alto: 1080 }), "por defecto 1920×1080 y 1440×1080")
+    ok(t("16:9", 720) === JSON.stringify({ ancho: 1280, alto: 720 }) && t("4:3", 720) === JSON.stringify({ ancho: 960, alto: 720 }), "a 720: 1280×720 y 960×720 (misma proporción, sin aplastar)")
+    const raro = tamanoDeSalida("16:9", 541)
+    ok(raro.ancho % 2 === 0 && raro.alto % 2 === 0, `siempre par, como pide H.264 (${raro.ancho}×${raro.alto})`)
+    ok(tamanoDeSalida("4:3", 99999).alto === 2160 && tamanoDeSalida("4:3", 10).alto === 360, "entre 360 y 2160")
+    const L24 = armarLinea(MUESTRA, 24)
+    ok(L24.fps === 24 && L24.cuadros === Math.round(L24.duracion * 24), `a 24 fps: ${L24.cuadros} cuadros, misma duración`)
+    ok(cerca(armarLinea(MUESTRA, 24).duracion, armarLinea(MUESTRA).duracion), "el fps no cambia la duración")
   }
 
   seccion("Diálogo: repartido en partes iguales")

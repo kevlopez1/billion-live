@@ -12,6 +12,10 @@
 //   --out <archivo.mp4>    (por defecto <ep>-<formato>.mp4)
 //   --desde <s> --hasta <s>     solo un tramo (los cuadros anteriores se simulan igual: el tramo sale idéntico al del video entero)
 //   --url http://localhost:3110 la web (npm run dev)
+//   --alto <px>            vista previa a otro alto (720 → 1280×720 en 16:9, 960×720 en 4:3); por defecto 1080
+//   --fps <n>              vista previa a otros cuadros por segundo (24); por defecto los del guion (30)
+//   --atajo                vista previa: los cuadros antes de --desde no se dibujan (llega rápido, pero no es
+//                          idéntico al video entero; nunca para el video final)
 //   --hashes <archivo>     escribe el md5 de cada cuadro (para comprobar que dos renders son iguales)
 //   --verbose              muestra la consola de la página
 //
@@ -30,7 +34,7 @@
 
 import { spawn } from "node:child_process"
 import { createHash } from "node:crypto"
-import { writeFileSync } from "node:fs"
+import { appendFileSync, writeFileSync } from "node:fs"
 import { createRequire } from "node:module"
 
 const require = createRequire(import.meta.url)
@@ -42,7 +46,7 @@ function args() {
     const k = a[i]
     if (!k.startsWith("--")) continue
     const clave = k.slice(2)
-    if (clave === "verbose") o.verbose = true
+    if (clave === "verbose" || clave === "atajo") o[clave] = true
     else o[clave] = a[++i]
   }
   return o
@@ -73,6 +77,9 @@ async function main() {
   const q = new URLSearchParams({ ep: o.ep, render: "1", calidad: o.calidad })
   if (o.formato) q.set("formato", o.formato)
   if (o.visor) q.set("visor", o.visor)
+  if (o.alto) q.set("alto", String(o.alto))
+  if (o.fps) q.set("fps", String(o.fps))
+  if (o.atajo) q.set("atajo", "1")
   const url = `${o.url.replace(/\/$/, "")}/casa-blanca/estudio?${q}`
 
   const { chromium } = cargarPlaywright()
@@ -124,7 +131,7 @@ async function main() {
     })
     const escribir = (buf) => new Promise((ok) => (ffmpeg.stdin.write(buf) ? ok() : ffmpeg.stdin.once("drain", ok)))
 
-    const hashes = []
+    if (o.hashes) writeFileSync(o.hashes, "")
     const total = hasta - desde
     const tRender = Date.now()
     if (desde > 0) console.error(`Simulando los ${desde} cuadros anteriores al tramo (sin guardarlos)…`)
@@ -140,7 +147,8 @@ async function main() {
       if (recargada || r.sesion !== sesion) throw new Error(`la página se recargó a mitad del render (cuadro ${i}): no se mezclan dos corridas en un video. Vuelve a correrlo.`)
       const datos = r.datos
       const buf = Buffer.from(datos.slice(datos.indexOf(",") + 1), "base64")
-      if (o.hashes) hashes.push(`${i}\t${createHash("md5").update(buf).digest("hex")}`)
+      // Cuadro por cuadro: si el render se corta, lo hecho queda anotado.
+      if (o.hashes) appendFileSync(o.hashes, `${i}\t${createHash("md5").update(buf).digest("hex")}\n`)
       await escribir(buf)
       const hechos = i - desde + 1
       const porCuadro = (Date.now() - tRender) / 1000 / hechos
@@ -150,7 +158,6 @@ async function main() {
     await terminado
     const s = (Date.now() - tRender) / 1000
     console.error(`\nListo: ${out} · ${total} cuadros en ${seg(s)} (${(s / total).toFixed(2)} s/cuadro)`)
-    if (o.hashes) writeFileSync(o.hashes, hashes.join("\n") + "\n")
   } finally {
     if (ffmpeg && ffmpeg.exitCode === null && !ffmpeg.stdin.writableEnded) ffmpeg.stdin.end()
     await navegador.close()

@@ -149,7 +149,8 @@ export function armarPelo(cu: Cuerpo, p: Personaje, op: { holguraEspalda: number
       const fm: number[] = []
       for (let j = 0; j < M; j++) {
         const l = f.l[j]
-        const m = mascaraBarba(cab, l.x, l.y, l.z, eb)
+        // La barba termina bajo la mandíbula: en las filas del cuello no hay (salvo la de collar).
+        const m = f.radial || eb === "menton" ? mascaraBarba(cab, l.x, l.y, l.z, eb) : 0
         fm.push(m)
         const g = m > 0 ? grosorBarba(cab, l.x, l.y, l.z, eb) * (0.5 + 0.5 * suave(0, 0.6, m)) + (eb === "completa" || eb === "larga" ? 0.002 * rizos(l.x, l.y, l.z, 260, sem) : 0) : 0
         const n = f.n[j]

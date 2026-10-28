@@ -23,9 +23,9 @@ import type { Calidad } from "../tipos"
 import type { Recursos } from "./compositor"
 import { CALENDARIO } from "./episodios"
 import { guionValido, type Episodio, type Formato, type Visor } from "./guion"
-import { armarLinea, avisosDelEpisodio } from "./linea"
+import { armarLinea, avisosDelEpisodio, tamanoDeSalida } from "./linea"
 import { MUESTRA } from "./muestra"
-import { TAMANO, crearEstudio, type Estudio as Motor } from "./reproductor"
+import { crearEstudio, type Estudio as Motor } from "./reproductor"
 
 interface InfoListo {
   ancho: number
@@ -67,6 +67,15 @@ interface Params {
   render: boolean
   /** ?atajo=1 (solo vista previa): saltar cuadros sin dibujarlos. */
   atajo: boolean
+  /** ?alto=720 (vista previa): otro alto de salida, mismo formato. */
+  alto: number | null
+  /** ?fps=24 (vista previa): otros cuadros por segundo. */
+  fps: number | null
+}
+
+function entero(v: string | null, min: number, max: number): number | null {
+  const n = Number(v)
+  return v && Number.isInteger(n) && n >= min && n <= max ? n : null
 }
 
 function leerParams(): Params {
@@ -82,6 +91,8 @@ function leerParams(): Params {
     calidad: c === "baja" || c === "media" || c === "alta" ? c : "alta",
     render: q.get("render") === "1",
     atajo: q.get("atajo") === "1",
+    alto: entero(q.get("alto"), 360, 2160),
+    fps: entero(q.get("fps"), 12, 60),
   }
 }
 
@@ -221,7 +232,7 @@ export default function Estudio() {
       if (!vivo) return
       let motor: Motor
       try {
-        motor = crearEstudio(oculto, salida, { ep, formato: fmt, visor: visorRef.current, calidad, recursos, atajo: !!params?.atajo })
+        motor = crearEstudio(oculto, salida, { ep, formato: fmt, visor: visorRef.current, calidad, recursos, atajo: !!params?.atajo, alto: params?.alto ?? undefined, fps: params?.fps ?? undefined })
       } catch (e) {
         console.error("[estudio] no se pudo crear:", e)
         return fallar(`No se pudo crear la escena: ${e instanceof Error ? e.message : String(e)}`)
@@ -312,9 +323,9 @@ export default function Estudio() {
     setClave((c) => c + 1)
   }, [])
 
-  const { ancho, alto } = TAMANO[fmt]
-  const duracion = useMemo(() => (ep ? armarLinea(ep).duracion : 0), [ep])
-  const fps = ep?.fps ?? 30
+  const { ancho, alto } = tamanoDeSalida(fmt, params?.alto ?? undefined)
+  const fps = params?.fps ?? ep?.fps ?? 30
+  const duracion = useMemo(() => (ep ? armarLinea(ep, fps).duracion : 0), [ep, fps])
 
   return (
     <div ref={raizRef} className="flex h-full w-full flex-col bg-black text-white" style={{ fontFamily: "var(--font-manrope), system-ui, sans-serif" }}>

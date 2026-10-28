@@ -73,8 +73,6 @@ export function ejeAscensor(n: NivelId): { x: number; z: number } {
 // ── Pasillos del subsuelo ──────────────────────────────────────
 // Los mismos tres pasillos en los tres subsuelos: el 1 pasa frente al
 // ascensor; el eje central baja de norte a sur y los une.
-const ACCESO_CELDA = (lugarId: string) => NODO[`acc-${lugarId}`]
-
 export interface Celda {
   nivel: "n1" | "n2" | "n3"
   fila: number

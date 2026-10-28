@@ -14,7 +14,20 @@
 import { CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
 import { CELDAS, LUGAR } from "../lugares"
 import { usd } from "../ui/formato"
-import { horaANumero, type CamaraPlano, type Episodio, type LineaDialogo, type Plano, type Visor } from "./guion"
+import { horaANumero, type CamaraPlano, type Episodio, type Formato, type LineaDialogo, type Plano, type Visor } from "./guion"
+
+export const TAMANO: Record<Formato, { ancho: number; alto: number }> = {
+  "16:9": { ancho: 1920, alto: 1080 },
+  "4:3": { ancho: 1440, alto: 1080 },
+}
+
+/** El tamaño de salida: 1920×1080 / 1440×1080, o el mismo formato a otro alto (ancho par, como pide H.264). */
+export function tamanoDeSalida(formato: Formato, alto?: number): { ancho: number; alto: number } {
+  const base = TAMANO[formato]
+  if (!alto || !Number.isFinite(alto)) return base
+  const h = Math.round(Math.min(2160, Math.max(360, alto)) / 2) * 2
+  return { ancho: Math.round((h * base.ancho) / base.alto / 2) * 2, alto: h }
+}
 
 export const APERTURA_S = 1.5
 export const CIERRE_S = 3

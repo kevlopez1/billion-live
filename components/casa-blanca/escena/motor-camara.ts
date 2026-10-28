@@ -384,9 +384,10 @@ function poseNivel(n: NivelId, out: Pose = nuevaPose(), aspecto = 1.6): Pose {
   if (aspecto < 0.8) {
     // Celular en vertical: desde el este, con el lado largo del subsuelo (180 m) a lo alto de la pantalla.
     const elev = 60 * THREE.MathUtils.DEG2RAD
-    const d = 190
-    out.mira.set(cx, y, cz)
-    out.pos.set(cx + Math.cos(elev) * d, y + Math.sin(elev) * d, cz + 10)
+    const d = 196
+    // El pivote un poco al este: el subsuelo sube en la pantalla y no queda cielo vacío arriba.
+    out.mira.set(cx + 14, y, cz)
+    out.pos.set(cx + 14 + Math.cos(elev) * d, y + Math.sin(elev) * d, cz + 10)
     out.fov = 45
     return out
   }

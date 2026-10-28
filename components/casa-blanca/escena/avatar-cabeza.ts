@@ -492,7 +492,8 @@ export function grosorBarba(cab: Cabeza, x: number, y: number, z: number, estilo
       return 0.007 + 0.008 * menton
     case "completa":
     default:
-      return 0.0045 + 0.0045 * menton
+      // Corta en las mejillas, más llena en el mentón.
+      return 0.0032 + 0.0055 * menton
   }
 }
 
@@ -526,7 +527,9 @@ export function pelo(cab: Cabeza, x: number, y: number, z: number, estilo: Estil
   // Debajo de la oreja y por delante de la nuca (la mandíbula): sin pelo.
   const mBajo = 1 - suave(0.0, -0.025, y) * suave(-0.03, 0.0, z)
   const larga = estilo === "largo" || estilo === "melena_bob"
-  let m = mFrente * mSien * (larga ? 1 : mOreja) * mNuca * (larga ? 1 : mBajo)
+  // Melena: por debajo de la mandíbula el pelo cae por los costados y la espalda, nunca por delante del cuello.
+  const mGarganta = 1 - suave(-0.035, -0.07, y) * suave(-0.02, 0.025, z)
+  let m = mFrente * mSien * (larga ? mGarganta : mOreja) * mNuca * (larga ? 1 : mBajo)
   m = clamp(m, 0, 1)
   const enLado = suave(0.045, 0.06, ax)
   const arriba = suave(-0.02, 0.07, y)

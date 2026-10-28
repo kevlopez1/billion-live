@@ -184,8 +184,8 @@ export function ambienteCiudad(hora: number, out?: AmbienteCiudad): AmbienteCiud
   a.niebla.color.set(P.niebla)
   a.niebla.densidad = THREE.MathUtils.lerp(0.0095, 0.0115, noche)
   a.exposicion = THREE.MathUtils.lerp(0.95, 1.0, noche)
-  a.bloom.fuerza = THREE.MathUtils.lerp(0.36, 0.48, noche)
-  a.bloom.umbral = THREE.MathUtils.lerp(0.93, 0.86, noche)
+  a.bloom.fuerza = THREE.MathUtils.lerp(0.3, 0.42, noche)
+  a.bloom.umbral = THREE.MathUtils.lerp(0.96, 0.9, noche)
   a.bloom.radio = 0.5
   return a
 }
@@ -1294,7 +1294,7 @@ function tabiqueVidrio(k: Kit, pz: Piezas, eje: "x" | "z", fijo: number, a0: num
 }
 
 /** Techo de una sala (solo se ve desde abajo) con paneles de luz de 60 x 60 en grilla. */
-function techoSala(k: Kit, pz: Piezas, s: Sala, acab: Valores, paso = 2.4, colorLuz: string = P.frio, fuerza = 3.2, turno = 1) {
+function techoSala(k: Kit, pz: Piezas, s: Sala, acab: Valores, paso = 2.4, colorLuz: string = P.frio, fuerza = 2.4, turno = 1) {
   const y = Y0 + s.alto
   k.techo.agregar(horizontal(s, y, true), null, acab)
   for (let x = s.x0 + paso / 2; x < s.x1; x += paso)
@@ -1548,6 +1548,14 @@ function construirAnden(k: Kit, pz: Piezas) {
   // Este: el muro grueso entre el andén y el pozo, con la compuerta.
   muro(k, pz, "z", POZO.z0, POZO.z1, S.x1, POZO.x0, Y0, yT, [{ a: 30, b: 34, alto: 4.2 }], A.concreto)
   k.compuertas.push({ x: (S.x1 + POZO.x0) / 2, z: 32, eje: "z", ancho: 4, alto: 4.2, grosor: 2, abierta: 0 })
+  // Del lado del atrio, el mismo muro lleva los paneles blancos del pozo.
+  const Xp = new THREE.Vector3(1, 0, 0)
+  for (const [a, b, y0, y1] of [
+    [POZO.z0, 30, Y0, Y0 + PB],
+    [34, POZO.z1, Y0, Y0 + PB],
+    [30, 34, Y0 + 4.2, Y0 + PB],
+  ])
+    k.base.agregar(cara(POZO.x0 + 0.004, a, POZO.x0 + 0.004, b, y0, y1, Xp), null, A.panel)
   letrero(k, pz, "f-anden", POZO.x0 + 0.05, Y0 + 5.0, 32, Math.PI / 2, 0.5)
   letrero(k, pz, "anden", S.x1 - 0.05, Y0 + 5.2, 22, -Math.PI / 2, 0.9)
 
@@ -1613,10 +1621,12 @@ function construirTren(mats: MaterialesCiudad, pz: Piezas, sombras: boolean): Tr
   cuerpo.agregar(cap, M(0, 0, 0, 0, 1, 1.1, 1), acabado("#c5ccd2", 0.3, 0.85))
   cap.dispose()
   for (const s of [-1, 1]) {
-    cuerpo.agregar(pz.caja, M(s * (r - 0.02), 0.45, 0, 0, 0.08, 0.7, largo - 3.4), acabado("#0d1216", 0.1, 0.4, 0, "#dbe9ff", 1.6))
+    cuerpo.agregar(pz.caja, M(s * (r - 0.02), 0.45, 0, 0, 0.08, 0.7, largo - 3.4), acabado("#0d1216", 0.1, 0.4, 0, "#dbe9ff", 0.75))
     cuerpo.agregar(pz.caja, M(s * (r - 0.05), -0.35, 0, 0, 0.06, 0.08, largo - 3), acabado(P.cian, 0.3, 0, 0, P.cian, 2.5))
   }
   cuerpo.agregar(pz.caja, M(0, -1.35, 0, 0, 2.0, 0.3, largo - 2.6), A.aceroOsc)
+  // Bogies sobre los rieles.
+  for (const s of [-1, 1]) cuerpo.agregar(pz.caja, M(0, -1.75, s * (largo / 2 - 2.2), 0, 1.9, 0.5, 2.4), acabado("#2b3036", 0.6, 0.6))
   // Parabrisas delante y detrás.
   for (const s of [-1, 1]) cuerpo.agregar(pz.esfera, M(0, 0.5, s * (largo / 2 - 0.55), 0, 0.85, 0.42, 0.5), acabado("#0d1216", 0.08, 0.5, 0, "#9fc3ff", 0.6))
   const coches = new THREE.InstancedMesh(cuerpo.geometria()!, mats.base, 2)
@@ -1625,7 +1635,7 @@ function construirTren(mats: MaterialesCiudad, pz: Piezas, sombras: boolean): Tr
   coches.frustumCulled = false
   const hoja = new Lote(PBR)
   hoja.agregar(pz.caja, M(0, 0, 0, 0, 0.06, 2.1, 0.75), acabado("#d3d9de", 0.3, 0.85))
-  hoja.agregar(pz.caja, M(0.02, 0.35, 0, 0, 0.04, 0.9, 0.5), acabado("#0d1216", 0.1, 0.4, 0, "#dbe9ff", 1.4))
+  hoja.agregar(pz.caja, M(0.02, 0.35, 0, 0, 0.04, 0.9, 0.5), acabado("#0d1216", 0.1, 0.4, 0, "#dbe9ff", 0.7))
   const puertas = new THREE.InstancedMesh(hoja.geometria()!, mats.base, 8)
   puertas.name = "ciudad-tren-puertas"
   puertas.frustumCulled = false
@@ -1750,7 +1760,7 @@ function construirCorredor(k: Kit, pz: Piezas) {
   // Techo con dos tiras de luz lineal empotradas.
   k.techo.agregar(horizontal(S, yT, true), null, acabado(P.panel, 0.55, 0, 1.2))
   for (const x of [-1.25, 1.25]) {
-    k.luz.agregar(pz.caja, M(x, yT - 0.01, cz(S), 0, 0.16, 0.02, S.z1 - S.z0 - 1), luz(P.frio, 4))
+    k.luz.agregar(pz.caja, M(x, yT - 0.01, cz(S), 0, 0.16, 0.02, S.z1 - S.z0 - 1), luz(P.frio, 2.4))
     for (let z = S.z0 + 4; z < S.z1; z += 6) k.reflejos.push({ x, z, h: S.alto, color: P.frio, fuerza: 0.45, ancho: 0.6 })
   }
   // El pórtico del escáner a la entrada: acero y tiras cian.
@@ -1933,7 +1943,7 @@ type Vista = { pos: [number, number, number]; mira: [number, number, number]; fo
 export const VISTAS_CIUDAD: Record<"mirador" | "plaza" | "avenida" | "aerea" | "torres" | "anden" | "control" | "comedor" | "jardin" | "camara", Vista> = {
   mirador: { pos: [-6.5, Y0 + 5.5, 15.6], mira: [4, Y0 + 0.5, 40], fov: 64 },
   plaza: { pos: [7, Y0 + 5, 42], mira: [-2, Y0 + 1.5, 22], fov: 64 },
-  avenida: { pos: [1.6, Y0 + 3.8, 94.5], mira: [-0.2, Y0 + 0.4, 72], fov: 58 },
+  avenida: { pos: [1.5, Y0 + 2.9, 94.8], mira: [-0.4, Y0 + 0.1, 76], fov: 60 },
   aerea: { pos: [31, Y0 + 13.5, 107.5], mira: [-4, Y0, 52], fov: 55 },
   torres: { pos: [-5.6, Y0 + 3.6, 91], mira: [-18, Y0 + 0.5, 74], fov: 62 },
   anden: { pos: [-13.2, Y0 + 4.6, 42.8], mira: [-27, Y0 + 0.5, 22], fov: 62 },
@@ -2346,7 +2356,7 @@ export function construirCiudad(ctx: CtxEscena): void {
       const visible = f.z > TUNEL.z1 + 4 + tren.paso * 2
       tren.coches.visible = visible
       tren.puertas.visible = visible
-      const yC = Y0 + 0.6
+      const yC = Y0 + 1.2
       for (let i = 0; i < 2; i++) {
         const zc = f.z - tren.largo / 2 - i * tren.paso
         _m.compose(_p.set(VIA.x, yC, zc), _q.identity(), _s.set(1, 1, 1))
