@@ -5,7 +5,9 @@
 // el DOM: la escena lee `pj` en cada cuadro y la interfaz escucha `on()`.
 //
 // Tres relojes, a propósito:
-// - El mundo avanza 1 minuto por segundo real × velocidad.
+// - El mundo avanza 12 segundos por segundo real × velocidad: a ×1 un día
+//   dura 2 horas, a ×4 media hora y a ×15 ocho minutos. Más rápido, los
+//   personajes pasaban el 42 % del día caminando de un lugar a otro.
 // - Los personajes caminan con la RAÍZ de la velocidad: a ×16 van 4 veces
 //   más rápido, no 16 (a ×16 se teletransportarían y no se vería nada).
 // - Las conversaciones corren en segundos reales para que se puedan leer.
@@ -98,6 +100,10 @@ const VEL_CAMINA = 1.4
 /** Paso apurado: sigue caminando, pero rápido. Antes de correr, se apura. */
 const VEL_APURADO = 2.1
 const VEL_CORRE = 3.5
+/** Por dentro de un edificio o un pasillo oculto nadie lo ve: se cruza a 8 m/s. */
+const VEL_OCULTO = 8
+/** Minutos del mundo por segundo real a ×1. */
+const MIN_POR_S = 0.2
 /** Cada tramo de ascensor dura 4 s (con el mismo reloj que el paso de los personajes). */
 const ASCENSOR_S = 4
 /** Distancia mínima entre dos personajes que se paran en un lugar. */
@@ -480,6 +486,8 @@ interface Tramo {
   entra?: string
 }
 
+const velTramo = (t: Tramo, ritmo: Ritmo) => (t.oculto ? VEL_OCULTO : VEL[ritmo])
+
 interface Interno {
   p: Personaje
   horario: EntradaHorario[]
@@ -831,7 +839,7 @@ export class Simulacion {
     }
     const v = Number.isFinite(this.reloj.velocidad) && this.reloj.velocidad > 0 ? this.reloj.velocidad : 0
     this.tReal += dt
-    this.avanzarReloj(dt * v)
+    this.avanzarReloj(dt * v * MIN_POR_S)
     this.revisarHorarios()
     const dtMov = dt * Math.sqrt(v)
     for (const id of this.ids) {
@@ -946,10 +954,12 @@ export class Simulacion {
     const v = this.reloj.velocidad
     if (!(v > 0) || s.horario.length < 2) return "paso"
     let largo = 0
+    let oculto = 0
     let ascensores = 0
     let prev = this.pj[id].pos
     for (const t of s.ruta) {
       if (t.ascensor) ascensores++
+      else if (t.oculto) oculto += dist3(prev, t.p)
       else largo += dist3(prev, t.p)
       prev = t.p
     }
@@ -960,8 +970,9 @@ export class Simulacion {
       if (em > m + 1e-6) proxima = Math.min(proxima, em)
     }
     if (proxima === Infinity) proxima = s.horario[0][0] * 60 + 1440
-    const disponibles = UMBRAL_TARDE * ((proxima - m) / v)
-    const llega = (vel: number) => (largo / vel + ascensores * ASCENSOR_S) / Math.sqrt(v) <= disponibles
+    const disponibles = UMBRAL_TARDE * ((proxima - m) / (v * MIN_POR_S))
+    const fijo = oculto / VEL_OCULTO + ascensores * ASCENSOR_S
+    const llega = (vel: number) => (largo / vel + fijo) / Math.sqrt(v) <= disponibles
     return llega(VEL_CAMINA) ? "paso" : llega(VEL_APURADO) ? "apurado" : "corre"
   }
 
@@ -1081,7 +1092,7 @@ export class Simulacion {
           this.alcanzar(id, w)
         }
       } else {
-        const vel = VEL[s.ritmo]
+        const vel = velTramo(w, s.ritmo)
         const dx = w.p.x - e.pos.x
         const dy = w.p.y - e.pos.y
         const dz = w.p.z - e.pos.z
@@ -1220,7 +1231,7 @@ export class Simulacion {
         e.velocidad = 0
       } else {
         e.estado = s.ritmo === "corre" ? "corre" : "camina"
-        e.velocidad = VEL[s.ritmo] * Math.sqrt(v)
+        e.velocidad = velTramo(w, s.ritmo) * Math.sqrt(v)
       }
     } else {
       const l = s.zona ? LUGAR[s.zona] : undefined

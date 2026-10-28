@@ -141,10 +141,10 @@ seccion("24 h del mundo en pasos de 0,1 s")
     })
     return k
   }
-  const prev: Record<string, { nivel: NivelId; estado: EstadoCuerpo; x: number; y: number; z: number }> = {}
+  const prev: Record<string, { nivel: NivelId; estado: EstadoCuerpo; visible: boolean; x: number; y: number; z: number }> = {}
   for (const id of IDS) {
     const e = sim.pj[id]
-    prev[id] = { nivel: e.nivel, estado: e.estado, ...e.pos }
+    prev[id] = { nivel: e.nivel, estado: e.estado, visible: e.visible, ...e.pos }
   }
   let nan = 0
   let saltosDeNivel = 0
@@ -168,7 +168,7 @@ seccion("24 h del mundo en pasos de 0,1 s")
   ok(Math.abs(escC.pos.x - ((depAmodei.x0 + depAmodei.x1) / 2 + 2.5)) < 1e-9, "la IA se sienta a 2,5 m del centro")
 
   const dt = 0.1
-  const pasos = Math.round((24 * 60 + 30) / dt) // 24 h y media del mundo a velocidad 1
+  const pasos = Math.round((24 * 60 + 30) / 0.2 / dt) // 24 h y media del mundo a velocidad 1 (0,2 min por segundo real)
   let ahora = 0
   for (let i = 0; i < pasos; i++) {
     ahora += dt * 1000
@@ -187,7 +187,8 @@ seccion("24 h del mundo en pasos de 0,1 s")
       const dy = e.pos.y - a.y
       const dz = e.pos.z - a.z
       const d = Math.hypot(dx, dy, dz)
-      if (d > 5 * dt + 1e-6) teletransportes++
+      // A la vista, nadie pasa de 5 m/s; por dentro (oculto) se cruza a 8 m/s.
+      if (d > (a.visible && e.visible ? 5 : 8.5) * dt + 1e-6) teletransportes++
       if (e.estado === "ascensor") {
         pasosAscensor++
         if (e.visible) ascensorVisible++
@@ -206,7 +207,7 @@ seccion("24 h del mundo en pasos de 0,1 s")
       }
       if (p.id === "hormozi" && e.estado === "sentado" && Math.hypot(e.pos.x - escH.pos.x, e.pos.z - escH.pos.z) < 0.01) sentadoEnEscritorio.hormozi = true
       if (p.id === "claude" && e.estado === "sentado" && Math.hypot(e.pos.x - escC.pos.x, e.pos.z - escC.pos.z) < 0.01) sentadoEnEscritorio.claude = true
-      prev[p.id] = { nivel: e.nivel, estado: e.estado, ...e.pos }
+      prev[p.id] = { nivel: e.nivel, estado: e.estado, visible: e.visible, ...e.pos }
     }
     // Nadie quieto encima de otro en un lugar visible.
     for (let x = 0; x < IDS.length; x++)
@@ -440,7 +441,7 @@ seccion("determinismo, velocidad y pausa")
       if (sim.pj[id].estado === "camina" && Math.abs(sim.pj[id].velocidad - 1.4 * 2) < 1e-9) vistaCaminando = true
   }
   ok(vistaCaminando, "a ×4 caminan a 1,4 × √4 = 2,8 m/s")
-  ok(Math.abs(sim.reloj.minutos - (8.9 * 60 + 40 * 4)) < 1e-6, "a ×4 el reloj avanza 4 minutos por segundo")
+  ok(Math.abs(sim.reloj.minutos - (8.9 * 60 + 40 * 4 * 0.2)) < 1e-6, "a ×4 el reloj avanza 48 s del mundo por segundo")
   sim.reloj.pausa = true
   const foto = JSON.stringify({ pj: IDS.map((id) => sim.pj[id].pos), m: sim.reloj.minutos })
   for (let i = 0; i < 50; i++) sim.avanzar(0.1, 40000 + i * 100)
