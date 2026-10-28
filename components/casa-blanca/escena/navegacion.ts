@@ -166,7 +166,7 @@ void main() {
  * Una malla con todos los letreros de un nivel. `ref`: distancia (m) a la
  * que el letrero mide su ancho; más lejos crece hasta `max` veces.
  */
-function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max: number; cerca: [number, number]; brillo: number; nombre: string }) {
+function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max: number; cerca: [number, number]; brillo: number; nombre: string; encima?: boolean }) {
   const filas = Math.ceil(letreros.length / 2)
   const W = SLOT_W * 2
   const H = Math.max(SLOT_H, THREE.MathUtils.ceilPowerOfTwo(filas * SLOT_H))
@@ -242,10 +242,12 @@ function mallaLetreros(letreros: Letrero[], op: { ref: number; min: number; max:
     fragmentShader: FRAG_LETRERO,
     transparent: true,
     depthWrite: false,
+    // Un marcador de juego se ve aunque haya un edificio delante.
+    depthTest: !op.encima,
   })
   const m = new THREE.Mesh(geo, mat)
   m.name = op.nombre
-  m.renderOrder = 20
+  m.renderOrder = op.encima ? 30 : 20
   // No le roban el toque a lo que está debajo.
   m.raycast = () => {}
   return m
@@ -608,8 +610,8 @@ function construirPabellon(ctx: CtxEscena) {
 
   // Marcador flotante, como en un juego: se ve desde la vista aérea, por encima de la Residencia.
   const marcador = mallaLetreros(
-    [{ x: P.x, y: 16, z: P.z, titulo: "ASCENSOR", sub: `${NIVEL_CORTO.n1.toUpperCase()} · ${NIVEL_CORTO.ciudad.toUpperCase()} ↓`, color: DORADO, ancho: 9 }],
-    { ref: 70, min: 0.8, max: 3.2, cerca: [14, 34], brillo: 1.15, nombre: "navegacion-superficie-marcador" },
+    [{ x: P.x, y: 9, z: P.z, titulo: "ASCENSOR ↓", sub: `SUBSUELOS · ${NIVEL_CORTO.ciudad.toUpperCase()}`, color: DORADO, ancho: 10 }],
+    { ref: 70, min: 0.8, max: 6, cerca: [16, 40], brillo: 1.15, nombre: "navegacion-superficie-marcador", encima: true },
   )
   if (marcador) {
     ctx.niveles.superficie.add(marcador)

@@ -236,8 +236,10 @@ export class Cabeza {
     d = smin(d, elip(x, y, z, 0, nty - 0.0115, ntz - 0.0125, 0.0092 * NA, 0.0044, 0.0078), 0.005)
     // Labios con volumen, comisuras y la línea de la boca
     const yb = this.yBoca
-    d = smin(d, elip(x, y, z, 0, yb + 0.0068, 0.1, 0.0232 * LW, 0.0064 * LF, 0.0084 * LF), 0.006)
-    d = smin(d, elip(x, y, z, 0, yb - 0.0068, 0.0974, 0.0202 * LW, 0.0072 * LF, 0.0088 * LF), 0.006)
+    d = smin(d, elip(x, y, z, 0, yb + 0.0066, 0.0985, 0.0228 * LW, 0.0062 * LF, 0.0082 * LF), 0.006)
+    d = smin(d, elip(x, y, z, 0, yb - 0.0068, 0.096, 0.0198 * LW, 0.0071 * LF, 0.0086 * LF), 0.006)
+    // Comisuras hundidas
+    d = smax(d, -esf(ax, y, z, 0.0255 * LW, yb, 0.0905, 0.0032), 0.004)
     d = smax(d, -elip(x, y, z, 0, yb, 0.107, 0.025 * LW, 0.0008, 0.011), 0.0015)
     // Surco bajo el labio inferior
     d = smax(d, -cono(x, y, z, -0.012, yb - 0.0175, 0.1015, 0.012, yb - 0.0175, 0.1015, 0.0035, 0.0035), 0.005)
@@ -272,7 +274,7 @@ export class Cabeza {
       o += w * (h - this.sdf(x + n.x * h, y + n.y * h, z + n.z * h))
       w *= 0.6
     }
-    return clamp(1 - o * 16, 0, 1)
+    return clamp(1 - o * 10, 0, 1)
   }
 
   /** Distancia `t` del punto de la superficie más externo sobre el rayo o + d·t (t ≤ tMax). */

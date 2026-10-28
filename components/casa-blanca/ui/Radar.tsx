@@ -109,7 +109,7 @@ function dibujar(ctx: CanvasRenderingContext2D, S: number, d: DatosRadar | null)
   const X = (x: number) => R + (x - c.x) * k
   const Z = (z: number) => R + (z - c.z) * k
 
-  if (!sub) {
+  if (d.nivel === "superficie") {
     // Terreno del predio, calles y edificios (huellas reales).
     const reja = HUELLAS.reja
     ctx.fillStyle = "rgba(74,110,70,0.42)"

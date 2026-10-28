@@ -7,7 +7,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Box, ChevronDown, ChevronUp, Crosshair, Film, Gavel, Info, Map as IconoMapa, MoreHorizontal, Newspaper, Pause, Play, Plane, Target, Users } from "lucide-react"
+import { Box, ChevronDown, ChevronUp, Clock, Crosshair, Film, Gavel, Info, Map as IconoMapa, MoreHorizontal, Newspaper, Pause, Play, Plane, Target, Users } from "lucide-react"
 import { CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
 import { NOMBRE_NIVEL, type NivelId } from "../tipos"
 import { NIVEL_CONTENIDO, NIVEL_CORTO, ORDEN_NIVELES, nivelVecino, profundidad } from "../navegacion"
@@ -337,7 +337,7 @@ function MenuTiempo(props: PropsDock) {
         </div>
       )}
       <Boton onClick={() => setAbierto((v) => !v)} activo={abierto} etiqueta={props.pausa ? "Tiempo en pausa: cambiar" : `Tiempo a ${props.velocidad}×: cambiar`} className="cb-cond px-2.5 text-[13px]">
-        {props.pausa ? <Pause className={ic} /> : <Play className={ic} />}
+        {props.pausa ? <Pause className={ic} /> : <Clock className={ic} />}
         {props.pausa ? "Pausa" : `${props.velocidad}×`}
       </Boton>
     </div>

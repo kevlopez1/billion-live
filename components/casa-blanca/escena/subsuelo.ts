@@ -3048,9 +3048,10 @@ export function construirSubsuelo(ctx: CtxEscena): Subsuelo {
       for (let p = 0; p < PUESTOS_POR_DEPTO; p++) {
         sombras.push({ x: cel.cx + OFF_X[p % 10], z: z0 + FILA_Z0 + Math.floor(p / 10) * FILA_PASO - 0.55, w: 2.3, h: 2.2, c: negro })
       }
-      const tinte = C(colorDe(d.id)).clone().multiplyScalar(0.15)
-      for (const s of [-1, 1]) charcos.push({ x: cel.cx + s * 9.2, z: z0 + 20.5, w: 22, h: 30, c: tinte })
-      charcos.push({ x: cel.cx, z: z0 + 3.2, w: 12, h: 9, c: tinte.clone().multiplyScalar(1.4) })
+      // Un charco suave sobre el pasillo central del depto. y otro en el puesto de mando (no sobre la alfombra: la quemaría).
+      const tinte = C(colorDe(d.id)).clone().multiplyScalar(0.07)
+      charcos.push({ x: cel.cx, z: z0 + 18, w: 9, h: 30, c: tinte })
+      charcos.push({ x: cel.cx, z: z0 + 3.2, w: 13, h: 9, c: tinte.clone().multiplyScalar(2) })
     }
     const mSombras = new THREE.Mesh(capaCalcos(sombras, y + 0.045), matSombra)
     mSombras.name = `subsuelo-${nivel}-sombras-contacto`
