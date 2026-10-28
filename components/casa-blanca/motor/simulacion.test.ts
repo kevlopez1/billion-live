@@ -377,6 +377,36 @@ seccion("irA")
   ok(sim.pj.amodei.destinoId === "habitaciones" && sim.pj.amodei.actividad === "Duerme", "el siguiente cambio de horario vuelve a mandar")
 }
 
+// ── Todo el mapa: se llega a cada lugar desde las habitaciones ──
+seccion("se llega a cada lugar del mapa")
+{
+  const lejos: string[] = []
+  let maxS = 0
+  for (const l of Object.values(LUGAR)) {
+    const p = pj("viajero", "hormozi", "vivo", [
+      [0, "habitaciones", "Sale"],
+      [0.01, l.id, "Llega"],
+    ])
+    const sim = new Simulacion([p], {}, { minutos: 0, semilla: 1 })
+    let ahora = 0
+    let s = 0
+    let nivel = sim.pj.viajero.nivel
+    let estado = sim.pj.viajero.estado
+    let saltos = 0
+    while (sim.pj.viajero.lugarId !== l.id && s < 400) {
+      sim.avanzar(1, (ahora += 1000))
+      s++
+      const e = sim.pj.viajero
+      if (e.nivel !== nivel && e.estado !== "ascensor" && estado !== "ascensor") saltos++
+      nivel = e.nivel
+      estado = e.estado
+    }
+    maxS = Math.max(maxS, s)
+    if (sim.pj.viajero.lugarId !== l.id || saltos || sim.pj.viajero.nivel !== l.nivel) lejos.push(l.id)
+  }
+  ok(!lejos.length, `se llega a los ${Object.keys(LUGAR).length} lugares, en su nivel y sin saltar de nivel (no: ${lejos.join(", ")}; el más lejano, ${maxS} s)`)
+}
+
 // ── 4. Determinismo, velocidad y pausa ─────────────────────────
 seccion("determinismo, velocidad y pausa")
 {
