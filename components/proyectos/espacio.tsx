@@ -327,7 +327,9 @@ export function Espacio() {
       )}
 
       {enManual ? (
-        <main className="mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border bg-background px-5 sm:mx-6 sm:mb-6">
+        // `cuaderno`: hoja punteada, para que el manual se sienta un lugar
+        // donde se escribe y no un informe terminado.
+        <main className="cuaderno mx-3 mb-3 min-h-0 flex-1 overflow-y-auto rounded-[2rem] border px-5 sm:mx-6 sm:mb-6">
           <Panel incrustado />
         </main>
       ) : enVideos ? (
