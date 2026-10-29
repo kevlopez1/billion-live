@@ -22,7 +22,7 @@ import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { ALTURA_NIVEL, type NivelId } from "../tipos"
 import { CELDAS, HUELLAS, LUGAR } from "../lugares"
-import { CORTE, INTERIOR_RESIDENCIA, vistaTapada, type PlantaId } from "../plantas"
+import { CORTE, INTERIOR, PLANTA, cuartoEn, dentroDeCuarto, vistaTapada, type Cuarto, type PlantaId } from "../plantas"
 import { ORDEN_NIVELES, PABELLON_ASCENSOR, ejeAscensor } from "../navegacion"
 import { VISTAS_CIUDAD, techoCiudad, tomaDescensoCiudad } from "./ciudad"
 import type { ModoCamara } from "./contrato"
@@ -1255,27 +1255,61 @@ export class ControlCamara {
     const off = _v3.copy(this.camara.position).sub(t)
     const esf = _esf.setFromVector3(off)
     esf.radius = Math.min(8.5, Math.max(5, esf.radius))
-    if (!this.interactuando && this.reloj - this.ultimaInteraccion > 1.5) {
+    const rodeando = this.reloj < this.rodeoHasta
+    if (!this.interactuando && !rodeando && this.reloj - this.ultimaInteraccion > 1.5) {
       let d = info.rumbo + Math.PI - esf.theta
       d = Math.atan2(Math.sin(d), Math.cos(d))
       esf.theta += d * (1 - Math.exp(-1.2 * dt))
     }
-    // La inclinación más baja (hasta 50° desde la vertical) que deje ver la cabeza por encima de los muros cortados.
-    const r = INTERIOR_RESIDENCIA
-    const ojo = _v4.copy(info.pos).setY(info.pos.y + 1.6)
-    let phiOk = 6 * THREE.MathUtils.DEG2RAD
-    for (const g of [50, 40, 31, 22, 14, 6]) {
-      const phi = g * THREE.MathUtils.DEG2RAD
-      _esf2.set(esf.radius, phi, esf.theta)
-      const c = _v5.setFromSpherical(_esf2).add(t)
-      c.x = Math.min(r.x1 - 0.4, Math.max(r.x0 + 0.4, c.x))
-      c.z = Math.min(r.z1 + 3.5, Math.max(r.z0 + 0.4, c.z))
-      c.y = Math.max(c.y, pl.y + CORTE + 0.8)
-      if (!vistaTapada(pl.id as PlantaId, ojo, c)) {
-        phiOk = phi
-        break
+    const r = INTERIOR[PLANTA[pl.id as PlantaId].edificio]
+    const tope = pl.y + CORTE
+    // `cuarto`: además, el rayo tiene que pasar la altura del corte todavía dentro de
+    // su cuarto (vistaTapada no ve las ventanas del óvalo: para ella son huecos).
+    const libreDesde = (ojo: THREE.Vector3, theta: number, grados: readonly number[], cuarto: Cuarto | null = null): number | null => {
+      for (const g of grados) {
+        const phi = g * THREE.MathUtils.DEG2RAD
+        _esf2.set(esf.radius, phi, theta)
+        const c = _v5.setFromSpherical(_esf2).add(t)
+        c.x = Math.min(r.x1 - 0.4, Math.max(r.x0 + 0.4, c.x))
+        c.z = Math.min(r.z1 + 3.5, Math.max(r.z0 + 0.4, c.z))
+        c.y = Math.max(c.y, tope + 0.8)
+        if (cuarto && c.y > ojo.y) {
+          const k = (tope - ojo.y) / (c.y - ojo.y)
+          if (!dentroDeCuarto(cuarto, ojo.x + (c.x - ojo.x) * k, ojo.z + (c.z - ojo.z) * k, 0.25)) continue
+        }
+        if (!vistaTapada(pl.id as PlantaId, ojo, c)) return phi
+      }
+      return null
+    }
+    // Pegado a un muro, inclinar no alcanza: el muro cortado tapa el cuerpo. Cada
+    // 0,25 s se busca, girando hacia el cuarto de a 30°, una vista que vea el torso;
+    // mientras gira no tira hacia "detrás de él" (si no, la cámara tiembla en el borde).
+    if (!this.interactuando && this.reloj >= this.proxRodeo) {
+      this.proxRodeo = this.reloj + 0.25
+      const torso = _v4.copy(info.pos).setY(info.pos.y + 1.0)
+      const suyo = cuartoEn(pl.id as PlantaId, info.pos.x, info.pos.z)
+      this.giroAdentro = 0
+      if (libreDesde(torso, esf.theta, [50, 40, 31], suyo) === null) {
+        for (const gd of [30, -30, 60, -60, 90, -90, 120, -120, 180]) {
+          const giro = gd * THREE.MathUtils.DEG2RAD
+          if (libreDesde(torso, esf.theta + giro, [50, 40, 31], suyo) !== null) {
+            this.giroAdentro = giro
+            this.rodeoHasta = this.reloj + 2
+            break
+          }
+        }
       }
     }
+    if (this.giroAdentro) {
+      const paso = this.giroAdentro * (1 - Math.exp(-3 * dt))
+      esf.theta += paso
+      this.giroAdentro -= paso
+    }
+    // La inclinación más baja (hasta 50° desde la vertical) que deje ver el torso (si no, la cabeza) por encima de los muros cortados.
+    const GRADOS = [50, 40, 31, 22, 14, 6] as const
+    const pecho = _v4.copy(info.pos).setY(info.pos.y + 1.0)
+    let phiOk = libreDesde(pecho, esf.theta, GRADOS, cuartoEn(pl.id as PlantaId, info.pos.x, info.pos.z))
+    if (phiOk === null) phiOk = libreDesde(pecho.setY(info.pos.y + 1.6), esf.theta, GRADOS) ?? 6 * THREE.MathUtils.DEG2RAD
     this.phiAdentro += (phiOk - this.phiAdentro) * (1 - Math.exp(-4 * dt))
     esf.phi = Math.min(esf.phi, this.phiAdentro)
     off.setFromSpherical(esf)
@@ -1287,6 +1321,10 @@ export class ControlCamara {
     if (p.y < pl.y + CORTE + 0.8) p.y = pl.y + CORTE + 0.8
   }
   private phiAdentro = 40 * THREE.MathUtils.DEG2RAD
+  /** Lo que falta girar alrededor del seguido para ver su torso (rad), y hasta cuándo no se tira hacia atrás. */
+  private giroAdentro = 0
+  private rodeoHasta = 0
+  private proxRodeo = 0
 
   /**
    * Dónde poner la cámara de seguir para ver a quien se sigue (`ojo` = su cabeza):
@@ -1321,7 +1359,9 @@ export class ControlCamara {
     const n = this.deps.nivel()
     const t = this.controles.target
     if (n === S) {
-      if (t.y < 0) t.y = 0
+      // Con el sótano del Ala Oeste abierto, el pivote puede bajar a su piso.
+      const piso = this.plantaInfo ? Math.min(0, this.plantaInfo.y) : 0
+      if (t.y < piso) t.y = piso
       const r = Math.hypot(t.x, t.z - 40)
       if (r > 700) {
         t.x *= 700 / r
@@ -1332,7 +1372,11 @@ export class ControlCamara {
       // Con una planta abierta, la Residencia está cortada: basta con quedar sobre los muros cortados.
       const p = this.camara.position
       const dentro = edificioEn(p.x, p.z, 1.5)
-      const cortada = this.plantaInfo && Math.abs(p.x) < HUELLAS.residencia.x1 + 1.5 && p.z > HUELLAS.porticoNorte.z0 - 1.5 && p.z < HUELLAS.porticoSur.cz + HUELLAS.porticoSur.radio + 1.5
+      const ed = this.plantaInfo ? PLANTA[this.plantaInfo.id as PlantaId].edificio : null
+      const cortada =
+        ed === "residencia"
+          ? Math.abs(p.x) < HUELLAS.residencia.x1 + 1.5 && p.z > HUELLAS.porticoNorte.z0 - 1.5 && p.z < HUELLAS.porticoSur.cz + HUELLAS.porticoSur.radio + 1.5
+          : !!ed && !!dentro && dentro.x0 === { "ala-oeste": HUELLAS.alaOeste.x0, eeob: HUELLAS.eeob.x0, tesoro: HUELLAS.tesoro.x0 }[ed]
       const techo = dentro ? (cortada ? this.plantaInfo!.y + CORTE - 1.2 : dentro.alto) : 0
       if (dentro && p.y < techo + 2) p.y = techo + 2
     } else if (this.modo === "nivel" && n === "ciudad") {

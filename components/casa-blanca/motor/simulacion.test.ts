@@ -7,7 +7,7 @@
 // que pasan por la superficie, un interior, el ascensor y el subsuelo.
 // ──────────────────────────────────────────────────────────────
 
-import { LUGAR, LUGARES, NODO } from "../lugares"
+import { GRAFO, LUGAR, LUGARES, NODO } from "../lugares"
 import { PERSONAJES as REALES } from "../datos/personajes"
 import { CUARTOS, PLANTA, PLANTAS, transitable } from "../plantas"
 import type { EntradaHorario, Especiales, EstadoCuerpo, NivelId, Personaje } from "../tipos"
@@ -466,6 +466,14 @@ seccion("interiores: se entra y se camina por las salas")
     ["salon-este", "salon-azul", "salon-rojo", "salon-verde", "comedor-estado", "dormitorio-lincoln", "sala-oval-amarilla", "cocina", "recepcion-diplomatica", "sala-mapas", "solario"].every((id) => !!LUGAR[id]?.planta),
     "todas las salas de la Residencia tienen planta (ninguna es ya «el edificio entero»)",
   )
+  ok(
+    PLANTAS.every((x) => x.lista && plantasVistas.has(x.id)),
+    `las ${PLANTAS.length} plantas de los cuatro edificios se recorren (${[...plantasVistas].join(", ")})`,
+  )
+  const sinPlanta = LUGARES.filter((l) => l.interior && !l.planta && l.id !== "habitaciones").map((l) => l.id)
+  ok(!sinPlanta.length, `ningún lugar es ya «el edificio entero» (salvo las habitaciones, con la puerta cerrada): ${sinPlanta.join(", ") || "ninguno"}`)
+  const ocultas = GRAFO.aristas.filter((x) => x[2]?.interior).map((x) => `${x[0]}–${x[1]}`)
+  ok(!ocultas.length, `no queda ningún tramo oculto en el grafo: solo el ascensor (${ocultas.join(", ") || "ninguno"})`)
 
   // A dormir: a la vista hasta la puerta del dormitorio; adentro, con la puerta cerrada, no se ve.
   {

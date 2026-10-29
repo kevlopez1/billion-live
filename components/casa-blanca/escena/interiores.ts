@@ -42,7 +42,8 @@ import {
   type Rect,
 } from "../plantas"
 import type { CtxEscena } from "./contrato"
-import { A, BOX, ESF, Lote, M, crearMaqueta, type Acabado } from "./lote"
+import { A, BOX, CIL, ESF, Lote, M, crearMaqueta, type Acabado } from "./lote"
+import { BORDE_ALA, FORRO, INTERIOR_EEOB, INTERIOR_TESORO, OVAL, PATIOS_EEOB } from "../plantas-edificios"
 
 // ── Paleta ──────────────────────────────────────────────────────
 const P = {
@@ -300,6 +301,16 @@ function contornoOvalo(c: Cuarto, inset = 0, n = 20): Array<[number, number]> {
   return pts
 }
 
+/** Contorno del Despacho Oval (una elipse) en orden. */
+function contornoElipse(c: Cuarto, n = 48): Array<[number, number]> {
+  const cx = (c.rect.x0 + c.rect.x1) / 2
+  const cz = (c.rect.z0 + c.rect.z1) / 2
+  return Array.from({ length: n }, (_, i) => {
+    const a = (Math.PI * 2 * i) / n
+    return [cx + c.elipse!.rx * Math.cos(a), cz + c.elipse!.rz * Math.sin(a)] as [number, number]
+  })
+}
+
 /** Un rectángulo sin el hueco (hasta cuatro pedazos). */
 function sinHueco(r: Rect, h0?: Rect): Rect[] {
   if (!h0) return [r]
@@ -418,9 +429,9 @@ class ConstructorPlanta {
     const estilo = c.piso
     const lote = estilo === "parquet" ? this.pisos.parquet : estilo === "damero" ? this.pisos.damero : estilo === "marmol" ? this.pisos.marmol : null
     const T = estilo === "parquet" ? 2.4 : estilo === "damero" ? 1.6 : 3.2
-    const tinte = estilo === "parquet" ? (c.id === "salon-este" ? "#f2e8da" : "#e8dfd2") : "#cfc9bf"
-    if (c.ovalo) {
-      const g = geoPoligono(contornoOvalo(c), y)
+    const tinte = c.colorPiso ?? (estilo === "parquet" ? (c.id === "salon-este" ? "#f2e8da" : "#e8dfd2") : "#cfc9bf")
+    if (c.ovalo || c.elipse) {
+      const g = geoPoligono(c.elipse ? contornoElipse(c) : contornoOvalo(c), y)
       if (lote) lote.geo(g, new THREE.Matrix4(), tinte, ac(A.laca, 0.3), { uv: [0, 0, 1 / T, 1 / T] })
       else this.L.geo(g, new THREE.Matrix4(), "#d8d2c6", ac(A.satin, 0.3))
       return
@@ -428,7 +439,7 @@ class ConstructorPlanta {
     // Sin el hueco de la escalinata ni el pozo por donde llega la escalera de abajo.
     let piezas = sinHueco(c.rect, c.hueco)
     for (const pz of pozosDe(c)) piezas = piezas.flatMap((r) => (r.x1 <= pz.x0 || r.x0 >= pz.x1 || r.z1 <= pz.z0 || r.z0 >= pz.z1 ? [r] : sinHueco(r, pz)))
-    const liso = c.id.startsWith("nucleo") ? "#b9b2a6" : c.id === "cocina" ? "#e9e7e2" : c.id === "gimnasio-res" ? "#4a4e52" : "#d8d2c6"
+    const liso = c.colorPiso ?? (c.id.startsWith("nucleo") ? "#b9b2a6" : c.id === "cocina" ? "#e9e7e2" : c.id === "gimnasio-res" ? "#4a4e52" : "#d8d2c6")
     for (const r of piezas) {
       if (lote) lote.piso(r.x0, r.x1, r.z0, r.z1, y, tinte, ac(estilo === "parquet" ? A.laca : A.pulido, 0.3), [r.x0 / T, r.z0 / T, r.x1 / T, r.z1 / T])
       else this.L.piso(r.x0, r.x1, r.z0, r.z1, y, liso, ac(A.satin, 0.3))
@@ -635,10 +646,89 @@ const MUEBLES: Record<string, Dibujo> = {
       L.geo(BOX(), M(Math.sin(a) * 0.35, 1.55 - caida * 0.3, Math.cos(a) * 0.35, 0.16, 0.02, 0.85, a, caida), i % 2 ? P.hoja : P.hojaClara, TELA)
     }
   },
-  columna(L) {
-    L.caja(0, 0, 0, 0.82, 0.28, 0.82, P.marmol, PULIDO)
-    L.cil(0, 0.28, 0, 0.36, 0.1, P.marmol, PULIDO, 18)
-    L.cil(0, 0.38, 0, 0.32, CORTE - 0.38 - 0.005, P.marmol, PULIDO, 18)
+  mesaReunion(L, m) {
+    // Una mesa de reuniones: tablero de puntas redondas, sin centro de mesa.
+    const w = m.w ?? MEDIDA.mesaReunion[0]
+    const d = m.d ?? MEDIDA.mesaReunion[1]
+    const col = m.color ?? P.caoba
+    L.caja(0, 0.72, 0, w, 0.05, d - w, col, LACA)
+    for (const s of [-1, 1]) L.cil(0, 0.72, (s * (d - w)) / 2, w / 2, 0.05, col, LACA, 20)
+    L.caja(0, 0.6, 0, w * 0.5, 0.12, d * 0.8, col, SATIN)
+    const patas = Math.max(2, Math.round(d / 2.4))
+    for (let i = 0; i < patas; i++) {
+      const z = -d / 2 + 0.7 + ((d - 1.4) * i) / Math.max(1, patas - 1)
+      L.cil(0, 0, z, 0.1, 0.6, col, SATIN, 10)
+      L.caja(0, 0, z, w * 0.55, 0.06, 0.22, col, SATIN)
+    }
+    // Carpetas de cuero en cada lugar.
+    const n = Math.max(1, Math.floor((d - 0.4) / 0.8))
+    for (let i = 0; i < n; i++) for (const sx of [-1, 1]) L.caja((sx * w) / 2 - sx * 0.22, 0.77, (i - (n - 1) / 2) * 0.8, 0.3, 0.008, 0.42, "#2a2420", SATIN)
+  },
+  atril(L) {
+    // El atril de la Sala de Prensa: madera, frente azul con el sello y dos micrófonos.
+    L.caja(0, 0, 0, 0.66, 1.08, 0.46, P.caoba, SATIN)
+    L.caja(0, 1.08, -0.02, 0.72, 0.05, 0.56, P.caoba, LACA, 0, -0.18)
+    L.caja(0, 0.18, 0.235, 0.56, 0.78, 0.01, "#1f3a6e", SATIN)
+    L.geo(CIL(24), M(0, 0.62, 0.245, 0.19, 0.01, 0.19, 0, Math.PI / 2), P.oro, METAL)
+    for (const s of [-1, 1]) L.cil(s * 0.08, 1.12, 0.12, 0.009, 0.28, "#1b1b1d", METAL, 6)
+  },
+  telon(L, m) {
+    // El fondo azul de la Sala de Prensa, con el óvalo de la Casa Blanca.
+    const w = m.w ?? MEDIDA.telon[0]
+    L.caja(0, 0, 0, w, CORTE - 0.03, 0.12, "#1f3a6e", TELA)
+    L.geo(CIL(36), M(0, 1.75, 0.062, 0.95, 0.01, 0.62, 0, Math.PI / 2), "#e9e4d6", SATIN)
+    L.geo(CIL(36), M(0, 1.75, 0.066, 0.86, 0.01, 0.54, 0, Math.PI / 2), "#2a4a86", SATIN)
+    L.caja(0, 1.6, 0.07, 0.9, 0.2, 0.01, "#e9e4d6", SATIN)
+    L.caja(0, 1.8, 0.07, 0.34, 0.12, 0.01, "#e9e4d6", SATIN)
+  },
+  pantalla(L, m) {
+    // Una pantalla de pared: marco negro y la imagen encendida (mapas y gráficos en azul).
+    const w = m.w ?? MEDIDA.pantalla[0]
+    const y0 = m.y ?? 0.95
+    const h = Math.min(w * 0.5625, CORTE - y0 - 0.25)
+    L.caja(0, y0, 0.03, w + 0.06, h + 0.06, 0.05, "#15171b", LACA)
+    L.quad(0, y0 + 0.03 + h / 2, 0.058, w, h, 0, "#2f5f96", LUZ(0.75))
+    L.quad(-w * 0.18, y0 + 0.03 + h * 0.55, 0.06, w * 0.42, h * 0.5, 0, "#7fb2de", LUZ(0.85))
+    L.quad(w * 0.28, y0 + 0.03 + h * 0.3, 0.06, w * 0.3, h * 0.18, 0, "#d9b45a", LUZ(0.85))
+  },
+  balcon(L, m) {
+    // Un balcón corrido contra el muro (atrás, -z): losa a 2,15 m sobre ménsulas y
+    // baranda de bronce hasta el corte. Se camina por debajo.
+    const [w0, d0] = MEDIDA.balcon
+    const w = m.w ?? w0
+    const d = m.d ?? d0
+    const piedra = m.color ?? "#e8dcc2"
+    const bronce = "#8a6a3a"
+    L.caja(0, 2.15, 0, w, 0.16, d, piedra, PULIDO)
+    L.caja(0, 2.12, d / 2 - 0.06, w, 0.06, 0.14, P.oroViejo, METAL)
+    const n = Math.max(2, Math.round(w / 1.8))
+    for (let i = 0; i <= n; i++) {
+      const x = -w / 2 + 0.15 + ((w - 0.3) * i) / n
+      // Ménsula: más alta junto al muro, se afina hacia el borde.
+      L.caja(x, 1.72, -d / 2 + 0.2, 0.14, 0.43, 0.4, piedra, PULIDO)
+      L.caja(x, 1.92, -d / 2 + 0.6, 0.12, 0.23, 0.4, piedra, PULIDO)
+    }
+    const b = Math.round(w / 0.24)
+    for (let i = 0; i <= b; i++) L.caja(-w / 2 + 0.06 + ((w - 0.12) * i) / b, 2.31, d / 2 - 0.06, 0.035, 0.3, 0.035, bronce, METAL)
+    L.caja(0, 2.61, d / 2 - 0.06, w, 0.06, 0.09, bronce, METAL)
+  },
+  bandera(L, m) {
+    // Una bandera en su asta, recogida.
+    const col = m.color ?? "#b22234"
+    L.cil(0, 0, 0, 0.17, 0.06, P.oro, METAL, 12)
+    L.cil(0, 0.06, 0, 0.022, 2.3, P.oroViejo, METAL, 8)
+    L.esf(0, 2.4, 0, 0.05, P.oro, METAL, 1, 8, 6)
+    L.caja(0.1, 1.05, 0, 0.16, 1.2, 0.15, col, TELA)
+    if (col === "#b22234") {
+      for (let i = 0; i < 4; i++) L.caja(0.1, 1.12 + i * 0.26, 0, 0.165, 0.09, 0.155, "#f4f1ea", TELA)
+      L.caja(0.1, 1.85, 0.04, 0.17, 0.4, 0.08, "#1f3a6e", TELA)
+    } else L.caja(0.1, 1.5, 0, 0.165, 0.22, 0.155, P.oro, TELA)
+  },
+  columna(L, m) {
+    const col = m.color ?? P.marmol
+    L.caja(0, 0, 0, 0.82, 0.28, 0.82, col, PULIDO)
+    L.cil(0, 0.28, 0, 0.36, 0.1, col, PULIDO, 18)
+    L.cil(0, 0.38, 0, 0.32, CORTE - 0.38 - 0.005, col, PULIDO, 18)
     L.cil(0, CORTE - 0.005, 0, 0.32, 0.005, P.remate, ac(A.mate, 0), 18)
   },
   ascensor(L, m) {
@@ -1018,13 +1108,30 @@ function charcos(K: ConstructorPlanta) {
       K.charco((c.rect.x0 + c.rect.x1) / 2, (c.ovalo.norte + c.ovalo.sur) / 2, 3.0)
       continue
     }
-    if (c.paso && w > 12) {
-      // Un pasillo largo: una lámpara cada 8 m.
-      const k = Math.round(w / 8)
-      for (let i = 0; i < k; i++) K.charco(c.rect.x0 + (w * (i + 0.5)) / k, (c.rect.z0 + c.rect.z1) / 2, 2.3)
+    if (c.elipse) {
+      K.charco((c.rect.x0 + c.rect.x1) / 2, (c.rect.z0 + c.rect.z1) / 2, 3.4)
       continue
     }
-    if (c.exterior || c.id.startsWith("nucleo") || c.id.startsWith("paso-") || c.id === "escalera-este-2") continue
+    if (c.exterior || c.piso === "piedra") continue
+    if (c.paso && Math.max(w, d) > 12) {
+      // Un pasillo largo: una lámpara cada 8 m.
+      const L = Math.max(w, d)
+      const k = Math.round(L / 8)
+      for (let i = 0; i < k; i++) {
+        const t = (L * (i + 0.5)) / k
+        if (w >= d) K.charco(c.rect.x0 + t, (c.rect.z0 + c.rect.z1) / 2, 2.0)
+        else K.charco((c.rect.x0 + c.rect.x1) / 2, c.rect.z0 + t, 2.0)
+      }
+      continue
+    }
+    if (c.id.startsWith("nucleo") || c.id.startsWith("paso-") || c.id === "escalera-este-2") continue
+    if (c.lugarId && w * d > 70 && PLANTA[c.planta].edificio !== "residencia") {
+      // Una sala grande sin arañas propias (Sala de Crisis, Sala del Efectivo): una luz cada 4,5 m.
+      const nx = Math.max(1, Math.round(w / 4.5))
+      const nz = Math.max(1, Math.round(d / 4.5))
+      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) K.charco(c.rect.x0 + (w * (i + 0.5)) / nx, c.rect.z0 + (d * (j + 0.5)) / nz, 2.2, 0.8)
+      continue
+    }
     K.charco((c.rect.x0 + c.rect.x1) / 2, (c.rect.z0 + c.rect.z1) / 2, Math.max(1.6, Math.min(3.4, Math.min(w, d) * 0.38)), 0.85)
   }
 }
@@ -1056,6 +1163,55 @@ function extras(K: ConstructorPlanta) {
   for (const e of ESCALERAS) escalera(K, e)
   charcos(K)
   vidrioSolario(K)
+  if (K.planta === "oeste-sotano") bordeSotano(K)
+  if (K.planta === "oeste-principal") pozoAla(K)
+  if (K.planta === "eeob-alta") patiosAbajo(K)
+}
+
+/** El sótano del Ala Oeste visto desde arriba: entre el remate del corte y el pasto, la tierra. */
+function bordeSotano(K: ConstructorPlanta) {
+  const W = HUELLAS.alaOeste
+  const y0 = K.y + CORTE
+  const h = -y0 + 0.02
+  const ym = y0 + h / 2
+  const tierra = "#4a4038"
+  K.L.quad((W.x0 + W.x1) / 2, ym, W.z0 + 0.01, W.x1 - W.x0, h, 0, tierra, ac(A.mate, 0))
+  K.L.quad((W.x0 + W.x1) / 2, ym, W.z1 - 0.01, W.x1 - W.x0, h, Math.PI, tierra, ac(A.mate, 0))
+  K.L.quad(W.x0 + 0.01, ym, (W.z0 + W.z1) / 2, W.z1 - W.z0, h, Math.PI / 2, tierra, ac(A.mate, 0))
+  K.L.quad(W.x1 - 0.01, ym, (W.z0 + W.z1) / 2, W.z1 - W.z0, h, -Math.PI / 2, tierra, ac(A.mate, 0))
+}
+
+/** El pozo de la escalera del Ala Oeste, visto desde la planta principal: sus muros bajan hasta el sótano. */
+function pozoAla(K: ConstructorPlanta) {
+  const r = pozosDe(CUARTO["ala-escalera"])[0]
+  const y0 = PLANTA["oeste-sotano"].y
+  const h = K.y - y0
+  const ym = y0 + h / 2
+  const muro = "#cfc9bd"
+  K.L.quad((r.x0 + r.x1) / 2, ym, r.z1 - 0.01, r.x1 - r.x0, h, Math.PI, muro, SATIN)
+  K.L.quad(r.x0 + 0.01, ym, (r.z0 + r.z1) / 2, r.z1 - r.z0, h, Math.PI / 2, muro, SATIN)
+  K.L.quad(r.x1 - 0.01, ym, (r.z0 + r.z1) / 2, r.z1 - r.z0, h, -Math.PI / 2, muro, SATIN)
+  // Al norte, bajo el arranque: el muro llega solo hasta el piso del sótano más la altura del tramo.
+  K.L.quad((r.x0 + r.x1) / 2, ym, r.z0 + 0.01, r.x1 - r.x0, h, 0, muro, SATIN)
+}
+
+/** Desde el segundo piso del Edificio Eisenhower se ve el fondo de los patios: su piso y sus muros, abajo. */
+function patiosAbajo(K: ConstructorPlanta) {
+  const yP = PLANTA["eeob-baja"].y
+  const L = K.L
+  for (const r of PATIOS_EEOB) {
+    L.piso(r.x0, r.x1, r.z0, r.z1, yP + 0.004, "#a8a294", ac(A.satin, 0.25))
+    const h = K.y - yP
+    const ym = yP + h / 2
+    const muro = "#a39888"
+    L.quad((r.x0 + r.x1) / 2, ym, r.z0 + 0.01, r.x1 - r.x0, h, 0, muro, SATIN)
+    L.quad((r.x0 + r.x1) / 2, ym, r.z1 - 0.01, r.x1 - r.x0, h, Math.PI, muro, SATIN)
+    L.quad(r.x0 + 0.01, ym, (r.z0 + r.z1) / 2, r.z1 - r.z0, h, Math.PI / 2, muro, SATIN)
+    L.quad(r.x1 - 0.01, ym, (r.z0 + r.z1) / 2, r.z1 - r.z0, h, -Math.PI / 2, muro, SATIN)
+    const cx = (r.x0 + r.x1) / 2
+    const cz = (r.z0 + r.z1) / 2
+    for (const dx of [-9, 9]) for (const dz of [-9, 9]) L.en(M(cx + dx, yP, cz + dz), () => MUEBLES.palmera(L, { t: "palmera", x: cx + dx, z: cz + dz }))
+  }
 }
 
 // ── El remate oscuro sobre la fachada cortada ────────────────────
@@ -1095,6 +1251,124 @@ function remateResidencia(): THREE.BufferGeometry {
   return g
 }
 
+/** Una forma horizontal (afuera menos el hueco), en el plano y = 0. */
+function formaConHueco(afuera: Array<[number, number]>, hueco: Array<[number, number]>): THREE.BufferGeometry {
+  const ext = new THREE.Shape()
+  afuera.forEach(([x, z], i) => (i ? ext.lineTo(x, -z) : ext.moveTo(x, -z)))
+  const h = new THREE.Path()
+  hueco.forEach(([x, z], i) => (i ? h.lineTo(x, -z) : h.moveTo(x, -z)))
+  ext.holes.push(h)
+  const g = new THREE.ShapeGeometry(ext, 8)
+  g.rotateX(-Math.PI / 2)
+  return g
+}
+/** Puntos de un óvalo del Despacho Oval (grados: 0 = este, 90 = sur). */
+function arcoOval(rx: number, rz: number, a0: number, a1: number): Array<[number, number]> {
+  const n = Math.max(2, Math.ceil(Math.abs(a1 - a0) / 4))
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const a = ((a0 + ((a1 - a0) * i) / n) * Math.PI) / 180
+    return [OVAL.cx + rx * Math.cos(a), OVAL.cz + rz * Math.sin(a)] as [number, number]
+  })
+}
+const GR = 180 / Math.PI
+
+/** El remate del Ala Oeste: sus muros y el muro del Despacho Oval (el óvalo sobresale del Ala al sureste). */
+function remateAla(): THREE.BufferGeometry {
+  const W = HUELLAS.alaOeste
+  const I = { x0: -79.4, x1: -50.6, z0: -14.4, z1: 17.4 }
+  const { ovaloAfuera: A1, ovaloAdentro: A0 } = BORDE_ALA
+  const afuera: Array<[number, number]> = [
+    [W.x0, W.z0],
+    [W.x1, W.z0],
+    ...arcoOval(A1.rx, A1.rz, -Math.acos((W.x1 - OVAL.cx) / A1.rx) * GR, 180 - Math.asin((W.z1 - OVAL.cz) / A1.rz) * GR),
+    [W.x0, W.z1],
+  ]
+  const hueco: Array<[number, number]> = [
+    [I.x0, I.z0],
+    [I.x1, I.z0],
+    ...arcoOval(A0.rx, A0.rz, -Math.acos((I.x1 - OVAL.cx) / A0.rx) * GR, 180 - Math.asin((I.z1 - OVAL.cz) / A0.rz) * GR),
+    [I.x0, I.z1],
+  ]
+  return formaConHueco(afuera, hueco)
+}
+
+/** El remate del Edificio Eisenhower: su contorno con pabellones menos el forro (en la Planta baja, con el vestíbulo hasta la puerta). */
+function remateEEOB(baja: boolean): THREE.BufferGeometry {
+  const E = HUELLAS.eeob
+  const ret = 1.6
+  const afuera: Array<[number, number]> = [
+    [E.x1, E.z0], [-114, E.z0], [-114, E.z0 + ret], [-123, E.z0 + ret], [-123, E.z0], [-137, E.z0], [-137, E.z0 + ret], [-146, E.z0 + ret], [-146, E.z0], [E.x0, E.z0],
+    [E.x0, -46], [E.x0 + ret, -46], [E.x0 + ret, -11], [E.x0, -11], [E.x0, 11], [E.x0 + ret, 11], [E.x0 + ret, 46], [E.x0, 46], [E.x0, E.z1],
+    [-146, E.z1], [-146, E.z1 - ret], [-137, E.z1 - ret], [-137, E.z1], [-123, E.z1], [-123, E.z1 - ret], [-114, E.z1 - ret], [-114, E.z1], [E.x1, E.z1],
+    [E.x1, 46], [E.x1 - ret, 46], [E.x1 - ret, 11], [E.x1, 11], [E.x1, -11], [E.x1 - ret, -11], [E.x1 - ret, -46], [E.x1, -46],
+  ]
+  const f = FORRO.eeob
+  const I = INTERIOR_EEOB
+  const hueco: Array<[number, number]> = [
+    [I.x0 - f, I.z0 - f],
+    [I.x1 + f, I.z0 - f],
+    ...(baja ? ([[I.x1 + f, -6.3], [-100.02, -6.3], [-100.02, 6.3], [I.x1 + f, 6.3]] as Array<[number, number]>) : []),
+    [I.x1 + f, I.z1 + f],
+    [I.x0 - f, I.z1 + f],
+  ]
+  return formaConHueco(afuera, hueco)
+}
+
+/** El remate del Tesoro: el edificio con su podio y el del pórtico sur, menos el forro (y el vestíbulo del pabellón norte). */
+function remateTesoro(): THREE.BufferGeometry {
+  const T = HUELLAS.tesoro
+  const afuera: Array<[number, number]> = [
+    [T.x0, T.z0], [T.x1, T.z0], [T.x1, T.z1], [T.x1 - 11.5, T.z1], [T.x1 - 11.5, T.z1 + 5.2], [T.x0 + 9.5, T.z1 + 5.2], [T.x0 + 9.5, T.z1], [T.x0, T.z1],
+  ]
+  const f = FORRO.tesoro
+  const I = INTERIOR_TESORO
+  const hueco: Array<[number, number]> = [
+    [I.x0 - f, I.z0 - f],
+    [I.x1 + f, I.z0 - f],
+    [I.x1 + f, I.z1 + f],
+    [I.x0 - f, I.z1 + f],
+    [I.x0 - f, -49.7],
+    [100.02, -49.7],
+    [100.02, -61.6],
+    [I.x0 - f, -61.6],
+  ]
+  return formaConHueco(afuera, hueco)
+}
+
+/** El remate de cada planta (el del sótano no hace falta: sus macizos llegan al borde). */
+const CLAVE_REMATE: Record<PlantaId, string | null> = {
+  "res-baja": "residencia",
+  "res-estado": "residencia",
+  "res-segundo": "residencia",
+  "res-tercero": "residencia",
+  "oeste-principal": "ala",
+  "oeste-sotano": null,
+  "eeob-baja": "eeob-baja",
+  "eeob-alta": "eeob-alta",
+  "tesoro-baja": "tesoro",
+}
+function geoRemate(clave: string): THREE.BufferGeometry {
+  if (clave === "ala") return remateAla()
+  if (clave === "eeob-baja") return remateEEOB(true)
+  if (clave === "eeob-alta") return remateEEOB(false)
+  if (clave === "tesoro") return remateTesoro()
+  return remateResidencia()
+}
+
+/**
+ * El sótano del Ala Oeste está bajo el pasto: con esa planta abierta, el
+ * suelo (y lo que esté en él) se recorta dentro de la huella del Ala, hasta
+ * 0,6 m de alto. Planos con `clipIntersection`: se recorta solo adentro de los cinco.
+ */
+const POZO_ALA: Rect = pozosDe(CUARTO["ala-escalera"])[0]
+const CAJA_SOTANO = [
+  new THREE.Plane(new THREE.Vector3(-1, 0, 0), HUELLAS.alaOeste.x0),
+  new THREE.Plane(new THREE.Vector3(1, 0, 0), -HUELLAS.alaOeste.x1),
+  new THREE.Plane(new THREE.Vector3(0, 0, -1), HUELLAS.alaOeste.z0),
+  new THREE.Plane(new THREE.Vector3(0, 0, 1), -HUELLAS.alaOeste.z1),
+  new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.6),
+]
+
 // ── El sistema ──────────────────────────────────────────────────
 export interface Interiores {
   /** Abre una planta (corta su edificio) o, con null, vuelve a la vista de afuera. */
@@ -1104,11 +1378,16 @@ export interface Interiores {
   lugarEn(x: number, z: number): string | null
   /** Para el depurador: lo que se construyó. */
   info(): { construidas: PlantaId[]; mallas: number; triangulos: number }
+  /** Al desmontar: devuelve los materiales originales a la fachada y al suelo, y libera los clones con corte (no cuelgan de la escena). */
+  dispose(): void
 }
 
 export function crearInteriores(ctx: CtxEscena, renderer: THREE.WebGLRenderer): Interiores {
   const grupos = new Map<PlantaId, THREE.Group>()
-  const remates = new Map<EdificioId, THREE.Mesh>()
+  const remates = new Map<string, THREE.Mesh>()
+  const clonesCaja = new Map<THREE.Material, THREE.Material>()
+  let suelo: Array<{ malla: THREE.Mesh; original: THREE.Material | THREE.Material[] }> | null = null
+  let sueloRecortado = false
   const plano = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0)
   const clones = new Map<THREE.Material, THREE.Material>()
   /** Las mallas de cada edificio con su material original. */
@@ -1157,11 +1436,12 @@ export function crearInteriores(ctx: CtxEscena, renderer: THREE.WebGLRenderer): 
         const dib = MUEBLES[mu.t]
         if (!dib) continue
         K.L.en(M(mu.x, K.y, mu.z, 1, 1, 1, mu.rumbo ?? 0), () => dib(K.L, mu))
-        if (mu.t === "mesaComedor") {
+        if (mu.t === "mesaComedor" || mu.t === "mesaReunion") {
+          const reunion = mu.t === "mesaReunion"
           for (const s of sillasDeMesa(mu)) {
-            K.L.en(M(s.x, K.y, s.z, 1, 1, 1, s.rumbo), () => silla(K.L, "#d6b46a", 1.05))
+            K.L.en(M(s.x, K.y, s.z, 1, 1, 1, s.rumbo), () => silla(K.L, reunion ? (mu.tono ?? "#3b2b22") : "#d6b46a", reunion ? 1.15 : 1.05))
             // El plato de cada uno, sobre la mesa.
-            K.L.cil(s.x + Math.sin(s.rumbo) * 0.42, K.y + 0.75, s.z + Math.cos(s.rumbo) * 0.42, 0.12, 0.012, "#d9d4ca", SATIN, 16)
+            if (!reunion) K.L.cil(s.x + Math.sin(s.rumbo) * 0.42, K.y + 0.75, s.z + Math.cos(s.rumbo) * 0.42, 0.12, 0.012, "#d9d4ca", SATIN, 16)
           }
         }
       }
@@ -1203,7 +1483,9 @@ export function crearInteriores(ctx: CtxEscena, renderer: THREE.WebGLRenderer): 
         else K.L.ext(pu.x - 0.2, pu.x + 0.2, K.y, K.y + CORTE - 0.01, pu.z + s * h - 0.07, pu.z + s * h + 0.07, P.marfil, LACA)
       }
     }
-    forrosExteriores(K, ext)
+    // La Residencia tiene ventanas que dan a cada cuarto: su forro va con huecos. Los demás edificios
+    // tienen la cara de adentro de su muro (Ala Oeste) o un muro de forro en plantas-edificios.ts.
+    if (PLANTA[p].edificio === "residencia") forrosExteriores(K, ext)
     extras(K)
 
     const g = new THREE.Group()
@@ -1269,30 +1551,89 @@ export function crearInteriores(ctx: CtxEscena, renderer: THREE.WebGLRenderer): 
   const cortar = (e: EdificioId) => {
     renderer.localClippingEnabled = true
     for (const { malla, original } of mallasDe(e)) malla.material = Array.isArray(original) ? original.map(clonDe) : clonDe(original)
-    let r = remates.get(e)
-    if (!r && e === "residencia") {
-      r = new THREE.Mesh(remateResidencia(), new THREE.MeshStandardMaterial({ color: P.remate, roughness: 0.9, metalness: 0 }))
-      r.name = "remate-residencia"
-      r.receiveShadow = ctx.sombras
-      ctx.niveles.superficie.add(r)
-      remates.set(e, r)
-    }
-    if (r) r.visible = true
     edificioCortado = e
   }
 
   const restaurar = (e: EdificioId) => {
     for (const { malla, original } of mallasDe(e)) malla.material = original
-    const r = remates.get(e)
-    if (r) r.visible = false
     edificioCortado = null
+  }
+
+  /** El remate oscuro sobre los muros cortados de la planta (uno por forma, se arma la primera vez). */
+  const mostrarRemate = (p: PlantaId | null) => {
+    const clave = p ? CLAVE_REMATE[p] : null
+    for (const [k, r] of remates) r.visible = k === clave
+    if (!p || !clave) return
+    let r = remates.get(clave)
+    if (!r) {
+      r = new THREE.Mesh(geoRemate(clave), new THREE.MeshStandardMaterial({ color: P.remate, roughness: 0.9, metalness: 0 }))
+      r.name = `remate-${clave}`
+      r.receiveShadow = ctx.sombras
+      ctx.niveles.superficie.add(r)
+      remates.set(clave, r)
+    }
+    r.position.y = PLANTA[p].y + CORTE + 0.004
+    r.visible = true
+  }
+
+  /** Las mallas del suelo que tocan la huella del Ala Oeste (pasto, caminos): se recortan con el sótano abierto. */
+  const mallasDelSuelo = () => {
+    if (suelo) return suelo
+    suelo = []
+    const W = HUELLAS.alaOeste
+    const caja = new THREE.Box3(new THREE.Vector3(W.x0, -1, W.z0), new THREE.Vector3(W.x1, 0.6, W.z1))
+    const b = new THREE.Box3()
+    ctx.niveles.superficie.updateMatrixWorld(true)
+    for (const o of ctx.niveles.superficie.children) {
+      if (o.userData.edificio || o.name.startsWith("planta-") || o.name.startsWith("remate-")) continue
+      o.traverse((x) => {
+        const malla = x as THREE.Mesh
+        if (!malla.isMesh) return
+        b.setFromObject(malla)
+        if (!b.isEmpty() && b.intersectsBox(caja)) suelo!.push({ malla, original: malla.material })
+      })
+    }
+    return suelo
+  }
+  const clonCaja = (mat: THREE.Material): THREE.Material => {
+    let c = clonesCaja.get(mat)
+    if (!c) {
+      c = mat.clone()
+      if (Object.prototype.hasOwnProperty.call(mat, "onBeforeCompile")) c.onBeforeCompile = mat.onBeforeCompile
+      if (Object.prototype.hasOwnProperty.call(mat, "customProgramCacheKey")) c.customProgramCacheKey = mat.customProgramCacheKey
+      c.clippingPlanes = CAJA_SOTANO
+      c.clipIntersection = true
+      c.clipShadows = true
+      c.userData = { ...mat.userData, original: mat }
+      clonesCaja.set(mat, c)
+    }
+    return c
+  }
+  /** Recorta el suelo dentro de `caja` (dentro de la huella del Ala), o lo deja entero con null. */
+  const recortarSuelo = (caja: Rect | null) => {
+    if (caja) {
+      CAJA_SOTANO[0].constant = caja.x0
+      CAJA_SOTANO[1].constant = -caja.x1
+      CAJA_SOTANO[2].constant = caja.z0
+      CAJA_SOTANO[3].constant = -caja.z1
+    }
+    const si = !!caja
+    if (si === sueloRecortado) return
+    sueloRecortado = si
+    for (const { malla, original } of mallasDelSuelo()) malla.material = si ? (Array.isArray(original) ? original.map(clonCaja) : clonCaja(original)) : original
   }
 
   // Los clones siguen al original: el brillo de noche de las ventanas y el reflejo del cielo.
   ctx.alActualizar((t) => {
-    if (mats) mats.charco.opacity = 0.55 * t.noche
+    // El sótano del Ala Oeste no tiene ventanas: sus lámparas están prendidas las 24 h.
+    if (mats) {
+      const sinVentanas = actual === "oeste-sotano"
+      mats.charco.opacity = 0.55 * (sinVentanas ? 1 : t.noche)
+      // Sus lámparas y pantallas, igual: el brillo de noche todo el día (lo repone el motor al salir).
+      if (sinVentanas) for (const mt of [mats.maqueta, mats.parquet, mats.marmol, mats.damero, mats.alfombra]) mt.emissiveIntensity = 1
+    }
     if (!edificioCortado) return
-    for (const [orig, clon] of clones) {
+    for (const [orig, clon] of [...clones, ...(sueloRecortado ? clonesCaja : [])]) {
       const o = orig as THREE.MeshStandardMaterial
       const c = clon as THREE.MeshStandardMaterial
       if (o.emissiveIntensity !== undefined) c.emissiveIntensity = o.emissiveIntensity
@@ -1311,13 +1652,21 @@ export function crearInteriores(ctx: CtxEscena, renderer: THREE.WebGLRenderer): 
         const g = construir(p)
         plano.constant = PLANTA[p].y + CORTE
         if (edificioCortado !== e) cortar(e)
-        const r = remates.get(e)
-        if (r) r.position.y = PLANTA[p].y + CORTE + 0.004
         g.visible = true
       }
+      mostrarRemate(p)
+      // El sótano: toda la huella del Ala. La planta principal: solo el pozo de la escalera (se ve bajar).
+      recortarSuelo(p === "oeste-sotano" ? HUELLAS.alaOeste : p === "oeste-principal" ? POZO_ALA : null)
       for (const [id, g] of grupos) g.visible = id === p
     },
     planta: () => actual,
+    dispose() {
+      if (edificioCortado) restaurar(edificioCortado)
+      recortarSuelo(null)
+      for (const m of [...clones.values(), ...clonesCaja.values()]) m.dispose()
+      clones.clear()
+      clonesCaja.clear()
+    },
     lugarEn(x, z) {
       if (!actual) return null
       return cuartoEn(actual, x, z)?.lugarId ?? null

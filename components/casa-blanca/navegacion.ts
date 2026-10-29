@@ -151,7 +151,7 @@ export interface Paso {
 }
 
 /** "la Sala Central", "el Gran Corredor": el artículo de cada cuarto. */
-const FEMENINOS = /^(Sala|Galería|Despensa|Antesala|Escalinata|Gran Escalera|Escalera|Biblioteca|Cocina|Recepción|Habitación)/
+const FEMENINOS = /^(Sala|Galería|Despensa|Antesala|Escalinata|Gran Escalera|Escalera|Biblioteca|Cocina|Recepción|Habitación|Oficina)/
 const conArticulo = (n: string) => `${FEMENINOS.test(n) ? "la" : "el"} ${n}`
 /** "a la Planta de Estado", "al Segundo piso". */
 const aPlanta = (p: PlantaId) => (/^Planta/.test(PLANTA[p].nombre) ? `a la ${PLANTA[p].nombre}` : `al ${PLANTA[p].nombre}`)
@@ -173,7 +173,8 @@ function caminoDentro(destino: string): { entrada: (typeof ENLACES)[number]; nod
   const largo = (ns: string[]) => ns.reduce((s, n, i) => (i ? s + Math.hypot(NODO[n].p.x - NODO[ns[i - 1]].p.x, NODO[n].p.y - NODO[ns[i - 1]].p.y, NODO[n].p.z - NODO[ns[i - 1]].p.z) : 0), 0)
   let mejor: { entrada: (typeof ENLACES)[number]; nodos: string[]; m: number } | null = null
   // Se entra desde el suelo (el balcón solo se alcanza desde adentro).
-  for (const entrada of ENLACES.filter((e) => !e.oculto && (NODO[e.nodo]?.p.y ?? 1) < 0.5)) {
+  // (la puerta del Edificio Eisenhower está arriba de su escalinata, a 1,2 m).
+  for (const entrada of ENLACES.filter((e) => !e.oculto && (NODO[e.nodo]?.p.y ?? 9) < 2)) {
     const previo = new Map<string, string>()
     const cola = [entrada.nodo]
     const vistos = new Set(cola)
@@ -203,9 +204,11 @@ function pasosHasta(destino: string, nombre: string, donde: { x: number; z: numb
   const pasos: Paso[] = [{ tipo: "inicio", texto: c.entrada.texto }]
   // Escaleras en orden; las seguidas de la misma escalera se dicen juntas ("hasta el Tercer piso").
   let pasillos: string[] = []
-  for (const n of c.nodos) {
-    const esc = /^i-e-(.+)-3$/.exec(n)
-    if (esc) {
+  for (let i = 0; i < c.nodos.length; i++) {
+    const n = c.nodos[i]
+    // Una escalera se nombra al terminarla: arriba (nodo 3, subiendo) o abajo (nodo 0, bajando).
+    const esc = /^i-e-(.+)-[03]$/.exec(n)
+    if (esc && /^i-e-.+-[12]$/.test(c.nodos[i - 1] ?? "")) {
       const e = ESCALERAS.find((x) => x.id === esc[1])!
       const llega = NODO[n].planta!
       const prev = pasos[pasos.length - 1]

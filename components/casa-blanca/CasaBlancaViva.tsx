@@ -22,7 +22,7 @@ import { Simulacion, type EventoSim } from "./motor/simulacion"
 import { ESPECIALES, PERSONAJES } from "./datos/personajes"
 import { DEPARTAMENTOS, OBJETIVOS, agentesDe, progresoObjetivo } from "./datos/empresa"
 import { LUGAR } from "./lugares"
-import { cuartoDeLugar, plantaDeLugar, type PlantaId } from "./plantas"
+import { NOMBRE_EDIFICIO, PLANTA, cuartoDeLugar, plantaDeLugar, type PlantaId } from "./plantas"
 import { dondeEsta, encuadreDe } from "./navegacion"
 import type { Departamento, Entregable, EstadoPuesto, NivelId, Objetivo, Personaje } from "./tipos"
 import { leerEstado, motivoSinIa, pedir, type EstadoServidor } from "./ui/api"
@@ -186,6 +186,7 @@ export default function CasaBlancaViva() {
   const [saliendoIntro, setSaliendoIntro] = useState(false)
   const [nivel, setNivel] = useState<NivelId>("superficie")
   const [planta, setPlanta] = useState<PlantaId | null>(null)
+  const adentro = planta ? `${NOMBRE_EDIFICIO[PLANTA[planta].edificio]} · ${PLANTA[planta].nombre}` : null
   const [camara, setCamara] = useState<ModoCam>("dron")
   const [maqueta, setMaqueta] = useState(false)
   const [velocidad, setVelocidad] = useState(1)
@@ -671,6 +672,12 @@ export default function CasaBlancaViva() {
       if (m.escena.encuadrar) m.escena.encuadrar(e.centro, e.distancia, lugarId, compactoRef.current ? { subir: 0.42 } : undefined)
       else m.escena.enfocar(e.centro, e.distancia)
       setNivel(e.nivel)
+      // La barra de plantas cambia en el acto (si no, marca la anterior hasta el próximo tick).
+      const sala = cuartoDeLugar(lugarId)
+      if (sala && m.escena.encuadrar) {
+        setPlanta(sala.planta)
+        setCamara("dron")
+      }
       const d = DEP_POR_LUGAR[lugarId]
       setPanel(d ? { tipo: "dep", id: d.id } : LUGAR[lugarId] ? { tipo: "lugar", id: lugarId } : null)
     },
@@ -976,7 +983,7 @@ export default function CasaBlancaViva() {
       {enJuego && !grabando && (
         <div className="pointer-events-none absolute inset-0 z-20">
           <div className="cb-hud-arriba absolute inset-x-0 top-0 flex items-start justify-between gap-3 px-4 pt-[max(14px,env(safe-area-inset-top))] md:px-7 md:pt-6">
-            <Marca nivel={nivel} compacto={compacto} />
+            <Marca nivel={nivel} compacto={compacto} adentro={adentro} />
             <Reloj sim={mundo.sim} compacto={compacto} />
           </div>
 
@@ -1014,6 +1021,7 @@ export default function CasaBlancaViva() {
           <div className="cb-hud-abajo absolute inset-x-2 bottom-[max(10px,env(safe-area-inset-bottom))] flex justify-center md:bottom-7 md:left-[220px] md:right-7">
             <Dock
               nivel={nivel}
+              adentro={adentro}
               onNivel={irANivel}
               camara={camara}
               maqueta={maqueta}

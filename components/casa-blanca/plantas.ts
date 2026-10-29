@@ -16,6 +16,8 @@
 // salas siguen con la regla vieja (el residente entra y no se ve).
 // ──────────────────────────────────────────────────────────────
 
+import { CUARTOS_EDIFICIOS, ENLACES_EDIFICIOS, ESCALERAS_EDIFICIOS, INTERIORES_EDIFICIOS, MACIZOS_EDIFICIOS, MUROS_EDIFICIOS, OVAL, PUERTAS_EDIFICIOS } from "./plantas-edificios"
+
 export type PlantaId =
   | "res-baja"
   | "res-estado"
@@ -51,11 +53,13 @@ export const PLANTAS: Planta[] = [
   { id: "res-segundo", edificio: "residencia", nombre: "Segundo piso", corto: "2.º piso", y: 8.6, techo: 4.6, lista: true },
   { id: "res-estado", edificio: "residencia", nombre: "Planta de Estado", corto: "Estado", y: 3.45, techo: 5.15, lista: true },
   { id: "res-baja", edificio: "residencia", nombre: "Planta Baja", corto: "Baja", y: 0, techo: 3.1, lista: true },
-  { id: "oeste-principal", edificio: "ala-oeste", nombre: "Planta principal", corto: "Principal", y: 0, techo: 3.6, lista: false },
-  { id: "oeste-sotano", edificio: "ala-oeste", nombre: "Sótano", corto: "Sótano", y: -3.4, techo: 3.0, lista: false },
-  { id: "eeob-alta", edificio: "eeob", nombre: "Segundo piso", corto: "2.º piso", y: 6, techo: 5, lista: false },
-  { id: "eeob-baja", edificio: "eeob", nombre: "Planta baja", corto: "Baja", y: 0, techo: 5, lista: false },
-  { id: "tesoro-baja", edificio: "tesoro", nombre: "Planta principal", corto: "Principal", y: 0, techo: 6, lista: false },
+  { id: "oeste-principal", edificio: "ala-oeste", nombre: "Planta principal", corto: "Principal", y: 0, techo: 3.6, lista: true },
+  { id: "oeste-sotano", edificio: "ala-oeste", nombre: "Sótano", corto: "Sótano", y: -3.4, techo: 3.0, lista: true },
+  // El Edificio Eisenhower: la puerta este está arriba de su escalinata (1,2 m); el segundo piso, a la altura de su cornisa.
+  { id: "eeob-alta", edificio: "eeob", nombre: "Segundo piso", corto: "2.º piso", y: 5.4, techo: 4.0, lista: true },
+  { id: "eeob-baja", edificio: "eeob", nombre: "Planta baja", corto: "Baja", y: 1.2, techo: 4.2, lista: true },
+  // El Tesoro está rodeado por la plaza de baldosas (y 0,045): su piso va 10 cm arriba, un umbral en la puerta.
+  { id: "tesoro-baja", edificio: "tesoro", nombre: "Planta baja", corto: "Baja", y: 0.1, techo: 4.4, lista: true },
 ]
 export const PLANTA = Object.fromEntries(PLANTAS.map((p) => [p.id, p])) as Record<PlantaId, Planta>
 
@@ -113,6 +117,12 @@ export type TipoMueble =
   | "billar"
   | "cinta"
   | "mapa"
+  | "mesaReunion"
+  | "atril"
+  | "telon"
+  | "pantalla"
+  | "bandera"
+  | "balcon"
 
 /**
  * Un mueble: centro (x, z), `rumbo` = hacia dónde mira su frente (0 = sur),
@@ -137,6 +147,8 @@ export interface Mueble {
 
 /** Medidas por defecto (ancho, fondo) de cada tipo. */
 export const MEDIDA: Record<TipoMueble, [number, number]> = {
+  // El balcón corrido de una sala de doble altura (va en alto: se camina por debajo, no es sólido).
+  balcon: [20, 1.0],
   mesaComedor: [1.4, 10.8],
   mesaRedonda: [1.2, 1.2],
   mesita: [1.1, 0.6],
@@ -162,6 +174,11 @@ export const MEDIDA: Record<TipoMueble, [number, number]> = {
   billar: [1.5, 2.7],
   cinta: [0.85, 1.9],
   mapa: [3.0, 0.08],
+  mesaReunion: [1.6, 6.0],
+  atril: [0.75, 0.55],
+  telon: [6.0, 0.2],
+  pantalla: [2.4, 0.1],
+  bandera: [0.45, 0.45],
 }
 
 /** Los muebles que no se atraviesan (los cuadros cuelgan, las sillas son asientos). */
@@ -187,6 +204,10 @@ const SOLIDO: Partial<Record<TipoMueble, number>> = {
   estufa: 0.2,
   billar: 0.5,
   cinta: 0.2,
+  mesaReunion: 0.85,
+  atril: 0.25,
+  telon: 0.1,
+  bandera: 0.1,
 }
 
 export interface Cuarto {
@@ -197,6 +218,8 @@ export interface Cuarto {
   rect: Rect
   /** Centros (z) de los medios círculos de un salón oval; el radio es la mitad del ancho. */
   ovalo?: { norte: number; sur: number }
+  /** Un óvalo de verdad (el Despacho Oval): semiejes; el centro es el del rectángulo. */
+  elipse?: { rx: number; rz: number }
   /** El lugar de lugares.ts que es este cuarto. */
   lugarId?: string
   /** Punto del grafo del cuarto (x, z): a la vista de cada puerta, lejos de los muebles. */
@@ -204,6 +227,8 @@ export interface Cuarto {
   /** Altura del nodo si no es la de la planta (el pie de la escalinata). */
   yNodo?: number
   piso: EstiloPiso
+  /** El tono del piso, si no es el de su estilo (la alfombra de la Sala de Crisis, el empedrado de un patio). */
+  colorPiso?: string
   /** Color de las paredes (seda, pintura o mármol). */
   muro: string
   /** Color de las cortinas de sus ventanas. */
@@ -1294,10 +1319,11 @@ const MUROS_TERCERO: Muro[] = [
   mu(P_3, 17.0, 17.3, -12.3, -1.7),
 ]
 
-export const CUARTOS: Cuarto[] = [...BAJA, ...ESTADO, ...SEGUNDO, ...TERCERO]
+// El Ala Oeste, el Edificio Eisenhower y el Tesoro viven en plantas-edificios.ts (mismo formato).
+export const CUARTOS: Cuarto[] = [...BAJA, ...ESTADO, ...SEGUNDO, ...TERCERO, ...CUARTOS_EDIFICIOS]
 export const CUARTO: Record<string, Cuarto> = Object.fromEntries(CUARTOS.map((c) => [c.id, c]))
-export const PUERTAS: Puerta[] = [...PUERTAS_BAJA, ...PUERTAS_ESTADO, ...PUERTAS_SEGUNDO, ...PUERTAS_TERCERO]
-export const MUROS: Muro[] = [...MUROS_BAJA, ...MUROS_ESTADO, ...MUROS_SEGUNDO, ...MUROS_TERCERO]
+export const PUERTAS: Puerta[] = [...PUERTAS_BAJA, ...PUERTAS_ESTADO, ...PUERTAS_SEGUNDO, ...PUERTAS_TERCERO, ...PUERTAS_EDIFICIOS]
+export const MUROS: Muro[] = [...MUROS_BAJA, ...MUROS_ESTADO, ...MUROS_SEGUNDO, ...MUROS_TERCERO, ...MUROS_EDIFICIOS]
 
 // ── Escaleras entre plantas ─────────────────────────────────────
 /**
@@ -1325,6 +1351,7 @@ export const ESCALERAS: Escalera[] = [
   { id: "oeste-2", nombre: "Escalera oeste", abajo: "nucleo-oeste", arriba: "nucleo-segundo", sube: [-12.75, -11.65], llega: [-13.9, -12.8], zA: -7.2, dir: -1, huella: 0.28, zFin: -12.25 },
   { id: "oeste-3", nombre: "Escalera oeste", abajo: "nucleo-segundo", arriba: "nucleo-tercero", sube: [-12.75, -11.65], llega: [-13.9, -12.8], zA: -7.2, dir: -1, huella: 0.28, zFin: -12.25 },
   { id: "gran", nombre: "Gran Escalera", abajo: "gran-escalera", arriba: "escalera-este-2", sube: [11.7, 13.7], llega: [9.5, 11.5], zA: -3.4, dir: -1, huella: 0.3, zFin: -10.0 },
+  ...ESCALERAS_EDIFICIOS,
 ]
 
 /** Las medidas que salen de una escalera: alturas, escalones por tramo y dónde termina el tramo. */
@@ -1352,20 +1379,25 @@ export function pozosDe(c: Cuarto): Rect[] {
 }
 
 /** Los tres salones ovales (Recepción Diplomática, Azul y Oval Amarilla) están uno encima del otro. */
-export const MACIZOS: Macizo[] = (["res-baja", "res-estado", "res-segundo"] as PlantaId[]).flatMap((planta) => [
-  { planta, pts: rinconOvalo(1) },
-  { planta, pts: rinconOvalo(-1) },
-])
+export const MACIZOS: Macizo[] = [
+  ...(["res-baja", "res-estado", "res-segundo"] as PlantaId[]).flatMap((planta) => [
+    { planta, pts: rinconOvalo(1) },
+    { planta, pts: rinconOvalo(-1) },
+  ]),
+  ...MACIZOS_EDIFICIOS,
+]
 
 /**
  * Uniones con el afuera, todas a la vista: la puerta norte (escalinata), la
  * del Pórtico Sur (Recepción Diplomática) y la de la Columnata Oeste. El
  * Balcón Truman es un cuarto del Segundo piso (`exterior`).
  */
-export const ENLACES: Array<{ nodo: string; cuarto: string; oculto?: boolean; texto: string }> = [
+export const ENLACES: Array<{ nodo: string; cuarto: string; oculto?: boolean; texto: string; puerta?: string }> = [
   { nodo: "puerta-res-norte", cuarto: "escalinata", texto: "Entra por la puerta norte de la Residencia" },
   { nodo: "puerta-res-sur", cuarto: "recepcion-diplomatica", texto: "Entra por el Pórtico Sur, a la Recepción Diplomática" },
   { nodo: "col-e", cuarto: "galeria-oeste", texto: "Entra desde la Columnata Oeste" },
+  // Los demás edificios: `puerta` = la puerta a la calle (lugares.ts pone un nodo a cada lado del vano).
+  ...ENLACES_EDIFICIOS,
 ]
 
 /** Ventanas de la fachada que dan a una planta: (x, z) del centro sobre la cara interior, ancho y alto del alféizar sobre el piso. */
@@ -1419,6 +1451,11 @@ export function dentroDeCuarto(c: Cuarto, x: number, z: number, margen = 0): boo
     const cx = (r.x0 + r.x1) / 2
     const zc = z < c.ovalo.norte ? c.ovalo.norte : z > c.ovalo.sur ? c.ovalo.sur : null
     if (zc !== null && Math.hypot(x - cx, z - zc) > rad - margen) return false
+  }
+  if (c.elipse) {
+    const ax = c.elipse.rx - margen
+    const az = c.elipse.rz - margen
+    if (ax <= 0 || az <= 0 || ((x - (r.x0 + r.x1) / 2) / ax) ** 2 + ((z - (r.z0 + r.z1) / 2) / az) ** 2 > 1) return false
   }
   if (c.hueco && x > c.hueco.x0 && x < c.hueco.x1 && z > c.hueco.z0 && z < c.hueco.z1) {
     // El hueco de la escalinata es de su propio cuarto.
@@ -1483,14 +1520,14 @@ export function asientosDe(c: Cuarto): Asiento[] {
       const ux = Math.cos(r)
       const uz = -Math.sin(r)
       for (const s of [-0.5, 0.5]) out.push({ x: m.x + ux * s, z: m.z + uz * s, rumbo: r })
-    } else if (m.t === "mesaComedor") out.push(...sillasDeMesa(m))
+    } else if (m.t === "mesaComedor" || m.t === "mesaReunion") out.push(...sillasDeMesa(m))
   }
   return out
 }
 
 /** Las sillas de una mesa de comedor: a los dos lados largos cada 0,8 m y una en cada cabecera. */
 export function sillasDeMesa(m: Mueble): Asiento[] {
-  const [w0, d0] = MEDIDA.mesaComedor
+  const [w0, d0] = MEDIDA[m.t]
   const w = m.w ?? w0
   const d = m.d ?? d0
   const giro = Math.abs(Math.sin(m.rumbo ?? 0)) > 0.7
@@ -1527,6 +1564,13 @@ export function zonasDe(c: Cuarto): Rect[] {
     const a = rad * 0.72
     return [{ x0: cx - a, x1: cx + a, z0: c.ovalo.norte - a, z1: c.ovalo.sur + a }]
   }
+  if (c.elipse) {
+    const cx = (r.x0 + r.x1) / 2
+    const cz = (r.z0 + r.z1) / 2
+    const ax = c.elipse.rx * 0.68
+    const az = c.elipse.rz * 0.68
+    return [{ x0: cx - ax, x1: cx + ax, z0: cz - az, z1: cz + az }]
+  }
   return [{ x0: r.x0 + m, x1: r.x1 - m, z0: r.z0 + m, z1: r.z1 - m }]
 }
 
@@ -1537,11 +1581,11 @@ export function zonasDe(c: Cuarto): Rect[] {
  */
 export const HABITACIONES = { planta: "res-tercero" as PlantaId, rect: { x0: -9.0, x1: 24.9, z0: -12.3, z1: -1.7 }, puerta: "h3-pasillo" }
 
-/** La planta de entrada de un lugar de edificio (la sala misma o, para "habitaciones", la Planta de Estado). */
+/** La planta de entrada de un lugar de edificio (la sala misma o, para "habitaciones", el Tercer piso). */
 export function plantaDeLugar(lugarId: string): PlantaId | null {
   const c = CUARTOS.find((x) => x.lugarId === lugarId && PLANTA[x.planta].lista)
   if (c) return c.planta
-  if (lugarId === "habitaciones") return "res-estado"
+  if (lugarId === "habitaciones") return HABITACIONES.planta
   return null
 }
 
@@ -1565,6 +1609,34 @@ function cruceSegmentos(ax: number, az: number, bx: number, bz: number, px: numb
 
 /** El interior de la Residencia (la cara de adentro de la fachada), para la cámara. */
 export const INTERIOR_RESIDENCIA: Rect = { x0: -24.9, x1: 24.9, z0: -12.3, z1: 12.3 }
+/** El interior de cada edificio, para la cámara (se queda sobre su huella). */
+export const INTERIOR: Record<EdificioId, Rect> = { residencia: INTERIOR_RESIDENCIA, ...INTERIORES_EDIFICIOS }
+const ladosRect = (r: Rect): Array<[number, number, number, number]> => [
+  [r.x0, r.z0, r.x1, r.z0],
+  [r.x1, r.z0, r.x1, r.z1],
+  [r.x1, r.z1, r.x0, r.z1],
+  [r.x0, r.z1, r.x0, r.z0],
+]
+/** La fachada de cada edificio en planta (los tramos que tapan la vista bajo el corte). */
+const FACHADA: Record<EdificioId, Array<[number, number, number, number]>> = {
+  residencia: [
+    // Salvo el arco del Salón Azul (al sur, |x| < 3,4).
+    [INTERIOR_RESIDENCIA.x0, INTERIOR_RESIDENCIA.z0, INTERIOR_RESIDENCIA.x1, INTERIOR_RESIDENCIA.z0],
+    [INTERIOR_RESIDENCIA.x1, INTERIOR_RESIDENCIA.z0, INTERIOR_RESIDENCIA.x1, INTERIOR_RESIDENCIA.z1],
+    [INTERIOR_RESIDENCIA.x1, INTERIOR_RESIDENCIA.z1, 3.4, INTERIOR_RESIDENCIA.z1],
+    [-3.4, INTERIOR_RESIDENCIA.z1, INTERIOR_RESIDENCIA.x0, INTERIOR_RESIDENCIA.z1],
+    [INTERIOR_RESIDENCIA.x0, INTERIOR_RESIDENCIA.z1, INTERIOR_RESIDENCIA.x0, INTERIOR_RESIDENCIA.z0],
+  ],
+  // El Ala Oeste: sus cuatro muros, salvo donde se abre al Despacho Oval (el muro del óvalo es un macizo).
+  "ala-oeste": [
+    [-79.4, -14.4, -50.6, -14.4],
+    [-50.6, -14.4, -50.6, OVAL.cz - 4.3],
+    [-79.4, 17.4, OVAL.cx - 4.6, 17.4],
+    [-79.4, -14.4, -79.4, 17.4],
+  ],
+  eeob: ladosRect(INTERIORES_EDIFICIOS.eeob),
+  tesoro: ladosRect(INTERIORES_EDIFICIOS.tesoro),
+}
 
 /**
  * ¿Un muro de la planta (cortado a CORTE) tapa la línea de `a` (la cabeza de
@@ -1596,19 +1668,5 @@ export function vistaTapada(planta: PlantaId, a: { x: number; y: number; z: numb
     })
     if (prueba(segs)) return true
   }
-  if (PLANTA[planta].edificio === "residencia") {
-    const r = INTERIOR_RESIDENCIA
-    // La fachada, salvo el arco del Salón Azul (al sur, |x| < 3,4).
-    if (
-      prueba([
-        [r.x0, r.z0, r.x1, r.z0],
-        [r.x1, r.z0, r.x1, r.z1],
-        [r.x1, r.z1, 3.4, r.z1],
-        [-3.4, r.z1, r.x0, r.z1],
-        [r.x0, r.z1, r.x0, r.z0],
-      ])
-    )
-      return true
-  }
-  return false
+  return prueba(FACHADA[PLANTA[planta].edificio])
 }

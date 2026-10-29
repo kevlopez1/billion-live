@@ -148,7 +148,16 @@ for (const pu of PUERTAS) {
 }
 for (const en of ENLACES) {
   const c = CUARTO[en.cuarto]
-  if (c && PLANTA[c.planta].lista) E(en.nodo, `i-${c.id}`, en.oculto ? { interior: true } : undefined)
+  if (!c || !PLANTA[c.planta].lista) continue
+  const pu = en.puerta ? PUERTAS.find((p) => p.id === en.puerta) : undefined
+  if (pu) {
+    // Una puerta a la calle: un nodo adentro, a 0,55 m del vano y del lado del cuarto; el de afuera es `en.nodo`.
+    const lados: Array<[number, number]> = pu.eje === "x" ? [[pu.x, pu.z - 0.55], [pu.x, pu.z + 0.55]] : [[pu.x - 0.55, pu.z], [pu.x + 0.55, pu.z]]
+    const [x, z] = dentroDeCuarto(c, lados[0][0], lados[0][1]) ? lados[0] : lados[1]
+    nodos.push({ id: `i-p-${pu.id}-a`, p: { x, y: PLANTA[c.planta].y, z }, nivel: "superficie", planta: c.planta })
+    E(`i-${c.id}`, `i-p-${pu.id}-a`)
+    E(`i-p-${pu.id}-a`, en.nodo)
+  } else E(en.nodo, `i-${c.id}`, en.oculto ? { interior: true } : undefined)
 }
 // Escaleras: cuatro nodos (arranque, fin del primer tramo, vuelta en el descanso, llegada).
 // Los tres primeros son de la planta de abajo: se cambia de planta a mitad del segundo tramo.
@@ -173,19 +182,24 @@ for (const es of ESCALERAS) {
   E(`i-e-${es.id}-3`, `i-${b.id}`)
 }
 
-// Columnata Oeste, Jardín de las Rosas y Ala Oeste
+// Columnata Oeste, Jardín de las Rosas y Ala Oeste. Las puertas del Ala (y la del
+// Despacho Oval al Jardín de las Rosas) se cruzan a la vista: ENLACES en plantas.ts.
 N("col-e", -28, 0, 5.5)
 N("col-o", -48, 0, 5.5)
+N("col-o-puerta", -49.75, 0, 5.5)
 N("rosas", -38, 0, 16)
-N("puerta-oeste", -62, 0, 20)
-N("oeste-int", -65, 0, 3, "superficie", true)
+N("puerta-oval", -45.95, 0, 15)
+N("puerta-oeste", -62, 0, 18.25)
 N("oeste-s", -62, 0, 28)
-E("col-o", "oeste-int", { interior: true })
+N("puerta-oeste-n", -65, 0, -15.25)
+N("oeste-portico", -65, 0, -21.5)
 E("col-e", "col-o")
+E("col-o", "col-o-puerta")
 E("col-e", "rosas")
 E("col-o", "rosas")
-E("puerta-oeste", "oeste-int", { interior: true })
+E("rosas", "puerta-oval")
 E("puerta-oeste", "oeste-s")
+E("puerta-oeste-n", "oeste-portico")
 
 // Jardín Sur
 N("sur-1", 0, 0, 42)
@@ -251,21 +265,21 @@ E("se-1", "obra")
 // Calles y edificios vecinos
 N("calle-oeste-s", -92, 0, 24)
 N("calle-oeste-n", -92, 0, -35)
-N("puerta-eeob", -99, 0, 0)
-N("eeob-int", -130, 0, 0, "superficie", true)
+// Al pie de la escalinata del Edificio Eisenhower y arriba, frente a su puerta (1,2 m).
+N("puerta-eeob", -96.9, 0, 0)
+N("puerta-eeob-arriba", -99.75, 1.2, 0)
 N("calle-este-s", 92, 0, 32)
 N("calle-este-n", 92, 0, -35)
-N("puerta-tesoro", 99, 0, 0)
-N("tesoro-int", 125, 0, 0, "superficie", true)
+// La puerta del Tesoro, en su pabellón norte.
+N("puerta-tesoro", 99.75, 0, -55)
 E("oeste-s", "calle-oeste-s")
 E("calle-oeste-s", "calle-oeste-n")
 E("calle-oeste-s", "puerta-eeob")
 E("calle-oeste-n", "puerta-eeob")
-E("puerta-eeob", "eeob-int", { interior: true })
+E("puerta-eeob", "puerta-eeob-arriba")
 E("calle-este-s", "calle-este-n")
 E("calle-este-s", "puerta-tesoro")
 E("calle-este-n", "puerta-tesoro")
-E("puerta-tesoro", "tesoro-int", { interior: true })
 E("calle-este-s", "se-2")
 
 // Jardín Norte, Pennsylvania Avenue y el Parque Lafayette
@@ -281,6 +295,7 @@ E("portico-norte", "norte-1")
 E("norte-1", "no-1")
 E("norte-1", "ne-1")
 E("no-1", "calle-oeste-n")
+E("no-1", "oeste-portico")
 E("ne-1", "calle-este-n")
 E("norte-1", "fuente-norte-o")
 E("fuente-norte-o", "penn-c")
@@ -367,11 +382,11 @@ const ALA: [number, number, number, number] = [W.x0, W.x1, W.z0, W.z1]
 
 const SUPERFICIE: Lugar[] = [
   // Residencia (interiores reales)
-  dentro("despacho-oval", "Despacho Oval", "oeste-int", "El actual está en la esquina sureste del Ala Oeste desde 1934; el primero lo estrenó Taft en 1909. El escritorio Resolute está hecho con madera de un barco británico.", ALA),
-  dentro("sala-gabinete", "Sala del Gabinete", "oeste-int", "Aquí el presidente se reúne con sus secretarios. Da al Jardín de las Rosas.", ALA),
-  dentro("sala-roosevelt", "Sala Roosevelt", "oeste-int", "Lleva el nombre de los dos Roosevelt: Theodore construyó el Ala Oeste en 1902 y Franklin la amplió.", ALA),
-  dentro("sala-prensa", "Sala de Prensa", "oeste-int", "La Sala de Prensa James S. Brady está construida sobre la piscina que Franklin D. Roosevelt mandó instalar en 1933.", ALA),
-  dentro("sala-crisis", "Sala de Crisis", "oeste-int", "Kennedy la creó en 1961, en el sótano del Ala Oeste, después del fracaso de Bahía de Cochinos.", ALA),
+  dentro("despacho-oval", "Despacho Oval", "ala-oeste", "El actual está en la esquina sureste del Ala Oeste desde 1934; el primero lo estrenó Taft en 1909. El escritorio Resolute está hecho con madera de un barco británico.", ALA),
+  dentro("sala-gabinete", "Sala del Gabinete", "ala-oeste", "Aquí el presidente se reúne con sus secretarios. Da al Jardín de las Rosas.", ALA),
+  dentro("sala-roosevelt", "Sala Roosevelt", "ala-oeste", "Lleva el nombre de los dos Roosevelt: Theodore construyó el Ala Oeste en 1902 y Franklin la amplió.", ALA),
+  dentro("sala-prensa", "Sala de Prensa", "ala-oeste", "La Sala de Prensa James S. Brady está construida sobre la piscina que Franklin D. Roosevelt mandó instalar en 1933.", ALA),
+  dentro("sala-crisis", "Sala de Crisis", "ala-oeste", "Kennedy la creó en 1961, en el sótano del Ala Oeste, después del fracaso de Bahía de Cochinos.", ALA),
   dentro("salon-este", "Salón Este", "res-int", "El salón más grande de la casa. Abigail Adams colgaba aquí la ropa a secar; Lincoln fue velado aquí en 1865.", RES),
   dentro("salon-azul", "Salón Azul", "res-int", "Es ovalado. Grover Cleveland se casó aquí en 1886, el único presidente casado en la Casa Blanca.", RES),
   dentro("salon-rojo", "Salón Rojo", "res-int", "Rutherford B. Hayes juró aquí en secreto en 1877, antes de la ceremonia pública.", RES),
@@ -384,8 +399,8 @@ const SUPERFICIE: Lugar[] = [
   dentro("sala-mapas", "Sala de Mapas", "res-int", "Franklin D. Roosevelt siguió desde aquí la Segunda Guerra Mundial.", RES),
   dentro("solario", "Solario", "res-int", "Sala de vidrio en el tercer piso, sobre el Pórtico Sur.", RES),
   dentro("habitaciones", "Habitaciones", "res-int", "La residencia tiene 132 habitaciones y 35 baños en seis niveles.", RES),
-  dentro("eeob", "Edificio Eisenhower", "eeob-int", "Oficinas del personal de la Casa Blanca y del vicepresidente, terminado en 1888.", [HUELLAS.eeob.x0, HUELLAS.eeob.x1, HUELLAS.eeob.z0, HUELLAS.eeob.z1]),
-  dentro("tesoro", "Departamento del Tesoro", "tesoro-int", "Es el edificio que aparece en el reverso del billete de 10 dólares.", [HUELLAS.tesoro.x0, HUELLAS.tesoro.x1, HUELLAS.tesoro.z0, HUELLAS.tesoro.z1]),
+  dentro("eeob", "Edificio Eisenhower", "eeob", "Oficinas del personal de la Casa Blanca y del vicepresidente, terminado en 1888.", [HUELLAS.eeob.x0, HUELLAS.eeob.x1, HUELLAS.eeob.z0, HUELLAS.eeob.z1]),
+  dentro("tesoro", "Departamento del Tesoro", "tesoro", "Es el edificio que aparece en el reverso del billete de 10 dólares.", [HUELLAS.tesoro.x0, HUELLAS.tesoro.x1, HUELLAS.tesoro.z0, HUELLAS.tesoro.z1]),
 
   // Exteriores (se ven)
   L({ id: "balcon-truman", nombre: "Balcón Truman", nivel: "superficie", tipo: "edificio", x0: -5, x1: 5, z0: 17, z1: 21, y: 8.6, acceso: "balcon", dato: "Truman lo agregó al Pórtico Sur en 1948, en medio de críticas." }),

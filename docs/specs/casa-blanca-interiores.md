@@ -180,3 +180,54 @@ cinta y mapa de pared).
   salas sin dato verificable llevan nombre genérico (Oficinas) y no son lugares.
 - **Cómo llegar:** elige la puerta que queda más cerca por dentro y nombra las escaleras («Escalera oeste
   al Tercer piso»). El mapa agrupa las salas de cada edificio por planta.
+
+## Estado del paso C (2026-10-29)
+Hecho: todo edificio se recorre a la vista. Ya no queda ningún lugar «el edificio entero» (salvo las
+habitaciones, con la puerta cerrada) ni ningún tramo oculto en el grafo fuera del ascensor; los rayos X
+quedan solo para el ascensor. Datos en `plantas-edificios.ts` (mismo formato que `plantas.ts`, que los suma).
+- **Ala Oeste, planta principal (y 0):** vestíbulo tras la puerta norte (x −65), Sala de Prensa al noreste
+  (fondo azul con el óvalo, atril y 49 butacas en 7 filas de 7), Oficina del Asesor de Seguridad Nacional,
+  pasillo este-oeste, Oficinas del Vicepresidente y del Jefe de Gabinete al oeste, Sala Roosevelt en el
+  centro (sin ventanas), pasillo sur hasta la puerta sur (x −62), Sala del Gabinete (mesa de 16 sillas),
+  Sala de las Palmas con la puerta a la Columnata y la antesala del Despacho Oval.
+- **Despacho Oval:** un óvalo de verdad (`Cuarto.elipse`, 10,4 x 8,2 m por dentro del muro). Escritorio
+  Resolute (1,83 x 1,22 m) frente a las ventanas del sur con dos banderas, chimenea al norte, dos sofás.
+  Puertas: a la antesala (oeste) y al Jardín de las Rosas (este). El muro del Ala que cruzaba el óvalo se
+  abrió hasta el techo del óvalo (desde afuera no cambia nada); su muro por dentro es un macizo con
+  huecos en las dos puertas y las tres ventanas del sur.
+- **Sótano (y −3,4):** Sala de Crisis (mesa de conferencias, pantallas, puestos de vigilancia frente al muro
+  de video) y Comedor de la Marina, por una escalera en U. Lo no excavado es macizo. Con el sótano abierto,
+  el suelo se recorta dentro de la huella del Ala (planos con `clipIntersection`); con la planta principal,
+  solo sobre el pozo de la escalera, para que se vea bajar.
+- **Edificio Eisenhower (Planta baja y 1,2, arriba de su escalinata; Segundo piso y 5,4):** dos patios con un
+  anillo de pasillos de damero, oficinas alrededor y un ala central. El lugar `eeob` es la Oficina Ceremonial
+  del Vicepresidente, en el segundo piso (se sube por la escalera junto al vestíbulo).
+- **Tesoro (y 0):** entrada en el pabellón norte (puerta nueva entre dos ventanas, z −55), dos patios, anillo
+  de pasillos y, al centro, la Sala del Efectivo (lugar `tesoro`).
+- **Fachadas macizas** (Eisenhower y Tesoro no tienen cara de adentro): un muro de forro ocupa el espesor
+  del muro real salvo 2 cm de afuera. El remate es por planta (`CLAVE_REMATE`).
+- **Puertas a la calle de estos edificios:** `ENLACES` con `puerta`: un nodo a cada lado del vano, se cambia
+  de planta justo en él. «Cómo llegar» nombra también las escaleras que bajan («al Sótano»).
+- **Cámara:** las salas del Ala Oeste se miran desde el sureste (al sur del Despacho hay árboles).
+- **Medido (calidad media):** Principal del Ala 5 mallas / 27.615 triángulos; Sótano 5 / 7.558; Eisenhower
+  baja 5 / 57.334, segundo 6 / 58.810; Tesoro 5 / 53.212. En el teléfono (390x844), la superficie al cargar:
+  286 llamadas y 6.241.725 triángulos (paso B: 286 y 6.241.541); igual después de construir las cinco plantas.
+- **Prueba:** la simulación recorre todas las salas desde las tres puertas de la Residencia sin tramos ocultos,
+  por puertas, a menos de 5 m/s, y verifica que las nueve plantas se pisan, que ningún lugar sigue siendo
+  «el edificio entero» y que no queda ningún tramo oculto en el grafo fuera del ascensor.
+
+## Estado tras la revisión (arreglos)
+
+- **«Salir» mientras se sigue a alguien adentro:** `mostrarPlanta` pasa la cámara a «dron» antes de cambiar
+  de planta (lo que pide la persona gana sobre «seguir», que volvía a abrir la planta del seguido).
+- **De noche, adentro, los residentes ya no son siluetas:** sin luces nuevas, con una planta abierta la
+  hemisférica que ya existe se vuelve cálida y sube con la noche (`rellenoInterior` en `motor.ts`). El sótano
+  del Ala Oeste no tiene ventanas: relleno, charcos y brillo de lámparas y pantallas fijos las 24 h.
+- **Cámara de seguir adentro:** si el muro cortado tapa el torso, gira de a 30° hacia el cuarto (cada 0,25 s,
+  sin tirar hacia atrás durante 2 s); el rayo tiene que pasar la altura del corte dentro del cuarto.
+- **Despacho Oval:** se encuadra desde el norte (escritorio de frente, ventanas detrás, sin árboles).
+- **Sala del Efectivo:** sin columnas sueltas; balcón de bronce corrido sobre ménsulas (mueble `balcon`, va en
+  alto y no es sólido) y diez ventanillas a lo largo de los muros largos.
+- **Habitaciones:** `plantaDeLugar` lleva al Tercer piso. La barra de plantas cambia en el acto al entrar desde
+  el mapa, y el subtítulo dice el edificio y la planta («Ala Oeste · Sótano») en vez de «Jardines y edificios».
+- **Desmontar:** `Interiores.dispose()` devuelve los materiales originales y libera los clones con corte.

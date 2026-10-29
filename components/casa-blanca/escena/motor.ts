@@ -25,7 +25,7 @@ import { ambienteCiudad, construirCiudad, type AmbienteCiudad } from "./ciudad"
 import { construirNavegacion } from "./navegacion"
 import { crearAvatar } from "./avatares"
 import { HUELLAS } from "../lugares"
-import { CORTE, CUARTOS, PLANTA, cuartoDeLugar, type PlantaId } from "../plantas"
+import { CORTE, CUARTOS, PLANTA, cuartoDeLugar, type EdificioId, type PlantaId } from "../plantas"
 import { crearInteriores } from "./interiores"
 import type { Ambiente } from "./motor-cielo"
 
@@ -40,10 +40,18 @@ const CAJAS_OCLUSION: Array<[number, number, number, number, number]> = [
   [HUELLAS.eeob.x0, HUELLAS.eeob.x1, HUELLAS.eeob.z0, HUELLAS.eeob.z1, HUELLAS.eeob.alto],
   [HUELLAS.tesoro.x0, HUELLAS.tesoro.x1, HUELLAS.tesoro.z0, HUELLAS.tesoro.z1, HUELLAS.tesoro.alto],
 ]
-function tapado(a: THREE.Vector3, b: THREE.Vector3, altoResidencia?: number): boolean {
+/** La huella de cada edificio con plantas (para saber cuál está cortado). */
+const HUELLA_EDIFICIO: Record<EdificioId, { x0: number; x1: number; z0: number; z1: number }> = {
+  residencia: HUELLAS.residencia,
+  "ala-oeste": HUELLAS.alaOeste,
+  eeob: HUELLAS.eeob,
+  tesoro: HUELLAS.tesoro,
+}
+const enEdificio = (x: number, z: number) => Object.values(HUELLA_EDIFICIO).some((h) => x > h.x0 && x < h.x1 && z > h.z0 && z < h.z1)
+function tapado(a: THREE.Vector3, b: THREE.Vector3, corte?: { x0: number; alto: number }): boolean {
   for (const [x0, x1, z0, z1, altoCaja] of CAJAS_OCLUSION) {
-    // Con una planta abierta, la Residencia está cortada: tapa solo hasta el corte.
-    const alto = altoResidencia !== undefined && x0 === HUELLAS.residencia.x0 ? altoResidencia : altoCaja
+    // Con una planta abierta, su edificio está cortado: tapa solo hasta el corte.
+    const alto = corte && x0 === corte.x0 ? corte.alto : altoCaja
     // Intersección segmento–caja (método de las franjas)
     let t0 = 0
     let t1 = 1
@@ -424,6 +432,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     intentar("interiores.mostrar", () => interiores.mostrar(p))
     plantaActual = interiores.planta()
     camara.setPlanta(plantaActual ? { id: plantaActual, y: PLANTA[plantaActual].y } : null)
+    // El relleno de las salas (rellenoInterior) depende de la planta abierta.
+    horaSucia = true
   }
 
   const aplicarNivel = (n: NivelId) => {
@@ -506,6 +516,20 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     renderer.toneMappingExposure = 0.9
   }
 
+  // Dentro de un edificio de noche la luz es la de las lámparas, no la de la luna:
+  // sin luces nuevas, la hemisférica que ya existe se vuelve cálida y sube. Sin
+  // esto los residentes eran siluetas negras. El sótano no tiene ventanas: su
+  // relleno no depende de la hora.
+  const _calidoCielo = new THREE.Color("#ffdcb4")
+  const _calidoSuelo = new THREE.Color("#5e4632")
+  const rellenoInterior = (p: PlantaId) => {
+    const k = p === "oeste-sotano" ? Math.max(nocheActual, 0.6) : nocheActual
+    if (k <= 0) return
+    cielo.hemi.color.lerp(_calidoCielo, 0.75 * k)
+    cielo.hemi.groundColor.lerp(_calidoSuelo, 0.85 * k)
+    cielo.hemi.intensity += 1.5 * k
+  }
+
   /** La ciudad: sol del cielo artificial, hemisferio, niebla y exposición de ambienteCiudad. */
   const aplicarCiudad = (h: number) => {
     const a = (ambCiudad = ambienteCiudad(h, ambCiudad ?? undefined))
@@ -526,6 +550,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     for (const n of nocturnos) n.mat.emissiveIntensity = n.dia + (n.noche - n.dia) * nocheActual
     for (const l of luces) l.luz.intensity = l.intensidad * nocheActual
     const sup = nivelActual === "superficie"
+    if (sup && plantaActual) rellenoInterior(plantaActual)
     let env: THREE.Texture | null
     let intensidadEnv: number
     if (sup) {
@@ -634,12 +659,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       const nuevo = actual + dif * (1 - Math.exp(-10 * dt))
       rumbos.set(id, nuevo)
       a.raiz.rotation.y = nuevo
-      // A quien se sigue y está adentro se lo ve a través de las paredes (el ascensor y los edificios
-      // que todavía no tienen planta). En la Residencia ya todo se recorre: el único oculto es el que
-      // duerme con la puerta cerrada, y ese no se muestra.
-      const R = HUELLAS.residencia
-      const enResidencia = e.pos.x > R.x0 && e.pos.x < R.x1 && e.pos.z > R.z0 && e.pos.z < R.z1 && e.pos.y > 0.2
-      const adentro = id === seguido && !e.visible && !enResidencia && nivelDeY(e.pos.y) === nivelActual
+      // Rayos X solo para el que se sigue dentro del ascensor: todos los edificios ya se recorren a la
+      // vista, y el único oculto dentro de uno es el que duerme con la puerta cerrada (ese no se muestra).
+      const adentro = id === seguido && !e.visible && !enEdificio(e.pos.x, e.pos.z) && nivelDeY(e.pos.y) === nivelActual
       // El que está en una planta se ve solo con esa planta abierta (desde afuera, la fachada lo tapa).
       const enVista = !e.planta || e.planta === plantaActual
       a.raiz.visible = (e.visible && enVista && nivelDeY(e.pos.y) === nivelActual) || adentro
@@ -992,7 +1014,11 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       return poseEnfoque(new THREE.Vector3(0, 0, 0), 90, "superficie")
     }
     const elev = 55 * THREE.MathUtils.DEG2RAD
-    const dir = new THREE.Vector3(0.18, 0, 1).normalize()
+    // Desde el sur; en el Ala Oeste, desde el sureste (por encima del Jardín de las Rosas: al sur del Despacho Oval hay árboles).
+    const enAla = (c ? PLANTA[c.planta].edificio : p ? PLANTA[p].edificio : null) === "ala-oeste"
+    // El Despacho Oval, desde el norte (desde adentro del Ala): el escritorio Resolute de frente, las ventanas detrás y ningún árbol en medio.
+    const oval = lugarId === "despacho-oval"
+    const dir = oval ? new THREE.Vector3(0.3, 0, -1).normalize() : new THREE.Vector3(enAla ? 1.5 : 0.18, 0, 1).normalize()
     const mira = new THREE.Vector3(cx, y + 0.6, cz)
     const pos = mira.clone().add(new THREE.Vector3(dir.x * Math.cos(elev) * d, Math.sin(elev) * d, dir.z * Math.cos(elev) * d))
     if (subir) {
@@ -1142,7 +1168,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       a.cabeza.getWorldPosition(_p)
       const r = proyectar(_p)
       // La etiqueta de quien se sigue no la tapa un edificio: se lo ve en rayos X.
-      const detras = nivelActual === "superficie" && id !== camara.seguido() && tapado(cam.position, _p, plantaActual ? PLANTA[plantaActual].y + CORTE : undefined)
+      const detras = nivelActual === "superficie" && id !== camara.seguido() && tapado(cam.position, _p, plantaActual ? { x0: HUELLA_EDIFICIO[PLANTA[plantaActual].edificio].x0, alto: PLANTA[plantaActual].y + CORTE } : undefined)
       return { ...r, visible: r.visible && !detras && visibleEnCadena(a.raiz) }
     },
     proyectar,
@@ -1177,6 +1203,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       observador?.disconnect()
       camara?.dispose()
       for (const a of avatares.values()) intentar("avatar.dispose", () => a.dispose())
+      if (interiores) intentar("interiores.dispose", () => interiores?.dispose())
       const texturas = new Set<THREE.Texture>()
       const mats = new Set<THREE.Material>()
       scene.traverse((o) => {
@@ -1211,6 +1238,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     maqueta: () => maquetaOn,
     mostrarPlanta(p, op) {
       if (!interiores) return
+      // Lo pidió la persona (Salir, otra planta): gana sobre "seguir", que si no
+      // volvería a abrir la planta del seguido en el cuadro siguiente.
+      if (camara.modo === "seguir") camara.setModo("dron")
       if (p && p === plantaActual) {
         // La planta que ya está abierta: se la vuelve a encuadrar entera.
         const pose = poseSala(p, null)
