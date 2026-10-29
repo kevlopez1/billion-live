@@ -281,7 +281,9 @@ export class Cabeza {
     d = smin(d, elip(x, y, z, 0, -0.012, 0.012, 0.067 * W, 0.07, 0.085), 0.03)
     // Maxilar (media cara) y mejillas
     d = smin(d, elip(x, yM, z, 0, -0.03 * L, 0.052, (0.051 + 0.006 * lleno) * W, 0.046 * L, 0.051), 0.026)
-    if (!lejos(ax, yM, z, 0.05, -0.03, 0.05, 0.065, d, 0.026)) {
+    // (el margen es la mezcla más ancha del grupo, la del carrillo: con uno menor el
+    // salto dejaba un escalón donde la mezcla todavía cambiaba la superficie)
+    if (!lejos(ax, yM, z, 0.05, -0.03, 0.05, 0.065, d, 0.036 + 0.012 * lleno)) {
       d = smin(d, elip(ax, y, z, 0.049 * W, -0.005 + 0.003 * (Pm - 1), 0.063, 0.021 * Pm, 0.014, 0.021), 0.02)
       // Arco cigomático: del pómulo a la oreja
       d = smin(d, cono(ax, y, z, 0.05 * W, -0.004, 0.06, 0.064 * W, 0.0, 0.012, 0.009, 0.006), 0.02)
@@ -291,7 +293,9 @@ export class Cabeza {
       // era un rectángulo; la cara real es un huevo, angosta abajo)
       // (centro más atrás y más angosto que antes: en z 0,066 era un bulto junto a
       // la boca en las 24 caras, el "hocico"; la grasa ahora ensancha la cara)
-      d = smin(d, elip(ax, yM, z, (0.036 + 0.007 * lleno) * W, -0.038 * L - 0.008 * lleno - 0.004 * Pa, 0.058 - 0.004 * lleno, 0.019 + 0.007 * lleno, 0.024 + 0.007 * lleno, 0.026 + 0.003 * lleno), 0.024 + 0.012 * lleno)
+      // (mezcla de 3,6 cm: con 2,4 el borde del carrillo dibujaba un pliegue vertical
+      // del pómulo a la mandíbula y de frente la cara se leía como una caja)
+      d = smin(d, elip(ax, yM, z, (0.036 + 0.007 * lleno) * W, -0.038 * L - 0.008 * lleno - 0.004 * Pa, 0.058 - 0.004 * lleno, 0.019 + 0.007 * lleno, 0.024 + 0.007 * lleno, 0.026 + 0.003 * lleno), 0.036 + 0.012 * lleno)
       // Mejillas hundidas bajo el pómulo.
       // (el elipsoide está fuera de la piel: solo hunde unos mm, -6 mm con mejillas = -1)
       // (mezcla ancha: con 1 cm el borde del hueco se veía como un pliegue o una cicatriz)
@@ -356,8 +360,11 @@ export class Cabeza {
       // Giba aguileña
       if (this.NG > 0.05) d = smin(d, esf(x, y, z, 0, nty + 0.017, lerp(0.104, ntz - 0.006, 0.4) + 0.0035 * this.NG, 0.0042 * NA), 0.006)
       d = smin(d, esf(x, y, z, 0, nty, ntz, 0.0102 * NB), 0.0065)
-      d = smin(d, esf(ax, y, z, 0.0136 * NA, nty - 0.0085, ntz - 0.0155, 0.0077 * NA), 0.0065)
-      d = smin(d, elip(x, y, z, 0, nty - 0.0115 - 0.002 * this.NG, ntz - 0.0125, 0.0092 * NA, 0.0044, 0.0078), 0.005)
+      // (base de la nariz 3,5 mm más arriba: colgaba 1,4 cm bajo la punta y se apoyaba
+      // en el labio de arriba, que quedaba de 13 mm y mirando hacia abajo — el "hocico"
+      // y la franja oscura como bigote en todas las caras; el real mide ~20 mm)
+      d = smin(d, esf(ax, y, z, 0.0136 * NA, nty - 0.0058, ntz - 0.0155, 0.0077 * NA), 0.0065)
+      d = smin(d, elip(x, y, z, 0, nty - 0.008 - 0.002 * this.NG, ntz - 0.0115, 0.0092 * NA, 0.0044, 0.0078), 0.005)
     }
     // Labios con volumen, comisuras y la línea de la boca
     const yb = this.yBoca
@@ -365,19 +372,27 @@ export class Cabeza {
       // Comisuras: la línea de los labios se curva arriba (sonrisa) o abajo.
       const kx = x / (0.025 * LW)
       const yl = y - this.LC * 0.0035 * kx * kx
-      d = smin(d, elip(x, yl, z, 0, yb + 0.0066, 0.095, 0.0228 * LW, 0.0062 * this.LU, 0.0082 * this.LU), 0.006)
-      d = smin(d, elip(x, yl, z, 0, yb - 0.0068, 0.0925 + 0.004 * this.LA, 0.0198 * LW, 0.0071 * this.LD, (0.0086 + 0.002 * this.LA) * this.LD), 0.006)
-      d = smax(d, -elip(x, yl, z, 0, yb, 0.1035, 0.025 * LW, 0.0008, 0.011), 0.0015)
+      // (los dos labios se tocan en la línea y la ranura mide ~2,5 mm: con los centros a
+      // ±6,7 mm no llegaban a la línea y la ranura de 1 cm dejaba la fila de la boca
+      // 6 mm adentro; la mitad de abajo del labio superior miraba al suelo y salía oscura)
+      d = smin(d, elip(x, yl, z, 0, yb + 0.0047, 0.095, 0.0228 * LW, 0.0058 * this.LU, 0.0082 * this.LU), 0.006)
+      d = smin(d, elip(x, yl, z, 0, yb - 0.0052, 0.0925 + 0.004 * this.LA, 0.0198 * LW, 0.0066 * this.LD, (0.0086 + 0.002 * this.LA) * this.LD), 0.006)
+      d = smax(d, -elip(x, yl, z, 0, yb, 0.1045, 0.025 * LW, 0.0008, 0.0055), 0.0012)
       // Modiolo: el hoyito en cada comisura (la boca queda metida en la cara,
       // no sobre un hocico).
-      d = smax(d, -esf(ax, yl, z, 0.027 * LW, yb, 0.0935, 0.0028), 0.005)
+      // (chico: con 2,8 mm y la mezcla de 5 mm hacía un pozo oscuro en cada comisura)
+      d = smax(d, -esf(ax, yl, z, 0.027 * LW, yb, 0.0935, 0.0018), 0.0035)
       // Filtrum: el surco entre la nariz y el labio superior.
-      d = smax(d, -cono(x, y, z, 0, nty - 0.014, ntz - 0.008, 0, yb + 0.011, 0.1, 0.0018, 0.0022), 0.003)
+      // (poco profundo: con el extremo de abajo a 4 mm bajo la piel, la columna del
+      // centro se hundía 5 mm y el labio de arriba quedaba partido)
+      d = smax(d, -cono(x, y, z, 0, nty - 0.0105, ntz - 0.0085, 0, yb + 0.012, 0.1025, 0.0016, 0.0019), 0.003)
       // Surco bajo el labio inferior
       d = smax(d, -cono(x, y, z, -0.012, yb - 0.0175, 0.098 + 0.003 * this.LA, 0.012, yb - 0.0175, 0.098 + 0.003 * this.LA, 0.0035, 0.0035), 0.005)
       // Surco nasolabial (más marcado con la edad y los carrillos llenos)
       const sn = E + 0.5 * Pa
-      d = smax(d, -cono(ax, y, z, 0.019 * NA, nty - 0.008, ntz - 0.021, 0.027 * LW, yb - 0.004 - 0.004 * Pa, 0.094, 0.0016 + 0.0014 * sn, 0.0012), 0.004 + 0.003 * sn)
+      // (termina ~5 mm por fuera de la comisura, como el pliegue real: terminando en la
+      // comisura misma, 3 mm bajo la piel, cavaba un pozo a cada lado del labio de arriba)
+      d = smax(d, -cono(ax, y, z, 0.019 * NA, nty - 0.008, ntz - 0.021, 0.027 * LW + 0.005, yb - 0.004 - 0.004 * Pa, 0.091, 0.0013 + 0.0011 * sn, 0.001), 0.0035 + 0.0025 * sn)
     }
     // Cuello y nuez
     const k = this.cuello
@@ -514,8 +529,12 @@ export class Cabeza {
    * Coordenadas canónicas de la cara (0..1) para el mapa de arrugas: x por el
    * ancho de la cara; y por puntos fijos (mentón, boca, nariz, ojos, frente).
    */
-  canonica(x: number, y: number): [number, number] {
+  canonica(x: number, y0: number): [number, number] {
     const u = 0.5 + x / (0.15 * this.W)
+    // Cerca de la boca, v sigue la curva de las comisuras: la fila de la boca queda
+    // en v = 0,3 de punta a punta (ahí va la línea de los labios del mapa).
+    const kx = clamp(x / (0.025 * this.LW), -1.3, 1.3)
+    const y = y0 - this.LC * 0.0035 * kx * kx * campana(y0 - this.yBoca, 0, 0.015)
     const o = this.ojo
     const yb = this.yBoca
     const ny = this.nariz.y
@@ -555,22 +574,28 @@ export class Cabeza {
     }
     // Labios
     const yb = this.yBoca
-    const labio = campana(ax, 0, 0.021 * this.LW) * campana(y - this.LC * 0.0035 * (x / (0.025 * this.LW)) ** 2, yb, 0.0095) * suave(0.088, 0.096, z)
+    // (el rojo solo en el bermellón, ~8 mm arriba y ~10 mm abajo de la línea: con una
+    // campana de 1 cm el color subía hasta la nariz y, con la sombra de la nariz al
+    // mediodía, se leía como un bigote en los afeitados)
+    const dyl = y - this.LC * 0.0035 * (x / (0.025 * this.LW)) ** 2 - yb
+    const labio = campana(ax, 0, 0.021 * this.LW) * (dyl > 0 ? suave(0.0095 * this.LU, 0.0055 * this.LU, dyl) : suave(-0.0115 * this.LD, -0.007 * this.LD, dyl)) * suave(0.088, 0.096, z)
     if (zn.labios) {
       r = lerp(r, zn.labios[0], labio * 0.85)
       g = lerp(g, zn.labios[1], labio * 0.85)
       b = lerp(b, zn.labios[2], labio * 0.85)
     } else {
-      const kl = this.r.fem ? 1.4 : 1.1
+      // (el de arriba un poco más oscuro, como con luz de arriba)
+      const kl = (this.r.fem ? 1.4 : 1.1) * (dyl > 0 ? 1.12 : 1)
       r -= 0.08 * labio * kl
       g -= 0.38 * labio * kl
       b -= 0.32 * labio * kl
     }
     // Línea de la boca (apenas: la boca de verdad se abre)
     const linea = campana(y, yb, 0.0011) * campana(ax, 0, 0.022) * suave(0.088, 0.096, z)
-    r -= 0.25 * linea
-    g -= 0.3 * linea
-    b -= 0.28 * linea
+    // (suave: la línea nítida va en el mapa de la piel, canal B)
+    r -= 0.12 * linea
+    g -= 0.15 * linea
+    b -= 0.14 * linea
     // Ojeras y párpados
     const o = this.ojo
     const ojera = campana(ax, o.x, 0.016) * campana(y, o.y - 0.008, 0.009) * frente * (0.35 + this.r.edad * 0.5) * (this.f.piel.delineado > 0 ? 1 : 0.7)
@@ -644,7 +669,9 @@ export class Cabeza {
     r += 0.02 * t
     g += 0.015 * t
     // Fosas nasales
-    const fosa = campana(ax, 0.008, 0.006) * campana(y, this.nariz.y - 0.012, 0.004) * suave(0.09, 0.098, z)
+    // (solo en las aletas y por encima del filtrum: con 3 cm de ancho y 4 mm de caída
+    // la mancha bajaba al labio y se leía como un bigote en Trump, Thiel y Musk)
+    const fosa = campana(ax, 0.0075 * this.NA, 0.0035) * campana(y, this.nariz.y - 0.0088, 0.0028) * suave(this.nariz.y - 0.0132, this.nariz.y - 0.0102, y) * suave(0.09, 0.098, z)
     r -= 0.4 * fosa
     g -= 0.45 * fosa
     b -= 0.45 * fosa

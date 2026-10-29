@@ -5,9 +5,25 @@
 import assert from "node:assert/strict"
 import { contextoDePrueba, copia, guionBueno, salidaBuena } from "./datos-de-prueba"
 import type { ContextoGuion } from "./guardas"
-import { costoEstimado, escribirGuion, extraerJson, idDeVideo, MODELO_POR_DEFECTO, modeloGuion, slug, type PedidoIA, type PedirIA, type RespuestaIA } from "./guionista"
+import Anthropic from "@anthropic-ai/sdk"
+import {
+  costoEstimado,
+  escribirGuion,
+  extraerJson,
+  idDeVideo,
+  MODELO_POR_DEFECTO,
+  modeloGuion,
+  pedirConAnthropic,
+  slug,
+  type ClienteMensajes,
+  type PedidoIA,
+  type PedirIA,
+  type RespuestaIA,
+} from "./guionista"
 import type { Idea } from "./ideas"
 import { FICCION } from "./textos"
+import { tituloDe } from "./tipos"
+import { textoFinal } from "@/components/casa-blanca/estudio/linea"
 
 let fallos = 0
 async function prueba(nombre: string, fn: () => void | Promise<void>) {
@@ -50,6 +66,43 @@ function iaFalsa(guiones: Array<string | RespuestaIA>, revisiones: Array<string 
 }
 
 const json = (x: unknown) => JSON.stringify(x)
+
+/** Un mensaje de la API armado a mano (lo que devolvería messages.create). */
+function mensaje(texto: string, stop: string = "end_turn"): Anthropic.Message {
+  return {
+    id: "msg_prueba",
+    type: "message",
+    role: "assistant",
+    model: MODELO_POR_DEFECTO,
+    content: [{ type: "text", text: texto, citations: null }],
+    stop_reason: stop,
+    stop_sequence: null,
+    usage: { input_tokens: 1200, output_tokens: 800, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+  } as unknown as Anthropic.Message
+}
+
+/**
+ * Un cliente de Anthropic de mentira: messages.create devuelve, en orden, lo que dicta la prueba
+ * (un texto, un Message o un error que lanza) y anota los parámetros de cada llamada.
+ */
+function anthropicFalso(respuestas: Array<string | Anthropic.Message | Error>) {
+  const llamadas: Anthropic.MessageCreateParamsNonStreaming[] = []
+  const claves: string[] = []
+  const crear = (k: string): ClienteMensajes => {
+    claves.push(k)
+    return {
+      messages: {
+        async create(params) {
+          llamadas.push(params)
+          const r = respuestas[Math.min(llamadas.length - 1, respuestas.length - 1)]
+          if (r instanceof Error) throw r
+          return typeof r === "string" ? mensaje(r) : r
+        },
+      },
+    }
+  }
+  return { crear, llamadas, claves }
+}
 
 async function main() {
   const ctx: ContextoGuion = await contextoDePrueba("2026-11-15")
@@ -195,6 +248,78 @@ async function main() {
     assert.match(s, /vivos \(SOLO de fondo[^\n]*musk/)
     assert.match(s, /Límites:/)
     assert.ok(!/- trump \(/.test(s), "la ficha de alguien fuera no va en el prompt")
+  })
+
+  // ── Con el cliente de Anthropic (de mentira): el camino real del puerto ──
+  await prueba("Anthropic de mentira, JSON válido: un guion y una revisión, con el modelo barato, la caché y el esfuerzo", async () => {
+    const api = anthropicFalso([bueno, OK_REVISION])
+    const r = await escribirGuion({ idea: idea(), slot: 1, ctx }, { pedir: pedirConAnthropic("sk-prueba", api.crear) })
+    assert.ok(r.ok, !r.ok ? r.motivo : "")
+    assert.equal(api.llamadas.length, 2)
+    const [g, rev] = api.llamadas
+    assert.equal(g.model, "claude-haiku-5-5")
+    assert.equal(rev.model, "claude-haiku-5-5")
+    assert.deepEqual((g.system as Anthropic.TextBlockParam[])[0].cache_control, { type: "ephemeral" })
+    assert.equal(g.output_config?.effort, "medium")
+    assert.equal(rev.output_config?.effort, "low")
+    assert.equal(g.messages[0].role, "user")
+    assert.deepEqual(api.claves, ["sk-prueba", "sk-prueba"])
+  })
+
+  await prueba("Anthropic de mentira, JSON inválido → se repite una vez → falla con el motivo (sin revisión)", async () => {
+    const api = anthropicFalso(["Claro, aquí va el guion: Napoleón entra…", "{ \"episodio\": "])
+    const r = await escribirGuion({ idea: idea(), slot: 1, ctx }, { pedir: pedirConAnthropic("sk-prueba", api.crear) })
+    assert.ok(!r.ok)
+    if (r.ok) return
+    assert.match(r.motivo, /dos respuestas sin JSON válido/)
+    assert.equal(api.llamadas.length, 2)
+    assert.match(String(api.llamadas[1].messages[0].content), /Devuelve SOLO el objeto JSON pedido/)
+  })
+
+  await prueba("Anthropic de mentira, JSON inválido una vez → el segundo sirve → sale", async () => {
+    const api = anthropicFalso(["no es json", bueno, OK_REVISION])
+    const r = await escribirGuion({ idea: idea(), slot: 1, ctx }, { pedir: pedirConAnthropic("sk-prueba", api.crear) })
+    assert.ok(r.ok && r.intentos === 2)
+  })
+
+  await prueba("Anthropic de mentira: un error de la API vuelve con el estado y el mensaje (el cómo), sin tirar", async () => {
+    const caida = new Anthropic.APIError(529, { type: "error", error: { type: "overloaded_error", message: "Overloaded" } }, undefined, new Headers())
+    const api = anthropicFalso([caida])
+    const r = await escribirGuion({ idea: idea(), slot: 1, ctx }, { pedir: pedirConAnthropic("sk-prueba", api.crear) })
+    assert.ok(!r.ok && /la IA no respondió: 529/.test(r.motivo) && /Overloaded/.test(r.motivo), !r.ok ? r.motivo : "")
+    const red = anthropicFalso([new TypeError("fetch failed")])
+    const r2 = await escribirGuion({ idea: idea(), slot: 1, ctx }, { pedir: pedirConAnthropic("sk-prueba", red.crear) })
+    assert.ok(!r2.ok && /TypeError: fetch failed/.test(r2.motivo))
+  })
+
+  await prueba("Anthropic de mentira: una negativa (refusal) cuenta como intento y se pide otra escena", async () => {
+    const api = anthropicFalso([mensaje("", "refusal"), bueno, OK_REVISION])
+    const r = await escribirGuion({ idea: idea(), slot: 1, ctx }, { pedir: pedirConAnthropic("sk-prueba", api.crear) })
+    assert.ok(r.ok && r.intentos === 2)
+    assert.match(String(api.llamadas[1].messages[0].content), /se negó/)
+  })
+
+  await prueba("sin FABRICA_ANTHROPIC_KEY no se arma el cliente ni se llama", async () => {
+    const api = anthropicFalso([bueno])
+    const r = await pedirConAnthropic("", api.crear)({ paso: "guion", modelo: "m", sistema: "s", usuario: "u", maxTokens: 10, esfuerzo: "low" })
+    assert.ok(!r.ok && /falta FABRICA_ANTHROPIC_KEY/.test(r.como))
+    assert.equal(api.claves.length, 0)
+  })
+
+  await prueba("un {RECAUDADO} en el título se publica con el número, nunca con la marca", async () => {
+    const ep = copia(guionBueno())
+    ep.titulo = "Vamos por {RECAUDADO}"
+    ep.planos[0].titulo = "Vamos por {RECAUDADO}"
+    const ia = iaFalsa([json(salidaBuena(ep))])
+    const r = await escribirGuion({ idea: idea({ pilar: "consejo" }), slot: 1, ctx }, { pedir: ia.pedir })
+    assert.ok(r.ok, !r.ok ? r.motivos.join(" | ") : "")
+    if (!r.ok) return
+    for (const t of Object.values(r.textos.porRed ?? {})) assert.ok(!t.includes("{"), t)
+    assert.equal(r.episodio.titulo, "Vamos por {RECAUDADO}")
+    // El título publicado se guarda con el número: con él la cola busca el post y YouTube lo sube.
+    assert.equal(r.textos.titulo, textoFinal("Vamos por {RECAUDADO}"))
+    assert.ok(!r.textos.titulo?.includes("{"))
+    assert.equal(tituloDe({ textos: r.textos, episodio: r.episodio }), r.textos.titulo)
   })
 
   await prueba("utilidades: slug, id, JSON, costo y modelo por env", () => {

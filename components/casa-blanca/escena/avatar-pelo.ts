@@ -283,14 +283,27 @@ function mechones(lote: Lote, cu: Cuerpo, ph: PeloR, sem: number, op: { holguraE
           if (Math.abs(px) > xMax) px = Math.sign(px) * lerp(Math.abs(px), xMax, suave(0.88 * cu.H, 0.8 * cu.H, y))
           if (pz < tz) pz = tz
         } else {
-          // Empujar hacia afuera si el cuerpo está más afuera que el mechón.
-          const rM = Math.hypot(px, pz)
-          const rT = Math.hypot(tx, tz)
-          if (rT > rM) {
-            const k = rT / Math.max(1e-4, rM)
-            px *= k
-            pz *= k
+          // Mechón de atrás: cae por la espalda, no por encima del hombro. (Empujado
+          // en dirección radial hasta el anillo del tronco, a la altura de los hombros
+          // salía disparado de costado hasta la punta del hombro: alambres finos en
+          // Jesús y Cleopatra.) Se limita el ancho y se empuja solo hacia atrás.
+          const xMax = 0.11 * s
+          if (Math.abs(px) > xMax) px = Math.sign(px) * lerp(Math.abs(px), xMax, suave(0.88 * cu.H, 0.8 * cu.H, y))
+          // Espalda a esa x: la columna de atrás más cercana en x.
+          let zB = 0
+          let dx = 9
+          for (let j = 0; j < M; j++) {
+            if (Math.sin(ANG[j]) > -0.2) continue
+            const d = Math.abs(xs[j] - px)
+            if (d < dx) {
+              dx = d
+              zB = zs[j]
+            }
           }
+          const zMax = zB - holg
+          if (pz > zMax) pz = zMax
+          void tx
+          void tz
         }
       }
       // Ondas a lo largo.

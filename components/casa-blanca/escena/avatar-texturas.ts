@@ -282,12 +282,15 @@ export function texOjo(iris: string, esclera = "#ece6de"): THREE.Texture {
  * R = profundidad de las arrugas de la edad (frente, entrecejo, patas de
  * gallo, bajo los ojos, surcos nasogenianos, líneas de marioneta).
  * G = hoyuelo del mentón partido. La piel las usa como relieve y sombra.
+ * B = la línea entre los labios (en todos, sin edad): la boca cae justo en v = 0,3
+ * y una línea de 1 mm no entra en los colores por vértice (filas cada 3–8 mm).
  */
 export function texArrugas(): THREE.Texture {
   return una("arrugas", () => {
     const n = 256
     const R = new Float32Array(n * n)
     const G = new Float32Array(n * n)
+    const B = new Float32Array(n * n)
     const ruido = fbm(n, 12, 12, 3, 211)
     // Suma una línea (segmento curvo muestreado) con un ancho en píxeles.
     const linea = (dst: Float32Array, pts: Array<[number, number]>, ancho: number, prof: number) => {
@@ -337,11 +340,13 @@ export function texArrugas(): THREE.Texture {
     }
     // Hoyuelo del mentón.
     linea(G, curva((t) => [0.5, 0.125 + 0.075 * t], 4), 2.6, 1)
+    // Línea de la boca: de comisura a comisura (u ±0,16 con la boca media).
+    linea(B, curva((t) => [0.335 + 0.33 * t, 0.3], 16), 1.3, 1)
     const px = new Uint8ClampedArray(n * n * 4)
     for (let i = 0; i < n * n; i++) {
       px[i * 4] = Math.min(255, R[i] * (0.8 + 0.4 * ruido[i]) * 255)
       px[i * 4 + 1] = Math.min(255, G[i] * 255)
-      px[i * 4 + 2] = 0
+      px[i * 4 + 2] = Math.min(255, B[i] * 255)
       px[i * 4 + 3] = 255
     }
     const t = textura(n, px, { color: false, anisotropia: ANISO })

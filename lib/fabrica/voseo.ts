@@ -3,9 +3,11 @@
 //
 // Un guion que escribe una IA puede traer "querés" o "mirá": aquí se cortan
 // antes de que lleguen a un video. La lista es la misma del detector de la
-// web; voseo.test (en guardas.test.ts) lee el .py y exige que estén todas.
+// web (y unas más); voseo.test (en guardas.test.ts) lee el .py y exige que estén todas.
 // Cada línea con formas lleva la marca para que el detector no la cuente.
 // ──────────────────────────────────────────────────────────────
+
+import { limpiar } from "./normalizar"
 
 export const FORMAS_VOSEO: readonly string[] = [
   "Poné", "poné", "Ponés", "ponés", "Dejá", "dejá", "Dejás", "dejás", "Mandá", "mandá", "Mandame", "mandame", // sin-voseo:ejemplos
@@ -23,15 +25,21 @@ export const FORMAS_VOSEO: readonly string[] = [
   "querés", "Querés", "podés", "Podés", "tenés", "Tenés", "sabés", "Sabés", "hacés", "Hacés", "Sos", "sos", // sin-voseo:ejemplos
   "vivís", "construís", "Construís", "vendés", "Vendés", "llamás", "Llamás", "creés", "Creés", // sin-voseo:ejemplos
   "venís", "Venís", "ganás", "Ganás", "acá", "Acá", "vos", "Vos", "Metele", "Fijate", "fijate", // sin-voseo:ejemplos
+  // Más que el .py: el texto de un modelo es abierto, no el copy fijo de la web (tabla del CLAUDE.md y frecuentes).
+  "esperá", "creá", "pensá", "escuchá", "decí", "hacé", "vení", "tené", "hablá", "llamá", "jugá", "pagá", "andate", // sin-voseo:ejemplos
+  "imaginate", "acordate", "olvidate", "vivís", "sentís", "decís", "pensás", "che", "boludo", "boluda", // sin-voseo:ejemplos
 ]
 
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-// Igual que el PAT del .py: la forma entera, sin letra pegada antes ni después. Distingue mayúsculas, como el .py.
-const PATRON = new RegExp(`(?<![A-Za-zÁÉÍÓÚáéíóúñÑ])(${FORMAS_VOSEO.map(escapar).join("|")})(?![A-Za-zÁÉÍÓÚáéíóúñÑ])`, "g")
+// Como el PAT del .py (la forma entera, sin letra pegada antes ni después),
+// pero SIN distinguir mayúsculas: un título en mayúsculas («MIRÁ ESTO») también cae.
+const PATRON = new RegExp(`(?<![\\p{L}])(${[...new Set(FORMAS_VOSEO.map((f) => f.toLowerCase()))].map(escapar).join("|")})(?![\\p{L}])`, "giu")
 
-/** Las formas de voseo que tiene un texto (vacío = está en español neutro). */
+/** Las formas de voseo que tiene un texto (vacío = está en español neutro). Se mira también limpio (tildes en NFD, letras parecidas). */
 export function formasDeVoseo(texto: string): string[] {
-  return [...texto.matchAll(PATRON)].map((m) => m[1])
+  const out: string[] = []
+  for (const v of new Set([texto.normalize("NFC"), limpiar(texto)])) for (const m of v.matchAll(PATRON)) out.push(m[1])
+  return [...new Set(out)]
 }
 
 /** Las razones, en español, por las que un texto no pasa. `donde` dice qué texto es ("título", "plano 3"…). */

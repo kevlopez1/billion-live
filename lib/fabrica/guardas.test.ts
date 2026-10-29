@@ -7,6 +7,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import type { Episodio } from "@/components/casa-blanca/estudio/guion"
 import { CALENDARIO } from "@/components/casa-blanca/estudio/episodios"
+import { textoFinal } from "@/components/casa-blanca/estudio/linea"
 import { contextoDePrueba, copia, guionBueno } from "./datos-de-prueba"
 import {
   CITAS,
@@ -264,14 +265,35 @@ async function main() {
     hay(miniaturaValida("El emperador pierde otra vez", "2026-11-15"), /5 palabras/)
   })
 
+  await prueba("una marca sin reemplazar en un post o la miniatura: rechazado; el título con {RECAUDADO} se publica con el número", () => {
+    const t = textoDe({ titulo: "Vamos por {RECAUDADO}", pilar: "consejo" }, "youtube")
+    hay(textoValido("youtube", t), /\{RECAUDADO\} sin reemplazar/)
+    hay(miniaturaValida("{META} hoy", "2026-11-15"), /\{META\} sin reemplazar/)
+    const ep = copia(guionBueno())
+    ep.titulo = "Vamos por {RECAUDADO}"
+    const publicado = textoDe({ titulo: textoFinal(ep.titulo), pilar: "consejo" }, "youtube")
+    assert.deepEqual(textoValido("youtube", publicado, ep.titulo), [])
+  })
+  await prueba("Kobe nombrado solo en el texto del post: el video queda amarillo (espera el OK de Kev)", () => {
+    const ep = guionBueno()
+    const textos = { porRed: textosDe({ titulo: ep.titulo, pilar: "camara-oculta", descripcion: "Napoleón quiere jugar como Kobe." }) }
+    const r = revisarTodo(ep, textos, ctx)
+    assert.deepEqual(r.errores, [])
+    assert.equal(r.luz, "amarillo")
+  })
+
   // ── Etiquetas de IA ──
   await prueba("etiqueta de IA por red: sin ella no se sube", () => {
-    assert.deepEqual(etiquetaIA("youtube", { status: { containsSyntheticMedia: true } }), [])
-    hay(etiquetaIA("youtube", { status: {} }), /containsSyntheticMedia/)
-    assert.deepEqual(etiquetaIA("instagram", { is_ai_generated: "true" }), [])
-    hay(etiquetaIA("instagram", {}), /is_ai_generated/)
-    assert.deepEqual(etiquetaIA("tiktok", { is_aigc: true }), [])
-    hay(etiquetaIA("tiktok", { is_aigc: false }), /is_aigc/)
+    const aviso = `${FICCION}\n\nT`
+    assert.deepEqual(etiquetaIA("youtube", { status: { containsSyntheticMedia: true }, snippet: { description: aviso } }), [])
+    hay(etiquetaIA("youtube", { status: {}, snippet: { description: aviso } }), /containsSyntheticMedia/)
+    hay(etiquetaIA("youtube", { status: { containsSyntheticMedia: true }, snippet: { description: "" } }), /snippet.description no empieza con el aviso/)
+    assert.deepEqual(etiquetaIA("instagram", { is_ai_generated: "true", caption: aviso }), [])
+    hay(etiquetaIA("instagram", { caption: aviso }), /is_ai_generated/)
+    hay(etiquetaIA("instagram", { is_ai_generated: "true", caption: "" }), /caption no empieza con el aviso/)
+    assert.deepEqual(etiquetaIA("tiktok", { is_aigc: true, title: aviso }), [])
+    hay(etiquetaIA("tiktok", { is_aigc: false, title: aviso }), /is_aigc/)
+    hay(etiquetaIA("tiktok", { is_aigc: true, title: "" }), /title no empieza con el aviso/)
     assert.deepEqual(etiquetaIA("facebook", { description: `${FICCION}\n\nT` }), [])
     hay(etiquetaIA("x", { text: "Hola" }), /no empieza con el aviso/)
   })

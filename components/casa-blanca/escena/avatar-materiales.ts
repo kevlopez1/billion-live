@@ -37,7 +37,7 @@ function inyectar(m: THREE.MeshPhysicalMaterial, sss: THREE.Color | null) {
         .replace("#include <begin_vertex>", "#include <begin_vertex>\n\tvArr = aArr;")
       f = f
         .replace("#include <common>", "#include <common>\nuniform sampler2D uArrugas;\nvarying vec4 vArr;\nvec3 arrugaNormal( vec3 p, vec3 n, float h, float fd ) {\n\tvec3 dpx = dFdx( p );\n\tvec3 dpy = dFdy( p );\n\tvec3 r1 = cross( dpy, n );\n\tvec3 r2 = cross( n, dpx );\n\tfloat det = dot( dpx, r1 ) * fd;\n\tvec3 g = sign( det ) * ( dFdx( h ) * r1 + dFdy( h ) * r2 );\n\treturn normalize( abs( det ) * n - g );\n}")
-        .replace("#include <color_fragment>", "#include <color_fragment>\n\tvec4 arrW = texture2D( uArrugas, vArr.xy );\n\tfloat arrH = arrW.r * vArr.z + arrW.g * vArr.w;\n\tdiffuseColor.rgb *= 1.0 - 0.16 * arrH;")
+        .replace("#include <color_fragment>", "#include <color_fragment>\n\tvec4 arrW = texture2D( uArrugas, vArr.xy );\n\tfloat arrH = arrW.r * vArr.z + arrW.g * vArr.w;\n\tdiffuseColor.rgb *= ( 1.0 - 0.16 * arrH ) * ( 1.0 - 0.7 * arrW.b );")
         .replace("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\n\tif ( arrH > 0.002 ) normal = arrugaNormal( - vViewPosition, normal, - arrH * 0.00016, faceDirection );")
       f = f
         .replace("#include <common>", "#include <common>\nuniform vec3 uSSS;")

@@ -123,7 +123,8 @@ export function baseSupabase(db: Cliente): BaseCola & BaseParte {
 
   return {
     async latido() {
-      const j = await rpc<Record<string, unknown>>(db, "fabrica_latido", {})
+      const j = await rpc<Record<string, unknown> | null>(db, "fabrica_latido", {})
+      if (!j?.ahora) throw new Error("[fabrica/base] fabrica_latido no devolvió el estado: falta la fila de fabrica_estado (correr la parte 11 de supabase/correr-todo.sql)")
       return { ahora: new Date(String(j.ahora)), estado: aEstado(j) }
     },
     leerEstado,

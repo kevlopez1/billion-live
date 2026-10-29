@@ -18,7 +18,7 @@
 
 import { ESPECIALES, PERSONAJES } from "@/components/casa-blanca/datos/personajes"
 import type { Conciencia, Recuerdo } from "@/lib/casa-blanca-memoria"
-import { aliasDe, luzDe, nombradosEn, SEMAFORO } from "./semaforo"
+import { aliasDe, luzDe, nombradosEn, SEMAFORO, tercerosEn } from "./semaforo"
 import type { Pilar } from "./textos"
 
 /** Los tipos de recuerdo que puede usar la fábrica. Los demás traen texto de un visitante. */
@@ -200,8 +200,9 @@ export function elegirIdeas(f: FuentesDeIdeas, op: { dia: string; cuantas: numbe
   const vivosYFuera = Object.keys(SEMAFORO).filter((id) => ["vivo", "fuera"].includes(luzDe(id, op.dia)))
 
   const todos = candidatos(f, op.dia)
-    // Una semilla que nombra a un vivo o a alguien fuera invita al modelo a ponerlo: se descarta antes.
-    .filter((c) => !c.semilla.some((s) => nombradosEn(s, vivosYFuera).length))
+    // Una semilla que nombra a un vivo, a alguien fuera o a una persona real de
+    // fuera de la casa (Bezos, Evo…) invita al modelo a ponerlo: se descarta antes.
+    .filter((c) => !c.semilla.some((s) => nombradosEn(s, vivosYFuera).length || tercerosEn(s).length))
     .sort((a, b) => b.puntaje - a.puntaje || a.par.localeCompare(b.par) || a.fuentes[0].localeCompare(b.fuentes[0]))
 
   const elegidas: Idea[] = []

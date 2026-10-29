@@ -787,6 +787,18 @@ comment on table public.fabrica_envios is
 
 create index if not exists fabrica_envios_estado_idx on public.fabrica_envios (estado);
 
+-- Sumadas después de la primera versión (idempotente: la tabla puede venir de antes).
+--   enviado_en     cuándo se MANDÓ (reserva en publicando o subiendo). Es el
+--                  ancla de recientes() para un ambiguo: las reservas que solo
+--                  miran (resolver un ambiguo) no la mueven. Si la movieran,
+--                  tres listas fallidas seguidas dejarían el post original
+--                  fuera de la ventana y "no está" sería publicar dos veces.
+--   ambiguo_desde  de dónde vino el ambiguo (publicando | subiendo). Columna
+--                  propia: un error posterior (la lista que falla) no la pisa,
+--                  y una subida de la VM no se confunde con una publicación.
+alter table public.fabrica_envios add column if not exists enviado_en timestamptz;
+alter table public.fabrica_envios add column if not exists ambiguo_desde text;
+
 -- ── El interruptor y los contadores del día (una sola fila) ──
 create table if not exists public.fabrica_estado (
   id                  boolean primary key default true check (id),
@@ -1072,7 +1084,9 @@ $$;
 -- ── Reservas de envíos ──
 
 -- Como reservar_video, y además: que ya sea la hora del próximo intento y que
--- esa red no esté pausada.
+-- esa red no esté pausada. Para PUBLICAR, el video tiene que seguir en
+-- `programado` en esta misma sentencia: si Kev lo rechazó desde el panel
+-- mientras el tick corría, la reserva pierde y no sale.
 --   p_sumar       false = revisar sin gastar un intento (mirar si salió)
 --   p_aun_pausada true  = solo para DESPROGRAMAR YouTube, que es justo lo que
 --                         hay que hacer cuando la fábrica está pausada
@@ -1086,6 +1100,7 @@ set search_path = public
 as $$
   update public.fabrica_envios v
   set estado = p_en_curso, dueno = p_dueno, reservado_en = now(),
+      enviado_en = case when p_en_curso in ('publicando', 'subiendo') then now() else v.enviado_en end,
       vence_en = now() + make_interval(mins => p_vence_min),
       intentos = v.intentos + case when p_sumar then 1 else 0 end,
       actualizado = now()
@@ -1094,6 +1109,8 @@ as $$
     and (v.dueno is null or v.vence_en < now())
     and v.intentos < p_max_intentos
     and (v.proximo_intento is null or v.proximo_intento <= now())
+    and (p_en_curso <> 'publicando' or exists (
+      select 1 from public.fabrica_videos fv where fv.id = v.video_id and fv.estado = 'programado'))
     and (p_aun_pausada or exists (
       select 1 from public.fabrica_estado e
       where e.id and not e.pausada
@@ -1134,7 +1151,12 @@ begin
       intentos_subtitulos = case when c ? 'intentos_subtitulos' then r.intentos_subtitulos else v.intentos_subtitulos end,
       publicado_en        = case when coalesce((c ->> 'publicado_ahora')::boolean, false) then now() else v.publicado_en end,
       verificado_en       = case when coalesce((c ->> 'verificado_ahora')::boolean, false) then now() else v.verificado_en end,
-      ultimo_error        = case when c ? 'error' then jsonb_build_object('cuando', now()) || (c -> 'error') else v.ultimo_error end
+      ultimo_error        = case when c ? 'error' then jsonb_build_object('cuando', now()) || (c -> 'error') else v.ultimo_error end,
+      -- Al entrar en ambiguo se anota desde dónde (el estado en curso de la
+      -- reserva); mientras siga ambiguo se conserva; al salir, se borra.
+      ambiguo_desde       = case when p_hasta <> 'ambiguo' then null
+                                 when v.estado <> 'ambiguo' then v.estado
+                                 else v.ambiguo_desde end
   from jsonb_populate_record(null::public.fabrica_envios, c - 'error' - 'publicado_ahora' - 'verificado_ahora') r
   where v.id = p_id and v.dueno = p_dueno;
   get diagnostics n = row_count;
@@ -1182,7 +1204,8 @@ begin
   update public.fabrica_envios
   set ultimo_error = jsonb_build_object(
         'cuando', now(), 'paso', estado, 'clase', 'ambiguo',
-        'como', 'la reserva de ' || dueno || ' venció en ' || estado || ' sin cerrarse'),
+        'como', 'la reserva de ' || coalesce(dueno, 'nadie') || ' venció en ' || estado || ' sin cerrarse'),
+      ambiguo_desde = estado,
       estado = 'ambiguo', dueno = null, vence_en = null, actualizado = now()
   where estado in ('subiendo', 'publicando') and vence_en < now();
   get diagnostics n = row_count;
@@ -1225,6 +1248,16 @@ begin
       and v.hora_salida < now() + make_interval(mins => p_min_sin_ok)
       and (v.dueno is null or v.vence_en < now())
       and exists (select 1 from public.fabrica_estado e where e.id and e.modo_aprobacion)
+      -- Lo que ya salió (o puede haber salido) no se rechaza: un video sigue en
+      -- `programado` hasta 24 h después de publicar, y encender el modo
+      -- aprobación a media tarde no puede tumbar lo de la mañana. Mismo
+      -- criterio que fabrica_decidir al rechazar. Un YouTube con publishAt
+      -- todavía por delante sí se puede rechazar: el tick lo desprograma.
+      and not exists (
+        select 1 from public.fabrica_envios en
+        where en.video_id = v.id
+          and (en.estado in ('publicando', 'procesando', 'ambiguo', 'publicado', 'confirmado')
+               or (en.estado = 'programado' and en.publish_at is not null and en.publish_at <= now())))
     returning v.dia, v.slot, v.hora_salida
   )
   select coalesce(jsonb_agg(jsonb_build_object('dia', dia, 'slot', slot, 'hora', hora_salida)), '[]'::jsonb)
@@ -1282,11 +1315,11 @@ begin
     where id = viejo.id;
   end if;
 
-  return query
   update public.fabrica_videos
   set dia = p_dia, slot = p_slot, hora_salida = p_hora, es_reserva = false, actualizado = now()
   where id = nuevo.id
-  returning *;
+  returning * into nuevo;
+  return next nuevo;
 end;
 $$;
 
@@ -1473,6 +1506,91 @@ end;
 $$;
 
 
+-- ── Lo que decide Kev en /publicar ──
+
+-- Aprobar o rechazar un guion (con amarillos) o un video terminado (modo
+-- aprobación). Gana solo si el video sigue COMO KEV LO VIO: mismo estado,
+-- mismo guion_hash y nadie trabajándolo, en UNA sentencia. Si no gana, se
+-- relee la fila para decir por qué (un "no" mudo deja a Kev apretando de nuevo).
+--   guion  aprobar  → listo_para_render (+ aprobado_guion_por/en)
+--          rechazar → rechazado
+--   video  aprobar  → mismo estado + aprobado_video_por/en
+--          rechazar → rechazado, solo si ninguna red lo está publicando ni lo
+--                     publicó (un rechazo no borra lo que ya salió). El lugar
+--                     que deja lo cubre la reserva en el próximo tick.
+create or replace function public.fabrica_decidir(
+  p_id uuid, p_que text, p_aprobar boolean, p_hash text, p_por text, p_motivo text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  fila public.fabrica_videos;
+  n int := 0;
+  salio text;
+  razon text := coalesce(nullif(trim(p_motivo), ''), 'rechazado por ' || p_por);
+begin
+  if p_que = 'guion' then
+    update public.fabrica_videos
+    set estado = case when p_aprobar then 'listo_para_render' else 'rechazado' end,
+        aprobado_guion_por = case when p_aprobar then p_por else aprobado_guion_por end,
+        aprobado_guion_en = case when p_aprobar then now() else aprobado_guion_en end,
+        motivo_rechazo = case when p_aprobar then motivo_rechazo else razon end,
+        intentos = 0, actualizado = now()
+    where id = p_id and estado = 'aprobacion_pendiente'
+      and guion_hash is not distinct from p_hash
+      and (dueno is null or vence_en < now());
+    get diagnostics n = row_count;
+  elsif p_que = 'video' and p_aprobar then
+    update public.fabrica_videos
+    set aprobado_video_por = p_por, aprobado_video_en = now(), actualizado = now()
+    where id = p_id and estado in ('calidad_ok', 'subido_parcial', 'programado')
+      and aprobado_video_en is null
+      and guion_hash is not distinct from p_hash;
+    get diagnostics n = row_count;
+  elsif p_que = 'video' then
+    update public.fabrica_videos v
+    set estado = 'rechazado', motivo_rechazo = razon, actualizado = now()
+    where v.id = p_id and v.estado in ('calidad_ok', 'subido_parcial', 'programado')
+      and v.guion_hash is not distinct from p_hash
+      and (v.dueno is null or v.vence_en < now())
+      and not exists (
+        select 1 from public.fabrica_envios e
+        where e.video_id = v.id and e.estado in ('publicando', 'procesando', 'ambiguo', 'publicado', 'confirmado'));
+    get diagnostics n = row_count;
+  else
+    return jsonb_build_object('ok', false, 'motivo', 'qué decidir: guion o video');
+  end if;
+
+  select * into fila from public.fabrica_videos where id = p_id;
+  if n = 1 then
+    return jsonb_build_object('ok', true, 'estado', fila.estado);
+  end if;
+  if not found then
+    return jsonb_build_object('ok', false, 'motivo', 'ese video ya no existe');
+  end if;
+  if fila.guion_hash is distinct from p_hash then
+    return jsonb_build_object('ok', false, 'estado', fila.estado, 'motivo', 'el guion cambió desde que lo viste: recarga');
+  end if;
+  if fila.dueno is not null and fila.vence_en > now() then
+    return jsonb_build_object('ok', false, 'estado', fila.estado,
+      'motivo', 'la fábrica lo está trabajando (' || coalesce(fila.trabajo, '?') || '): inténtalo en unos minutos');
+  end if;
+  select string_agg(e.red || ' ' || e.estado, ', ') into salio from public.fabrica_envios e
+  where e.video_id = p_id and e.estado in ('publicando', 'procesando', 'ambiguo', 'publicado', 'confirmado');
+  if salio is not null and p_que = 'video' and not p_aprobar then
+    return jsonb_build_object('ok', false, 'estado', fila.estado,
+      'motivo', 'ya está saliendo o salió (' || salio || '): se baja a mano en cada red');
+  end if;
+  if p_que = 'video' and p_aprobar and fila.aprobado_video_en is not null then
+    return jsonb_build_object('ok', false, 'estado', fila.estado, 'motivo', 'ya estaba aprobado');
+  end if;
+  return jsonb_build_object('ok', false, 'estado', fila.estado, 'motivo', 'ya no espera esta decisión (está en ' || fila.estado || ')');
+end;
+$$;
+
+
 -- Solo el servidor llama a estas funciones. Con la llave pública, cualquiera
 -- podría reanudar la fábrica o reservar envíos.
 do $$
@@ -1531,6 +1649,10 @@ create unique index if not exists publicaciones_fabrica_corte_uq
 --        select vault.create_secret('<la clave>', 'fabrica_cron');
 --   3. Quitar los "-- " del bloque de abajo y correrlo solo. Se puede correr
 --      de nuevo: cron.schedule con el mismo nombre reemplaza el anterior.
+--      La URL tiene que ser la final: pg_net no sigue redirecciones (si el
+--      dominio manda a www, el tick no llega y solo lo nota el vigilante).
+--   4. Comprobar a los 10 min: select status_code, content from net._http_response
+--      order by created desc limit 3;   (200 = el tick corrió)
 --   Para apagarlo: select cron.unschedule('fabrica-tick');
 --
 -- do $$
@@ -1538,12 +1660,12 @@ create unique index if not exists publicaciones_fabrica_corte_uq
 --   falta text[] := '{}';
 --   hay_clave boolean := false;
 -- begin
---   if not exists (select 1 from pg_extension where extname = 'pg_cron') then falta := falta || 'pg_cron'; end if;
---   if not exists (select 1 from pg_extension where extname = 'pg_net') then falta := falta || 'pg_net'; end if;
+--   if not exists (select 1 from pg_extension where extname = 'pg_cron') then falta := array_append(falta, 'pg_cron'); end if;
+--   if not exists (select 1 from pg_extension where extname = 'pg_net') then falta := array_append(falta, 'pg_net'); end if;
 --   if to_regclass('vault.decrypted_secrets') is not null then
 --     execute 'select exists (select 1 from vault.decrypted_secrets where name = $1)' into hay_clave using 'fabrica_cron';
 --   end if;
---   if not hay_clave then falta := falta || 'el secreto fabrica_cron en Vault'; end if;
+--   if not hay_clave then falta := array_append(falta, 'el secreto fabrica_cron en Vault'); end if;
 --   if cardinality(falta) > 0 then
 --     raise notice 'fabrica-tick NO se programó. Falta: %', array_to_string(falta, ', ');
 --     return;

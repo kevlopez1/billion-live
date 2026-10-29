@@ -329,7 +329,16 @@ export interface FilaEnvio {
   publish_at: string | null
   publicado_en: string | null
   dueno: string | null
+  /** La última reserva (cualquiera, también las que solo miran). */
   reservado_en: string | null
+  /**
+   * Cuándo se MANDÓ por última vez (reserva en publicando o subiendo). Es el
+   * ancla de recientes() para un ambiguo: las reservas que solo miran no la
+   * mueven, así una lista que falla varias veces no deja afuera el post.
+   */
+  enviado_en?: string | null
+  /** De dónde vino el ambiguo (publicando | subiendo). Columna propia: un error posterior no la pisa. */
+  ambiguo_desde?: string | null
   vence_en: string | null
   intentos: number
   proximo_intento: string | null
@@ -338,5 +347,31 @@ export interface FilaEnvio {
   ultimo_error: (ErrorGuardado & { cuando?: string }) | null
 }
 
-/** El título con el que se publica (y con el que se busca en recientes()). */
-export const tituloDe = (v: Pick<FilaVideo, "textos" | "episodio">) => (v.textos?.titulo ?? v.episodio?.titulo ?? "").trim()
+/** Una marca del estudio ({RECAUDADO}, {META}…) en cualquier forma: lo que la tenga no es un título publicado. */
+export const MARCA_SUELTA = /\{[^{}]*\}/
+
+/**
+ * El título con el que se publica (y con el que se busca en recientes()).
+ * Siempre el que salió de verdad, con los números puestos:
+ *   1. textos.titulo (el guionista lo guarda ya con textoFinal);
+ *   2. si falta, el segundo bloque de un texto publicado (textos.ts lo arma
+ *      FICCION + título + …), que es el título tal cual salió;
+ *   3. el del episodio solo si no trae marcas.
+ * Con una marca sin reemplazar devuelve "": buscar «{RECAUDADO}» entre los
+ * posts no encontraría nunca el que dice «$1.234», y "no está" sería publicar
+ * dos veces. Vacío = no se busca a ciegas (revisar a mano).
+ */
+export function tituloDe(v: Pick<FilaVideo, "textos" | "episodio">): string {
+  const limpio = (s: string | undefined | null) => {
+    const t = (s ?? "").replace(/\s+/g, " ").trim()
+    return t && !MARCA_SUELTA.test(t) ? t : ""
+  }
+  const guardado = limpio(v.textos?.titulo)
+  if (guardado) return guardado
+  for (const texto of Object.values(v.textos?.porRed ?? {})) {
+    if (!texto?.startsWith(FICCION)) continue
+    const t = limpio(texto.split("\n\n")[1])
+    if (t) return t
+  }
+  return limpio(v.episodio?.titulo)
+}

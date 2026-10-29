@@ -220,6 +220,7 @@ export function matPielAndroide(lineas: Estilo["lineas"]): THREE.MeshPhysicalMat
   }
   m.customProgramCacheKey = () => "cb-androide-piel"
   m.name = `androide-${clave}`
+  m.userData.uniforms = uniforms
   mats.set(clave, m)
   return m
 }
@@ -339,6 +340,8 @@ function texEstampado(texto: string, e: Estilo): THREE.CanvasTexture {
 }
 
 const ropas = new Map<string, THREE.MeshPhysicalMaterial>()
+// AJUSTE-TEMPORAL (calibración en la escena; se quita al terminar)
+if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") (window as unknown as Record<string, unknown>).__androideMats = { mats, ropas }
 /** Sudadera de punto con el nombre estampado en el pecho (un material por androide). */
 export function matRopaAndroide(p: Personaje, tejido: Tejido): THREE.MeshPhysicalMaterial {
   const e = estiloDe(p.id)

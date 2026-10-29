@@ -17,6 +17,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import { PERSONAJES } from "@/components/casa-blanca/datos/personajes"
+import { cumple, sinTildes, variantes } from "./normalizar"
 
 export type Luz = "verde" | "amarillo" | "vivo" | "fuera"
 
@@ -46,7 +47,8 @@ export const SEMAFORO: Readonly<Record<string, EntradaSemaforo>> = {
   claude: { luz: "verde", alias: ["Claude"] },
   chatgpt: { luz: "verde", alias: ["ChatGPT"] },
   // ── Amarillos: solo con el OK de Kev ──
-  kobe: { luz: "amarillo", alias: ["Kobe", "Bryant", "Black Mamba"] },
+  // «Mamba» sola también: «la Mamba Negra» es como se lo dice en español.
+  kobe: { luz: "amarillo", alias: ["Kobe", "Kobe Bean", "Bryant", "Black Mamba", "Mamba Negra", "Mamba"] },
   jobs: { luz: "amarillo", alias: ["Steve Jobs", "Jobs"] },
   jesus: { luz: "amarillo", alias: ["Jesús", "Jesus", "Jesucristo", "Nazaret"] },
   // ── Vivos: solo de fondo ──
@@ -60,8 +62,94 @@ export const SEMAFORO: Readonly<Record<string, EntradaSemaforo>> = {
   gadzhi: { luz: "vivo", alias: ["Gadzhi", "Iman Gadzhi"] },
   // ── Fuera ──
   // Trump: fuera de cuadro hasta el 10-nov inclusive (elecciones de EE. UU. del 3-nov y su resaca); desde el 11, vivo de fondo.
-  trump: { luz: "fuera", cambios: [{ desde: "2026-11-11", luz: "vivo" }], alias: ["Trump", "Donald"] },
+  trump: { luz: "fuera", cambios: [{ desde: "2026-11-11", luz: "vivo" }], alias: ["Trump", "Donald", "Melania", "Mar-a-Lago", "Mar a Lago"] },
   tate: { luz: "fuera", alias: ["Tate", "Andrew Tate"] },
+}
+
+/**
+ * Cómo se nombra a un vivo sin decir su nombre. Cuenta igual que nombrarlo:
+ * «el dueño de Tesla me pidió decirles…» le atribuye una declaración a Musk.
+ */
+const CARGO = "(?:due[ñn][oa]s?|jef[ea]s?|ceo|fundador(?:a|es)?|cofundador(?:a|es)?|creador(?:a|es)?|director(?:a)?(?: ejecutiv[oa])?|president[ea](?: ejecutiv[oa])?|mandam[aá]s|cabeza|patr[oó]n|el de|la de)"
+const EMPRESAS_DE: ReadonlyArray<[string, string]> = [
+  ["musk", "Tesla|SpaceX|xAI|Neuralink|Starlink|The Boring Company|Twitter"],
+  ["altman", "OpenAI|Open AI"],
+  ["amodei", "Anthropic"],
+  ["pichai", "Google|Alphabet"],
+  ["karp", "Palantir"],
+  ["thiel", "PayPal|Pay Pal|Palantir|Founders Fund"],
+  ["hormozi", "Acquisition\\.com"],
+]
+export const PATRONES_DE: Readonly<Record<string, readonly RegExp[]>> = {
+  ...Object.fromEntries(EMPRESAS_DE.map(([id, emp]) => [id, [new RegExp(`(?<![\\p{L}])${CARGO}\\s+(?:de\\s+)?(?:la\\s+|el\\s+)?(?:${emp})(?![\\p{L}])`, "iu")]])),
+  trump: [/(?<![\p{L}])president[ea]\s+(?:n[uú]mero\s+|n\.?\s*[°º]?\s*)?(?:47|cuadrag[eé]simo\s+s[eé]ptimo)(?![\p{N}])/iu, /(?<![\p{L}])(?:el\s+)?(?:magnate|millonario)\s+naranja(?![\p{L}])/iu],
+}
+
+/**
+ * Nombres de pila que en español son comunes («Sam», «Alex»): cuentan como
+ * ese vivo solo si la MISMA oración habla de IA, empresas o cohetes.
+ */
+export const NOMBRES_DE_PILA: Readonly<Record<string, readonly string[]>> = {
+  altman: ["Sam"],
+  amodei: ["Dario", "Darío"],
+  thiel: ["Peter"],
+  karp: ["Alex"],
+  hormozi: ["Alex"],
+  gadzhi: ["Iman"],
+  tate: ["Andrew"],
+  pichai: ["Sundar"],
+  musk: ["Elon"],
+}
+const CONTEXTO_TECH =
+  /(?<![\p{L}])(?:ia|i\.a\.|inteligencia artificial|gpt|chat ?gpt|openai|anthropic|empresa|compa[ñn][ií]a|startup|cohete|robot|modelo|app|algoritmo|inversi[oó]n|inversor|fondo|negocio|marte|tesla|google|palantir|paypal|millones|billones|ventas|curso)(?![\p{L}])/iu
+
+// ── Personas reales que NO viven en la casa ──────────────────
+// No hay semáforo para ellas: un video de la fábrica no las nombra nunca.
+// Nombrarlas ya es el error (y además cuentan como persona real para la regla
+// comercial y los temas prohibidos). Solo palabras que en español no son otra
+// cosa: «Maduro», «Mesa», «Paz» o «Arce» solos no van.
+export const TERCEROS_REALES: Readonly<Record<string, readonly string[]>> = {
+  bezos: ["Bezos", "Jeff Bezos"],
+  zuckerberg: ["Zuckerberg", "Mark Zuckerberg", "Zuck"],
+  gates: ["Bill Gates"],
+  buffett: ["Buffett", "Warren Buffett"],
+  huang: ["Jensen Huang", "Jensen"],
+  nadella: ["Nadella", "Satya Nadella"],
+  cook: ["Tim Cook"],
+  arnault: ["Arnault", "Bernard Arnault"],
+  slim: ["Carlos Slim"],
+  biden: ["Biden", "Joe Biden"],
+  obama: ["Obama", "Barack Obama", "Michelle Obama"],
+  harris: ["Kamala", "Kamala Harris"],
+  vance: ["Vance", "JD Vance", "J. D. Vance"],
+  putin: ["Putin", "Vladimir Putin"],
+  xi: ["Xi Jinping", "Jinping"],
+  zelensky: ["Zelensky", "Zelenski", "Zelenskyy"],
+  netanyahu: ["Netanyahu"],
+  milei: ["Milei", "Javier Milei"],
+  maduro: ["Nicolás Maduro", "Nicolas Maduro"],
+  lula: ["Lula", "Lula da Silva"],
+  bolsonaro: ["Bolsonaro"],
+  petro: ["Gustavo Petro"],
+  bukele: ["Bukele", "Nayib Bukele"],
+  sheinbaum: ["Sheinbaum", "Claudia Sheinbaum"],
+  amlo: ["AMLO", "López Obrador", "Lopez Obrador"],
+  // Bolivia: la difamación es delito penal.
+  evo: ["Evo", "Evo Morales"],
+  arce: ["Luis Arce", "Lucho Arce"],
+  paz: ["Rodrigo Paz"],
+  quiroga: ["Tuto Quiroga", "Jorge Quiroga"],
+  doria: ["Doria Medina", "Samuel Doria Medina"],
+  camacho: ["Luis Fernando Camacho", "Fernando Camacho"],
+  anez: ["Jeanine Áñez", "Jeanine Añez", "Áñez", "Añez"],
+  mesa: ["Carlos Mesa"],
+  lara: ["Edmand Lara", "Edman Lara"],
+  messi: ["Messi", "Lionel Messi"],
+  ronaldo: ["Cristiano Ronaldo", "Ronaldo"],
+  swift: ["Taylor Swift"],
+  shakira: ["Shakira"],
+  badbunny: ["Bad Bunny"],
+  papa: ["Papa Francisco", "Papa León", "Papa Leon", "León XIV", "Leon XIV"],
 }
 
 const ES_DIA = /^\d{4}-\d{2}-\d{2}$/
@@ -105,25 +193,58 @@ export function aliasDe(id: string): string[] {
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 const CACHE = new Map<string, RegExp>()
 
-/** Una expresión que encuentra a ese residente por cualquiera de sus nombres, como palabra entera y sin importar mayúsculas. */
+/**
+ * Una expresión que encuentra alguno de esos nombres como palabra entera, sin
+ * importar mayúsculas. El borde es de LETRA: un número pegado («Kobe24») no
+ * salva el nombre.
+ */
+export function buscadorDeNombres(nombres: readonly string[]): RegExp {
+  // Cada nombre también sin tildes: «Napoleon», «Anez» o «Jesus» escritos sin ellas.
+  const alias = [...new Set(nombres.flatMap((n) => [n, sinTildes(n)]))]
+    .sort((a, b) => b.length - a.length)
+    .map(escapar)
+    .join("|")
+  // Sin alias no puede encontrar nada (una expresión vacía encontraría todo).
+  return new RegExp(alias ? `(?<![\\p{L}])(?:${alias})(?![\\p{L}])` : "(?!)", "iu")
+}
+
+/** Una expresión que encuentra a ese residente por cualquiera de sus nombres. */
 export function buscadorDe(id: string): RegExp {
   let re = CACHE.get(id)
   if (!re) {
-    const alias = aliasDe(id)
-      .sort((a, b) => b.length - a.length)
-      .map(escapar)
-      .join("|")
-    // Sin alias no puede encontrar nada (una expresión vacía encontraría todo).
-    re = new RegExp(alias ? `(?<![\\p{L}\\p{N}])(?:${alias})(?![\\p{L}\\p{N}])` : "(?!)", "iu")
+    re = buscadorDeNombres(aliasDe(id))
     CACHE.set(id, re)
   }
   return re
 }
 
-/** Los residentes nombrados en un texto. */
+const oracionesDe = (t: string) => t.split(/(?<=[.!?…])\s+|\n+/)
+
+/** ¿El texto nombra a ese residente? Por nombre, alias, cargo («el dueño de Tesla») o nombre de pila con contexto. */
+export function nombra(id: string, texto: string): boolean {
+  if (cumple(buscadorDe(id), texto)) return true
+  for (const re of PATRONES_DE[id] ?? []) if (cumple(re, texto)) return true
+  const pila = NOMBRES_DE_PILA[id]
+  if (pila?.length) {
+    const re = buscadorDeNombres(pila)
+    for (const v of variantes(texto)) for (const o of oracionesDe(v)) if (re.test(o) && CONTEXTO_TECH.test(o)) return true
+  }
+  return false
+}
+
+/** Los residentes nombrados en un texto (por nombre, cargo o nombre de pila con contexto). */
 export function nombradosEn(texto: string, ids: Iterable<string> = Object.keys(SEMAFORO)): string[] {
   const out: string[] = []
-  for (const id of ids) if (buscadorDe(id).test(texto)) out.push(id)
+  for (const id of ids) if (nombra(id, texto)) out.push(id)
+  return out
+}
+
+const BUSCA_TERCERO = new Map(Object.entries(TERCEROS_REALES).map(([id, n]) => [id, buscadorDeNombres(n)]))
+
+/** Las personas reales de fuera de la casa nombradas en un texto. */
+export function tercerosEn(texto: string): string[] {
+  const out: string[] = []
+  for (const [id, re] of BUSCA_TERCERO) if (cumple(re, texto)) out.push(id)
   return out
 }
 

@@ -17,6 +17,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import type { BaseCola, CamposEnvio, CamposVideo } from "./base-cola"
+import { textoValido } from "./guardas"
 import {
   COSTO_USD,
   MAX_INTENTOS,
@@ -54,8 +55,13 @@ import {
 
 /** Cuánto antes de la salida se mira si el lugar va a llegar. */
 export const HORIZONTE_HUECOS_MIN = 180
-/** YouTube recibe publishAt solo para las próximas 3 h: así el interruptor lo alcanza. */
-export const HORIZONTE_YOUTUBE_MIN = 180
+/**
+ * YouTube recibe publishAt solo para los próximos 40 min: lo que YouTube ya
+ * tiene programado sale aunque la base esté pausada, así que cuanto menos
+ * quede expuesto, mejor. Además la ruta de pausa lo baja en el momento
+ * (bajarYouTube), sin esperar al tick. 40 min = cuatro ticks para programarlo.
+ */
+export const HORIZONTE_YOUTUBE_MIN = 40
 /** Lo que no salió hasta 3 h después de su hora ya no sale (no se publica tarde de golpe al reanudar). */
 export const VENTANA_SALIDA_MIN = 180
 /** Se mira la visibilidad 15 min después de publicar, y hasta 24 h. */
@@ -69,6 +75,33 @@ export const HORA_PARTE = "23:00"
 export const MARGEN_RECIENTES_MIN = 30
 /** La media de X tiene que vivir al menos hasta 30 min después de la salida. */
 export const MARGEN_MEDIA_X_MIN = 30
+/**
+ * Un ambiguo se mira recién 8 min después de que se MANDÓ: un post recién
+ * mandado tarda en aparecer en la lista, y "no está" no puede significar
+ * "todavía no se ve".
+ */
+export const ESPERA_AMBIGUO_MIN = 8
+/**
+ * Las redes asíncronas esperan más: Facebook /videos con file_url (Meta baja
+ * el archivo y lo procesa por su cuenta) y TikTok por Upload-Post
+ * (async_upload) pueden no listar todavía un post que sí va a salir. SIN
+ * VERIFICAR con una publicación real: probarlo antes de encender
+ * FABRICA_FACEBOOK_ACTIVA o FABRICA_TIKTOK_ACTIVA.
+ */
+export const ESPERA_AMBIGUO_RED_MIN: Readonly<Record<RedId, number>> = {
+  youtube: ESPERA_AMBIGUO_MIN,
+  instagram: ESPERA_AMBIGUO_MIN,
+  x: ESPERA_AMBIGUO_MIN,
+  facebook: 30,
+  tiktok: 30,
+}
+
+/** Cuándo se mandó lo que quedó en duda (enviado_en; si es una fila vieja, su reserva). */
+export const enviadoEn = (e: Pick<FilaEnvio, "enviado_en" | "reservado_en">) => ms(e.enviado_en ?? e.reservado_en)
+
+/** De dónde vino el ambiguo. Una fila de antes de la columna lo tenía en ultimo_error.paso. */
+export const origenAmbiguo = (e: Pick<FilaEnvio, "ambiguo_desde" | "ultimo_error">): "subiendo" | "publicando" =>
+  (e.ambiguo_desde ?? e.ultimo_error?.paso) === "subiendo" ? "subiendo" : "publicando"
 
 const min = (n: number) => n * 60_000
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN)
@@ -83,7 +116,7 @@ export type Accion =
   | { tipo: "retomar"; envio: string; video: string; red: RedId }
   | { tipo: "omitir"; envio: string; red: RedId; desde: EstadoEnvio; como: string }
   | { tipo: "publicar"; envio: string; video: string; red: RedId; desde: EstadoEnvio }
-  | { tipo: "programar"; envio: string; video: string; red: "youtube"; publishAt: string }
+  | { tipo: "programar"; envio: string; video: string; red: "youtube"; publishAt: string; desde: EstadoEnvio }
   | { tipo: "marcar_publicado"; envio: string; red: RedId }
   | { tipo: "verificar"; envio: string; video: string; red: RedId }
   | { tipo: "avanzar_video"; video: string; desde: EstadoVideo; hasta: EstadoVideo; motivo?: string }
@@ -103,6 +136,14 @@ export interface EntradaPlan {
 }
 
 const redPausada = (e: FilaEstado, red: RedId) => e.redes?.[red]?.pausada === true
+
+/**
+ * La hora a la que YouTube sacaría un envío `programado`: su publish_at, o la
+ * salida del video si la reserva de programar se cortó antes de guardarlo (la
+ * cola reserva en `programado` ANTES de llamar a YouTube: ante la duda, se
+ * trata como programado y el interruptor lo baja).
+ */
+const salidaYouTube = (e: FilaEnvio, v: FilaVideo | undefined) => (e.publish_at ? ms(e.publish_at) : ms(v?.hora_salida))
 
 /** ¿Este envío ya no va a cambiar? Un publicado sin verificar a las 24 h cuenta como cerrado. */
 export function envioCerrado(e: FilaEnvio, ahora: Date): boolean {
@@ -145,28 +186,48 @@ export function listoParaProgramar(v: FilaVideo, envios: FilaEnvio[], estado: Fi
 }
 
 /**
+ * Paso 1 del tick (y lo que corre la ruta de pausa en el momento): YouTube
+ * con publishAt por delante se baja a privado si la fábrica o la red se
+ * pararon, o si el video se rechazó después de programarse. Pura.
+ */
+export function bajadasDeYouTube(p: EntradaPlan): Accion[] {
+  const { estado, videos, envios, ahora, activas } = p
+  const t = ahora.getTime()
+  const video = new Map(videos.map((v) => [v.id, v]))
+  const parada = estado.pausada || !p.fabricaActiva
+  const puede = activas.includes("youtube") && !redPausada(estado, "youtube")
+  const acciones: Accion[] = []
+  for (const e of envios) {
+    const v = video.get(e.video_id)
+    if (e.red !== "youtube" || e.estado !== "programado" || !(salidaYouTube(e, v) > t)) continue
+    const muerto = !v || v.estado === "rechazado" || v.estado === "fallido"
+    if (parada || !puede || muerto) acciones.push({ tipo: "desprogramar", envio: e.id, video: e.video_id, red: "youtube" })
+  }
+  return acciones
+}
+
+/**
  * Qué hacer en este tick, en orden. Pura.
  * Pausada (o FABRICA_ACTIVA apagada) → solo desprogramar YouTube.
  */
 export function planDelTick(p: EntradaPlan): Accion[] {
   const { estado, videos, envios, ahora, activas } = p
   const t = ahora.getTime()
-  const acciones: Accion[] = []
   const porVideo = new Map<string, FilaEnvio[]>()
   for (const e of envios) porVideo.set(e.video_id, [...(porVideo.get(e.video_id) ?? []), e])
   const video = new Map(videos.map((v) => [v.id, v]))
   const parada = estado.pausada || !p.fabricaActiva
   const puede = (red: RedId) => activas.includes(red) && !redPausada(estado, red)
 
-  // 1. YouTube con publishAt por delante: se baja a privado si la fábrica o la
-  //    red se pararon, o si el video se rechazó después de programarse.
-  for (const e of envios) {
-    if (e.red !== "youtube" || e.estado !== "programado" || !(ms(e.publish_at) > t)) continue
-    const v = video.get(e.video_id)
-    const muerto = !v || v.estado === "rechazado" || v.estado === "fallido"
-    if (parada || !puede("youtube") || muerto) acciones.push({ tipo: "desprogramar", envio: e.id, video: e.video_id, red: "youtube" })
+  // 1. YouTube con publishAt por delante, si hay que bajarlo.
+  const acciones: Accion[] = bajadasDeYouTube(p)
+  // Pausada: nada más que el parte. El parte sale igual (dice que está
+  // pausada): si no saliera, el vigilante no podría distinguir una pausa de
+  // un tick muerto.
+  if (parada) {
+    if (horaBolivia(ahora) >= HORA_PARTE) acciones.push({ tipo: "parte" })
+    return acciones
   }
-  if (parada) return acciones
 
   // 2. Huecos de las próximas 3 h: los cubre la reserva verde.
   for (const h of huecosDelTick(estado, videos, ahora)) acciones.push({ tipo: "cubrir_hueco", ...h })
@@ -185,7 +246,7 @@ export function planDelTick(p: EntradaPlan): Accion[] {
     if (e.estado !== "ambiguo" || !v || !libre(e)) continue
     if (v.hora_salida && t > finVentana(e, v)) {
       acciones.push({ tipo: "cerrar_ambiguo", envio: e.id, red: e.red, como: "quedó ambiguo hasta el fin de la ventana: revisar a mano en la red" })
-    } else if (activas.includes(e.red)) {
+    } else if (activas.includes(e.red) && !(t - enviadoEn(e) < min(ESPERA_AMBIGUO_RED_MIN[e.red]))) {
       acciones.push({ tipo: "resolver_ambiguo", envio: e.id, video: e.video_id, red: e.red })
     }
   }
@@ -229,20 +290,17 @@ export function planDelTick(p: EntradaPlan): Accion[] {
   }
 
   // 6. YouTube: publishAt solo dentro de las próximas 3 h; si ya pasó, YouTube lo sacó.
+  //    Un `programado` sin publish_at es una programación cortada a la mitad:
+  //    se vuelve a programar (es idempotente) mientras falte para la salida.
   for (const e of ordenados) {
     const v = video.get(e.video_id)
     if (e.red !== "youtube" || !v || !libre(e)) continue
-    if (e.estado === "programado" && ms(e.publish_at) <= t) {
+    const falta = ms(v.hora_salida) - t
+    const aTiempo = v.estado === "programado" && !!v.hora_salida && puede("youtube") && falta <= min(HORIZONTE_YOUTUBE_MIN) && falta > min(2)
+    if (e.estado === "programado" && salidaYouTube(e, v) <= t) {
       acciones.push({ tipo: "marcar_publicado", envio: e.id, red: "youtube" })
-    } else if (
-      e.estado === "subido" &&
-      v.estado === "programado" &&
-      v.hora_salida &&
-      puede("youtube") &&
-      ms(v.hora_salida) - t <= min(HORIZONTE_YOUTUBE_MIN) &&
-      ms(v.hora_salida) - t > min(2)
-    ) {
-      acciones.push({ tipo: "programar", envio: e.id, video: e.video_id, red: "youtube", publishAt: v.hora_salida })
+    } else if (aTiempo && (e.estado === "subido" || (e.estado === "programado" && !e.publish_at))) {
+      acciones.push({ tipo: "programar", envio: e.id, video: e.video_id, red: "youtube", publishAt: v.hora_salida!, desde: e.estado })
     }
   }
 
@@ -277,7 +335,7 @@ export function planDelTick(p: EntradaPlan): Accion[] {
   // 10. El almacén: se borra lo publicado cuando todas sus redes cerraron.
   for (const v of videos) {
     const es = porVideo.get(v.id) ?? []
-    if (v.estado === "publicado" && v.archivo && es.every((e) => (TERMINALES_ENVIO as readonly string[]).includes(e.estado))) {
+    if (v.estado === "publicado" && v.archivo && es.every((e) => envioCerrado(e, ahora))) {
       acciones.push({ tipo: "limpiar_almacen", video: v.id, archivo: v.archivo })
     }
   }
@@ -304,10 +362,13 @@ const error = (paso: string, f: Pick<Fallo, "como" | "codigo">, clase: ErrorGuar
 
 /**
  * Qué hacer con la respuesta de publicar. `reservado` es el envío ya
- * reservado (sus intentos incluyen este). `vuelta` es adonde vuelve si hay que
- * reintentar (estadoBase, o procesando si se retomaba un contenedor).
+ * reservado. `vuelta` es adonde vuelve si hay que reintentar (estadoBase, o
+ * procesando si se retomaba un contenedor). `sumado` = la reserva contó este
+ * intento (publicar sí; retomar un contenedor no): lo que no gasta intento lo
+ * devuelve solo si se había sumado.
  */
-export function decidirPublicacion(r: RespuestaPublicar, reservado: FilaEnvio, ahora: Date, vuelta: EstadoEnvio): Decision {
+export function decidirPublicacion(r: RespuestaPublicar, reservado: FilaEnvio, ahora: Date, vuelta: EstadoEnvio, sumado = true): Decision {
+  const devuelto = sumado ? Math.max(0, reservado.intentos - 1) : reservado.intentos
   if (r.ok) {
     return { hasta: "publicado", campos: { id_red: r.idRed, enlace: r.enlace ?? null, publicado_ahora: true, proximo_intento: null }, cuenta: true }
   }
@@ -315,7 +376,7 @@ export function decidirPublicacion(r: RespuestaPublicar, reservado: FilaEnvio, a
   if (r.pendiente) {
     return {
       hasta: "procesando",
-      campos: { contenedor: r.pendiente, intentos: Math.max(0, reservado.intentos - 1), error: error("publicar", r, r.clase) },
+      campos: { contenedor: r.pendiente, intentos: devuelto, error: error("publicar", r, r.clase) },
     }
   }
   switch (r.clase) {
@@ -326,7 +387,7 @@ export function decidirPublicacion(r: RespuestaPublicar, reservado: FilaEnvio, a
       // Tope o spam: hoy no. Mañana desde las 00:00, sin gastar el intento.
       return {
         hasta: "no_hoy",
-        campos: { proximo_intento: mananaBolivia(ahora).toISOString(), intentos: Math.max(0, reservado.intentos - 1), error: error("publicar", r, "no_hoy") },
+        campos: { proximo_intento: mananaBolivia(ahora).toISOString(), intentos: devuelto, error: error("publicar", r, "no_hoy") },
       }
     case "fatal":
       return { hasta: "fallido", campos: { error: error("publicar", r, "fatal") }, cuenta: false }
@@ -358,9 +419,19 @@ export function decidirAmbiguo(lista: Reciente[] | Fallo, envio: FilaEnvio, titu
   if (!Array.isArray(lista)) {
     return { hasta: "ambiguo", campos: { error: error("recientes", lista, lista.clase) } }
   }
-  const subiendo = envio.ultimo_error?.paso === "subiendo"
+  // El origen vive en su propia columna: el error de una lista fallida no lo pisa.
+  const subiendo = origenAmbiguo(envio) === "subiendo"
   const buscado = plano(titulo)
-  const hallado = buscado ? lista.find((p) => plano(p.texto).includes(buscado)) : undefined
+  // Sin título no hay con qué buscarlo: "no lo encontré" no probaría nada, y
+  // repetir a ciegas es publicar dos veces.
+  if (!buscado) {
+    return {
+      hasta: "fallido",
+      campos: { error: { paso: "recientes", clase: "ambiguo", como: "sin título para buscarlo entre los recientes: revisar a mano en la red" } },
+      cuenta: false,
+    }
+  }
+  const hallado = lista.find((p) => plano(p.texto).includes(buscado))
   if (hallado) {
     return subiendo
       ? { hasta: "subido", campos: { id_red: hallado.idRed } }
@@ -376,6 +447,29 @@ export function decidirAmbiguo(lista: Reciente[] | Fallo, envio: FilaEnvio, titu
   return {
     hasta: subiendo ? "pendiente" : estadoBase(envio.red),
     campos: { error: { paso: "recientes", clase: "ambiguo", como: `no estaba entre los ${lista.length} posts recientes: se vuelve a intentar` } },
+  }
+}
+
+/**
+ * YouTube, ambiguo al PUBLICAR (no al subir): la VM ya había subido el video
+ * en privado, así que estar en la lista de subidas no prueba nada. La
+ * pregunta es estado(): público = salió; privado = no salió y se vuelve a
+ * intentar (publicar es un videos.update, idempotente); sin respuesta clara,
+ * sigue ambiguo.
+ */
+export function decidirAmbiguoYouTube(v: { visibilidad: Visibilidad; como: string }, envio: FilaEnvio): Decision {
+  switch (v.visibilidad) {
+    case "publico":
+      return { hasta: "publicado", campos: { visibilidad: "publico", publicado_ahora: true, proximo_intento: null }, cuenta: true }
+    case "privado":
+      if (envio.intentos >= MAX_INTENTOS) {
+        return { hasta: "fallido", campos: { error: { paso: "estado", clase: "ambiguo", como: `sigue privado y ya no quedan intentos: ${v.como}` } }, cuenta: false }
+      }
+      return { hasta: "subido", campos: { error: { paso: "estado", clase: "ambiguo", como: `sigue privado, no salió: se vuelve a publicar (${v.como})` } } }
+    case "no_existe":
+      return { hasta: "fallido", campos: { error: { paso: "estado", clase: "fatal", como: `el video ya no existe en YouTube: ${v.como}` } }, cuenta: false }
+    default:
+      return { hasta: "ambiguo", campos: { error: { paso: "estado", clase: "ambiguo", como: `estado ${v.visibilidad}: ${v.como}` } } }
   }
 }
 
@@ -443,6 +537,7 @@ function paraRed(v: FilaVideo, e: FilaEnvio): VideoParaRed {
     envioId: e.id,
     red: e.red,
     titulo: tituloDe(v),
+    // Nunca se publica con "" de relleno: textosParaPublicar() lo frena antes.
     texto: v.textos?.porRed?.[e.red] ?? "",
     archivo: v.archivo,
     duracionS: v.duracion_s === null ? null : Number(v.duracion_s),
@@ -453,6 +548,20 @@ function paraRed(v: FilaVideo, e: FilaEnvio): VideoParaRed {
     mediaId: e.media_id,
     publishAt: e.publish_at,
   }
+}
+
+/**
+ * Lo que tiene mal lo que se va a mandar a una red (vacío = se puede mandar).
+ * Se mira ANTES de reservar: un texto que falta no se rellena con "" (saldría
+ * sin el aviso de ficción y, en TikTok, sin medir sus 61 s), y un título con
+ * una marca sin reemplazar no sube.
+ */
+export function textosParaPublicar(v: FilaVideo, red: RedId): string[] {
+  const titulo = tituloDe(v)
+  const texto = v.textos?.porRed?.[red]
+  if (!titulo) return [`sin título publicable para ${red} (falta o trae una marca sin reemplazar)`]
+  if (!texto) return [`sin texto para ${red}: el guion no lo armó para esa red`]
+  return textoValido(red, texto, titulo)
 }
 
 /** Un adaptador que lanza en vez de devolver un Fallo: no se sabe si mandó, así que es ambiguo. */
@@ -488,19 +597,22 @@ export async function ejecutarTick(p: PuertosTick): Promise<ResultadoTick> {
   const video = new Map(videos.map((v) => [v.id, v]))
   const envio = new Map(envios.map((e) => [e.id, e]))
 
+  // Pausada (de antes o en medio del tick) solo se hace esto: bajar YouTube y el parte.
+  const sePuedePausada = (tipo: Accion["tipo"]) => tipo === "desprogramar" || tipo === "parte"
   for (const a of acciones) {
     const queda = presupuesto - (p.reloj() - inicio)
     if (queda < (NECESITA_MS[a.tipo] ?? 3_000)) {
       res.cortado = `sin tiempo para ${a.tipo} (quedaban ${Math.round(queda / 1000)} s): sigue el próximo tick`
       break
     }
-    // El interruptor se lee antes de cada paso. Desprogramar es lo único que se hace pausada.
-    if (a.tipo !== "desprogramar") {
+    if (res.pausada && !sePuedePausada(a.tipo)) continue
+    // El interruptor se lee antes de cada paso (la reserva lo vuelve a mirar en la base).
+    if (!sePuedePausada(a.tipo)) {
       const e = await p.base.leerEstado()
       if (e.pausada) {
         res.cortado = `se pausó en medio del tick: ${e.motivo ?? "sin motivo"}`
         res.pausada = true
-        break
+        continue
       }
       if ("red" in a && e.redes?.[a.red]?.pausada && a.tipo !== "verificar" && a.tipo !== "omitir" && a.tipo !== "cerrar_ambiguo") {
         res.hechas.push({ accion: a.tipo, envio: "envio" in a ? a.envio : undefined, resultado: `red ${a.red} pausada` })
@@ -519,10 +631,41 @@ export async function ejecutarTick(p: PuertosTick): Promise<ResultadoTick> {
     if (resultado.startsWith("fábrica pausada")) {
       res.pausada = true
       res.cortado = resultado
-      break
     }
   }
   return res
+}
+
+/**
+ * La ruta de pausa lo corre en el momento: lo que YouTube tiene programado
+ * sale aunque la base diga pausada, y esperar al tick son hasta 10 min. No
+ * deja latido (no es un tick: el vigilante no puede confundirlo con uno).
+ * La hora es la del servidor: alcanza para saber qué publishAt está por delante.
+ */
+export async function bajarYouTube(p: Omit<PuertosTick, "parte">): Promise<ResultadoTick["hechas"]> {
+  const log = p.log ?? ((m: string) => console.log(m))
+  const dueno = p.dueno ?? `pausa-${p.reloj().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  const ahora = p.ctx.ahora()
+  const estado = await p.base.leerEstado()
+  const hoy = diaBolivia(ahora)
+  const { videos, envios } = await p.base.cargar([sumarDias(hoy, -1), hoy, sumarDias(hoy, 1)])
+  const activas = redesEncendidas(p.env).filter((r) => p.adaptadores[r])
+  const acciones = bajadasDeYouTube({ estado, videos, envios, ahora, fabricaActiva: flag(p.env.FABRICA_ACTIVA), activas })
+  const video = new Map(videos.map((v) => [v.id, v]))
+  const envio = new Map(envios.map((e) => [e.id, e]))
+  const hechas: ResultadoTick["hechas"] = []
+  for (const a of acciones) {
+    let resultado: string
+    try {
+      resultado = await ejecutarAccion(a, { ...p, log }, dueno, ahora, video, envio)
+    } catch (e) {
+      resultado = `error: ${textoDeError(e)}`
+      console.error(`[fabrica/cola] bajar YouTube al pausar falló: ${textoDeError(e)}`)
+    }
+    hechas.push({ accion: a.tipo, envio: "envio" in a ? a.envio : undefined, video: "video" in a ? a.video : undefined, resultado })
+  }
+  if (hechas.length) log(`[fabrica/cola] al pausar se bajaron ${hechas.length} envío(s) de YouTube: ${hechas.map((h) => h.resultado).join(" | ")}`)
+  return hechas
 }
 
 async function ejecutarAccion(
@@ -580,6 +723,17 @@ async function ejecutarAccion(
     case "retomar": {
       const retomar = a.tipo === "retomar"
       const desde: EstadoEnvio[] = retomar ? ["procesando"] : [a.desde]
+      // 0. Lo que se manda tiene que estar entero. Retomar no vuelve a mandar el texto (el contenedor ya lo tiene).
+      if (!retomar) {
+        const malos = textosParaPublicar(v, a.red)
+        if (malos.length) {
+          const como = malos.join("; ")
+          const hasta: EstadoEnvio = a.desde === "no_hoy" ? "omitido" : "fallido"
+          const movido = await base.moverEnvio(a.envio, [a.desde], hasta, { error: { paso: "publicar", clase: "fatal", como } })
+          console.error(`[fabrica/cola] ${a.red}: ${a.envio} no se manda: ${como}`)
+          return movido ? `${hasta}: ${como}` : "otro lo movió antes"
+        }
+      }
       // 1. Reservar. Sin reserva no se manda nada.
       const r = await base.reservarEnvio(a.envio, desde, "publicando", dueno, VENCE_ENVIO_MIN, MAX_INTENTOS, { sumar: !retomar })
       if (!r) return "reserva perdida: otro lo tiene, ya se movió o no quedan intentos"
@@ -594,7 +748,7 @@ async function ejecutarAccion(
       }
       // 3. Mandar.
       const resp = await aFallo(adaptador.publicar(paraRed(v, r), p.ctx), `${a.red}.publicar`)
-      const d = decidirPublicacion(resp, r, ahora, retomar ? "procesando" : estadoBase(a.red))
+      const d = decidirPublicacion(resp, r, ahora, retomar ? "procesando" : estadoBase(a.red), !retomar)
       // 4. Cerrar la reserva. Si no cierra, venció: el próximo tick la ve ambigua.
       const cerrado = await base.terminarEnvio(r.id, dueno, d.hasta, d.campos)
       if (!cerrado) console.error(`[fabrica/cola] ${a.red}: la reserva de ${r.id} venció antes de cerrarse en ${d.hasta}`)
@@ -604,16 +758,35 @@ async function ejecutarAccion(
     case "resolver_ambiguo": {
       const r = await base.reservarEnvio(a.envio, ["ambiguo"], "ambiguo", dueno, VENCE_ENVIO_MIN, 99, { sumar: false })
       if (!r) return "reserva perdida"
-      // Desde la reserva que quedó en duda (la del tick que mandó), con margen.
-      const ref = [ms(e0.reservado_en), ms(v.hora_salida), ahora.getTime() - 24 * 3600_000].find(Number.isFinite) as number
-      const lista = await aFallo(adaptador.recientes(new Date(ref - min(MARGEN_RECIENTES_MIN)), p.ctx), `${a.red}.recientes`)
+      // YouTube al publicar: la subida privada ya estaba en la lista; se pregunta su visibilidad.
+      if (a.red === "youtube" && origenAmbiguo(r) === "publicando" && r.id_red) {
+        let vis: { visibilidad: Visibilidad; como: string }
+        try {
+          vis = await adaptador.estado(r.id_red, p.ctx)
+        } catch (e) {
+          vis = { visibilidad: "desconocida", como: `estado() lanzó: ${textoDeError(e)}` }
+        }
+        const d = decidirAmbiguoYouTube(vis, r)
+        await base.terminarEnvio(r.id, dueno, d.hasta, d.campos)
+        if (d.cuenta !== undefined) await base.registrarResultado(a.red, d.cuenta)
+        return `ambiguo → ${d.hasta} (estado: ${vis.visibilidad})`
+      }
+      // Desde que se MANDÓ (enviado_en: las reservas que solo miran no la
+      // mueven) o la salida, lo que sea antes, con margen.
+      const ref = Math.min(...[enviadoEn(e0), ms(v.hora_salida)].filter(Number.isFinite))
+      const desde = Number.isFinite(ref) ? ref : ahora.getTime() - 24 * 3600_000
+      const lista = await aFallo(adaptador.recientes(new Date(desde - min(MARGEN_RECIENTES_MIN)), p.ctx), `${a.red}.recientes`)
       const d = decidirAmbiguo(lista, r, tituloDe(v))
       await base.terminarEnvio(r.id, dueno, d.hasta, d.campos)
       if (d.cuenta !== undefined) await base.registrarResultado(a.red, d.cuenta)
+      if (!Array.isArray(lista)) console.error(`[fabrica/cola] ${a.red}: recientes() falló para ${r.id}, sigue ambiguo: ${lista.como}`)
       return `ambiguo → ${d.hasta}`
     }
     case "programar": {
-      const r = await base.reservarEnvio(a.envio, ["subido"], "subido", dueno, VENCE_ENVIO_MIN, 99, { sumar: false })
+      // Se reserva YA en `programado`: si el tick muere con YouTube a medio
+      // programar, la base dice programado y el interruptor lo baja. Al revés
+      // (reservar en subido) una pausa no lo vería y YouTube lo sacaría igual.
+      const r = await base.reservarEnvio(a.envio, [a.desde], "programado", dueno, VENCE_ENVIO_MIN, 99, { sumar: false })
       if (!r) return "reserva perdida"
       if (!adaptador.programar) {
         await base.terminarEnvio(r.id, dueno, "subido", {})
@@ -624,8 +797,12 @@ async function ejecutarAccion(
         await base.terminarEnvio(r.id, dueno, "programado", { publish_at: a.publishAt })
         return `programado para ${a.publishAt}`
       }
-      await base.terminarEnvio(r.id, dueno, "subido", { error: error("programar", resp, resp.clase) })
-      return `no se programó: ${resp.clase} · ${resp.como}`
+      // Ambiguo (o ya venía de una programación cortada): pudo quedar
+      // programado en YouTube. Sigue `programado` sin publish_at: el próximo
+      // tick lo reprograma o, si está pausada, lo baja.
+      const hasta: EstadoEnvio = resp.clase === "ambiguo" || a.desde === "programado" ? "programado" : "subido"
+      await base.terminarEnvio(r.id, dueno, hasta, { publish_at: null, error: error("programar", resp, resp.clase) })
+      return `no se programó (${hasta}): ${resp.clase} · ${resp.como}`
     }
     case "desprogramar": {
       const r = await base.reservarEnvio(a.envio, ["programado"], "programado", dueno, VENCE_ENVIO_MIN, 99, { sumar: false, aunPausada: true })

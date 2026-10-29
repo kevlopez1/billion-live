@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react"
 import { AlertTriangle, CalendarDays, Check, ExternalLink, Loader2, Lock, RefreshCw, Send } from "lucide-react"
+import { Fabrica } from "./fabrica"
 
 // ──────────────────────────────────────────────────────────────
 // /publicar — una pieza, Instagram y Facebook a la vez, en la cuenta de Kev o
-// en la de La Casa Blanca Project.
+// en la de La Casa Blanca Project. Debajo, la fábrica de videos (fabrica.tsx).
 //
 // La clave no se guarda: vive en memoria mientras la pestaña está abierta,
 // igual que en /control. Los tokens de Meta nunca pasan por aquí: viven en
@@ -203,7 +204,7 @@ export default function PublicarPage() {
   const hoy = hoyBolivia()
 
   return (
-    <div className="flex min-h-screen items-start justify-center overflow-x-hidden bg-background px-4 py-6 text-foreground sm:items-center sm:p-6">
+    <div className="flex min-h-screen flex-col items-center gap-6 overflow-x-hidden bg-background px-4 py-6 text-foreground sm:p-6">
       <div className="glass-card w-full min-w-0 max-w-md p-5 sm:p-7">
         <div className="mb-1 flex items-center gap-2 text-muted-foreground">
           <Lock className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -415,6 +416,8 @@ export default function PublicarPage() {
           )
         })}
       </div>
+
+      <Fabrica clave={clave} />
     </div>
   )
 }

@@ -2,11 +2,15 @@ import { NextResponse } from "next/server"
 import { autorizado, quien, rechazo } from "@/lib/auth-admin"
 import { conLlave } from "@/lib/fabrica/auth"
 import { baseReal } from "@/lib/fabrica/base-cola"
+import { bajarYouTube } from "@/lib/fabrica/cola"
+import { adaptadores, ctxReal } from "@/lib/fabrica/registro-redes"
 import { porQuien, sinPermiso, validarPedidoEstado, type Quien } from "@/lib/fabrica/estado-pedido"
 import { diaBolivia, sumarDias } from "@/lib/fabrica/tipos"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
+// Al pausar se baja YouTube en el momento (cada envío programado, unos segundos).
+export const maxDuration = 60
 
 // ──────────────────────────────────────────────────────────────
 // El interruptor de la fábrica.
@@ -83,7 +87,21 @@ export async function POST(req: Request) {
               ...(p.tope_gasto_usd_dia !== undefined ? { tope_gasto_usd_dia: p.tope_gasto_usd_dia } : {}),
             })
     console.log(`[fabrica/estado] ${por} → ${p.accion}${"red" in p && p.red ? ` (${p.red})` : ""}`)
-    return NextResponse.json({ estado })
+    // Lo que YouTube ya tiene programado sale aunque la base diga pausada: se
+    // baja YA, sin esperar al tick (hasta 10 min). Si falla, la pausa igual
+    // quedó y el tick siguiente lo vuelve a intentar; se dice cómo falló.
+    let youtube: Awaited<ReturnType<typeof bajarYouTube>> | { error: string } | undefined
+    if (p.accion === "pausar" && (!p.red || p.red === "youtube")) {
+      try {
+        const env = process.env
+        youtube = await bajarYouTube({ base, adaptadores: adaptadores(), ctx: ctxReal(env), env, reloj: Date.now })
+      } catch (e) {
+        const como = e instanceof Error ? e.message : String(e)
+        console.error(`[fabrica/estado] pausado, pero bajar YouTube en el momento falló (lo reintenta el tick): ${como}`)
+        youtube = { error: como }
+      }
+    }
+    return NextResponse.json({ estado, ...(youtube ? { youtube } : {}) })
   } catch (e) {
     return fallo(p.accion, e)
   }

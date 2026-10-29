@@ -345,10 +345,10 @@ export const FICHAS: Record<string, Ficha> = {
     estatura: 1.9,
     edad: 79,
     ap: { piel: "#E6A97E", ropa: { color: "#1B2340", color2: "#F4F4F2", corbata: "#C8102E" } },
-    cuerpo: { anchoHombros: 0.5, pecho: 1.0, profundidad: 1.1, cintura: 1.3, panza: 0.065, panzaAlta: 0.55, cuello: { grosor: 1.25, largo: 0.8 }, piernas: 0.97, muslo: 0.95 },
+    cuerpo: { anchoHombros: 0.53, pecho: 1.0, profundidad: 1.1, cintura: 1.18, panza: 0.065, panzaAlta: 0.55, cuello: { grosor: 1.25, largo: 0.95 }, piernas: 0.97, muslo: 0.95 },
     cara: {
-      ancho: 1.1, largo: 1.03, mandibula: 1.12, menton: 1.05, mejillas: 0.15, papada: 0.35, tercioInferior: 1.04, arcoCejas: 1.1,
-      ojos: { abierto: 0.82, parpado: 0.6, tam: 0.95, bolsas: 0.4 },
+      ancho: 1.1, largo: 1.03, mandibula: 1.12, menton: 1.05, mejillas: 0.05, papada: 0.15, tercioInferior: 1.04, arcoCejas: 1.1,
+      ojos: { abierto: 0.88, parpado: 0.6, tam: 0.95, bolsas: 0.25 },
       nariz: { ancho: 1.1, punta: 1.05 },
       labios: { superior: 0.8, inferior: 1.0, avanceInferior: 0.1, ancho: 0.9, comisuras: -0.05 },
       orejas: { tam: 1.15, lobulo: 1.35 },

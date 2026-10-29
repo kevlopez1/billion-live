@@ -15,6 +15,11 @@ reserva, reintentos, interruptor y parte diario, panel en `/publicar`, `/privaci
    `now()` de la base, nunca la hora de Vercel) con dueño y vencimiento. Solo el dueño lo cierra. Nada se marca después de mandar.
 2. **Lo ambiguo se mira antes de repetirlo.** Timeout después de enviar, o una reserva vencida en `subiendo`/`publicando`,
    pasa a `ambiguo`. De `ambiguo` solo se sale listando los posts recientes de esa red (`recientes()`); si la lista falla, sigue ambiguo.
+   La ventana de `recientes()` se ancla en `enviado_en` (cuándo se MANDÓ; las reservas que solo miran no lo mueven) o en la
+   salida, lo que sea antes, menos 30 min. El origen del ambiguo (`publicando` | `subiendo`) vive en `ambiguo_desde`, nunca en
+   `ultimo_error`. YouTube ambiguo al publicar se resuelve con `estado()` (la lista de subidas trae las privadas). Facebook y
+   TikTok (asíncronas) esperan 30 min antes de mirar; las demás, 8. El título que se busca es el publicado (`tituloDe`: con los
+   números puestos; con una marca sin reemplazar devuelve vacío y no se busca a ciegas).
 3. **Banderas de entorno con `flag()`** (`lib/fabrica/tipos.ts`): `true` solo con `1|true|si|sí|on` (sin mayúsculas ni espacios).
    `"false"`, vacío o ausente = apagado. Todas arrancan apagadas.
 4. **Ningún `catch` mudo.** Un catch que devuelve vacío hace `console.error("[fabrica/<modulo>] <qué> falló: <cómo>")` y el vacío
@@ -34,6 +39,7 @@ reserva, reintentos, interruptor y parte diario, panel en `/publicar`, `/privaci
 | `lib/fabrica/tipos.ts` | Tipos, `TRANSICIONES`, `flag()`, hora de Bolivia, `FICCION`, `CORREO_BAJAS`, horarios (sección 3) | A |
 | `lib/fabrica/semaforo.ts` | El semáforo por personaje como dato + alias para buscarlos en texto | A |
 | `lib/fabrica/guardas.ts` | Reparto, contenido prohibido, regla comercial, voseo, textos por red, etiquetas de IA | A |
+| `lib/fabrica/normalizar.ts` | Las variantes con las que comparan todas las guardas (NFKC, invisibles, letras parecidas, CamelCase, números por letras); `guardas-adversarial.test.ts` guarda los casos del revisor del 2026-10-29 | A |
 | `supabase/correr-todo.sql` | Parte 11 (sección 2): tablas, funciones, cron, cambio de `publicaciones` | A |
 | `lib/fabrica/base.ts` | Puerto `Base` (interfaz) + implementación con `getAdminClient()` que solo llama `rpc`/`from` | A |
 | `lib/fabrica/ideas.ts` | 3–6 ideas (+1 reserva) desde memoria (sin tipo `charla`), conciencia y reflexión; sin par ni tema repetido en 7 días | B |
@@ -43,7 +49,7 @@ reserva, reintentos, interruptor y parte diario, panel en `/publicar`, `/privaci
 | `lib/fabrica/redes/{youtube,x,uploadpost,meta-reels}.ts` | Adaptadores (sección 5). `meta-reels.ts` envuelve `lib/meta.ts` | D |
 | `lib/fabrica/tokens.ts` | Cifrado AES-256-GCM + reserva y rotación atómica de tokens | D |
 | `lib/fabrica/almacen.ts` | Interfaz `Almacen { subir, urlFirmada(ruta, horas≥24), borrar }`; Supabase Storage o Vercel Blob (paso 11 de Kev); simulado en tests | D |
-| `lib/meta.ts`, `app/api/publicar/route.ts` | Graph a la versión verificada (override `META_GRAPH_URL` sigue), `is_ai_generated` en la cuenta `casa-blanca`, `content_publishing_limit`, errores con `codigo`/`subcodigo`, listar videos recientes de la página | D |
+| `lib/meta.ts`, `app/api/publicar/route.ts` | Graph por cuenta: la casa en v26.0, la de Kev sigue en v23.0 hasta una publicación de prueba (override `META_GRAPH_URL` sigue), `is_ai_generated` en la cuenta `casa-blanca`, `content_publishing_limit`, errores con `codigo`/`subcodigo`, listar videos recientes de la página | D |
 | `lib/fabrica/cola.ts` | `planDelTick(estado, videos, envios, ahora) → Accion[]` (puro) + `ejecutarTick(puertos)` | E |
 | `lib/fabrica/reporte.ts` | Arma el parte (puro) y lo manda por el canal inyectado | E |
 | `app/api/fabrica/tick/route.ts` | POST, cada 10 min desde pg_cron, `Bearer FABRICA_CRON_SECRET`, `maxDuration = 60`, presupuesto 45 s | E |
@@ -74,6 +80,7 @@ Todo idempotente (`if not exists`, `create or replace`, `on conflict do nothing`
 - **`fabrica_envios`** (una fila por video y red; una fila se reserva con un UPDATE simple, un jsonb no):
   `video_id fk on delete cascade`, `red`, `estado text check (pendiente|subiendo|subido|programado|publicando|procesando|ambiguo|publicado|confirmado|no_hoy|fallido|omitido)`,
   `id_red`, `enlace`, `contenedor` (IG), `media_id`, `media_expira_en` (X), `publish_at` (YouTube), `dueno`, `reservado_en`,
+  `enviado_en` (solo lo mueve una reserva en `publicando`/`subiendo`), `ambiguo_desde` (`publicando`|`subiendo`),
   `vence_en`, `intentos`, `proximo_intento`, `visibilidad`, `verificado_en`, `subtitulos text (no_aplica|pendiente|ok|fallido)`,
   `intentos_subtitulos`, `ultimo_error jsonb`. `unique (video_id, red)`.
 - **`fabrica_estado`** (una fila, `id bool pk default true check (id)`): `pausada bool default true` (**nace pausada**), `motivo`,
@@ -92,7 +99,9 @@ Funciones (la reserva vive aquí, en una sola sentencia, como `casa_blanca_consu
 - `fabrica_reservar_envio(p_id, p_desde text[], p_en_curso, p_dueno, p_vence_min, p_max_intentos) → fila | null`: además exige
   `proximo_intento <= now()` y la red no pausada. Suma el intento **al reservar** (una caída también cuenta).
 - `fabrica_terminar_envio(p_id, p_dueno, p_hasta, p_campos jsonb) → bool`.
-- `fabrica_vencidos_a_ambiguo() → int`: `subiendo`/`publicando` con `vence_en < now()` → `ambiguo`. Primera llamada de cada tick y tanda.
+- `fabrica_vencidos_a_ambiguo() → int`: `subiendo`/`publicando` con `vence_en < now()` → `ambiguo` (con `ambiguo_desde`). Primera llamada de cada tick y tanda.
+- `fabrica_vencer_aprobaciones`: nunca rechaza un video con un envío `publicando|procesando|ambiguo|publicado|confirmado`
+  ni un YouTube con `publish_at` ya pasado (lo que ya salió no se baja por encender el modo aprobación).
 - `fabrica_cubrir_hueco(p_dia, p_slot, p_hora) → fila | null`: con `for update skip locked`, la reserva verde más vieja lista
   (y aprobada si hay modo aprobación) toma el slot; el video que no llegó pasa a reserva o queda rechazado.
 - `fabrica_sumar_gasto(p_usd) → jsonb`: reinicia contadores si cambió el día; suma **antes** de gastar solo si no pasa el tope;
@@ -134,10 +143,13 @@ sin romper. En esta ola nadie escribe `null`. **Antes** de que el lector de mét
 | `calidad_ok`/`subido_parcial`/`programado` → `rechazado` | panel, o tick (modo aprobación sin OK a 30 min de la salida) | UPDATE condicional; el tick llama `cubrir_hueco` |
 | cualquiera no terminal → `fallido` | quien tenga la reserva, con error `fatal` | `terminar_video` |
 
-**Envíos por red** (tick salvo lo marcado): `pendiente` →(VM) `subiendo` → `subido` →(YouTube, de T−3 h a T) `programado`
+**Envíos por red** (tick salvo lo marcado): `pendiente` →(VM) `subiendo` → `subido` →(YouTube, de T−40 min a T) `programado`
 → `publicado` → `confirmado`. Meta, TikTok y X: `pendiente|subido` →(a la hora) `publicando` → `procesando` (contenedor de IG) →
 `publicado` → (15 min después, `estado()`) `confirmado` o pausa de esa red si sale privado. Al pausar: `programado` → `subido`
-(`videos.update` a privado, sin `publishAt`). `no_hoy` → `proximo_intento` = 00:00 de mañana. Reintentos: máximo 3, espera
+(`videos.update` a privado, sin `publishAt`), **en el momento** desde la ruta de pausa (`bajarYouTube`) y otra vez en cada tick.
+Antes de reservar un envío se revisa su texto (`textosParaPublicar`): sin texto para esa red, sin título publicable o sin la línea
+FICCION → `fallido` con el cómo, sin tocar la red. Un `media_publish` de Instagram que falla sin ser `fatal` devuelve el mismo
+contenedor (`pendiente`): el reintento lo retoma, nunca crea otro. `no_hoy` → `proximo_intento` = 00:00 de mañana. Reintentos: máximo 3, espera
 10 → 30 → 90 min. Subtítulos de YouTube aparte: el video se marca `subido` antes de `captions.insert` (400 unidades por intento).
 Media de X: vence a las 24 h (**SIN VERIFICAR**): la tanda corre a las **22:00 de D−1** y sube X al final; si `media_expira_en`
 < salida + 30 min, X queda `omitido` con el cómo. La tanda renueva la media de X de las reservas que vencen en menos de 30 h.
@@ -145,7 +157,7 @@ Media de X: vence a las 24 h (**SIN VERIFICAR**): la tanda corre a las **22:00 d
 **Horarios** (Bolivia): 3 al día 12:00, 16:00, 21:30; 6 al día 10:00, 12:00, 14:00, 16:00, 21:00, 22:30. Nunca 19:00 hasta el 22-nov.
 
 **Un tick** (presupuesto 45 s, cada paso mira el tiempo que queda): latido (`ultimo_tick_en`) → `vencidos_a_ambiguo` → si pausada:
-solo desprogramar YouTube y salir → vencer aprobaciones y cubrir huecos de las próximas 3 h → resolver ambiguos (`recientes()`) →
+solo desprogramar YouTube y salir → vencer aprobaciones y cubrir huecos de las próximas 3 h → resolver ambiguos (`recientes()`, o `estado()` en YouTube) →
 retomar contenedores de IG → publicar lo que toca (de a uno, reserva primero) → programar `publishAt` de YouTube → verificar
 visibilidad → a partir de las 23:00, `reclamar('parte')` y mandar el parte → borrar del almacén lo que todas las redes confirmaron.
 
@@ -156,29 +168,43 @@ visibilidad → a partir de las 23:00, `reclamar('parte')` y mandar el parte →
 - `amarillo` (solo con el OK de Kev): kobe, jobs, jesus. Nunca en reserva.
 - `vivo` (solo de fondo): thiel, altman, musk, hormozi, amodei, pichai, karp, gadzhi; trump desde el 2026-11-11.
 - `fuera`: tate siempre; trump hasta el 2026-11-10 inclusive, **según la fecha de salida**, no la de escritura. Desconocido = `fuera`.
-- Cada entrada trae `alias` para buscarlo en texto (`"Musk"`, `"Elon"`, `"Trump"`, `"Kobe"`, `"Bryant"`…).
+- Cada entrada trae `alias` para buscarlo en texto (`"Musk"`, `"Elon"`, `"Trump"`, `"Melania"`, `"Kobe"`, `"Mamba Negra"`…), más
+  cargos (`PATRONES_DE`: «el dueño de Tesla», «el presidente 47») y nombres de pila que solo cuentan con contexto de IA o empresas
+  en la misma oración (`NOMBRES_DE_PILA`: «Sam», «Dario»). `nombra(id, texto)` reúne las tres.
+- `TERCEROS_REALES`: personas reales que no viven en la casa (Bezos, Zuckerberg, Biden, Milei, Evo, Arce, Messi…). Nombrarlas ya
+  es un error, y cuentan como persona real para la regla comercial y los temas prohibidos.
+- Todo se compara sobre las **variantes** del texto (`normalizar.ts`): el original, el limpio (NFKC, sin invisibles, letras
+  cirílicas o griegas parecidas pasadas a latinas, CamelCase y `#`/`@` separados) y el limpio sin números por letras («Altm4n»).
+  Un texto con caracteres invisibles o letras de otro alfabeto se rechaza.
 
 **`revisarReparto(ep, textos, fechaSalida)`**: `fuera` no aparece en ningún campo ni alias en ningún texto. `vivo`: nunca en
 `dialogo.quien`, ni como `seguir`, ni en `toma.personaje`, ni primero en `reunir`, ni solo en `reunir`; su alias nunca en
-`titulo`, `rotulo`, diálogo, título del episodio, textos de publicación ni miniatura.
-**`reglaComercial`**: si el reparto tiene un `vivo` o `fallecido` (de `personajes.ts`), nada de `PRIME`, `{RECAUDADO}`, `{META}`
-ni `\breto\b` en el episodio ni en los textos.
-**`revisarContenido`** (patrones como datos, con una prueba por familia): con un vivo o fallecido en el reparto o nombrado:
-delitos, juicios, salud, sexo, familia. Siempre: política electoral; una persona real recomendando PRIME, un producto o un
-candidato; empresa real (Tesla, SpaceX, OpenAI, Anthropic, Palantir, Google, Apple…) con una cifra en la misma frase; consejos de
-plata, salud o leyes; la muerte de Kobe; conspiraciones como hecho; comillas en un diálogo salvo `cita: true` **y** texto igual a
-una línea `C(...)` de ese personaje. El prompt del guionista incluye el `limites` de cada personaje.
-**`voseo(texto)`**: la lista de `scripts/sin-voseo.py` portada a TS (líneas con `// sin-voseo:ejemplos`); un test lee el `.py` y
-exige que estén todas.
+`titulo`, `rotulo`, diálogo, título del episodio, textos de publicación ni miniatura. Un tercero real, nunca nombrado.
+**`reglaComercial`**: si hay un `vivo` o `fallecido` (en cuadro o nombrado) o un tercero real nombrado, nada de PRIME (también
+«P R I M E», «PRlME»…), `{RECAUDADO}`/`{META}` (en cualquier forma), sus montos ya reemplazados, Kev, kevproject, Mansory,
+Mercedes, reto, desafío ni recaudado en el episodio ni en los textos (el enlace fijo a la casa no cuenta). Y siempre: una persona
+real (también histórica) nunca dice PRIME, Kev, kevproject, el auto ni los números del reto en un diálogo.
+**`revisarContenido`** (patrones como datos, con una prueba por familia): con una persona real (también histórica): delitos,
+salud, sexo. Con un vivo, fallecido o tercero: juicios, familia. Siempre: política electoral; alguien recomendando PRIME, un
+producto o un candidato (también elogios: «es lo mejor», «háganle caso»); empresa real con una cifra o un valor; consejos de
+plata, salud o leyes; conspiraciones como hecho; la muerte de Kobe (nombrado como sea). **Citas**: comillas de cualquier tipo
+solo en un diálogo con `cita: true` **y** texto igual a una línea `C(...)` de ese personaje; fuera del diálogo, nunca; tampoco
+«como dijo X:» ni «X: …» firmado con el nombre de una persona real. El prompt del guionista incluye el `limites` y la `bio`.
+**`voseo(texto)`**: la lista de `scripts/sin-voseo.py` portada a TS (líneas con `// sin-voseo:ejemplos`) más formas frecuentes,
+sin distinguir mayúsculas; un test lee el `.py` y exige que estén todas.
 **Guion**: `guionValido()` y `avisosDelEpisodio()` del estudio sin errores; `duracionTotal + APERTURA_S + CIERRE_S` entre 60 y 90 s
-(61 o más si va a TikTok); título de 48 caracteres o menos; similitud (trigramas) < 0,6 contra los últimos 30 guiones.
+(61 o más si va a TikTok); título de 48 caracteres o menos; similitud (trigramas) < 0,6 contra los últimos 30 guiones. Llaves
+solo `{RECAUDADO}` y `{META}` exactas. Un año en un rótulo o un título tiene que estar en la ficha de un personaje del video.
 **Textos por red** (`textoDe(video, red)` y `textoValido(red, texto)`): primera línea exactamente `FICCION` = «Ficción hecha con IA.
 Personajes inspirados en figuras reales; no son ellas ni hablan por ellas.»; título; `kevproject.world/casa-blanca` (**menos en X**);
-`#LaCasaBlancaProject` + 2 del pilar. X: rechaza cualquier URL o dominio suelto (`algo.world`, `t.co`, `http`), y 280 caracteres.
-Instagram 2.200. Miniatura: 3 palabras o menos, ningún alias de vivo.
-**Etiquetas de IA** (`etiquetaIA(red, cuerpo)`; si falta, no se sube): YouTube `status.containsSyntheticMedia = true`;
-Instagram `is_ai_generated = true`; TikTok `is_aigc` por Upload-Post (**SIN VERIFICAR**: TikTok queda apagada hasta probarlo);
-Facebook y X sin parámetro: la primera línea, el aviso dentro del video y el nombre de la cuenta.
+`#LaCasaBlancaProject` + 2 del pilar. X: rechaza cualquier URL o dominio, también disfrazado («kevproject . world», «[.]»,
+«punto», «．»), y toda mención de kevproject o primebusiness; 280 caracteres. Instagram 2.200. Miniatura: 3 palabras o menos,
+ningún vivo, fuera ni tercero. El guionista guarda `textos.titulo` (el título publicado, con los números puestos).
+**Etiquetas de IA** (`etiquetaIA(red, cuerpo)`; si falta, no se sube): YouTube `status.containsSyntheticMedia = true` + descripción
+que empieza con FICCION (un `videos.update` de `part=status` no lleva texto); Instagram `is_ai_generated = true` + caption con
+FICCION (también un video de la casa publicado desde la cuenta de Kev); TikTok `is_aigc` por Upload-Post (**SIN VERIFICAR**:
+TikTok queda apagada hasta probarlo) + título con FICCION; Facebook y X sin parámetro: la primera línea, el aviso dentro del
+video y el nombre de la cuenta.
 
 ## 5. Adaptadores de red (`lib/fabrica/redes/*`)
 

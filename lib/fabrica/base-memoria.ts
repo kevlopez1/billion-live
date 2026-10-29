@@ -93,7 +93,7 @@ export function baseEnMemoria(m: Memoria): BaseCola & BaseParte {
       for (const e of m.envios) {
         if ((e.estado === "subiendo" || e.estado === "publicando") && t(e.vence_en) < now()) {
           e.ultimo_error = conCuando({ paso: e.estado, clase: "ambiguo", como: `la reserva de ${e.dueno} venció en ${e.estado} sin cerrarse` }) as FilaEnvio["ultimo_error"]
-          Object.assign(e, { estado: "ambiguo", dueno: null, vence_en: null })
+          Object.assign(e, { ambiguo_desde: e.estado, estado: "ambiguo", dueno: null, vence_en: null })
           n++
         }
       }
@@ -137,11 +137,15 @@ export function baseEnMemoria(m: Memoria): BaseCola & BaseParte {
       const e = m.envios.find((x) => x.id === id)
       if (!e || !desde.includes(e.estado) || !libre(e) || e.intentos >= maxIntentos) return null
       if (e.proximo_intento && t(e.proximo_intento) > now()) return null
+      // Publicar exige el video en programado en la misma "sentencia" (como el SQL).
+      if (enCurso === "publicando" && m.videos.find((v) => v.id === e.video_id)?.estado !== "programado") return null
       if (!o.aunPausada && (m.estado.pausada || m.estado.redes[e.red]?.pausada)) return null
       Object.assign(e, {
         estado: enCurso,
         dueno,
         reservado_en: iso(m.ahora),
+        // Como el SQL: solo una reserva que MANDA mueve el ancla de recientes().
+        enviado_en: enCurso === "publicando" || enCurso === "subiendo" ? iso(m.ahora) : (e.enviado_en ?? null),
         vence_en: iso(new Date(now() + venceMin * 60_000)),
         intentos: e.intentos + ((o.sumar ?? true) ? 1 : 0),
       })
@@ -150,7 +154,9 @@ export function baseEnMemoria(m: Memoria): BaseCola & BaseParte {
     async terminarEnvio(id, dueno, hasta, campos = {}) {
       const e = m.envios.find((x) => x.id === id)
       if (!e || e.dueno !== dueno) return false
-      Object.assign(e, { estado: hasta as EstadoEnvio, dueno: null, vence_en: null })
+      // Como el SQL: al entrar en ambiguo se anota desde dónde; al salir, se borra.
+      const ambiguoDesde = hasta !== "ambiguo" ? null : e.estado !== "ambiguo" ? e.estado : (e.ambiguo_desde ?? null)
+      Object.assign(e, { estado: hasta as EstadoEnvio, dueno: null, vence_en: null, ambiguo_desde: ambiguoDesde })
       aplicar(e, campos)
       return true
     },

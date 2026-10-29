@@ -576,33 +576,54 @@ export class Cuerpo {
       return best
     })()
     const anchoB = cab.anchoBoca
+    const nominal = (k: number, phi: number) => (ALFAS[k] * (139 + 1.2 * Math.sin(phi))) / 146 * (Math.PI / 180)
+    // Ángulo de la fila de la boca en cada columna: pegado a la línea de los labios
+    // en la boca y, hacia los costados, de vuelta al nominal POCO A POCO. (Con un corte
+    // de golpe la fila saltaba unos mm en la comisura y dejaba bloques oscuros en
+    // escalera a los dos lados del labio de arriba, que de lejos se leían como bigote.)
+    const alB = new Float64Array(M)
+    for (let j = 0; j < M; j++) {
+      const phi = ANG[j]
+      const alN = nominal(kBoca, phi)
+      const wPhi = suave(0.4, 0.62, Math.sin(phi))
+      if (wPhi <= 0) {
+        alB[j] = alN
+        continue
+      }
+      let al = alBoca
+      let x = 0
+      // (el primer rayo es completo y los otros arrancan donde pegó el anterior de esta
+      // misma columna; arrancando desde la columna vecina caía en otro cruce)
+      let tW = -1
+      for (let it = 0; it < 3; it++) {
+        dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
+        const t = tW > 0 ? cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tW, 0.2) : cab.rayo(0, 0, 0, dir.x, dir.y, dir.z, 0.2)
+        tW = t
+        x = dir.x * t
+        const kx = clamp(x / (0.025 * cab.anchoBoca / 0.024), -1.3, 1.3)
+        const yObj = yb + cab.f.cara.labios.comisuras * 0.0035 * kx * kx
+        al += (dir.y * t - yObj) / t
+      }
+      const w = wPhi * (1 - suave(anchoB * 1.05, anchoB * 1.8, Math.abs(x)))
+      alB[j] = alN + (al - alN) * w
+    }
     for (let k = 0; k < ALFAS.length; k++) {
       const fila: FilaCabeza = { P: [], l: [], n: [], radial: true }
       for (let j = 0; j < M; j++) {
         const phi = ANG[j]
-        const aMax = 139 + 1.2 * Math.sin(phi)
-        let al = (ALFAS[k] * aMax) / 146 * (Math.PI / 180)
+        let al = nominal(k, phi)
         let t: number
-        if (k === kBoca && Math.sin(phi) > 0.55) {
-          // Fila de la boca: el ángulo que pega en la línea de los labios.
-          al = alBoca
-          t = 0
-          for (let it = 0; it < 3; it++) {
-            dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
-            t = cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
-            const x = dir.x * t
-            if (Math.abs(x) > anchoB * 1.3) break
-            const kx = x / (0.025 * cab.anchoBoca / 0.024)
-            const yObj = yb + cab.f.cara.labios.comisuras * 0.0035 * kx * kx
-            al += (dir.y * t - yObj) / t
-          }
-          dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
-          t = cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
-        } else {
-          dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
-          // Arranque cálido: donde pegó el rayo de la fila anterior en esta columna.
-          t = k === 0 ? cab.rayo(0, 0, 0, dir.x, dir.y, dir.z, 0.2) : cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
+        if (k === kBoca) al = alB[j]
+        else if (k === kBoca - 1 || k === kBoca + 1) {
+          // Las vecinas de la boca no se amontonan contra ella: si quedan a menos de
+          // medio paso, van al medio entre la boca y la fila siguiente.
+          const otra = nominal(k === kBoca - 1 ? kBoca - 2 : kBoca + 2, phi)
+          const paso = Math.abs(al - otra)
+          if (Math.abs(al - alB[j]) < 0.5 * paso || Math.sign(al - alB[j]) !== Math.sign(otra - alB[j])) al = (otra + alB[j]) / 2
         }
+        dir.set(Math.sin(al) * Math.cos(phi), Math.cos(al), Math.sin(al) * Math.sin(phi))
+        // Arranque cálido: donde pegó el rayo de la fila anterior en esta columna.
+        t = k === 0 ? cab.rayo(0, 0, 0, dir.x, dir.y, dir.z, 0.2) : cab.rayoDesde(0, 0, 0, dir.x, dir.y, dir.z, tPrev[j], 0.2)
         tPrev[j] = t
         const l = new THREE.Vector3(dir.x * t, dir.y * t, dir.z * t)
         fila.l.push(l)
@@ -888,7 +909,9 @@ export function mallaPiel(cu: Cuerpo, cub: Cobertura, op: { sombraBarba: number 
       const ax = Math.abs(l.x)
       const lab = campana(ax, 0, 0.02) * campana(l.y, cab.yBoca, 0.011) * suave(0.085, 0.09, l.z)
       const zonaT = campana(ax, 0, 0.03) * suave(0.0, 0.05, l.y) * suave(0.06, 0.09, l.z) + campana(ax, 0, 0.012) * campana(l.y, cab.nariz.y, 0.02) * suave(0.09, 0.1, l.z)
-      const craneo = conPelo ? 0 : suave(0.03, 0.08, l.y) * 0.25
+      // (el brillo de la cabeza rapada sale de la ficha: con 0,25 fijo, Kobe —sin brillo—
+      // tenía un punto de plástico en la coronilla; Hormozi y Tate siguen brillando)
+      const craneo = conPelo ? 0 : suave(0.03, 0.08, l.y) * (0.04 + 0.3 * brilloPiel)
       const r = 0.52 - 0.14 * lab - 0.08 * zonaT - craneo
       const pw = cu.pesosCabeza(l)
       const enBoca = esBoca && ax < cab.anchoBoca * 0.97 && l.z > 0.06

@@ -19,7 +19,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { z } from "zod"
 import { PERSONAJES } from "@/components/casa-blanca/datos/personajes"
 import type { Episodio, Red } from "@/components/casa-blanca/estudio/guion"
-import { APERTURA_S, CIERRE_S } from "@/components/casa-blanca/estudio/linea"
+import { APERTURA_S, CIERRE_S, textoFinal } from "@/components/casa-blanca/estudio/linea"
 import { LUGARES } from "@/components/casa-blanca/lugares"
 import {
   DURACION_MAX,
@@ -63,11 +63,22 @@ export type RespuestaIA =
 
 export type PedirIA = (p: PedidoIA) => Promise<RespuestaIA>
 
-/** El puerto real: Anthropic con la clave propia de la fábrica (FABRICA_ANTHROPIC_KEY, workspace con tope, paso 6). */
-export function pedirConAnthropic(apiKey = env("FABRICA_ANTHROPIC_KEY")): PedirIA {
+/** Lo único que el guionista usa del SDK: así las pruebas le pasan un cliente de mentira. */
+export interface ClienteMensajes {
+  messages: { create(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> }
+}
+
+/**
+ * El puerto real: Anthropic con la clave propia de la fábrica (FABRICA_ANTHROPIC_KEY, workspace con tope, paso 6).
+ * `crear` arma el cliente; las pruebas lo cambian por uno que no sale a la red.
+ */
+export function pedirConAnthropic(
+  apiKey = env("FABRICA_ANTHROPIC_KEY"),
+  crear: (apiKey: string) => ClienteMensajes = (k) => new Anthropic({ apiKey: k, timeout: 120_000, maxRetries: 1 }),
+): PedirIA {
   return async (p) => {
     if (!apiKey) return { ok: false, como: "falta FABRICA_ANTHROPIC_KEY (clave propia de la fábrica, con tope de gasto)" }
-    const cliente = new Anthropic({ apiKey, timeout: 120_000, maxRetries: 1 })
+    const cliente = crear(apiKey)
     try {
       const r = await cliente.messages.create({
         model: p.modelo,
@@ -204,7 +215,7 @@ export function sistemaGuionista(ctx: ContextoGuion): string {
       .map((p) => p.id)
       .join(", ")
   const fichas = PERSONAJES.filter((p) => luzDe(p.id, dia) !== "fuera")
-    .map((p) => `- ${p.id} (${p.corto}, ${luzDe(p.id, dia)}): ${p.rol}. Voz: ${p.voz} Límites: ${p.limites ?? "ficción declarada"}`)
+    .map((p) => `- ${p.id} (${p.corto}, ${luzDe(p.id, dia)}): ${p.rol}. Voz: ${p.voz} Límites: ${p.limites ?? "ficción declarada"} Dato real: ${p.bio}`)
     .join("\n")
   const lugares = LUGARES.map((l) => `${l.id} (${l.nombre})`).join(", ")
   const tomas = ctx.tomas.map((t) => `${t.id} (${t.duracion} s)`).join(", ")
@@ -223,7 +234,7 @@ export function sistemaGuionista(ctx: ContextoGuion): string {
     `- El título del episodio: ${MAX_TITULO} caracteres o menos, es el gancho.`,
     "- Las líneas de un plano se reparten su duración en partes iguales: cada línea lleva como mucho 17 caracteres por segundo de su turno. Líneas cortas.",
     "- Una toma fija no dura más que su duración (abajo, entre paréntesis).",
-    "- El primer rótulo dice dónde y a qué hora. Al menos un rótulo con un dato real y verificable de un personaje histórico.",
+    "- El primer rótulo dice dónde y a qué hora. Al menos un rótulo con un dato real de un personaje del video, COPIADO de su «Dato real» (abajo): nunca uno de memoria. Un año que no esté en su ficha se rechaza.",
     "- El último plano hace una pregunta al espectador.",
     "",
     `TOMAS: ${tomas}`,
@@ -236,9 +247,15 @@ export function sistemaGuionista(ctx: ContextoGuion): string {
     `- fuera (no aparecen ni se nombran): ${porLuz("fuera")}`,
     "",
     "NUNCA escribes:",
-    ...FAMILIAS.map((f) => `- ${f.nombre}${f.cuando === "con_real" ? " (si hay una persona real viva o fallecida en el video)" : ""}`),
-    "- Frases entre comillas: pasan por reales. Solo una cita marcada en personajes.ts, copiada igual y con \"cita\": true. Si no la sabes exacta, no hay cita.",
-    "- Si hay una persona viva o fallecida (en cuadro o nombrada): ni PRIME, ni {RECAUDADO}, ni {META}, ni la palabra «reto».",
+    ...FAMILIAS.map(
+      (f) =>
+        `- ${f.nombre}${f.cuando === "con_real" ? " (si hay una persona real viva o fallecida en el video)" : f.cuando === "con_persona" ? " (de cualquier persona real, también histórica)" : ""}`,
+    ),
+    "- Comillas de ningún tipo, en ningún texto (tampoco para el nombre de un libro). La única excepción: una línea de diálogo con \"cita\": true que copie igual una cita marcada en personajes.ts. Si no la sabes exacta, no hay cita. Tampoco «como dijo X:».",
+    "- El nombre de una persona real que no vive en la casa (empresarios, políticos, deportistas, artistas): nunca. Tampoco por su cargo («el dueño de Tesla»).",
+    "- PRIME, Kev, kevproject, {RECAUDADO} y {META} nunca en boca de una persona real (tampoco histórica): solo en un rótulo o un título.",
+    "- Si hay una persona viva o fallecida (en cuadro o nombrada): ni PRIME, ni {RECAUDADO}, ni {META}, ni Kev, ni el reto o el desafío.",
+    "- Llaves solo para {RECAUDADO} y {META}, escritas así, exactas.",
     "- Nada que un espectador razonable pueda creer que pasó de verdad: es ficción y se nota.",
     "",
     "IDIOMA: español neutro para toda Latinoamérica. Nada de voseo: quieres, puedes, mira, dime, aquí (nunca querés, podés, mirá, decime, acá). Pocas palabras.", // sin-voseo:ejemplos
@@ -363,8 +380,14 @@ export async function escribirGuion(p: PedidoGuion, puertos: PuertosGuionista): 
     // El id lo pone el código: el modelo no decide cómo se llama el archivo.
     const episodio: Episodio = { id: idDeVideo(dia, p.slot, s.episodio.titulo), ...s.episodio }
     const descripcion = s.descripcion?.trim() || null
+    // Lo publicado lleva el número, no la marca: «{RECAUDADO}» escrito tal cual en un post es un error a la vista.
+    // El título publicado se guarda aparte (textos.titulo): es con el que la
+    // cola busca el post en recientes() y el que sube YouTube. Con la marca
+    // cruda no encontraría el post que dice «$1.234» y lo publicaría dos veces.
+    const titulo = textoFinal(episodio.titulo).replace(/\s+/g, " ").trim()
     const textos: TextosDelVideo = {
-      porRed: textosDe({ titulo: episodio.titulo, pilar: p.idea.pilar, descripcion: descripcion ?? undefined }, p.ctx.redes),
+      titulo,
+      porRed: textosDe({ titulo, pilar: p.idea.pilar, descripcion: descripcion ? textoFinal(descripcion) : undefined }, p.ctx.redes),
       miniatura: s.miniatura.trim(),
     }
     const rev = revisarTodo(episodio, textos, p.ctx)
