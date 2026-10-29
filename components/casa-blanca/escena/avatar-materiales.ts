@@ -118,11 +118,13 @@ export function matPiel(color: string): THREE.MeshPhysicalMaterial {
 // el color de la prenda) y barniz (cuero de vestir, charol).
 const N_TELAS = 16
 const fl = (a: number[]) => `float[${N_TELAS}]( ${a.map((x) => x.toFixed(3)).join(", ")} )`
-const TELA_NORMAL = [0.65, 0.35, 0.55, 1.0, 0.5, 0.75, 0.55, 0.4, 0.5, 0.8, 1.0, 0.6, 0, 0, 0, 0.5]
-const TELA_SHEEN = [0.55, 0.22, 0.4, 0.75, 0.22, 0.3, 0.85, 0.35, 0.0, 0.2, 0.65, 0.0, 0.0, 0, 0.0, 0.9]
+const TELA_NORMAL = [0.65, 0.35, 0.55, 1.0, 0.5, 0.45, 0.55, 0.4, 0.5, 0.8, 1.0, 0.6, 0, 0, 0, 0.5]
+// (gamuza 0,9 -> 0,35: las zapatillas de ante salían casi blancas)
+const TELA_SHEEN = [0.55, 0.22, 0.4, 0.75, 0.22, 0.3, 0.85, 0.35, 0.0, 0.2, 0.65, 0.0, 0.0, 0, 0.0, 0.35]
 // Especular por tela (la tela mate no tiene brillo puntual: la camisa blanca se quemaba en el cuello).
 const TELA_ESPEC = [0.7, 0.45, 0.5, 0.4, 0.5, 0.5, 0.35, 1, 1, 0.6, 0.4, 0.6, 1, 1, 1, 0.35]
-const TELA_BARNIZ = [0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0, 0, 0, 0.75, 0]
+// (charol 0,75 -> 0,5: el negro reflejaba el cielo casi entero, azul)
+const TELA_BARNIZ = [0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0, 0, 0, 0.5, 0]
 
 const GLSL_ROPA_PARS = /* glsl */ `
 uniform sampler2DArray uTelas;
@@ -252,7 +254,10 @@ export function matRopa(_tejido: Tejido, numero?: { texto: string; relleno: stri
         [
           "#include <normal_fragment_maps>",
           "\tif ( plH > 0.0 ) normal = telaRelieve( - vViewPosition, normal, - plH * 0.0045, faceDirection );",
-          "\tvec2 telaN = ( telaT.rg * 2.0 - 1.0 ) * TELA_NOR[ telaC ] + ( telaM.rg * 2.0 - 1.0 ) * 0.25;",
+          // La trama se apaga cuando un píxel cubre varios texeles: a media distancia el
+          // relieve del punto se leía como rayas (moiré) aunque el color tenga mipmaps.
+          "\tfloat telaFw = length( fwidth( vTelaUv * TELA_REP[ telaC ] ) ) * 128.0;",
+          "\tvec2 telaN = ( telaT.rg * 2.0 - 1.0 ) * TELA_NOR[ telaC ] * ( 1.0 - smoothstep( 1.5, 4.0, telaFw ) ) + ( telaM.rg * 2.0 - 1.0 ) * 0.25;",
           "\tnormal = normalize( telaTBN( - vViewPosition, normal, vTelaUv ) * vec3( telaN, 1.0 ) );",
         ].join("\n"),
       )
@@ -261,7 +266,11 @@ export function matRopa(_tejido: Tejido, numero?: { texto: string; relleno: stri
         [
           "#include <lights_physical_fragment>",
           // Terciopelo teñido con el color de la prenda (lana y punto: borde aterciopelado).
-          "\tmaterial.sheenColor = TELA_SHE[ telaC ] * ( 0.08 + 0.92 * min( diffuseColor.rgb * 2.5, vec3( 1.0 ) ) ) * ( 1.0 - metalnessFactor );",
+          // (las telas oscuras guardan un terciopelo gris: con el teñido puro, la ropa negra
+          // no tenía brillo de borde y se leía como una silueta plana)
+          "\tvec3 sheT = min( diffuseColor.rgb * 2.5, vec3( 1.0 ) );",
+          "\tfloat sheL = dot( sheT, vec3( 0.3333 ) );",
+          "\tmaterial.sheenColor = TELA_SHE[ telaC ] * mix( vec3( 0.3 ), mix( vec3( sheL ), sheT, 0.75 ), smoothstep( 0.0, 0.6, sheL ) ) * ( 1.0 - metalnessFactor );",
           "\tmaterial.clearcoat = TELA_BAR[ telaC ];",
           "\tmaterial.specularColorBlended *= TELA_ESP[ telaC ];",
           "\tmaterial.specularColor *= TELA_ESP[ telaC ];",
@@ -298,6 +307,7 @@ const pelos = new Map<string, THREE.MeshPhysicalMaterial>()
 // - Capas de abajo opacas (aMat.y = 1): la textura no les abre huecos, así el
 //   cielo y la piel no se ven a través de la masa del pelo.
 const PELO_COMUN = [
+  "uniform float uMsaa;",
   "uniform vec3 uTibio;",
   "uniform vec4 uKK;",
   "uniform vec4 uKK2;",
@@ -413,7 +423,12 @@ export function matPelo(color: string, rizado = false): THREE.MeshPhysicalMateri
   // El brillo blanco, apenas teñido del pelo (en el negro, casi blanco; en el castaño, dorado).
   const brillo = new THREE.Color(color).lerp(new THREE.Color("#fff4e6"), 0.75)
   const dir = rizado ? texRizosDir() : null
+  // ¿Se dibuja con MSAA? (lo pone msaaPelo antes de cada malla; sin MSAA la
+  // cobertura parcial no existe y el borde vuelve al recorte de siempre, 0,42)
+  const uMsaa = { value: 1 }
+  m.userData.uMsaa = uMsaa
   m.onBeforeCompile = (sh) => {
+    sh.uniforms.uMsaa = uMsaa
     sh.uniforms.uTibio = { value: tibio }
     sh.uniforms.uKK = { value: kk }
     sh.uniforms.uKK2 = { value: kk2 }
@@ -434,8 +449,11 @@ export function matPelo(color: string, rizado = false): THREE.MeshPhysicalMateri
           "#ifdef ALPHA_TO_COVERAGE",
           // Cobertura parcial en todo el rango (0,24–0,8): las hebras ralas del borde y
           // de las capas de afuera dejan ver lo de abajo (con MSAA, mezcla de verdad).
+          "\tif ( uMsaa < 0.5 ) { if ( diffuseColor.a < 0.42 ) discard; diffuseColor.a = 1.0; }",
+          "\telse {",
           "\tdiffuseColor.a = smoothstep( 0.24, max( 0.8, 0.24 + fwidth( diffuseColor.a ) ), diffuseColor.a );",
           "\tif ( diffuseColor.a < 0.05 ) discard;",
+          "\t}",
           "#else",
           "#include <alphatest_fragment>",
           "#endif",
@@ -642,4 +660,15 @@ export function matHolograma(color: string, color2: string, alto: number, op: { 
 /** Para el informe de rendimiento: los materiales compartidos no se liberan con un personaje. */
 export function esCompartido(m: THREE.Material): boolean {
   return pieles.has(m.name.replace(/^piel-/, "")) || ropas.has(m.name.replace(/^ropa-/, "")) || [...pelos.values(), ...ojos.values(), ...lentes.values()].includes(m as THREE.MeshPhysicalMaterial)
+}
+
+/**
+ * Para el onBeforeRender de la malla del pelo: avisa al material si el destino
+ * tiene MSAA (calidad alta) o no (media y baja). Sin asignaciones por cuadro.
+ */
+export function msaaPelo(renderer: THREE.WebGLRenderer, material: THREE.Material | THREE.Material[]) {
+  const u = (material as THREE.Material).userData?.uMsaa as { value: number } | undefined
+  if (!u) return
+  const rt = renderer.getRenderTarget()
+  u.value = rt && rt.samples > 0 ? 1 : 0
 }

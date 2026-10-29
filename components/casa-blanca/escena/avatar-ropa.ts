@@ -64,11 +64,13 @@ export interface Ropa {
 const MAT_LANA: Mat2 = [0.82, 0]
 const MAT_ALGODON: Mat2 = [0.9, 0]
 const MAT_CUERO: Mat2 = [0.32, 0]
-const MAT_ORO: Mat2 = [0.36, 1]
+// (0,36 -> 0,46: a la hora dorada la diadema y los herrajes estallaban en un punto de luz)
+const MAT_ORO: Mat2 = [0.46, 1]
 const MAT_BOTON: Mat2 = [0.35, 0]
 
 const _v = new THREE.Vector3()
 const _n = new THREE.Vector3()
+const _q = new THREE.Vector3()
 
 /** Código de pliegue para aArr.y: tipo (1 manga, 2 pernera, 3 torso, 4 caída, 5 banda) + fuerza (0..2). */
 const PL = (tipo: number, fuerza: number) => tipo + clamp(fuerza, 0, 1.98) * 0.5
@@ -91,6 +93,9 @@ function normAng(a: number): number {
   if (x < 0) x += DOS_PI
   return x - Math.PI / 2
 }
+
+/** Alturas (/H) de las filas de los hombros que comparten todas las prendas del tronco. */
+const FILAS_HOMBRO = [0.79, 0.806, 0.818]
 
 interface Anillo {
   xs: Float64Array
@@ -126,6 +131,59 @@ class Sastre {
   tela(id: number) {
     this.telaId = id
     this.lote.exPorDefecto(id, 0, 0, 0)
+  }
+
+  private bases = new Map<number, number>()
+  /** Borde de arriba de la última prenda del tronco que llega a los hombros (el cuello nace ahí). */
+  topePrenda: ((a: number) => number) | null = null
+  /**
+   * Altura de la base del cuello en el ángulo a: la primera (desde 0,80·H) donde la
+   * superficie del tronco queda a menos de 2 cm de la del cuello. Al frente es baja
+   * (la horquilla del esternón); a los costados sube por el trapecio. Ahí nacen los
+   * cuellos de las prendas: con una altura fija, a los costados la fila de abajo del
+   * cuello caía en la punta del hombro y el cuello era un abanico que salía por
+   * encima de la prenda (las "plumas" sobre los hombros).
+   */
+  baseCuello(a: number): number {
+    const key = Math.round(normAng(a) * 400)
+    const c = this.bases.get(key)
+    if (c !== undefined) return c
+    // Suavizada a lo largo del ángulo: sin eso, donde el hombro es casi plano la base
+    // saltaba de golpe entre dos columnas y el cuello de la prenda hacía un escalón.
+    const y = (this.baseCruda(a - 0.3) + 2 * this.baseCruda(a - 0.15) + 3 * this.baseCruda(a) + 2 * this.baseCruda(a + 0.15) + this.baseCruda(a + 0.3)) / 9
+    this.bases.set(key, y)
+    return y
+  }
+
+  private crudas = new Map<number, number>()
+  private baseCruda(a: number): number {
+    const key = Math.round(normAng(a) * 400)
+    const c = this.crudas.get(key)
+    if (c !== undefined) return c
+    const Hh = this.Hh
+    const cab = this.cu.cab
+    const yN = 0.845 * Hh
+    const q = this.puntoCuello(yN, a, 0, new THREE.Vector3())
+    const yl = (yN - cab.c.y) / cab.hs
+    const k = cab.cuello
+    const zE = cab.c.z + lerp(k.z0, k.z1, clamp((yl - k.y0) / (k.y1 - k.y0), 0, 1)) * cab.hs
+    const rQ = Math.hypot(q.x - cab.c.x, q.z - zE) + 0.02 * this.s
+    const p = new THREE.Vector3()
+    let y = 0.845 * Hh
+    let dAnt = Infinity
+    const paso = 0.002 * Hh
+    for (let yy = 0.8 * Hh; yy < 0.845 * Hh; yy += paso) {
+      this.punto(yy, a, 0.3, 0, p)
+      const d = Math.hypot(p.x - cab.c.x, p.z - zE) - rQ
+      if (d <= 0) {
+        // Entre dos pasos, la altura donde la distancia cruza el umbral.
+        y = Number.isFinite(dAnt) ? yy - paso * (-d / Math.max(1e-9, dAnt - d)) : yy
+        break
+      }
+      dAnt = d
+    }
+    this.crudas.set(key, y)
+    return y
   }
 
   /** Sección del tronco (con normales 2D). Debajo de la cadera, la de la cadera (faldas). */
@@ -274,27 +332,66 @@ class Sastre {
     pl?: number
     /** Ondas del ruedo (m, por ángulo): se apagan hacia arriba. */
     ruedo?: (a: number) => number
+    /** false: el borde de arriba no sube por el trapecio hasta la base del cuello. */
+    alCuello?: boolean
+    /**
+     * false: filas repartidas hasta el borde en cada ángulo, sin las filas fijas de los
+     * hombros (prendas sin nada encima cuyo borde baja mucho, como la musculosa: con la
+     * grilla, el ribete de la sisa quedaba entre dos filas y salía dentado).
+     */
+    grilla?: boolean
   }) {
     const L = this.lote
+    const Hh = this.Hh
     const bultos = op.bultos ?? 0.35
     const paso = (op.paso ?? 0.026) * this.s
-    const n = Math.max(2, Math.ceil((op.y1 - op.y0) / paso))
-    const ts: number[] = []
-    for (let i = 0; i <= n; i++) ts.push(i / n)
     const abierta = !!op.arco
     const cols = abierta ? op.cols ?? 44 : MR
+    // Borde de arriba en cada ángulo. Si la prenda llega a los hombros, sube por el
+    // trapecio hasta la base del cuello (ahí nace su cuello): si no, entre el borde
+    // y el cuello de la prenda quedaba un escalón de piel o una aleta.
+    const alto = op.alCuello !== false
+    const topeDe = (a: number) => {
+      const t = op.tope ? Math.min(op.y1, op.tope(a)) : op.y1
+      if (!alto || t < 0.81 * Hh) return t
+      return t + Math.max(0, this.baseCuello(a) - t) * suave(0.81 * Hh, 0.826 * Hh, t)
+    }
+    // El cuello que se arme después nace en este borde (sin escalón de piel entre los dos).
+    if (op.y1 >= 0.8 * Hh) this.topePrenda = topeDe
+    // Filas: parejas hasta 0,77·H y, en los hombros, a alturas FIJAS que comparten
+    // todas las prendas. Con filas propias (cada 4–7 cm, a otra altura en cada capa)
+    // la cuerda de la de abajo cortaba la curva del hombro por fuera de la de arriba
+    // y asomaba en astillas sobre la silueta.
+    const grilla = op.grilla !== false && paso > 0.015 * this.s
+    const yCorte = grilla ? Math.min(op.y1, 0.77 * Hh) : op.y1
+    const nU = Math.max(grilla && op.y1 > 0.78 * Hh ? 1 : 2, Math.ceil((yCorte - op.y0) / paso))
+    const niveles: number[] = []
+    for (let i = 0; i <= nU; i++) niveles.push(lerp(op.y0, yCorte, i / nU))
+    if (grilla && op.y1 > 0.78 * Hh) {
+      for (const g of FILAS_HOMBRO) if (g * Hh > yCorte + 0.004 * Hh) niveles.push(g * Hh)
+      niveles.push(Infinity)
+    }
+    const nF = niveles.length
     const ids: number[][] = []
+    const llenas: boolean[][] = []
     const centros: THREE.Vector3[] = []
-    for (const t of ts) {
+    for (let i = 0; i < nF; i++) {
+      const t = i / (nF - 1)
       const fila: number[] = []
+      const llena: boolean[] = []
       let cz = 0
-      const y0 = lerp(op.y0, op.y1, t)
-      const arc = op.arco ? op.arco(y0) : null
+      const yN = Math.min(niveles[i], op.y1)
+      const arc = op.arco ? op.arco(yN) : null
       // Cerrada: la última columna repite la primera (una vuelta entera de ángulo):
       // las UV y los pliegues siguen sin salto en la costura de la espalda.
       for (let k = 0; k <= cols; k++) {
         const a = arc ? lerp(arc[0], arc[1], k / cols) : k === cols ? ANG_R[0] + DOS_PI : ANG_R[k]
-        let y = op.tope ? lerp(op.y0, Math.min(op.y1, op.tope(a)), t) : y0
+        const top = topeDe(a)
+        let y: number
+        if (!grilla) y = op.tope ? lerp(op.y0, top, t) : lerp(op.y0, op.y1, t)
+        else if (top <= yCorte + 0.004 * Hh) y = i <= nU ? lerp(op.y0, top, i / nU) : top
+        else y = Math.min(niveles[i], top)
+        llena.push(y >= top - 1e-6)
         if (op.ruedo && t < 0.5) y += op.ruedo(a) * (1 - 2 * t) * (1 - 2 * t)
         const vu = op.vuelo ? op.vuelo(y) : 0
         let h = op.holgura(y, a)
@@ -302,23 +399,23 @@ class Sastre {
         this.punto(y, a, bultos, h, _v, vu)
         const c = op.color(y, a)
         const m = typeof op.mat === "function" ? op.mat(y, a) : op.mat
-        const pw = y < 0.5 * this.Hh ? this.pesosFalda(_v.x, y, _v.z, op.y0) : this.cu.pesosTronco(_v.x, y, _v.z)
+        const pw = y < 0.5 * Hh ? this.pesosFalda(_v.x, y, _v.z, op.y0) : this.cu.pesosTronco(_v.x, y, _v.z)
         fila.push(L.v(_v.x, _v.y, _v.z, a * 0.16, y, c, pw, m))
-        if (op.pl) L.ex(this.telaId, op.pl, y / this.Hh, a)
+        if (op.pl) L.ex(this.telaId, op.pl, y / Hh, a)
         cz += _v.z
       }
       ids.push(fila)
-      centros.push(new THREE.Vector3(0, y0, cz / (cols + 1)))
+      llenas.push(llena)
+      centros.push(new THREE.Vector3(0, Number.isFinite(yN) ? yN : op.y1, cz / (cols + 1)))
     }
-    L.tiras(ids, false, { centros })
+    // Sin los cuadriláteros que quedaron aplastados en el borde (filas ya en el tope).
+    L.tiras(ids, false, { centros, emitir: (i, j) => !(llenas[i][j] && llenas[i][j + 1]) })
     L.pieza()
     if (op.tapa !== false) {
       const arco = op.arco
-      const tope = op.tope
       const y0 = op.y0
-      const y1 = op.y1
       this.tapaTronco.push((y, a) => {
-        if (y < y0 + 0.01 || y > (tope ? Math.min(y1, tope(a)) : y1) - 0.012) return false
+        if (y < y0 + 0.01 || y > topeDe(a) - 0.012) return false
         const ar = arco ? arco(y) : null
         if (!ar) return true
         const [a0, a1] = ar
@@ -360,8 +457,20 @@ class Sastre {
     const rm = op.cadena === "brazo" ? cu.radiosBrazo((op.u0 + op.u1) / 2) : cu.radiosPierna((op.u0 + op.u1) / 2)
     const vuelta = (Math.PI / 2) * (rm[0] + rm[1] + rm[2] + rm[3]) + 0.02
     const uRef = Math.max(0.05, c.u[2])
+    // Anillos parejos, pero los dos más cercanos al codo o la rodilla se corren a ±3,5 cm
+    // del hueso: la silueta doblada sale redonda (sin costo de triángulos).
+    const us: number[] = []
+    for (let i = 0; i <= n; i++) us.push(lerp(op.u0, op.u1, i / n))
+    const uJ = c.u[2]
+    if (n >= 4 && uJ > op.u0 + 0.06 * this.s && uJ < op.u1 - 0.06 * this.s) {
+      for (const objetivo of [uJ - 0.035 * this.s, uJ + 0.035 * this.s]) {
+        let k = 1
+        for (let i = 1; i < n; i++) if (Math.abs(us[i] - objetivo) < Math.abs(us[k] - objetivo)) k = i
+        if (us[k - 1] < objetivo - 0.01 * this.s && us[k + 1] > objetivo + 0.01 * this.s) us[k] = objetivo
+      }
+    }
     for (let i = 0; i <= n; i++) {
-      const u = lerp(op.u0, op.u1, i / n)
+      const u = us[i]
       c.marco(u, m)
       const r = op.cadena === "brazo" ? cu.radiosBrazo(u) : cu.radiosPierna(u)
       const fila: number[] = []
@@ -414,18 +523,37 @@ class Sastre {
     const ids: number[][] = []
     const centros: THREE.Vector3[] = []
     const cab = this.cu.cab
+    // La banda nace en la base del cuello de ese ángulo (ver baseCuello) y la fila de
+    // abajo va sobre el tronco, donde termina la prenda; las de arriba, sobre el cuello.
+    const tp = this.topePrenda
+    const yA = (a: number) => {
+      const y = Math.max(op.y0, this.baseCuello(a) - 0.002 * this.Hh)
+      return tp ? Math.min(y, Math.max(op.y0, tp(a))) : y
+    }
+    const yB = (a: number) => Math.max(op.y1(a), yA(a) + 0.006 * this.Hh)
     for (let i = 0; i <= filas; i++) {
       const t = i / filas
       const fila: number[] = []
       for (let k = 0; k < (abierta ? cols + 1 : cols); k++) {
         const a = op.arco ? lerp(op.arco[0], op.arco[1], k / cols) : ANG_R[k]
-        const y = lerp(op.y0, op.y1(a), t)
+        const y = lerp(yA(a), yB(a), t)
         const h = lerp(op.holg0, op.holg1, t)
-        // Abajo, sobre el tronco; arriba, sobre el cuello.
-        if (y < 0.826 * this.Hh) this.punto(y, a, 0.3, h, _v)
-        else this.puntoCuello(y, a, h, _v)
+        // Del tronco al cuello sin escalón: entre 0,818 y 0,834·H se mezclan los dos
+        // (con el corte seco en 0,826, donde el borde del escote cruzaba esa altura
+        // la banda saltaba de una superficie a la otra y el escote salía dentado).
+        const kN = i === 0 ? 0 : suave(0.818 * this.Hh, 0.834 * this.Hh, y)
+        if (kN < 1) this.punto(y, a, 0.3, h, _v)
+        if (kN > 0) {
+          // (el cuello se mide desde 0,834·H para abajo en vertical: más abajo la forma del
+          // cuello no está definida y el rayo devolvía radios irregulares —borde mordido—)
+          const yC = Math.max(y, 0.834 * this.Hh)
+          this.puntoCuello(yC, a, h, _q)
+          _q.y -= yC - y
+          if (kN < 1) _v.lerp(_q, kN)
+          else _v.copy(_q)
+        }
         const l = (y - cab.c.y) / cab.hs
-        const pw: Pesos = y < 0.826 * this.Hh ? this.cu.pesosTronco(_v.x, y, _v.z) : this.cu.pesosCabeza(new THREE.Vector3(_v.x, l, 0))
+        const pw: Pesos = i === 0 || kN < 0.5 ? this.cu.pesosTronco(_v.x, y, _v.z) : this.cu.pesosCabeza(new THREE.Vector3(_v.x, l, 0))
         fila.push(this.lote.v(_v.x, _v.y, _v.z, a * 0.1, y, op.color, pw, op.mat))
       }
       ids.push(fila)
@@ -437,9 +565,18 @@ class Sastre {
     const filaIn: number[] = []
     for (let k = 0; k < top.length; k++) {
       const a = op.arco ? lerp(op.arco[0], op.arco[1], k / cols) : ANG_R[k]
-      const y = op.y1(a)
-      if (y < 0.826 * this.Hh) this.punto(y, a, 0.3, 0.0005, _v)
-      else this.puntoCuello(y, a, 0.0005, _v)
+      const y = yB(a)
+      // (la misma mezcla tronco–cuello que la fila de arriba: si no, el canto salía
+      // de otra superficie y el borde del cuello se veía mordido)
+      const kN = suave(0.818 * this.Hh, 0.834 * this.Hh, y)
+      if (kN < 1) this.punto(y, a, 0.3, 0.0005, _v)
+      if (kN > 0) {
+        const yC = Math.max(y, 0.834 * this.Hh)
+        this.puntoCuello(yC, a, 0.0005, _q)
+        _q.y -= yC - y
+        if (kN < 1) _v.lerp(_q, kN)
+        else _v.copy(_q)
+      }
       const l = (y - cab.c.y) / cab.hs
       filaIn.push(this.lote.v(_v.x, _v.y, _v.z, 0, 0, escalarRGBA(op.color, 0.7), this.cu.pesosCabeza(new THREE.Vector3(0, l, 0)), op.mat))
     }
@@ -766,8 +903,9 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         u0: 0.022 * s,
         u1: fin,
         // (la copa de la manga nace casi pegada al brazo, por DENTRO de la prenda del
-        // tronco: con 3/4 de la holgura asomaba en el hombro como una caja)
-        holgura: (u, a) => holg * (0.35 + 0.65 * suave(0.0, 0.12 * s, u)) + (op.ancha ?? 0) * suave(c.u[2] - 0.1 * s, fin, u) + 0.003 * campana(u, c.u[2] - 0.01 * s, 0.03 * s) * Math.max(0, -Math.sin(a)),
+        // tronco: con 3/4 de la holgura asomaba en el hombro como una caja; el vuelo de
+        // la manga ancha también crece desde el hombro, no desde la copa)
+        holgura: (u, a) => holg * (0.35 + 0.65 * suave(0.0, 0.12 * s, u)) + (op.ancha ?? 0) * suave(c.u[2] - 0.1 * s, fin, u) * suave(0.01 * s, 0.11 * s, u) + 0.003 * campana(u, c.u[2] - 0.01 * s, 0.03 * s) * Math.max(0, -Math.sin(a)),
         color: () => color,
         mat: op.mat ?? MAT_LANA,
         cols: op.cols,
@@ -836,7 +974,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         pos: (t, w, out) => {
           const y = lerp(yA, yB, t)
           // Ancho con la muesca (el escote entre la solapa y el cuello) arriba.
-          const ancho = (0.072 * s * suave(0, 0.3, t) * (1 - 0.4 * suave(0.78, 1, t)) * (1 - 0.42 * campana(t, 0.84, 0.035))) / R
+          // (muesca de 0,06 de ancho en t: con 0,035 caía entre dos filas y era un diente suelto)
+          const ancho = (0.072 * s * suave(0, 0.3, t) * (1 - 0.4 * suave(0.78, 1, t)) * (1 - 0.38 * campana(t, 0.84, 0.06))) / R
           const borde = FRENTE + lado * -delta(y)
           const f = (w + 1) / 2
           const a = borde + lado * -(f * ancho)
@@ -928,13 +1067,20 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       y1: 0.828 * Hh,
       // (pechera casi plana bajo el saco: filas cada 4 cm bastan)
       paso: 0.04,
-      arco: () => [FRENTE - ar, FRENTE + ar],
+      // Solo lo que se ve por la abertura del saco (más lo que tapa la solapa): con
+      // ±0,75 rad la pechera llegaba al hombro y asomaba por encima del saco.
+      arco: (y) => {
+        const yb = 0.598 * Hh
+        const d = y > yb ? 0.035 + 0.42 * Math.pow(suave(yb, 0.828 * Hh, y), 0.85) : 0.035 + 0.22 * suave(yb, 0.425 * Hh, y)
+        const m = Math.min(ar, d + 0.16)
+        return [FRENTE - m, FRENTE + m]
+      },
       holgura: () => 0.0045,
       bultos: 0.45,
       // Tapeta: una franja apenas más oscura al centro.
       color: (y, a) => (Math.abs(a - FRENTE) < 0.03 ? escalarRGBA(color, 0.9) : color),
       mat: MAT_ALGODON,
-      cols: 22,
+      cols: 16,
     })
     if (op.abierta) {
       // Botones de la camisa (abierta arriba: el primero a la altura del esternón).
@@ -962,26 +1108,33 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     // Puntas del cuello: dos triángulos sobre el pecho, a los lados del nudo.
     for (const lado of [1, -1] as const) {
       const yA = 0.828 * Hh + 0.012 * s
-      const largo = (op.abierta ? 0.075 : 0.06) * s
+      // Abierto (sin corbata): puntas cortas que caen SOBRE la solapa, junto a la
+      // muesca. (Con 7,5 cm, abriendo 0,42 rad, salían hacia los hombros por fuera
+      // de las solapas y se leían como dos colmillos blancos.)
+      const largo = (op.abierta ? 0.05 : 0.06) * s
       const a0 = abierto + 0.02
-      const abre = op.abierta ? 0.42 : 0.22
+      const abre = op.abierta ? 0.2 : 0.22
+      const base = op.abierta ? 0.3 : 0.28
       S.tira({
         filas: 3,
-        cols: 2,
-        grosor: 0.0015,
+        cols: op.abierta ? 4 : 2,
+        grosor: op.abierta ? 0.0025 : 0.0015,
         pos: (t, w, out) => {
           const y = yA - t * largo
           // Base ancha arriba, punta abajo y hacia afuera.
-          const a = FRENTE + lado * (a0 + abre * t + ((w + 1) / 2) * 0.28 * (1 - t))
-          // Abierto (sin corbata): las puntas caen sobre las solapas del saco y se ven.
-          const sobre = op.abierta ? suave(0, 0.35, t) * 0.014 : 0
-          return y > 0.826 * Hh ? S.puntoCuello(y, a, 0.0085, out) : S.punto(y, a, 0.45, 0.0075 + 0.002 * (1 - t) + sobre, out)
+          const a = FRENTE + lado * (a0 + abre * t + ((w + 1) / 2) * base * (1 - t))
+          if (y > 0.826 * Hh) return S.puntoCuello(y, a, 0.0085, out)
+          // Abierto: por encima de la superficie de la solapa (holgura del saco +
+          // 3,5 mm de la solapa + su rollo + 2,5 mm), no a una distancia fija.
+          const h = op.abierta ? lerp(0.0095, holgTraje(y, a) + 0.0035 + 0.005 + 0.0025, suave(0, 0.35, t)) : 0.0075 + 0.002 * (1 - t)
+          return S.punto(y, a, 0.45, h, out)
         },
         normal: (t, w, out) => {
           const a = FRENTE + lado * (a0 + abre * t)
           return out.set(Math.cos(a), 0.25, Math.sin(a)).normalize()
         },
-        color: () => color,
+        // Canto más oscuro: se lee como tela doblada, no como una lámina.
+        color: (t, w) => (op.abierta && Math.abs(w) > 0.9 ? escalarRGBA(color, 0.8) : color),
         mat: MAT_ALGODON,
         pesos: (pt) => cu.pesosTronco(pt.x, Math.min(pt.y, 0.83 * Hh), pt.z),
       })
@@ -1129,7 +1282,9 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         return [FRENTE - m, FRENTE + m]
       } : undefined,
       cols: op.soloFrente ? 30 : 22,
-      holgura: (y, a) => 0.016 + 0.006 * suave(0.6 * Hh, 0.5 * Hh, y),
+      // (+1 cm adelante a la altura de la rodilla: al dar el paso, la rodilla de
+      // adelante atravesaba el ruedo de las túnicas cortas)
+      holgura: (y, a) => 0.016 + 0.006 * suave(0.6 * Hh, 0.5 * Hh, y) + 0.01 * Math.max(0, Math.sin(a)) ** 2 * campana(y, 0.29 * Hh, 0.08 * Hh),
       bultos: 0.3,
       vuelo: (y) => (op.vuelo ?? 0.32) * Math.pow(suave(0.5 * Hh, op.ruedo, y), 0.8),
       // Caída: flautas que nacen del cinturón y crecen hacia el ruedo, con la fase que
@@ -1204,7 +1359,9 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
           const y = lerp(yA, yP, t)
           // Del costado del cuello (ángulo ancho) a la punta en el centro.
           const a = FRENTE + lado * (lerp(0.62, 0.05, t) + w * 0.09 * (1 - 0.6 * t))
-          return S.punto(y, a, 0.3, holgTraje(y, a) + 0.008, out)
+          // (por encima de la solapa del saco —3,5 mm + rollo de 5 mm—: con 8 mm las
+          // solapas la atravesaban en un zigzag de dientes negros)
+          return S.punto(y, a, 0.3, holgTraje(y, a) + 0.0125, out)
         },
         normal: (t, w, out) => {
           const y = lerp(yA, yP, t)
@@ -1218,7 +1375,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     }
     // La joya: un triángulo dorado colgando de la punta.
     S.tela(TELA.liso)
-    S.punto(yP - 0.03 * s, FRENTE, 0.3, holgTraje(yP, FRENTE) + 0.009, _v)
+    S.punto(yP - 0.03 * s, FRENTE, 0.3, holgTraje(yP, FRENTE) + 0.0135, _v)
     S.boton(_v.clone(), _n.clone(), 0.028 * s, 0.004, rgba("#d4aa48"), MAT_ORO, cu.pesosTronco(0, yP, 0.1), 3)
   }
 
@@ -1295,6 +1452,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       color: (y, a) => (y < yAb + 0.12 * Hh * suave(4.3, A0, a) + 0.02 * s ? escalarRGBA(color, 0.8) : color),
       mat: MAT_LANA,
       tapa: false,
+      alCuello: false,
       pl: PL(4, 1.4),
     })
     // Pliegue sobre los hombros (la capa se apoya ahí) y la fíbula dorada.
@@ -1364,7 +1522,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       S.tela(TELA.fieltro)
       S.cuello({ y0: 0.82 * Hh, y1: (a) => 0.82 * Hh + 0.045 * s, arco: [FRENTE + 0.35, FRENTE + DOS_PI - 0.35], holg0: 0.014, holg1: 0.012, color: rojo, mat: MAT_LANA, filas: 2, tapa: true })
       mangas(C1, 9, 0.015, { puno: rojo, tela: TELA.fieltro, telaPuno: TELA.fieltro, pl: PL(1, 0.8) })
-      // Botas: caña hasta la rodilla.
+      // Botas: caña hasta la rodilla. (De cuero: seguía la tela del calzón y se leía como tela.)
+      S.tela(TELA.cuero)
       for (const lado of [1, -1] as const) {
         const c = cu.piernas[lado > 0 ? 0 : 1]
         S.tubo({ cadena: "pierna", lado, u0: c.u[2] - 0.035 * s, u1: c.u[3] + 0.02 * s, holgura: (u) => 0.01 + 0.012 * suave(c.u[2] + 0.04 * s, c.u[2] - 0.03 * s, u), color: () => cueroNegro, mat: MAT_CUERO, cols: 14 })
@@ -1444,9 +1603,14 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         y0: 0.765 * Hh,
         y1: 0.83 * Hh,
         paso: 0.0045,
-        holgura: (y, a) => 0.009 + 0.006 * suave(0.81 * Hh, 0.77 * Hh, y),
+        // (+1,4 cm a los costados abajo: el casquete del hombro —la malla del brazo— asomaba
+        // por el borde inferior del collar en dientes)
+        holgura: (y, a) => 0.009 + 0.006 * suave(0.81 * Hh, 0.77 * Hh, y) + 0.014 * Math.abs(Math.cos(a)) ** 2 * suave(0.81 * Hh, 0.765 * Hh, y),
         bultos: 0.5,
         tope: (a) => 0.83 * Hh,
+        // (franjas a alturas fijas: con el borde subiendo por el trapecio las filas se
+        // repartían distinto en cada ángulo y las franjas salían en zigzag)
+        alCuello: false,
         color: (y) => franjas[clamp(Math.floor(((y - 0.765 * Hh) / (0.065 * Hh)) * 7), 0, 6)],
         mat: (y) => (Math.floor(((y - 0.765 * Hh) / (0.065 * Hh)) * 7) % 2 ? [0.45, 0] : [0.58, 1]),
       })
@@ -1469,6 +1633,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       S.tela(TELA.malla)
       S.tronco({
         pl: PL(3, 0.7),
+        grilla: false,
+        alCuello: false,
         y0: 0.5 * Hh,
         y1: 0.826 * Hh,
         holgura: (y) => 0.011 + 0.006 * suave(0.6 * Hh, 0.5 * Hh, y),
@@ -1592,7 +1758,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         // Lo de abajo: camisa (con su cuello) o camiseta clara.
         const abajo = rgba(ves.cuelloCamisa ?? "#d8d5cf")
         S.tela(ves.cuelloCamisa ? TELA.popelina : TELA.jersey)
-        S.tronco({ y0: 0.836 * Hh - 0.08 * Hh, y1: 0.836 * Hh, holgura: () => 0.0045, bultos: 0.4, tope: (a) => 0.836 * Hh - escote(a), color: () => abajo, mat: MAT_ALGODON })
+        // (solo el frente, lo que se ve por la V: dando la vuelta entera asomaba por los hombros del suéter)
+        S.tronco({ y0: 0.836 * Hh - 0.08 * Hh, y1: 0.836 * Hh, arco: () => [FRENTE - 0.78, FRENTE + 0.78], cols: 14, holgura: () => 0.0045, bultos: 0.4, tope: (a) => 0.836 * Hh - escote(a), color: () => abajo, mat: MAT_ALGODON })
         if (ves.cuelloCamisa) {
           // Cuello de camisa: banda alta, abierta adelante, con las puntas sobre el escote.
           S.cuello({ y0: 0.822 * Hh, y1: (a) => 0.85 * Hh - 0.024 * Hh * Math.pow(Math.max(0, Math.sin(a)), 4), holg0: 0.011, holg1: 0.005, color: abajo, mat: MAT_ALGODON, filas: 2 })
@@ -2250,6 +2417,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     manos,
   }
 
+  // Negros con información: tela ≥ 0,017 lineal (≈ #242424), cuero y charol ≥ 0,011.
+  if (tipo !== "holograma") S.lote.pisoColor((t) => (t === TELA.cuero || t === TELA.charol || t === TELA.liso ? 0.011 : 0.017))
   return { lote: S.lote, utileria, lentes, cobertura, tejido, numero, altoSombrero, sombraBarba }
 }
 

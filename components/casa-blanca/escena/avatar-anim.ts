@@ -418,10 +418,13 @@ export class Animador {
       x = lado * g.p[0] * s
       z = this.silueta(this.zF, y) + g.p[2] * s
     }
-    if (g.b && golpe !== 0) {
-      x += lado * g.b[0] * s * golpe
-      y += g.b[1] * s * golpe
-      z += g.b[2] * s * golpe
+    if (golpe !== 0) {
+      // Golpe del gesto en el acento, más uno genérico (la muñeca baja 3 cm y avanza
+      // 1,5): sin él, los gestos sin golpe propio se sostenían congelados.
+      const b = g.b
+      x += lado * (b ? b[0] : 0) * s * golpe
+      y += ((b ? b[1] : 0) - 0.03) * s * golpe
+      z += ((b ? b[2] : 0) + 0.015) * s * golpe
     }
     out.x = x
     out.y = y
@@ -865,9 +868,12 @@ export class Animador {
       const ext = this.hablaExterna
       // (sin el motor: a veces escucha, para que dos que conversan no hablen siempre a la vez)
       f.habla = ext !== null ? ext : h1 > 0.3
-      const dur = f.habla ? 2.2 + 3.2 * h2 : 1.6 + 2.6 * h2
+      // Frases de 1,2–1,9 s con respiros cortos (y a veces una pausa larga): cada una
+      // trae su gesto. Con frases de hasta 5,4 s el que hablaba quedaba en la misma
+      // pose toda la toma y solo se movía la mandíbula.
+      const dur = f.habla ? 1.2 + 0.7 * h2 : 1.6 + 2.6 * h2
       f.fin = dur
-      f.prox = dur + 0.35 + 1.1 * h3
+      f.prox = dur + (f.habla ? 0.15 + 0.35 * h3 + (h3 > 0.82 ? 1.0 : 0) : 0.35 + 1.1 * h3)
       // Gesto: el primero de la lista sale más seguido; no se repite el mismo dos veces seguidas.
       // Al escuchar: la pose de escucha (si tiene) o las manos en reposo.
       const n = this.pf.gestos.length

@@ -1242,10 +1242,11 @@ function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura, tc: RGBA)
 
 /** Dedos: [centro a lo ancho, dorso(+)/palma(-), arco de nudillos, largo, radio, abertura, flexión MCP, PIP, DIP] (m, rad; mano de 1,78 m). */
 const DEDOS: Array<[number, number, number, number, number, number, number, number, number]> = [
-  [0.029, 0.0004, -0.003, 0.088, 0.0099, 0.07, 0.17, 0.26, 0.12],
-  [0.009, 0.0008, 0.0, 0.095, 0.0101, 0.015, 0.23, 0.33, 0.15],
-  [-0.011, 0.0004, -0.004, 0.089, 0.0095, -0.045, 0.3, 0.4, 0.19],
-  [-0.03, -0.001, -0.013, 0.071, 0.0083, -0.11, 0.38, 0.46, 0.22],
+  // (abiertos 1–1,5° más entre sí: de perfil se ven cuatro dedos, no una pala)
+  [0.029, 0.0004, -0.003, 0.088, 0.0099, 0.09, 0.17, 0.26, 0.12],
+  [0.009, 0.0008, 0.0, 0.095, 0.0101, 0.02, 0.23, 0.33, 0.16],
+  [-0.011, 0.0004, -0.004, 0.089, 0.0095, -0.058, 0.3, 0.4, 0.21],
+  [-0.03, -0.001, -0.013, 0.071, 0.0083, -0.135, 0.38, 0.46, 0.26],
 ]
 /** Largo de las falanges (proximal, media, distal) / largo del dedo. */
 const FALANGES = [0.47, 0.28, 0.25]
@@ -1391,20 +1392,32 @@ function mallaMano(lote: Lote, cu: Cuerpo, c: Cadena, anilloBrazo: number[], tc:
         sAcum = (seg === 0 ? 0 : seg === 1 ? sPIP : sDIP) + lSeg * fr
       }
       const t = sAcum / G.largo
-      const r = G.r * (1 - 0.1 * t)
+      // Cada falange más fina que la anterior (proximal 1 → media 0,9 → distal 0,82):
+      // con el mismo grosor de la base a la punta los dedos se leían como salchichas.
+      const r = G.r * (1 - 0.18 * t)
+      // Sección más ancha que alta (1,12:1) en el cuerpo del dedo.
+      const kE = i >= 1 && i <= 6 ? 1.05 : 1
+      const kA = i >= 1 && i <= 6 ? 0.94 : 1
       // Pesos: nudillo y membrana mezclan con la mano; después, dedos → dedos2 en la PIP.
       const w2 = suave(sPIP - 0.006 * s, sPIP + 0.006 * s, sAcum)
       const d1 = f === 0 ? hI : hD
       const d2 = f === 0 ? hI2 : hD2
-      const pw: Pesos = i === 0 ? [[hM, 0.5], [d1, 0.5]] : i === 1 ? [[hM, 0.12], [d1, 0.88]] : [[d1, 1 - w2], [d2, w2]]
+      // (la base del índice y la del medio comparten un poco sus huesos: con el índice en
+      // su propio hueso, al señalar o hacer la pinza la membrana entre los dos se abría)
+      const pw: Pesos =
+        conIndice && f === 0 && i <= 1
+          ? i === 0 ? [[hM, 0.5], [hI, 0.3], [hD, 0.2]] : [[hM, 0.12], [hI, 0.68], [hD, 0.2]]
+          : conIndice && f === 1 && i <= 1
+            ? i === 0 ? [[hM, 0.5], [hD, 0.4], [hI, 0.1]] : [[hM, 0.12], [hD, 0.78], [hI, 0.1]]
+            : i === 0 ? [[hM, 0.5], [d1, 0.5]] : i === 1 ? [[hM, 0.12], [d1, 0.88]] : [[d1, 1 - w2], [d2, w2]]
       const fila: number[] = []
       for (let j = 0; j < 8; j++) {
         const a = ANGD[j]
         const ca = Math.cos(a)
         const sa = Math.sin(a)
         const dorso = sa > 0
-        let x = r * kw * ca
-        let y = r * (dorso ? kd * k1 : kp * k1) * sa
+        let x = r * kw * kE * ca
+        let y = r * (dorso ? kd * k1 : kp * k1) * kA * sa
         // Uña: plana y apenas levantada sobre la falange distal.
         const enUna = i >= 4 && i <= 6 && dorso ? (j === 1 || j === 2 ? 1 : 0.35) : 0
         if (enUna > 0) {
@@ -1552,7 +1565,9 @@ function mallaMano(lote: Lote, cu: Cuerpo, c: Cadena, anilloBrazo: number[], tc:
       cc.multiplyScalar(1 / 8)
     }
     // Entre nudillo y membrana, los costados que dan a otro dedo quedan dentro de la membrana.
-    lote.tiras(filasD, true, { centros, emitir: (i, j) => !(i === 0 && ((j === 3 && f > 0) || (j === 7 && f < 3))) })
+    // (entre el índice y el medio sí: con el índice en su hueso la membrana se corre y debajo tiene que haber piel)
+    const entreIM = (j: number) => conIndice && ((f === 0 && j === 7) || (f === 1 && j === 3))
+    lote.tiras(filasD, true, { centros, emitir: (i, j) => !(i === 0 && ((j === 3 && f > 0) || (j === 7 && f < 3)) && !entreIM(j)) })
     // Punta redonda (la yema sobresale un poco hacia la palma).
     const ult = filasD[filasD.length - 1]
     const pc = G.j[3].clone().addScaledVector(G.dor[3], -0.12 * G.r)

@@ -71,8 +71,8 @@ interface Horma {
 }
 
 const HORMAS: Record<TipoZapato, Horma> = {
-  oxford: { largo: 1.06, holg: 0.004, vira: 0.0028, taco: 0.024, planta: 0.009, pBola: 0.74, pExp: 0.75, altoPunta: 0.03, levante: 0.011, collar: 0.062, arco: 0.007, cordones: 5, tela: TELA.cuero, telaSuela: TELA.suela, rug: 0.4 },
-  charol: { largo: 1.065, holg: 0.004, vira: 0.0024, taco: 0.024, planta: 0.009, pBola: 0.72, pExp: 0.7, altoPunta: 0.028, levante: 0.012, collar: 0.06, arco: 0.007, cordones: 5, tela: TELA.charol, telaSuela: TELA.suela, rug: 0.14 },
+  oxford: { largo: 1.06, holg: 0.004, vira: 0.0028, taco: 0.024, planta: 0.009, pBola: 0.74, pExp: 0.55, altoPunta: 0.034, levante: 0.006, collar: 0.062, arco: 0.007, cordones: 5, tela: TELA.cuero, telaSuela: TELA.suela, rug: 0.4 },
+  charol: { largo: 1.065, holg: 0.004, vira: 0.0024, taco: 0.024, planta: 0.009, pBola: 0.72, pExp: 0.55, altoPunta: 0.032, levante: 0.007, collar: 0.06, arco: 0.007, cordones: 5, tela: TELA.charol, telaSuela: TELA.suela, rug: 0.14 },
   botin: { largo: 1.06, holg: 0.005, vira: 0.003, taco: 0.026, planta: 0.01, pBola: 0.74, pExp: 0.8, altoPunta: 0.026, levante: 0.01, collar: 0.11, arco: 0.006, cordones: 0, tela: TELA.cuero, telaSuela: TELA.suela, rug: 0.42 },
   bota: { largo: 1.06, holg: 0.006, vira: 0.0035, taco: 0.03, planta: 0.013, pBola: 0.76, pExp: 0.9, altoPunta: 0.03, levante: 0.01, collar: 0.11, arco: 0.004, cordones: 0, tela: TELA.cuero, telaSuela: TELA.suela, rug: 0.45 },
   zapatilla: { largo: 1.07, holg: 0.007, vira: 0.0045, taco: 0.03, planta: 0.019, pBola: 0.75, pExp: 0.95, altoPunta: 0.036, levante: 0.014, collar: 0.064, arco: 0, cordones: 6, tela: TELA.gamuza, telaSuela: TELA.suela, rug: 0.85 },
@@ -146,7 +146,9 @@ function zapato(L: Lote, cu: Cuerpo, lado: 1 | -1, z: Zapato) {
       const alto = lerp(Math.max(Math.min(y - base, h.altoPunta * s + 0.014 * s), h.altoPunta * s), h.altoPunta * s * 0.55, q * q)
       y = base + alto * Math.pow(Math.max(0, 1 - q ** 4), 0.4)
     }
-    return Math.max(y, base + 0.002 * s)
+    // Puntera (cap toe) de los de vestir: un escalón de 0,6 mm donde termina la costura.
+    const cap = (z.tipo === "oxford" || z.tipo === "charol") && t >= 0.795 ? 0.0006 * s : 0
+    return Math.max(y, base + 0.002 * s) + cap
   }
   const aMundo = (x: number, y: number, t: number, out: THREE.Vector3) => {
     const zl = z0 + zPie(t)
@@ -211,6 +213,29 @@ function zapato(L: Lote, cu: Cuerpo, lado: 1 | -1, z: Zapato) {
   L.tiras(idsC, false, { centros: centrosC })
   L.pieza()
 
+  // ── Herraje del mocasín: una barra de metal sobre el empeine (geometría: pintado
+  // por vértice, el color se estiraba entre filas y se leía como una mancha de piel) ──
+  if (z.tipo === "mocasin" && usaDet) {
+    L.exPorDefecto(TELA.liso)
+    const t = 0.47
+    const yt = yArriba(t)
+    const pw = pesos(t)
+    const hx = 0.019 * s
+    const dz = 0.003 * s
+    const vs: number[] = []
+    for (const [x, dt, y] of [[-hx, -1, -0.001], [hx, -1, -0.001], [hx, 1, -0.001], [-hx, 1, -0.001], [-hx, -1, 0.0022], [hx, -1, 0.0022], [hx, 1, 0.0022], [-hx, 1, 0.0022]] as const) {
+      aMundo(x, yt + y * s - 0.18 * (Math.abs(x) / Math.max(1e-4, W(t))) ** 2 * (yt - ySuela(t)), t + (dt * dz) / Ls, _p)
+      vs.push(L.v(_p.x, _p.y, _p.z, 0, 0, colDet, pw, [0.3, 1]))
+    }
+    // Las seis caras con las dos orientaciones (son 24 triángulos: más barato que orientarlas).
+    for (const [a, b, c, d] of [[4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]]) {
+      L.q(vs[a], vs[b], vs[c], vs[d])
+      L.q(vs[a], vs[d], vs[c], vs[b])
+    }
+    L.pieza()
+    L.exPorDefecto(h.tela)
+  }
+
   // ── Cordones: plaquitas cruzadas sobre el empeine ──
   if (h.cordones > 0) {
     const cc = z.tipo === "zapatilla" ? escalarRGBA(col, 1.08) : escalarRGBA(col, 0.6)
@@ -221,14 +246,19 @@ function zapato(L: Lote, cu: Cuerpo, lado: 1 | -1, z: Zapato) {
       const w = W(t)
       const yt = yArriba(t) + 0.0015 * s
       const ab = (0.32 - 0.08 * (i / h.cordones)) * w
-      const d = 0.0022 * s
+      const d = 0.002 * s
       const pw = pesos(t)
+      // Cordón en relieve: un prisma de 4 mm de ancho y 2 mm de alto (una lámina plana
+      // a 1,5 mm no se leía de cerca: el zapato parecía un mocasín sin cordones).
       const q: number[] = []
-      for (const [x, dt] of [[-ab, -1], [ab, -1], [ab, 1], [-ab, 1]] as const) {
-        aMundo(x, yt - 0.25 * Math.abs(x) * 0.4, t + (dt * d) / Ls, _p)
-        q.push(L.v(_p.x, _p.y, _p.z, 0, 0, cc, pw, [0.8, 0]))
+      for (const [x, dt, alto] of [[-ab, -1, 0], [ab, -1, 0], [ab, 1, 0], [-ab, 1, 0], [-ab, 0, 1], [ab, 0, 1]] as const) {
+        aMundo(x, yt - 0.25 * Math.abs(x) * 0.4 - 0.0012 * s + alto * 0.0026 * s, t + (dt * d) / Ls, _p)
+        q.push(L.v(_p.x, _p.y, _p.z, 0, 0, alto ? escalarRGBA(cc, 1.25) : cc, pw, [0.8, 0]))
       }
-      L.q(q[0], q[3], q[2], q[1])
+      L.q(q[0], q[4], q[5], q[1])
+      L.q(q[4], q[3], q[2], q[5])
+      L.t(q[0], q[3], q[4])
+      L.t(q[1], q[5], q[2])
     }
     L.pieza()
   }
@@ -256,7 +286,6 @@ function colorCorte(tipo: TipoZapato, t: number, f: number, col: RGBA, oscuro: R
     case "mocasin":
       // Costura en U del empeine (mocasín) y antifaz.
       if (t > 0.5 && t < 0.86 && Math.abs(Math.cos(f)) < 0.62 && Math.abs(Math.abs(Math.cos(f)) - 0.55) < 0.06) return oscuro
-      if (Math.abs(t - 0.45) < 0.02 && arriba > 0.4) return usaDet ? det : oscuro
       return col
     case "bota":
     case "botin":
@@ -276,8 +305,8 @@ const CALZADO: Record<string, Zapato> = {
   tate: { tipo: "charol", color: "#0a0a0b" },
   musk: { tipo: "bota", color: "#121212", suela: "#1a1817" },
   napoleon: { tipo: "bota", color: "#0e0e10", suela: "#1c1612" },
-  jobs: { tipo: "zapatilla", color: "#8e8e8b", suela: "#ededed", detalle: "#7f8186" },
-  altman: { tipo: "zapatilla", color: "#9a9ca0", suela: "#eeeeec", detalle: "#d8d8d6" },
+  jobs: { tipo: "zapatilla", color: "#76777a", suela: "#d9d7d1", detalle: "#7f8186" },
+  altman: { tipo: "zapatilla", color: "#84868a", suela: "#d9d7d1", detalle: "#d8d8d6" },
   pichai: { tipo: "zapatilla", color: "#e6e6e3", suela: "#f2f2f0", detalle: "#b9bcc2" },
   karp: { tipo: "zapatilla", color: "#2b2f36", suela: "#e2e2e0", detalle: "#c43c2c" },
   amodei: { tipo: "zapatilla", color: "#2c2e33", suela: "#d9d9d6", detalle: "#55585e" },

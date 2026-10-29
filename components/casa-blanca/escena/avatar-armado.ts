@@ -18,7 +18,7 @@ import { armarPelo } from "./avatar-pelo"
 import { Animador } from "./avatar-anim"
 import { hashTexto } from "./avatar-geo"
 import { conFicha, vestuarioDe } from "./avatar-fichas"
-import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra } from "./avatar-materiales"
+import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra, msaaPelo } from "./avatar-materiales"
 import { texBalon, texPunto, texSombra } from "./avatar-texturas"
 import { esAndroide, matCejasLuz, matRopaAndroide, prepararAndroide, sombraRopaAndroide } from "./avatar-androide"
 
@@ -128,7 +128,8 @@ export function crearAvatarReal(original: Personaje): Avatar {
     if (andro) mRopa.customDepthMaterial = sombraRopaAndroide(mRopa.material as THREE.Material)
     // El pelo no proyecta sombra: con alfa recortado, las hebras dejaban manchas
     // de "tierra" en la frente y en las mejillas (mapa de sombras a 2 mm).
-    piel(lPelo.geometria(), andro ? andro.matPestanas : matPelo(cu.rasgos.f.pelo.color, cu.rasgos.f.pelo.rizo >= 0.6), false)
+    const mPelo = piel(lPelo.geometria(), andro ? andro.matPestanas : matPelo(cu.rasgos.f.pelo.color, cu.rasgos.f.pelo.rizo >= 0.6), false)
+    if (!andro) mPelo.onBeforeRender = (renderer, _e, _c, _g, material) => msaaPelo(renderer, material)
     if (andro?.cejas) piel(andro.cejas.geometria(), matCejasLuz(), false)
     piel(lOjos.geometria(), matOjo(cu.rasgos.iris, cu.rasgos.f.esclera), false)
     // (el androide lleva solo la montura de alambre: el cristal, con el reflejo del cielo, le tapaba los ojos)

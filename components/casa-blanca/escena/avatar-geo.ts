@@ -364,6 +364,31 @@ export class Lote {
     return g
   }
 
+  /**
+   * Piso de albedo (lineal) para los colores de vértice: un negro puro no muestra
+   * pliegues ni volumen; una remera negra de algodón refleja ~3 %. `piso(tela)` da el
+   * mínimo según la tela (aArr.x) del vértice. Mantiene el tono.
+   */
+  pisoColor(piso: (tela: number) => number) {
+    const C = this.bCol.a
+    const E = this.bEx.a
+    for (let v = 0; v < this.nv; v++) {
+      const f = piso(this.usaEx ? Math.round(E[v * 4]) : 0)
+      const r = C[v * 4], g = C[v * 4 + 1], b = C[v * 4 + 2]
+      const m = Math.max(r, g, b)
+      if (m >= f) continue
+      if (m < 1e-4) {
+        C[v * 4] = C[v * 4 + 1] = C[v * 4 + 2] = f
+        continue
+      }
+      // Sube hacia el piso sin saturar: la mitad escala (tono) y la mitad suma gris.
+      const k = f / m
+      C[v * 4] = 0.5 * r * k + 0.5 * (r + f - m)
+      C[v * 4 + 1] = 0.5 * g * k + 0.5 * (g + f - m)
+      C[v * 4 + 2] = 0.5 * b * k + 0.5 * (b + f - m)
+    }
+  }
+
   get triangulos(): number {
     return this.bIdx.n / 3
   }

@@ -32,6 +32,8 @@ export const FORMA = {
   senala: [1.05, -0.12, 0.75],
   pinza: [0.85, 0.42, 0.75],
   torre: [-0.05, -0.05, 0.05],
+  // Yemas con yemas (la torre de Jobs): los dedos apenas curvos.
+  yemas: [0.12, 0.1, 0.05],
   agarra: [0.75, 0.7, 0.6],
 } as const satisfies Record<string, Forma>
 
@@ -72,7 +74,9 @@ export const REPOSO = {
   // Un poco separadas del cuerpo (Trump, Hormozi, Tate).
   abiertas: { p: [0.035, 0.045, 0.03], ref: "bind", polo: [0.6, -0.2, -1], forma: FORMA.relajada, prono: 0.1 },
   // Juntas al frente, bajo el ombligo (Altman, Pichai, Cleopatra).
-  juntas: { p: [0.035, -0.47, 0.06], polo: P_ABAJO, forma: FORMA.suave, prono: 0.95, flex: 0.25 },
+  // (muñecas a 4,5 cm, palmas más hacia arriba y dedos más recogidos: una mano se
+  // apoya en la otra; con 3,5 cm los dedos de una atravesaban la palma de la otra)
+  juntas: { p: [0.045, -0.46, 0.075], polo: P_ABAJO, forma: [0.45, 0.4, 0.2], prono: 1.15, flex: 0.25 },
   // Juntas más arriba, cerca del pecho (Thiel).
   juntasAltas: { p: [0.04, -0.36, 0.08], polo: P_ABAJO, forma: FORMA.suave, prono: 1.0, flex: 0.3 },
   // Dentro de las mangas, frente al vientre (Sun Tzu, el Iluminado).
@@ -81,14 +85,22 @@ export const REPOSO = {
   atras: { p: [0.05, -0.5, 0.05], ref: "espalda", polo: [0.9, -0.2, -0.6], forma: FORMA.suave, prono: -0.6, flex: 0.2 },
   // En el bolsillo del pantalón (Musk, Gadzhi, Tate): la mano entra en la tela.
   bolsillo: { p: [-0.035, -0.5, 0.055], ref: "lado", polo: [0.7, -0.3, -0.7], forma: FORMA.suave, prono: -0.2, flex: 0.1 },
+  // Bolsillo bajo una remera que lo tapa (Musk, Gadzhi): la mano entra por el costado
+  // del muslo, por debajo del ruedo. (Con el bolsillo de adelante los dedos asomaban
+  // bajo el ruedo, como si tuviera las manos dentro de la camiseta.)
+  bolsilloRemera: { p: [0.012, -0.58, 0.06], ref: "lado", polo: [0.7, -0.3, -0.7], forma: [0.3, 0.25, -0.3], prono: -0.2, flex: 0.15 },
   // Mano derecha dentro del chaleco (Napoleón, retrato de David).
-  chaleco: { p: [0.0, -0.34, -0.035], polo: [0.8, -1, 0], forma: FORMA.suave, prono: 0.0, flex: 0.5 },
+  // (más arriba y más adentro, la mano plana: los dedos quedan bajo el borde de la
+  // casaca y se ven el pulgar y el dorso; antes era un puño apoyado en la cintura)
+  chaleco: { p: [0.0, -0.28, -0.05], polo: [0.8, -1, 0], forma: FORMA.suave, prono: 0.0, flex: 0.25 },
   // Mano en la solapa del levitón (Lincoln).
   solapa: { p: [0.08, -0.14, 0.03], polo: P_ABAJO, forma: FORMA.agarra, prono: 1.0, flex: 0.6 },
   // Mano en la cadera, el codo afuera (Cleopatra).
   cadera: { p: [0.035, -0.4, 0.0], ref: "lado", polo: P_AFUERA, forma: FORMA.relajada, prono: -0.4, flex: -0.25 },
   // Dedos en "torre" frente al pecho (Jobs).
-  torre: { p: [0.062, -0.17, 0.12], polo: P_ABAJO, forma: FORMA.torre, prono: 0.1, flex: -0.1 },
+  // (palmas enfrentadas —prono 0,45— y muñecas a 8 cm del centro: las yemas se
+  // tocan; con 6 cm y la palma hacia el pecho los dedos se entrecruzaban)
+  torre: { p: [0.082, -0.16, 0.13], polo: P_ABAJO, forma: FORMA.yemas, prono: 0.45, flex: -0.3 },
   // Sostiene el cuaderno o la tablilla contra el antebrazo (Leonardo, Marco).
   cuaderno: { p: [0.1, -0.42, 0.14], polo: [0.4, -1, -0.3], forma: FORMA.agarra, prono: 0.5, flex: 0.1 },
   // Sostiene el borde del manto sobre el pecho (Sócrates).
@@ -141,8 +153,8 @@ export const GESTOS = {
   }),
   // Dedos en torre frente al pecho, golpecitos (Jobs).
   torre: G({
-    d: { p: [0.062, -0.15, 0.13], b: [0.0, 0.012, 0.012], polo: P_ABAJO, forma: FORMA.torre, prono: 0.1, flex: -0.1 },
-    i: { p: [0.062, -0.15, 0.13], b: [0.0, 0.012, 0.012], polo: P_ABAJO, forma: FORMA.torre, prono: 0.1, flex: -0.1 },
+    d: { p: [0.082, -0.15, 0.13], b: [0.0, 0.012, 0.012], polo: P_ABAJO, forma: FORMA.yemas, prono: 0.45, flex: -0.3 },
+    i: { p: [0.082, -0.15, 0.13], b: [0.0, 0.012, 0.012], polo: P_ABAJO, forma: FORMA.yemas, prono: 0.45, flex: -0.3 },
     asiente: 0.025,
   }),
   // "One more thing": la mano abierta arriba, presentando (Jobs).
@@ -258,7 +270,7 @@ const P = (p: Partial<Perfil>): Perfil => ({ ...BASE, ...p })
 /** Perfiles por id de personaje (sacados de postura_gestos de cada ficha). */
 export const PERFILES: Record<string, Perfil> = {
   trump: P({ apoyo: 0.05, puntas: 0.2, pechoAfuera: 0.05, menton: -0.07, hombrosAtras: 0.04, energia: 1.1, cadencia: 0.88, braceo: 0.7, brazosAfuera: 0.08, cadera: 1.5, reposoI: "abiertas", reposoD: "abiertas", gestos: ["pinza", "acordeon", "senala", "pinza", "palmas"] }),
-  musk: P({ apoyo: 0.0, puntas: 0.1, encorvar: 0.05, cabezaAdelante: 0.05, menton: 0.03, hombrosAtras: -0.05, hombrosCaida: 0.02, vaiven: 1.4, energia: 0.9, reposoI: "bolsillo", reposoD: "bolsillo", gestos: ["chico", "palma", "abiertas"] }),
+  musk: P({ apoyo: 0.0, puntas: 0.1, encorvar: 0.05, cabezaAdelante: 0.05, menton: 0.03, hombrosAtras: -0.05, hombrosCaida: 0.02, vaiven: 1.4, energia: 0.9, reposoI: "bolsilloRemera", reposoD: "bolsilloRemera", gestos: ["chico", "palma", "abiertas"] }),
   altman: P({ apoyo: -0.01, puntas: 0.08, encorvar: 0.02, cabezaAdelante: 0.02, ladeo: 0.05, vaiven: 0.6, energia: 0.7, cadencia: 1.12, braceo: 0.8, reposoI: "juntas", reposoD: "juntas", gestos: ["chico", "palma", "enmarca"] }),
   thiel: P({ apoyo: -0.01, puntas: 0.06, rodilla: 0.002, pechoAfuera: 0.01, menton: 0.03, vaiven: 0.45, energia: 0.6, braceo: 0.7, reposoI: "juntasAltas", reposoD: "juntasAltas", gestos: ["chico", "chico", "palma"] }),
   karp: P({ apoyo: 0.02, puntas: 0.14, encorvar: 0.04, cabezaAdelante: 0.03, vaiven: 1.8, energia: 1.5, cadencia: 1.15, braceo: 1.2, gestos: ["abiertas", "palmas", "senala", "abiertas"], rebote: 1 }),
@@ -266,7 +278,7 @@ export const PERFILES: Record<string, Perfil> = {
   amodei: P({ apoyo: 0.01, puntas: 0.1, encorvar: 0.04, cabezaAdelante: 0.03, vaiven: 1.4, energia: 1.25, gestos: ["enmarca", "cuenta", "palmas", "enmarca", "palma"] }),
   hormozi: P({ apoyo: 0.055, puntas: 0.16, pechoAfuera: 0.03, hombrosAtras: 0.05, encorvar: 0.02, energia: 1.15, braceo: 0.85, brazosAfuera: 0.1, reposoI: "abiertas", reposoD: "abiertas", gestos: ["corta", "cuenta", "corta2", "senala"] }),
   tate: P({ apoyo: 0.045, puntas: 0.15, pechoAfuera: 0.07, menton: -0.08, hombrosAtras: 0.07, energia: 0.95, cadencia: 0.9, braceo: 0.7, brazosAfuera: 0.12, reposoI: "abiertas", reposoD: "bolsillo", gestos: ["senala", "palma", "senala"] }),
-  gadzhi: P({ apoyo: 0.0, puntas: 0.08, pechoAfuera: 0.02, menton: -0.02, vaiven: 0.6, energia: 0.75, reposoI: "sueltas", reposoD: "bolsillo", caminaD: "bolsillo", gestos: ["palma", "chico", "palmas"] }),
+  gadzhi: P({ apoyo: 0.0, puntas: 0.08, pechoAfuera: 0.02, menton: -0.02, vaiven: 0.6, energia: 0.75, reposoI: "sueltas", reposoD: "bolsilloRemera", caminaD: "bolsilloRemera", gestos: ["palma", "chico", "palmas"] }),
   jobs: P({ apoyo: 0.01, puntas: 0.12, encorvar: 0.03, cabezaAdelante: 0.05, energia: 0.9, reposoI: "torre", reposoD: "torre", gestos: ["presenta", "torre", "palma", "presenta"], escucha: "menton" }),
   kobe: P({ apoyo: 0.04, puntas: 0.1, rodilla: 0.012, cabezaAdelante: 0.03, menton: 0.02, vaiven: 1.2, energia: 1.1, gestos: ["senala", "palma", "corta"] }),
   lincoln: P({ apoyo: 0.0, puntas: 0.1, encorvar: 0.07, cabezaAdelante: 0.06, menton: 0.05, ladeo: 0.07, hombrosAtras: -0.05, hombrosCaida: 0.03, vaiven: 0.7, energia: 0.7, cadencia: 0.8, braceo: 0.8, reposoI: "solapa", reposoD: "sueltas", gestos: ["palma", "menton", "palma"], escucha: "menton" }),
