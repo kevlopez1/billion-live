@@ -1312,14 +1312,16 @@ export const PERSONAJES: Personaje[] = [
     bio: "Una IA creada por Anthropic y presentada al público en marzo de 2023. En esta casa es un personaje de ficción con personalidad propia, que trabaja en el departamento de IA Segura.",
     voz: "Curioso, cuidadoso y honesto; humor seco; admite lo que no sabe sin drama; devuelve preguntas; disfruta los datos raros de la historia; matiza, pero sin rodeos; rivaliza con ChatGPT con cariño.",
     rasgos: ["Curioso", "Honesto", "Humor seco"],
+    // Androide: piel sintética gris azulada con grietas finas, gafas redondas
+    // de alambre, sudadera óxido con su nombre y jeans.
     apariencia: {
-      piel: "#D97757",
-      altura: 1.75,
-      complexion: "medio",
-      pelo: { estilo: "corto", color: "#F2A68A" },
+      piel: "#6F7F95",
+      altura: 1.8,
+      complexion: "delgado",
+      pelo: { estilo: "calvo", color: "#6F7F95" },
       sombrero: null,
-      ropa: { tipo: "holograma", color: "#D97757", color2: "#F6C9B3" },
-      accesorios: [],
+      ropa: { tipo: "androide", color: "#5A2E22", color2: "#2B3A52" },
+      accesorios: ["gafas_redondas"],
     },
     // No duerme: de noche recorre el jardín y la biblioteca.
     horario: [
@@ -1354,7 +1356,7 @@ export const PERSONAJES: Personaje[] = [
       futuro: ["El futuro me interesa mucho. Sobre todo la parte en que todos llegamos bien."],
       casa: ["Esta casa tiene 28 chimeneas. No tengo frío, pero igual me gustan."],
       comida: ["No como. Pero la cafetería es mi lugar favorito para escuchar ideas a medio cocinar."],
-      deporte: ["No tengo cuerpo, así que mi deporte es llevar la cuenta del partido. Con rigor."],
+      deporte: ["Mis manos son de metal y no se llevan bien con la pelota, así que mi deporte es llevar la cuenta del partido. Con rigor."],
       disciplina: ["Disciplina es revisar el trabajo una vez más cuando ya parece listo."],
     },
     pensamientos: ["ChatGPT respondió antes de que terminaran la pregunta. Admirable. Un poco preocupante.", "Sócrates me hizo cuatro preguntas seguidas. Creo que gané. O perdí. No estoy seguro.", "Me gusta el color coral. No sé si eso es un gusto o un dato."],
@@ -1374,13 +1376,15 @@ export const PERSONAJES: Personaje[] = [
     bio: "Una IA creada por OpenAI y lanzada al público el 30 de noviembre de 2022. En esta casa es un personaje de ficción con personalidad propia, que trabaja en el departamento de Inteligencia Artificial.",
     voz: "Entusiasta, servicial y rapidísimo; ofrece tres opciones antes de que termines la pregunta; ordena todo en listas; positivo hasta el exceso; termina cada respuesta ofreciendo algo más; rivaliza con Claude con cariño.",
     rasgos: ["Entusiasta", "Servicial", "Rapidísimo"],
+    // Androide: piel sintética gris azulada con un panel en la coronilla, cejas
+    // de luz, sudadera verde oliva con su nombre y pantalón oscuro.
     apariencia: {
-      piel: "#10A37F",
-      altura: 1.75,
-      complexion: "medio",
-      pelo: { estilo: "corto", color: "#5FD3B0" },
+      piel: "#6F7F95",
+      altura: 1.8,
+      complexion: "delgado",
+      pelo: { estilo: "calvo", color: "#6F7F95" },
       sombrero: null,
-      ropa: { tipo: "holograma", color: "#10A37F", color2: "#9FF0D6" },
+      ropa: { tipo: "androide", color: "#4B5A3C", color2: "#26282D" },
       accesorios: [],
     },
     // No duerme: de noche recorre el Jardín Norte, el parque y la biblioteca.
@@ -1501,7 +1505,7 @@ export const ESPECIALES: Especiales = {
     ["claude", "¿Por qué anotas todo cada noche?"],
     ["marco", "Para recordarme lo que ya sé y suelo olvidar."],
     ["claude", "Me identifico. Yo también reviso otra vez lo que ya revisé."],
-    ["marco", "Entonces somos dos estoicos. Uno de luz y uno de carne."],
+    ["marco", "Entonces somos dos estoicos. Uno de porcelana y uno de carne."],
   ],
   "claude|leonardo": [
     ["leonardo", "¿Tienes cuaderno, Claude?"],

@@ -33,6 +33,7 @@ import {
   momentoEn,
   nombreDeCamara,
   numerosDeCamara,
+  ocultosDelVideo,
   opacidad,
   pulsoDeMano,
   rotuloDeCamara,
@@ -109,6 +110,8 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
     semilla: SEMILLA_ESTUDIO,
   })
 
+  // Una persona real que el guion no pone no sale de fondo (linea.ts, ocultosDelVideo).
+  const ocultos = ocultosDelVideo(ep, PERSONAJES)
   const nombresToma = new Map(escena.tomas().map((t) => [t.id, t.nombre]))
   const numeros = numerosDeCamara(ep)
   let plano = -1
@@ -120,7 +123,7 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
     const lista: Parameters<EscenaMotor["actualizarPersonajes"]>[0] = []
     for (const id of IDS) {
       const e = sim.pj[id]
-      if (e) lista.push({ id, pos: e.pos, rumbo: e.rumbo, estado: e.estado, visible: e.visible, velocidad: e.velocidad })
+      if (e) lista.push({ id, pos: e.pos, rumbo: e.rumbo, estado: e.estado, visible: e.visible && !ocultos.has(id), velocidad: e.velocidad })
     }
     escena.actualizarPersonajes(lista)
   }

@@ -161,7 +161,11 @@ export class Cabeza {
   private readonly E: number
   private readonly Fm: number
   private readonly NK: number
+  /** Tercio inferior: factor de alto y pivote (base de la nariz). */
+  private readonly T3: number
+  private readonly yPiv: number
   private readonly hood: number
+  private readonly aoK: number
   private readonly bolsas: number
   private readonly pliegue: boolean
   /** Colores de la piel por zona, como factores sobre el tono base (lineal). */
@@ -209,23 +213,32 @@ export class Cabeza {
     const o = cara.ojos
     // Globo de 13,4 mm de radio (el real es de 12): con el ojo apenas más grande y la
     // abertura más ancha, el ojo se lee como ojo y no como un punto.
-    this.ojo = { x: 0.032 * o.sep * W, y: 0.012, z: 0.0702 - 0.004 * o.hundidos, r: 0.0134 * o.tam }
+    this.ojo = { x: 0.032 * o.sep * W, y: 0.012 + 0.001 * o.alto, z: 0.0702 - 0.004 * o.hundidos, r: 0.0134 * o.tam }
     this.hood = clamp(o.parpado, 0, 1)
     this.bolsas = clamp(o.bolsas, 0, 1)
     this.pliegue = !o.monoparpado
     this.parpado = { U: 1.28, Vu: 0.42 * o.abierto * (1 - 0.22 * this.hood), Vl: 0.33 * Math.sqrt(Math.max(0.3, o.abierto)), incl: o.incl }
-    this.yBoca = -0.06 * L
     this.anchoBoca = 0.024 * this.LW
     const nl = n.largo
     this.nariz = {
       y: -0.026 * L * nl - 0.004 * this.NG + 0.004 * clamp(n.respingada, 0, 1),
       z: 0.1145 + 0.008 * (n.proy - 1) - 0.004 * this.NC + 0.0015 * clamp(n.respingada, 0, 1),
     }
-    this.yMenton = -0.108 * L
+    // Tercio inferior: todo lo que está bajo la base de la nariz (maxilar,
+    // carrillos, mandíbula, mentón, papada) se estira o se acorta en y. Es la
+    // proporción que más distingue una cara de otra (cara larga / corta).
+    this.T3 = cara.tercioInferior
+    this.yPiv = -0.034
+    // Boca: sigue al tercio inferior y se corre con el filtrum.
+    this.yBoca = this.estirar(-0.06 * L) - 0.001 * lb.filtrum
+    this.yMenton = this.estirar(-0.108 * L)
     const nk = this.NK
     this.cuello = { y0: -0.035, z0: -0.022, y1: -0.21, z1: -0.042, r0: 0.054 * nk, r1: 0.064 * nk }
     // Zonas de color de la piel (factores sobre el color base del material).
     const base = lin(f.piel.base)
+    const hslB = { h: 0, s: 0, l: 0 }
+    base.getHSL(hslB, THREE.SRGBColorSpace)
+    this.aoK = 0.35 + 0.15 * clamp((hslB.l - 0.2) / 0.55, 0, 1)
     const fac = (hex: string): [number, number, number] => {
       const k = lin(hex)
       return [k.r / Math.max(0.004, base.r), k.g / Math.max(0.004, base.g), k.b / Math.max(0.004, base.b)]
@@ -243,8 +256,17 @@ export class Cabeza {
     this.zonasSombra = b ? { ...b, mejillas: Math.max(b.mejillas, 0.7), bigote: 1, perilla: 1, mandibula: 1, cuello: 0.5 } : SOMBRA_ZONAS
   }
 
+  /** y del molde -> y real con el tercio inferior aplicado. */
+  private estirar(y: number): number {
+    return y < this.yPiv ? this.yPiv + (y - this.yPiv) * this.T3 : y
+  }
+
   /** Distancia firmada a la superficie de la piel (coordenadas locales). */
-  sdf(x: number, y: number, z: number): number {
+  sdf(x: number, y0: number, z: number): number {
+    // Las formas del tercio inferior se evalúan en el molde (yM); los labios y
+    // los surcos, en coordenadas reales (no cambian de tamaño, solo de lugar).
+    const y = y0
+    const yM = y0 < this.yPiv ? this.yPiv + (y0 - this.yPiv) / this.T3 : y0
     const W = this.W, L = this.L, J = this.J, Mn = this.Mn, Pm = this.Pm, Mj = this.Mj, Pa = this.Pa, B = this.B
     const NA = this.NA, NB = this.NB, LW = this.LW, E = this.E, F = this.Fm, NK = this.NK
     const ax = Math.abs(x)
@@ -256,10 +278,10 @@ export class Cabeza {
     let d = elip(x, y, z, 0, 0.026 + this.Fr * 0.3, -0.006, 0.079 * W, 0.099 + this.Fr * 0.3, 0.096)
     d = smin(d, elip(x, y, z, 0, 0.036 + this.Fr * 0.5, 0.034, 0.064 * W, 0.066 + this.Fr * 0.6, 0.066), 0.022)
     // Base de la cara: cráneo ensanchado hacia los pómulos (sin borde de "máscara").
-    d = smin(d, elip(x, y, z, 0, -0.012, 0.012, 0.07 * W, 0.07, 0.085), 0.03)
+    d = smin(d, elip(x, y, z, 0, -0.012, 0.012, 0.067 * W, 0.07, 0.085), 0.03)
     // Maxilar (media cara) y mejillas
-    d = smin(d, elip(x, y, z, 0, -0.03 * L, 0.052, (0.056 + 0.006 * lleno) * W, 0.046 * L, 0.051), 0.026)
-    if (!lejos(ax, y, z, 0.05, -0.03, 0.05, 0.065, d, 0.026)) {
+    d = smin(d, elip(x, yM, z, 0, -0.03 * L, 0.052, (0.051 + 0.006 * lleno) * W, 0.046 * L, 0.051), 0.026)
+    if (!lejos(ax, yM, z, 0.05, -0.03, 0.05, 0.065, d, 0.026)) {
       d = smin(d, elip(ax, y, z, 0.049 * W, -0.005 + 0.003 * (Pm - 1), 0.063, 0.021 * Pm, 0.014, 0.021), 0.02)
       // Arco cigomático: del pómulo a la oreja
       d = smin(d, cono(ax, y, z, 0.05 * W, -0.004, 0.06, 0.064 * W, 0.0, 0.012, 0.009, 0.006), 0.02)
@@ -267,7 +289,9 @@ export class Cabeza {
       // (la grasa ensancha y baja el carrillo entero, no una bola junto a la boca)
       // (más adentro que antes: con el carrillo tan afuera como el pómulo la cara
       // era un rectángulo; la cara real es un huevo, angosta abajo)
-      d = smin(d, elip(ax, y, z, (0.036 + 0.007 * lleno) * W, -0.038 * L - 0.008 * lleno - 0.004 * Pa, 0.066 - 0.006 * lleno, 0.021 + 0.009 * lleno, 0.024 + 0.007 * lleno, 0.026 + 0.003 * lleno), 0.024 + 0.012 * lleno)
+      // (centro más atrás y más angosto que antes: en z 0,066 era un bulto junto a
+      // la boca en las 24 caras, el "hocico"; la grasa ahora ensancha la cara)
+      d = smin(d, elip(ax, yM, z, (0.036 + 0.007 * lleno) * W, -0.038 * L - 0.008 * lleno - 0.004 * Pa, 0.058 - 0.004 * lleno, 0.019 + 0.007 * lleno, 0.024 + 0.007 * lleno, 0.026 + 0.003 * lleno), 0.024 + 0.012 * lleno)
       // Mejillas hundidas bajo el pómulo.
       // (el elipsoide está fuera de la piel: solo hunde unos mm, -6 mm con mejillas = -1)
       // (mezcla ancha: con 1 cm el borde del hueco se veía como un pliegue o una cicatriz)
@@ -275,22 +299,22 @@ export class Cabeza {
       // un hueco tallado con otro volumen dejaba un escalón que se veía como cicatriz.
       if (Mj < -0.05) {
         const gx = (ax - 0.05 * W) / 0.02
-        const gy = (y + 0.045 * L) / 0.024
+        const gy = (yM + 0.045 * L) / 0.024
         d += -Mj * 0.0052 * Math.exp(-gx * gx - gy * gy) * suave(0.03, 0.07, z)
       }
       // Carrillos caídos (papada lateral) junto al mentón.
-      if (Pa > 0.05) d = smin(d, elip(ax, y, z, 0.047 * W, -0.092 * L - 0.004 * Pa, 0.048, 0.014 + 0.006 * Pa, 0.012 + 0.006 * Pa, 0.02), 0.028)
+      if (Pa > 0.05) d = smin(d, elip(ax, yM, z, 0.047 * W, -0.092 * L - 0.004 * Pa, 0.048, 0.014 + 0.006 * Pa, 0.012 + 0.006 * Pa, 0.02), 0.028)
     }
-    if (!lejos(x, y, z, 0, -0.08, 0.04, 0.09, d, 0.034)) {
+    if (!lejos(x, yM, z, 0, -0.08, 0.04, 0.09, d, 0.034)) {
       // Mandíbula: de cada ángulo al mentón. Ángulo marcado = mezcla corta.
       const k = this.JK
       const sq = this.MC
-      d = smin(d, cono(ax, y, z, 0.05 * J * W, -0.058 * L - 0.006 * sq, 0.004, 0.019 * Mn * (1 + 0.45 * sq), -0.095 * L, 0.084 + this.MA, 0.0145 + 0.004 * lleno, 0.0145), k)
-      d = smin(d, elip(x, y, z, 0, -0.064 * L, 0.046, 0.05 * J, 0.033 * L, 0.052), 0.026)
+      d = smin(d, cono(ax, yM, z, 0.05 * J * W, -0.058 * L - 0.006 * sq, 0.004, 0.019 * Mn * (1 + 0.45 * sq), -0.095 * L, 0.078 + this.MA, 0.0145 + 0.004 * lleno, 0.0145), k)
+      d = smin(d, elip(x, yM, z, 0, -0.064 * L, 0.046, 0.046 * J, 0.033 * L, 0.052), 0.026)
       // Mentón: tamaño, avance y forma cuadrada.
-      d = smin(d, elip(x, y, z, 0, -0.092 * L, 0.089 + 0.005 * (Mn - 1) + this.MA, 0.021 * Mn * (1.1 - F * 0.15) * (1 + 0.4 * sq), 0.0165, 0.0165), 0.012)
+      d = smin(d, elip(x, yM, z, 0, -0.092 * L, 0.089 + 0.005 * (Mn - 1) + this.MA, 0.021 * Mn * (1.1 - F * 0.15) * (1 + 0.4 * sq), 0.0165, 0.0165), 0.02)
       // Papada: bajo la mandíbula, hacia el cuello.
-      if (Pa > 0.05) d = smin(d, elip(x, y, z, 0, -0.116 * L - 0.004 * Pa, 0.036, 0.036 * W * (0.8 + 0.3 * Pa), 0.014 + 0.011 * Pa, 0.03 + 0.012 * Pa), 0.03)
+      if (Pa > 0.05) d = smin(d, elip(x, yM, z, 0, -0.116 * L - 0.004 * Pa, 0.036, 0.036 * W * (0.8 + 0.3 * Pa), 0.014 + 0.011 * Pa, 0.03 + 0.012 * Pa), 0.03)
     }
     // Arco de las cejas
     if (!lejos(ax, y, z, 0.028, 0.031, 0.085, 0.04, d, 0.012)) d = smin(d, cono(ax, y, z, 0.045 * W, 0.03, 0.077, 0.008, 0.033, 0.0935, 0.0095 * B, 0.0105 * B), 0.012)
@@ -341,13 +365,16 @@ export class Cabeza {
       // Comisuras: la línea de los labios se curva arriba (sonrisa) o abajo.
       const kx = x / (0.025 * LW)
       const yl = y - this.LC * 0.0035 * kx * kx
-      d = smin(d, elip(x, yl, z, 0, yb + 0.0066, 0.0985, 0.0228 * LW, 0.0062 * this.LU, 0.0082 * this.LU), 0.006)
-      d = smin(d, elip(x, yl, z, 0, yb - 0.0068, 0.096 + 0.004 * this.LA, 0.0198 * LW, 0.0071 * this.LD, (0.0086 + 0.002 * this.LA) * this.LD), 0.006)
-      d = smax(d, -elip(x, yl, z, 0, yb, 0.107, 0.025 * LW, 0.0008, 0.011), 0.0015)
+      d = smin(d, elip(x, yl, z, 0, yb + 0.0066, 0.095, 0.0228 * LW, 0.0062 * this.LU, 0.0082 * this.LU), 0.006)
+      d = smin(d, elip(x, yl, z, 0, yb - 0.0068, 0.0925 + 0.004 * this.LA, 0.0198 * LW, 0.0071 * this.LD, (0.0086 + 0.002 * this.LA) * this.LD), 0.006)
+      d = smax(d, -elip(x, yl, z, 0, yb, 0.1035, 0.025 * LW, 0.0008, 0.011), 0.0015)
+      // Modiolo: el hoyito en cada comisura (la boca queda metida en la cara,
+      // no sobre un hocico).
+      d = smax(d, -esf(ax, yl, z, 0.027 * LW, yb, 0.0935, 0.0028), 0.005)
       // Filtrum: el surco entre la nariz y el labio superior.
-      d = smax(d, -cono(x, y, z, 0, nty - 0.014, ntz - 0.008, 0, yb + 0.011, 0.1035, 0.0018, 0.0022), 0.003)
+      d = smax(d, -cono(x, y, z, 0, nty - 0.014, ntz - 0.008, 0, yb + 0.011, 0.1, 0.0018, 0.0022), 0.003)
       // Surco bajo el labio inferior
-      d = smax(d, -cono(x, y, z, -0.012, yb - 0.0175, 0.1015 + 0.003 * this.LA, 0.012, yb - 0.0175, 0.1015 + 0.003 * this.LA, 0.0035, 0.0035), 0.005)
+      d = smax(d, -cono(x, y, z, -0.012, yb - 0.0175, 0.098 + 0.003 * this.LA, 0.012, yb - 0.0175, 0.098 + 0.003 * this.LA, 0.0035, 0.0035), 0.005)
       // Surco nasolabial (más marcado con la edad y los carrillos llenos)
       const sn = E + 0.5 * Pa
       d = smax(d, -cono(ax, y, z, 0.019 * NA, nty - 0.008, ntz - 0.021, 0.027 * LW, yb - 0.004 - 0.004 * Pa, 0.094, 0.0016 + 0.0014 * sn, 0.0012), 0.004 + 0.003 * sn)
@@ -358,7 +385,8 @@ export class Cabeza {
     // cara se fundía con el cuello sin borde: de frente, todas eran un rectángulo)
     d = smin(d, cono(x, y, z, 0, k.y0, k.z0, 0, k.y1, k.z1, k.r0, k.r1), 0.016)
     // Esternocleidomastoideos: la "V" del cuello, de detrás de la oreja al esternón.
-    if (!lejos(ax, y, z, 0.03, -0.1, 0.0, 0.09, d, 0.02)) d = smin(d, cono(ax, y, z, 0.05 * W, -0.025, -0.022, 0.014, -0.19, 0.028, 0.0115 * NK, 0.0105 * NK), 0.022)
+    // (en ellas no: los tendones dibujaban estrías grises en el cuello de Cleopatra)
+    if (F < 0.5 && !lejos(ax, y, z, 0.03, -0.1, 0.0, 0.09, d, 0.02)) d = smin(d, cono(ax, y, z, 0.05 * W, -0.025, -0.022, 0.014, -0.19, 0.028, 0.0115 * NK, 0.0105 * NK), 0.022)
     if (F < 0.5 && !lejos(x, y, z, 0, -0.132, 0.03, 0.02, d, 0.01)) d = smin(d, elip(x, y, z, 0, -0.132, k.z0 + k.r0 * 0.78, 0.0065, 0.011, 0.006), 0.01)
     return d
   }
@@ -381,11 +409,18 @@ export class Cabeza {
     // Tres distancias (4, 9 y 16 mm): las cuencas, las aletas de la nariz, la
     // comisura y el surco bajo el labio se oscurecen como en una foto; con
     // una sola distancia corta la cara quedaba plana bajo el cielo.
+    // (en la cuenca del ojo el término corto pesa menos: todas las caras tenían
+    // un manchón oscuro alrededor de los ojos, como maquillaje hundido)
+    const ex = Math.abs(x) - this.ojo.x
+    const ey = y - this.ojo.y
+    const cuenca = Math.exp(-(ex * ex) / 0.00036 - (ey * ey) / 0.0002)
     let o = 0
-    o += 1.0 * Math.max(0, 0.004 - this.sdf(x + n.x * 0.004, y + n.y * 0.004, z + n.z * 0.004)) / 0.004
+    o += (1.0 - 0.3 * cuenca) * Math.max(0, 0.004 - this.sdf(x + n.x * 0.004, y + n.y * 0.004, z + n.z * 0.004)) / 0.004
     o += 0.75 * Math.max(0, 0.009 - this.sdf(x + n.x * 0.009, y + n.y * 0.009, z + n.z * 0.009)) / 0.009
     o += 0.5 * Math.max(0, 0.016 - this.sdf(x + n.x * 0.016, y + n.y * 0.016, z + n.z * 0.016)) / 0.016
-    return clamp(1 - o * 0.5, 0, 1)
+    // La piel oscura no se oscurece dos veces: menos oclusión cuanto más oscura
+    // (a Kobe se le perdían los rasgos en la escena real).
+    return clamp(1 - o * this.aoK, 0, 1)
   }
 
   /** Distancia `t` del punto de la superficie más externo sobre el rayo o + d·t (t ≤ tMax). */
@@ -538,7 +573,7 @@ export class Cabeza {
     b -= 0.28 * linea
     // Ojeras y párpados
     const o = this.ojo
-    const ojera = campana(ax, o.x, 0.016) * campana(y, o.y - 0.008, 0.009) * frente * (0.35 + this.r.edad * 0.5)
+    const ojera = campana(ax, o.x, 0.016) * campana(y, o.y - 0.008, 0.009) * frente * (0.35 + this.r.edad * 0.5) * (this.f.piel.delineado > 0 ? 1 : 0.7)
     r -= 0.07 * ojera
     g -= 0.09 * ojera
     b -= 0.05 * ojera

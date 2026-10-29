@@ -41,6 +41,29 @@ const _q = new THREE.Vector3()
 const _e = new THREE.Euler()
 const _m4 = new THREE.Matrix4()
 
+// Índices (×3) de los huesos de cada lado, calculados una vez: armar
+// `dedos${L}` en cada cuadro creaba cadenas nuevas (basura para el GC).
+function indicesLado(L: "I" | "D") {
+  const i = (h: NombreHueso) => H[h] * 3
+  return {
+    dedos: i(`dedos${L}`), dedos2: i(`dedos2${L}`), pulgar: i(`pulgar${L}`), mano: i(`mano${L}`),
+    hombro: i(`hombro${L}`), codo: i(`codo${L}`),
+    muslo: i(`muslo${L}`), rodilla: i(`rodilla${L}`), tobillo: i(`tobillo${L}`), punta: i(`punta${L}`),
+  }
+}
+const LADO_I = indicesLado("I")
+const LADO_D = indicesLado("D")
+const lado$ = (lado: number) => (lado > 0 ? LADO_I : LADO_D)
+const LADOS = [1, -1] as const
+const esLoco = (e: EstadoCuerpo) => e === "camina" || e === "corre"
+
+interface Pie {
+  y: number
+  z: number
+  pitch: number
+  punta: number
+}
+
 /** Ruido suave determinista (suma de senos). */
 function ruido(t: number, s: number): number {
   return 0.5 * Math.sin(t * 1.13 + s) + 0.3 * Math.sin(t * 2.37 + s * 1.7) + 0.2 * Math.sin(t * 4.11 + s * 2.9)
@@ -108,13 +131,30 @@ export class Animador {
     P[i + 2] += z
   }
 
+  /** Como r, con el índice (×3) ya calculado. */
+  private ri(P: Pose, i: number, x: number, y = 0, z = 0) {
+    P[i] += x
+    P[i + 1] += y
+    P[i + 2] += z
+  }
+
+  /** Pies preasignados para el IK (sin objetos nuevos por cuadro). */
+  private readonly pies: [Pie, Pie] = [{ y: 0, z: 0, pitch: 0, punta: 0 }, { y: 0, z: 0, pitch: 0, punta: 0 }]
+  private pie(k: 0 | 1, y: number, z: number, pitch: number, punta = 0) {
+    const p = this.pies[k]
+    p.y = y
+    p.z = z
+    p.pitch = pitch
+    p.punta = punta
+  }
+
   /** Mano: curvatura de dedos (0 abierta, 1 puño) y giro de la muñeca. */
   private mano(P: Pose, lado: 1 | -1, curva: number, prono = 0, flex = 0) {
-    const L = lado > 0 ? "I" : "D"
-    this.r(P, `dedos${L}`, 0, 0, -lado * curva * 1.1)
-    this.r(P, `dedos2${L}`, 0, 0, -lado * curva * 1.25)
-    this.r(P, `pulgar${L}`, 0.15 * curva, 0, -lado * 0.25 * curva)
-    this.r(P, `mano${L}`, flex, -lado * prono, 0)
+    const I = lado$(lado)
+    this.ri(P, I.dedos, 0, 0, -lado * curva * 1.1)
+    this.ri(P, I.dedos2, 0, 0, -lado * curva * 1.25)
+    this.ri(P, I.pulgar, 0.15 * curva, 0, -lado * 0.25 * curva)
+    this.ri(P, I.mano, flex, -lado * prono, 0)
   }
 
   /**
@@ -122,7 +162,7 @@ export class Animador {
    * tobillos en `pies` (y, z en el espacio del personaje), calcula muslo,
    * rodilla y tobillo; `pitch` = punta hacia abajo (+).
    */
-  private ik(P: Pose, pies: Array<{ y: number; z: number; x?: number; pitch: number; punta?: number }>) {
+  private ik(P: Pose, pies: readonly Pie[]) {
     const cad = this.cu.j.cadera
     const oy = P[RAIZ + 1]
     const oz = P[RAIZ + 2]
@@ -137,7 +177,7 @@ export class Animador {
       const hz = cad.z + oz + _q.z
       const dy = hy - pie.y
       const dz = pie.z - hz
-      let d = Math.hypot(dy, dz)
+      let d = Math.sqrt(dy * dy + dz * dz)
       const max = (pg.L1 + pg.L2) * 0.9995
       if (d > max) d = max
       const cosK = clamp((pg.L1 * pg.L1 + pg.L2 * pg.L2 - d * d) / (2 * pg.L1 * pg.L2), -1, 1)
@@ -148,14 +188,14 @@ export class Animador {
       const r1 = -(th1 - pg.f1)
       const r2 = kappa + (pg.f2 - pg.f1)
       const r3 = pie.pitch - r1 - r2
-      const L = pg.lado > 0 ? "I" : "D"
-      const im = H[`muslo${L}`] * 3
+      const I = lado$(pg.lado)
+      const im = I.muslo
       P[im] = r1
       // El muslo compensa el giro de la cadera: la rodilla dobla hacia adelante.
       P[im + 1] = -P[ic + 1]
-      P[H[`rodilla${L}`] * 3] = r2
-      P[H[`tobillo${L}`] * 3] = r3
-      P[H[`punta${L}`] * 3] = pie.punta ?? 0
+      P[I.rodilla] = r2
+      P[I.tobillo] = r3
+      P[I.punta] = pie.punta
     }
   }
 
@@ -193,10 +233,9 @@ export class Animador {
     this.mirar(P)
     const pi = this.piernas[0]
     const pd = this.piernas[1]
-    this.ik(P, [
-      { y: pi.tob.y, z: pi.tob.z, pitch: 0 },
-      { y: pd.tob.y, z: pd.tob.z, pitch: 0 },
-    ])
+    this.pie(0, pi.tob.y, pi.tob.z, 0)
+    this.pie(1, pd.tob.y, pd.tob.z, 0)
+    this.ik(P, this.pies)
   }
 
   private mirar(P: Pose) {
@@ -215,8 +254,7 @@ export class Animador {
     const p = this.fase
     const paso = vel / pasosSeg
     const duty = lerp(0.6, 0.36, kR)
-    const pies: Array<{ y: number; z: number; pitch: number; punta: number }> = []
-    for (let k = 0; k < 2; k++) {
+    for (let k = 0 as 0 | 1; k < 2; k++) {
       const pg = this.piernas[k]
       const q = (p + k * 0.5) % 1
       let z: number
@@ -247,7 +285,7 @@ export class Animador {
         pitch = lerp(lerp(0.5, 0.25, kR), lerp(-0.2, 0.05, kR), suave(0, 0.85, u))
         punta = -0.2 * (1 - u)
       }
-      pies.push({ y, z: pg.tob.z + z, pitch, punta })
+      this.pie(k as 0 | 1, y, pg.tob.z + z, pitch, punta)
     }
     // Cadera: baja un poco, rebota, va hacia el pie de apoyo y gira.
     const c = Math.cos(2 * Math.PI * (p - duty / 2))
@@ -272,7 +310,7 @@ export class Animador {
     this.r(P, "codoD", lerp(-0.2 - 0.32 * Math.max(0, -bD), -1.5 - 0.18 * Math.cos(2 * Math.PI * p), kR))
     this.mano(P, 1, lerp(0.42, 1.05, kR), 0.15)
     this.mano(P, -1, lerp(0.42, 1.05, kR), 0.15)
-    this.ik(P, pies)
+    this.ik(P, this.pies)
   }
 
   private poseSentado(P: Pose) {
@@ -289,16 +327,19 @@ export class Animador {
     this.r(P, "cabeza", 0.12 + 0.03 * ruido(t * 0.3, this.sem), 0.1 * ruido(t * 0.13, this.sem + 1))
     this.respirar(P, 0.8)
     // Brazos al teclado: antebrazos casi horizontales, palmas abajo, dedos tecleando.
-    for (const lado of [1, -1] as const) {
-      const L = lado > 0 ? "I" : "D"
-      this.r(P, `hombro${L}`, -0.6, 0, lado * 0.16)
-      this.r(P, `codo${L}`, -1.2)
+    for (const lado of LADOS) {
+      const I = lado$(lado)
+      this.ri(P, I.hombro, -0.6, 0, lado * 0.16)
+      this.ri(P, I.codo, -1.2)
       const tecla = 0.12 * Math.max(0, Math.sin(t * (lado > 0 ? 9.3 : 8.1) + this.sem)) * Math.max(0, Math.sin(t * 1.7 + lado))
       this.mano(P, lado, 0.45 + tecla, 1.42, 0.12)
     }
     // Pies apoyados en el piso, rodillas al frente.
-    const pies = this.piernas.map((pg) => ({ y: pg.tob.y, z: pg.cad.z + P[RAIZ + 2] + pg.L1 * 0.92, pitch: 0 }))
-    this.ik(P, pies)
+    for (let k = 0 as 0 | 1; k < 2; k++) {
+      const pg = this.piernas[k]
+      this.pie(k as 0 | 1, pg.tob.y, pg.cad.z + P[RAIZ + 2] + pg.L1 * 0.92, 0)
+    }
+    this.ik(P, this.pies)
   }
 
   private poseHabla(P: Pose) {
@@ -306,13 +347,13 @@ export class Animador {
     const t = this.t
     const sem = this.sem
     // Gestos: una mano más activa que la otra; palmas que se abren.
-    for (const lado of [1, -1] as const) {
-      const L = lado > 0 ? "I" : "D"
+    for (const lado of LADOS) {
+      const I = lado$(lado)
       const act = lado > 0 ? 0.55 + 0.45 * Math.sin(t * 0.31 + sem) : 0.55 - 0.45 * Math.sin(t * 0.31 + sem)
       const g1 = 0.5 + 0.5 * ruido(t * 1.4, sem + lado * 3)
       const g2 = 0.5 + 0.5 * ruido(t * 1.1, sem + lado * 7)
-      this.r(P, `hombro${L}`, -(0.15 + 0.5 * g1) * act, 0, lado * (0.08 + 0.2 * g2 * act))
-      this.r(P, `codo${L}`, -(0.7 + 0.85 * g2) * act)
+      this.ri(P, I.hombro, -(0.15 + 0.5 * g1) * act, 0, lado * (0.08 + 0.2 * g2 * act))
+      this.ri(P, I.codo, -(0.7 + 0.85 * g2) * act)
       this.mano(P, lado, -0.2 * act, -0.9 * act, -0.15 * act)
     }
     this.r(P, "cabeza", 0.045 * Math.sin(t * 2.3) * (0.5 + 0.5 * Math.sin(t * 0.7 + sem)), 0.06 * Math.sin(t * 0.9 + sem))
@@ -339,10 +380,9 @@ export class Animador {
     this.mano(P, -1, 0.5, 0.1)
     const pi = this.piernas[0]
     const pd = this.piernas[1]
-    this.ik(P, [
-      { y: pi.tob.y, z: pi.tob.z, pitch: 0 },
-      { y: pd.tob.y, z: pd.tob.z, pitch: 0 },
-    ])
+    this.pie(0, pi.tob.y, pi.tob.z, 0)
+    this.pie(1, pd.tob.y, pd.tob.z, 0)
+    this.ik(P, this.pies)
   }
 
   private poseDeporte(P: Pose, dt: number) {
@@ -368,10 +408,9 @@ export class Animador {
       this.r(P, "hombroI", -0.3, 0, 0.5)
       this.r(P, "codoI", -0.95)
       this.mano(P, 1, 0.35, 0.5)
-      this.ik(P, [
-        { y: pi.tob.y, z: pi.tob.z + 0.12 * s, x: 0.05, pitch: 0 },
-        { y: pd.tob.y, z: pd.tob.z - 0.1 * s, pitch: 0 },
-      ])
+      this.pie(0, pi.tob.y, pi.tob.z + 0.12 * s, 0)
+      this.pie(1, pd.tob.y, pd.tob.z - 0.1 * s, 0)
+      this.ik(P, this.pies)
     } else {
       // Boxeo de sombra: guardia, jab y cruzado, saltitos.
       const g = this.golpe
@@ -389,17 +428,16 @@ export class Animador {
       this.r(P, "pecho", 0.06, 0.08 + 0.15 * ext * -g.lado)
       this.r(P, "cuello", -0.05, 0.05)
       this.r(P, "cabeza", -0.06, 0.05)
-      for (const lado of [1, -1] as const) {
-        const L = lado > 0 ? "I" : "D"
+      for (const lado of LADOS) {
+        const I = lado$(lado)
         const e = g.lado === lado ? ext : 0
-        this.r(P, `hombro${L}`, lerp(-1.0, -1.42, e), 0, lado * lerp(0.42, 0.12, e))
-        this.r(P, `codo${L}`, lerp(-2.05, -0.12, e))
+        this.ri(P, I.hombro, lerp(-1.0, -1.42, e), 0, lado * lerp(0.42, 0.12, e))
+        this.ri(P, I.codo, lerp(-2.05, -0.12, e))
         this.mano(P, lado, 1.25, lerp(0.6, 1.4, e), 0.1)
       }
-      this.ik(P, [
-        { y: pi.tob.y, z: pi.tob.z + 0.16 * s, pitch: 0.06 },
-        { y: pd.tob.y + 0.02 * s, z: pd.tob.z - 0.14 * s, pitch: 0.35 },
-      ])
+      this.pie(0, pi.tob.y, pi.tob.z + 0.16 * s, 0.06)
+      this.pie(1, pd.tob.y + 0.02 * s, pd.tob.z - 0.14 * s, 0.35)
+      this.ik(P, this.pies)
     }
   }
 
@@ -409,9 +447,8 @@ export class Animador {
     const sinTiempo = dt <= 0
     const d = Math.min(Math.max(dt, 0), 0.1)
     this.t += d
-    const loco = (e: EstadoCuerpo) => e === "camina" || e === "corre"
     if (estado !== this.estado) {
-      if (!(loco(estado) && loco(this.estado))) {
+      if (!(esLoco(estado) && esLoco(this.estado))) {
         this.previa.set(this.salida)
         this.mezcla = sinTiempo ? 1 : 0
       }

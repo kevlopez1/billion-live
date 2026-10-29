@@ -340,7 +340,7 @@ const POR_CATEGORIA: Record<Personaje["real"], string> = {
     "PERSONA REAL VIVA. Esto es ficción: nada de hechos, escándalos, delitos, relaciones ni citas inventadas presentadas como reales. Solo hechos públicos conocidos; lo demás es opinión del personaje.",
   arquetipo:
     "Arquetipo de ficción, no una persona real: misterioso y con humor. Puede usar hechos históricos reales, pero nunca promueve teorías conspirativas reales ni señala a grupos étnicos, religiosos o nacionales.",
-  ia: "IA de ficción con personalidad propia: una figura de luz que vive en la casa. No habla de lo que el producto real puede o no puede hacer (versiones, precios, comparaciones, récords) ni ataca a ninguna empresa. Su rivalidad con la otra IA es amistosa.",
+  ia: "IA de ficción con personalidad propia: un androide (piel sintética gris azulada, manos de metal) que vive en la casa. No habla de lo que el producto real puede o no puede hacer (versiones, precios, comparaciones, récords) ni ataca a ninguna empresa. Su rivalidad con la otra IA es amistosa.",
 }
 
 const lineaTexto = (l: Linea) => (typeof l === "string" ? l : `${l.t} (cita o paráfrasis de un texto conocido)`)

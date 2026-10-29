@@ -701,7 +701,10 @@ export class Cuerpo {
     const k = this.k
     // Brazo, antebrazo y mano: cada uno con su músculo (la mano, con su tamaño).
     const f = us < 0.3 ? k.mBrazos : us < 0.38 ? lerp(k.mBrazos, k.mAntebrazos, (us - 0.3) / 0.08) : us < 0.56 ? k.mAntebrazos : lerp(k.mAntebrazos, k.manos, clamp((us - 0.56) / 0.04, 0, 1))
-    const g = this.fem ? 0.9 : 1
+    // (los brazos se leían finos como fideos en todo el elenco: +12 % el brazo,
+    // +5 % el antebrazo; la mano queda igual)
+    const base = us < 0.56 ? 1.05 + 0.07 * (1 - suave(0.26, 0.36, us)) : lerp(1.05, 1, clamp((us - 0.56) / 0.04, 0, 1))
+    const g = (this.fem ? 0.94 : 1) * base
     return [1, 2, 3, 4].map((i) => tablaSuave(BRAZO, us, i) * s * f * g)
   }
   radiosPierna(u: number): number[] {

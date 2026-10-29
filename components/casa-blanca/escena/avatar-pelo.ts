@@ -214,9 +214,10 @@ function mechones(lote: Lote, cu: Cuerpo, ph: PeloR, sem: number, op: { holguraE
   const nAtras = 13
   for (let i = 0; i < nAtras; i++) {
     const t = i / (nAtras - 1)
-    // De costado a costado por la espalda.
-    angulos.push({ a: lerp(0.15, Math.PI - 0.15, t) - Math.PI, capa: 0 })
-    if (i % 2 === 1) angulos.push({ a: lerp(0.15, Math.PI - 0.15, t) - Math.PI + 0.08, capa: 1 })
+    // De costado a costado por la espalda (sin los dos extremos: el mechón que
+    // nacía justo al costado caía por fuera del hombro y se veía como alambres).
+    angulos.push({ a: lerp(0.4, Math.PI - 0.4, t) - Math.PI, capa: 0 })
+    if (i % 2 === 1) angulos.push({ a: lerp(0.4, Math.PI - 0.4, t) - Math.PI + 0.08, capa: 1 })
   }
   // Mechones de adelante, sobre los hombros.
   if (ph.adelante > 0) {
@@ -274,13 +275,22 @@ function mechones(lote: Lote, cu: Cuerpo, ph: PeloR, sem: number, op: { holguraE
         const holg = 0.02 + op.holguraEspalda + capa * 0.006
         const tx = xs[jb] + ca * holg
         const tz = zs[jb] + sa * holg
-        // Empujar hacia afuera si el cuerpo está más afuera que el mechón.
-        const rM = Math.hypot(px, pz)
-        const rT = Math.hypot(tx, tz)
-        if (rT > rM) {
-          const k = rT / Math.max(1e-4, rM)
-          px *= k
-          pz *= k
+        if (sa > 0.05) {
+          // Mechón de adelante: el hombro no lo empuja hacia afuera (quedaba
+          // horizontal sobre el hombro, como alambres); se apoya hacia ADELANTE
+          // sobre el pecho, sin pasar el ancho del cuello + 8 cm.
+          const xMax = 0.1 * s
+          if (Math.abs(px) > xMax) px = Math.sign(px) * lerp(Math.abs(px), xMax, suave(0.88 * cu.H, 0.8 * cu.H, y))
+          if (pz < tz) pz = tz
+        } else {
+          // Empujar hacia afuera si el cuerpo está más afuera que el mechón.
+          const rM = Math.hypot(px, pz)
+          const rT = Math.hypot(tx, tz)
+          if (rT > rM) {
+            const k = rT / Math.max(1e-4, rM)
+            px *= k
+            pz *= k
+          }
         }
       }
       // Ondas a lo largo.

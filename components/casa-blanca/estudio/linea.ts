@@ -255,3 +255,27 @@ export function avisosDelEpisodio(ep: Episodio, tomas: ReadonlyArray<{ id: strin
   })
   return avisos
 }
+
+/** Quiénes pone el guion en cuadro: el seguido, los reunidos y quien habla. */
+export function enElGuion(ep: Episodio): Set<string> {
+  const ids = new Set<string>()
+  for (const p of ep.planos) {
+    const c = p.camara
+    if (c.tipo !== "lugar" && c.personaje) ids.add(c.personaje)
+    for (const id of p.reunir ?? []) ids.add(id)
+    for (const l of p.dialogo ?? []) ids.add(l.quien)
+  }
+  return ids
+}
+
+/**
+ * Los residentes que el video no muestra: una persona real ("vivo" o
+ * "fallecido") sale solo si el guion la pone. Si no, la simulación la llevaría
+ * de fondo por los lugares del plano (Kobe por la cafetería, Jobs por el
+ * taller) en un video que puede llevar PRIME o el contador, y Trump no sale
+ * antes del 10-nov. Fuente: kev-project-gta/estrategia-reto/11-FABRICA-DE-VIDEOS.md, sección 6.
+ */
+export function ocultosDelVideo(ep: Episodio, personajes: ReadonlyArray<{ id: string; real?: string }>): Set<string> {
+  const guion = enElGuion(ep)
+  return new Set(personajes.filter((p) => (p.real === "vivo" || p.real === "fallecido") && !guion.has(p.id)).map((p) => p.id))
+}

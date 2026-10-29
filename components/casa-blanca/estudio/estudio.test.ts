@@ -17,12 +17,14 @@ import {
   avisosDelEpisodio,
   codigoDeTiempo,
   cuadroDeTiempo,
+  enElGuion,
   horarioDialogo,
   lineaActiva,
   lugarDelPlano,
   minutosDe,
   momentoEn,
   numerosDeCamara,
+  ocultosDelVideo,
   opacidad,
   pulsoDeMano,
   rotuloDeCamara,
@@ -109,6 +111,41 @@ async function main() {
     }
     ok(!vistos.has("muestra"), "ningún episodio del calendario se llama \"muestra\"")
     console.log(`  (${CALENDARIO.length} episodios en el calendario)`)
+  }
+
+  seccion("Personas reales: regla comercial, sin voz para los vivos, Trump fuera hasta el 10-nov")
+  {
+    // Fuente: kev-project-gta/estrategia-reto/11-FABRICA-DE-VIDEOS.md, sección 6.
+    // Un video con un personaje real "vivo" o "fallecido" no lleva PRIME, {RECAUDADO}, {META} ni el reto
+    // (California AB 1836: la imagen de un fallecido en algo que promociona un negocio).
+    const real = new Map(PERSONAJES.map((p) => [p.id, p.real]))
+    const protegidos = PERSONAJES.filter((p) => p.real === "vivo" || p.real === "fallecido")
+    const nombrado = (texto: string, p: (typeof PERSONAJES)[number]) =>
+      [p.corto, p.nombre].some((n) => new RegExp(`(?<!\\p{L})${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\p{L})`, "iu").test(texto))
+    const comercial = /PRIME|\{RECAUDADO\}|\{META\}|(?<!\p{L})retos?(?!\p{L})/u
+    for (const e of CALENDARIO) {
+      const ep = e.episodio
+      const textos = [e.texto, ep.titulo, ...ep.planos.flatMap((p) => [p.titulo ?? "", p.rotulo ?? "", ...(p.dialogo ?? []).map((l) => l.texto)])]
+      // En cuadro: el seguido, los reunidos y quien habla; y el departamento de alguien (su cartel lleva su nombre).
+      const enCuadro = enElGuion(ep)
+      for (const p of ep.planos) if (p.camara.tipo === "lugar" && p.camara.lugar.startsWith("dep-")) enCuadro.add(p.camara.lugar.slice(4))
+      // De fondo: el video oculta a toda persona real que el guion no pone (si no, la simulación la pasea por el plano).
+      const ocultos = ocultosDelVideo(ep, PERSONAJES)
+      ok(protegidos.every((p) => enCuadro.has(p.id) || ocultos.has(p.id)), `${ep.id}: ninguna persona real de fondo (ocultas: ${ocultos.size})`)
+      const presentes = protegidos.filter((p) => enCuadro.has(p.id) || textos.some((t) => nombrado(t, p))).map((p) => p.id)
+      const conNegocio = textos.find((t) => comercial.test(t))
+      ok(!(presentes.length && conNegocio), `${ep.id}: sin personas reales (${presentes.join(", ")}) junto a PRIME, el contador o el reto («${(conNegocio ?? "").slice(0, 60)}»)`)
+      const vivosQueHablan = ep.planos.flatMap((p) => (p.dialogo ?? []).filter((l) => real.get(l.quien) === "vivo").map((l) => l.quien))
+      ok(vivosQueHablan.length === 0, `${ep.id}: ningún personaje vivo habla (${vivosQueHablan.join(", ")})`)
+      if (e.fecha < "2026-11-10") ok(!enCuadro.has("trump"), `${ep.id} (${e.fecha}): Trump fuera de cuadro antes del 10-nov`)
+    }
+    // La guarda marca lo que tiene que marcar.
+    const conKobe: Episodio = { ...MUESTRA, id: "con-kobe", planos: [{ dur: 3, camara: { tipo: "seguir", personaje: "marco" }, reunir: ["marco", "kobe"] }] }
+    const oc = ocultosDelVideo(conKobe, PERSONAJES)
+    ok(!oc.has("kobe") && oc.has("jobs") && oc.has("trump") && !oc.has("marco") && !oc.has("claude"), "se oculta a la persona real que el guion no pone; nunca a un histórico, una IA ni al que el guion pone")
+    const kobe = PERSONAJES.find((p) => p.id === "kobe")!
+    ok(nombrado("Kobe ya lleva dos horas.", kobe) && !nombrado("Kobeña", kobe), "la guarda reconoce el nombre suelto, no dentro de otra palabra")
+    ok(comercial.test("El reto es real") && comercial.test("{RECAUDADO} de {META}") && !comercial.test("Retomar el hilo"), "la guarda reconoce el reto y el contador")
   }
 
   seccion("guionValido marca lo que no existe")

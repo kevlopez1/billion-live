@@ -88,8 +88,13 @@ export interface Apariencia {
   barba?: { estilo: "completa" | "corta" | "candado" | "menton" | "larga" | "barba_de_dias"; color: string }
   sombrero?: "bicornio" | "chistera" | "laurel" | "gorra" | "corona_egipcia" | "boina" | null
   ropa: {
-    /** "holograma": figura de luz translúcida (para las IA: Claude y ChatGPT). */
-    tipo: "traje" | "tunica" | "toga" | "uniforme_militar" | "deportivo" | "casual" | "cuello_alto" | "camiseta_basquet" | "vestido_egipcio" | "tunica_renacentista" | "holograma"
+    /**
+     * "androide": sudadera con el nombre en el pecho sobre un cuerpo de androide
+     * (piel sintética, manos de metal; las IA: Claude y ChatGPT). `color` es la
+     * sudadera y `color2` el pantalón.
+     * "holograma": figura de luz translúcida (el primer diseño de las IA; hoy sin uso).
+     */
+    tipo: "traje" | "tunica" | "toga" | "uniforme_militar" | "deportivo" | "casual" | "cuello_alto" | "camiseta_basquet" | "vestido_egipcio" | "tunica_renacentista" | "androide" | "holograma"
     color: string
     color2?: string
     corbata?: string

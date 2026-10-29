@@ -19,6 +19,7 @@ import { ANG, Cuerpo, H, M, mallaPie, type Cobertura, type Marco } from "./avata
 import { campana, clamp, escalarRGBA, lerp, Lote, rgba, suave, type Mat2, type Pesos, type RGBA } from "./avatar-geo"
 import { peloEn } from "./avatar-cabeza"
 import { vestuarioDe } from "./avatar-fichas"
+import { estampar, MONTURA_ANDROIDE } from "./avatar-androide"
 import type { Tejido } from "./avatar-texturas"
 
 const DOS_PI = Math.PI * 2
@@ -37,6 +38,7 @@ export function holguraDe(ap: Apariencia): number {
       return 0.026
     case "cuello_alto":
     case "casual":
+    case "androide":
     case "holograma":
       return 0.011
     default:
@@ -196,17 +198,44 @@ class Sastre {
     }
   }
 
-  /** Pesos de una falda o faldón: cadera arriba, cada vez más muslo hacia el ruedo. */
+  /**
+   * Pesos de una falda o faldón. La mitad de ATRÁS cuelga de la cadera y toma
+   * cada vez más muslo hacia el ruedo (lo de siempre: al caminar se mece). La
+   * mitad de ADELANTE va entera al muslo a la altura de la rodilla y, debajo,
+   * pasa a la pierna (rodilla): sentado, la tela hace regazo sobre los muslos
+   * y cae delante de las canillas. Antes todo tomaba como mucho 0,6 de muslo y,
+   * con los muslos horizontales, la túnica se doblaba hacia atrás en "banana".
+   */
   pesosFalda(x: number, y: number, z: number, yRuedo: number): Pesos {
     const yC = 0.5 * this.Hh
     if (y >= yC) return this.cu.pesosTronco(x, y, z)
+    const s = this.s
+    const izq = x >= 0
+    const ML = izq ? H.musloI : H.musloD
+    const MO = izq ? H.musloD : H.musloI
+    const RL = izq ? H.rodillaI : H.rodillaD
+    const RO = izq ? H.rodillaD : H.rodillaI
+    const yK = (izq ? this.cu.j.rodillaI : this.cu.j.rodillaD).y
+    // Atrás: cadera -> muslo (máx. 0,6) hacia el ruedo.
     const t = clamp((yC - y) / Math.max(0.05, yC - yRuedo), 0, 1)
-    const w = 0.6 * Math.pow(t, 0.8)
-    const centro = 1 - suave(0, 0.06 * this.s, Math.abs(x))
-    const L = x >= 0 ? "I" : "D"
-    const O = x >= 0 ? "D" : "I"
-    const p: Pesos = [[H.cadera, 1 - w], [H[`muslo${L}`], w * (1 - centro * 0.5)]]
-    if (centro > 0.01) p.push([H[`muslo${O}`], w * centro * 0.5])
+    const wAtras = 0.6 * Math.pow(t, 0.8)
+    // Adelante: muslo entero al llegar a la rodilla; debajo, la pierna.
+    const frente = suave(-0.035 * s, 0.03 * s, z)
+    const tk = clamp((yC - y) / Math.max(0.05, yC - yK), 0, 1)
+    const wMus = lerp(wAtras, Math.pow(tk, 0.7), frente)
+    const wRod = frente * 0.85 * clamp((yK - y) / (0.12 * this.Hh), 0, 1)
+    const wPierna = wMus * (1 - wRod) // muslo
+    const wCad = 1 - wMus
+    const centro = 1 - suave(0, 0.06 * s, Math.abs(x))
+    const p: Pesos = [[H.cadera, wCad]]
+    const a = 1 - centro * 0.5
+    const b = centro * 0.5
+    if (wPierna * a > 0.001) p.push([ML, wPierna * a])
+    if (wMus * wRod * a > 0.001) p.push([RL, wMus * wRod * a])
+    if (b > 0.01) {
+      if (wPierna * b > 0.001) p.push([MO, wPierna * b])
+      if (wMus * wRod * b > 0.001) p.push([RO, wMus * wRod * b])
+    }
     return p
   }
 
@@ -871,7 +900,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
   }
 
   /** Banda diagonal sobre el torso (faja, manto, toga): del hombro `lado` a la cadera opuesta. */
-  const banda = (lado: 1 | -1, ancho: number, holg: number, color: (w: number) => RGBA, op: { y0?: number; y1?: number; pliegues?: number; mat?: Mat2; t0?: number; t1?: number; filas?: number } = {}) => {
+  const banda = (lado: 1 | -1, ancho: number, holg: number, color: (w: number) => RGBA, op: { y0?: number; y1?: number; pliegues?: number; mat?: Mat2; t0?: number; t1?: number; filas?: number; hombro?: number } = {}) => {
     const yAlto = op.y1 ?? 0.818 * Hh
     const yBajo = op.y0 ?? 0.56 * Hh
     // El plano inclinado pasa por arriba del hombro y por la cadera del otro lado.
@@ -898,7 +927,10 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         }
         y = clamp(y + w * ancho * 0.5, yMin, 0.83 * Hh)
         const pl = op.pliegues ? op.pliegues * Math.sin(w * 3 + t * 40) * 0.5 + op.pliegues * 0.5 : 0
-        return S.punto(y, a, 0.3, holg + 0.004 + pl, out)
+        // Sobre el hombro, más afuera: si no, la manga de la túnica (el deltoides)
+        // asomaba blanca por el borde del manto.
+        const hb = op.hombro ? op.hombro * suave(0.09 * s, 0.15 * s, Math.abs(out.x)) * suave(0.74 * Hh, 0.8 * Hh, y) : 0
+        return S.punto(y, a, 0.3, holg + 0.004 + pl + hb, out)
       },
       normal: (tt, w, out) => {
         const a = -Math.PI / 2 + lerp(t0, t1, tt) * DOS_PI
@@ -964,7 +996,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       const cm = rgba(m.color)
       const cb = m.borde ? rgba(m.borde) : escalarRGBA(cm, 0.8)
       // Manto (himation): banda ancha y pesada del hombro a la cadera opuesta, con borde.
-      banda(m.lado ?? 1, (m.ancho ?? 0.3) * s, 0.04, (w) => (w > 0.8 ? cb : cm), { pliegues: 0.008, y0: (m.bajo ?? 0.54) * Hh })
+      banda(m.lado ?? 1, (m.ancho ?? 0.3) * s, 0.04, (w) => (w > 0.8 ? cb : cm), { pliegues: 0.008, y0: (m.bajo ?? 0.54) * Hh, hombro: 0.018 })
     }
     if (ves.cuelloCruzado) {
       const cc = rgba(ves.cuelloCruzado)
@@ -1295,6 +1327,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     }
     case "deportivo":
     case "casual":
+    case "androide":
     case "holograma": {
       tejido = "algodon"
       const ves = vestuarioDe(p.id)
@@ -1328,6 +1361,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       } else S.cuello({ y0: 0.818 * Hh, y1: (a) => 0.84 * Hh - escote(a), holg0: 0.0095, holg1: 0.004, color: escalarRGBA(C1, 0.92), mat: MAT_ALGODON, filas: 1 })
       if (remera) mangas(C1, 0.15 * s, 0.01, { mat: MAT_ALGODON })
       else mangas(C1, 9, 0.011, { mat: [0.92, 0], puno: escalarRGBA(C1, 0.9) })
+      // Androide: el nombre estampado en el pecho de la sudadera (avatar-androide.ts).
+      if (tipo === "androide") estampar(S.lote, cu, p, (y, a, b, h, o) => S.punto(y, a, b, h, o))
       const mezclilla = ves.mezclilla ?? new THREE.Color(ap.ropa.color2 ?? "#2f3e55").b > 0.25
       if (tipo === "deportivo") pantalon(C2, { corto: cu.piernas[0].u[2] - 0.05 * s })
       // (en el holograma, el color 2 es el del borde de luz: el pantalón va del color base)
@@ -1576,7 +1611,9 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     const lote = new Lote()
     // Sin aro (Jobs): solo un filo plateado finísimo que marca el borde del cristal.
     const sinAro = !!vestuarioDe(p.id).gafasSinAro
-    const montura = rgba(sinAro ? "#b8b8b8" : red ? "#3a332c" : sol ? "#0f0f10" : "#1c1c1e")
+    // (androide: alambre plateado y metálico)
+    const montura = rgba(tipo === "androide" ? MONTURA_ANDROIDE.color : sinAro ? "#b8b8b8" : red ? "#3a332c" : sol ? "#0f0f10" : "#1c1c1e")
+    const matMontura = tipo === "androide" ? MONTURA_ANDROIDE.mat : MAT_BOTON
     for (const lado of [1, -1] as const) {
       const cx = lado * (o.x + 0.002)
       const cy = o.y - 0.001
@@ -1605,7 +1642,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         lente.push(lote.v(_v.x, _v.y, _v.z, 0, 0, [1, 1, 1, 1], pesoCab(), [0.05, 0]))
       }
       for (let k = 0; k < 24; k++) lote.t(cen, lente[k], lente[(k + 1) % 24])
-      S.cordon(pts, sinAro ? 0.00045 * cab.hs : red ? 0.0011 * cab.hs : 0.0017 * cab.hs, montura, MAT_BOTON, pesoCab, true, sinAro ? 3 : 5)
+      S.cordon(pts, sinAro ? 0.00045 * cab.hs : red ? 0.0011 * cab.hs : 0.0017 * cab.hs, montura, matMontura, pesoCab, true, sinAro ? 3 : 5)
       // Patilla hacia la oreja.
       const pat: THREE.Vector3[] = []
       for (let k = 0; k <= 6; k++) {
@@ -1616,10 +1653,10 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         pat.push(cab.aAvatar(lado * (tt + 0.004 + 0.012 * (1 - t) * (1 - t)) , yl, z, new THREE.Vector3()))
       }
       pat[0] = cab.aAvatar(cx + lado * rx, cy + 0.004, zL - 0.004, new THREE.Vector3())
-      S.cordon(pat, 0.0013 * cab.hs, montura, MAT_BOTON, pesoCab, false, 4)
+      S.cordon(pat, 0.0013 * cab.hs, montura, matMontura, pesoCab, false, 4)
     }
     // Puente
-    S.cordon([cab.aAvatar(0.012, o.y + 0.003, zL + 0.002, new THREE.Vector3()), cab.aAvatar(0, o.y + 0.005, zL + 0.006, new THREE.Vector3()), cab.aAvatar(-0.012, o.y + 0.003, zL + 0.002, new THREE.Vector3())], 0.0013 * cab.hs, montura, MAT_BOTON, pesoCab, false, 4)
+    S.cordon([cab.aAvatar(0.012, o.y + 0.003, zL + 0.002, new THREE.Vector3()), cab.aAvatar(0, o.y + 0.005, zL + 0.006, new THREE.Vector3()), cab.aAvatar(-0.012, o.y + 0.003, zL + 0.002, new THREE.Vector3())], 0.0013 * cab.hs, montura, matMontura, pesoCab, false, 4)
     lote.pieza()
     lentes = { lote, sol }
   }
@@ -1654,6 +1691,42 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       })
     }
     utileria = U.lote
+  }
+
+  // ── Guan (Sun Tzu): tapa laqueada sobre el moño y pasador horizontal dorado ──
+  const guan = vestuarioDe(p.id).guan
+  const monoF = cu.rasgos.f.pelo.mono
+  if (guan && monoF) {
+    const tB = cab.rayo(0, 0, 0, 0, 1, -0.15, 0.2)
+    const bx = 0
+    const by = tB * 0.99
+    const bz = -0.15 * tB * 0.99
+    const rG = monoF.radio * 1.18
+    const cG = rgba(guan.color)
+    const L = S.lote
+    const ids: number[][] = []
+    const centros: THREE.Vector3[] = []
+    // Perfil: abre un poco abajo, lados rectos, tapa plana con borde redondeado.
+    const perfil: Array<[number, number]> = [[0.28, 1.0], [0.34, 1.04], [0.9, 1.02], [1.06, 0.92], [1.1, 0.55], [1.11, 0.02]]
+    for (const [h, rr] of perfil) {
+      const fila: number[] = []
+      for (let k = 0; k < 16; k++) {
+        const g = (k / 16) * DOS_PI
+        cab.aAvatar(bx + Math.cos(g) * rG * rr, by + h * monoF.alto, bz + Math.sin(g) * rG * rr * 0.9, _v)
+        fila.push(L.v(_v.x, _v.y, _v.z, k / 16, h, cG, pesoCab(), [0.32, 0]))
+      }
+      ids.push(fila)
+      centros.push(cab.aAvatar(bx, by + h * monoF.alto, bz, new THREE.Vector3()))
+    }
+    L.tiras(ids, true, { centros })
+    L.pieza()
+    // Pasador: de lado a lado, atravesando la tapa.
+    const largoP = rG * 3.2
+    const p0 = cab.aAvatar(bx - largoP / 2, by + 0.62 * monoF.alto, bz, new THREE.Vector3())
+    const p1 = cab.aAvatar(bx + largoP / 2, by + 0.62 * monoF.alto, bz, new THREE.Vector3())
+    const dirP = p1.clone().sub(p0)
+    const lP = dirP.length()
+    S.boton(p0, dirP.normalize(), 0.0026 * cab.hs, lP, rgba(guan.pasador), MAT_ORO, pesoCab(), 6)
   }
 
   // ── Sombreros (pesos: cabeza) ──
@@ -1704,10 +1777,14 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
     switch (sombrero) {
       case "chistera": {
         const h = 0.17
-        cilindro([[yB - 0.006, rx + 0.032, rz + 0.04], [yB - 0.002, rx + 0.036, rz + 0.044], [yB, rx + 0.03, rz + 0.038], [yB + 0.002, rx, rz], [yB + 0.03, rx - 0.001, rz - 0.001], [yB + 0.032, rx - 0.0005, rz - 0.0005], [yB + h, rx + 0.006, rz + 0.006], [yB + h + 0.002, rx + 0.004, rz + 0.004]], negroF, [0.4, 0], true)
+        // 7 mm más abajo que el borde medido: el ala se apoya en el pelo (antes
+        // quedaba una franja de frente clara entre el pelo y el ala).
+        const yC = yB - 0.007
+        const ex = 0.002
+        cilindro([[yC - 0.006, rx + 0.032, rz + 0.04], [yC - 0.002, rx + 0.036, rz + 0.044], [yC, rx + 0.03, rz + 0.038], [yC + 0.002, rx + ex, rz + ex], [yC + 0.03, rx - 0.001 + ex, rz - 0.001 + ex], [yC + 0.032, rx - 0.0005 + ex, rz - 0.0005 + ex], [yC + h, rx + 0.006 + ex, rz + 0.006 + ex], [yC + h + 0.002, rx + 0.004 + ex, rz + 0.004 + ex]], negroF, [0.4, 0], true)
         // Cinta
-        cilindro([[yB + 0.004, rx + 0.0015, rz + 0.0015], [yB + 0.028, rx + 0.0015, rz + 0.0015]], rgba("#1d1d22"), [0.6, 0], false)
-        altoSombrero = (yB + h - 0.123) * hs
+        cilindro([[yC + 0.004, rx + 0.0015 + ex, rz + 0.0015 + ex], [yC + 0.028, rx + 0.0015 + ex, rz + 0.0015 + ex]], rgba("#1d1d22"), [0.6, 0], false)
+        altoSombrero = (yC + h - 0.123) * hs
         break
       }
       case "bicornio": {
@@ -1718,12 +1795,15 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         // izquierda. (Antes medía lo mismo que la cabeza y se leía como gorra.)
         const largo = Math.max(rx * 2.7, 0.44)
         const alto = 0.135
-        const y0 = yB - 0.014
+        // (4 mm más abajo: flotaba sobre el pelo; copa de lados rectos y puntas
+        // que suben, en fieltro duro: con la copa redonda se leía como una cúpula)
+        const y0 = yB - 0.018
         const forma = (cara: number, t: number, v: number, out: THREE.Vector3) => {
           const u = 2 * t - 1
           const x = u * largo * 0.5
-          const tope = y0 + 0.016 + alto * Math.pow(Math.max(0, 1 - u * u), 0.62) - 0.012 * u * u * u * u
-          const y = lerp(y0 + 0.01 * u * u, tope, v)
+          const u8 = u * u * u * u * u * u * u * u
+          const tope = y0 + 0.016 + alto * Math.pow(Math.max(0, 1 - u * u), 0.38) + 0.02 * u8
+          const y = lerp(y0 + 0.01 * u * u + 0.02 * u8, tope, v)
           const base = Math.sqrt(Math.max(0, 1 - (x / (rx * 1.04)) ** 2)) * rz * 1.05
           // Las alas se abren un poco hacia afuera abajo y se curvan al juntarse arriba.
           const z = -0.004 + cara * ((base + 0.008) * Math.pow(1 - v, 0.8) + 0.004 * Math.sin(Math.PI * v) * (1 - u * u))

@@ -172,15 +172,33 @@ export function matPelo(color: string, rizado = false): THREE.MeshPhysicalMateri
     // Los bucles, más mates (con el brillo del pelo lacio parecían de metal).
     roughness: rizado ? 0.78 : 0.52,
     metalness: 0,
-    sheen: rizado ? 0.08 : 0.35,
+    // (el brillo de terciopelo del pelo claro también tomaba el cielo: nada en canas y rubios claros)
+    sheen: rizado ? 0.08 : 0.35 * (1 - THREE.MathUtils.smoothstep(hsl.l, 0.45, 0.7)),
     sheenRoughness: 0.45,
     sheenColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.25).multiplyScalar(0.5 - 0.25 * hsl.l),
     // El pelo claro (canas, rubio) reflejaba el cielo y se veía celeste o
     // verdoso: menos especular y un reflejo teñido del propio pelo.
-    specularIntensity: (0.55 - 0.25 * hsl.l) * (rizado ? 0.5 : 1),
+    specularIntensity: (0.45 - 0.3 * hsl.l) * (rizado ? 0.5 : 1),
     // (y el pelo negro reflejaba el cielo: barbas y bigotes oscuros salían azules)
     specularColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.35 - 0.15 * hsl.l),
   })
+  // La luz del cielo (hemisferio + entorno) es azul: las canas y barbas blancas
+  // salían menta o celeste a mediodía y el pelo negro, azul marino. Ni el
+  // albedo ni el especular lo arreglaban (probado): se entibia solo la luz
+  // indirecta que recibe el pelo, más cuanto más claro (el sol directo no se toca).
+  const hs = { h: 0, s: 0, l: 0 }
+  c.getHSL(hs, THREE.SRGBColorSpace)
+  const tibio = new THREE.Vector3(1, 0.94 - 0.4 * hs.l, 0.87 - 0.47 * hs.l)
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTibio = { value: tibio }
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform vec3 uTibio;")
+      .replace(
+        "#include <lights_fragment_maps>",
+        "#include <lights_fragment_maps>\n\tirradiance *= uTibio;\n\tiblIrradiance *= uTibio;\n#if defined( RE_IndirectSpecular )\n\tradiance *= uTibio;\n#endif",
+      )
+  }
+  m.customProgramCacheKey = () => "pelo-tibio"
   m.name = `pelo-${clave}`
   pelos.set(clave, m)
   return m
@@ -216,17 +234,19 @@ export function matLente(sol: boolean): THREE.MeshPhysicalMaterial {
   let m = lentes.get(k)
   if (m) return m
   m = new THREE.MeshPhysicalMaterial({
-    color: sol ? "#0b0d10" : "#e8f0f4",
-    roughness: sol ? 0.3 : 0.04,
+    color: sol ? "#0b0d10" : "#ffffff",
+    roughness: sol ? 0.3 : 0.05,
     metalness: 0,
     transparent: true,
-    opacity: sol ? 0.92 : 0.16,
+    // (las claras con barniz 1 reflejaban todo el cielo y tapaban los ojos de
+    // blanco: Jobs, Amodei, Pichai se veían ciegos; ahora apenas un reflejo)
+    opacity: sol ? 0.92 : 0.08,
     depthWrite: false,
     // Las de sol reflejaban tanto cielo que se leían como cristal claro (el
     // envMapIntensity no cuenta con scene.environment: se baja el barniz).
-    clearcoat: sol ? 0.25 : 1,
-    clearcoatRoughness: sol ? 0.15 : 0.02,
-    specularIntensity: sol ? 0.45 : 1,
+    clearcoat: sol ? 0.25 : 0.15,
+    clearcoatRoughness: sol ? 0.15 : 0.05,
+    specularIntensity: sol ? 0.45 : 0.3,
   })
   m.name = `lente-${k}`
   lentes.set(k, m)

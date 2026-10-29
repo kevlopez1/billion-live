@@ -1,11 +1,11 @@
 -- ══════════════════════════════════════════════════════════════
--- TODO EN UNO — las diez partes que necesita kevproject.world
+-- TODO EN UNO — las once partes que necesita kevproject.world
 --
 -- CÓMO SE CORRE
 --   1. Abre https://supabase.com/dashboard/project/llhvnzlbnmoufilxgshv/sql/new
 --   2. Copia este archivo COMPLETO y pégalo ahí.
 --   3. Botón Run (o Ctrl+Enter).
---   4. Al final te devuelve una tabla de 13 filas. Todas tienen que decir
+--   4. Al final te devuelve una tabla de 19 filas. Todas tienen que decir
 --      "protegida". Si alguna dice "ABIERTA", algo falló: avísame.
 --
 -- Se puede correr las veces que quieras: no borra nada ni duplica nada.
@@ -17,7 +17,7 @@
 
 
 -- ──────────────────────────────────────────────────────────────
--- 1 de 10 · CUENTAS  (para que "Crear tu cuenta" funcione)
+-- 1 de 11 · CUENTAS  (para que "Crear tu cuenta" funcione)
 --
 -- La autenticación la maneja Supabase Auth (tabla auth.users): el hash de la
 -- contraseña, la verificación del correo y el reseteo los hace Supabase.
@@ -160,7 +160,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 2 de 10 · EL AUTO DE PÍXELES  (las firmas en el auto)
+-- 2 de 11 · EL AUTO DE PÍXELES  (las firmas en el auto)
 -- ──────────────────────────────────────────────────────────────
 
 create table if not exists public.car_pixels (
@@ -208,7 +208,7 @@ alter table public.car_pixels enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 3 de 10 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
+-- 3 de 11 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
 --
 -- Una sola fila con todo el contenido en jsonb. Es a propósito: el manual se
 -- edita entero de una vez desde el panel, no campo por campo, así que una
@@ -261,7 +261,7 @@ alter table public.branding_historial enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 4 de 10 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
+-- 4 de 11 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
 --
 -- Tabla aparte del manual a propósito. El manual es un documento que se
 -- guarda entero de una vez; esto son cientos de filas que crecen solas. Si
@@ -320,7 +320,7 @@ alter table public.publicaciones enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 5 de 10 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
+-- 5 de 11 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
 --
 -- Una sola fila con el árbol entero en jsonb, igual que el manual de marca.
 -- Se guarda solo (autoguardado), así que el historial NO archiva cada
@@ -376,7 +376,7 @@ alter table public.proyectos_kev_historial enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 6 de 10 · PREGUNTAS ABIERTAS  (/preguntas: una pregunta, 20 respuestas)
+-- 6 de 11 · PREGUNTAS ABIERTAS  (/preguntas: una pregunta, 20 respuestas)
 --
 -- Una sola fila con el tablero entero en jsonb, igual que el manual de marca
 -- y los proyectos. Sin historial: aquí no se reescribe un documento largo,
@@ -397,7 +397,7 @@ alter table public.preguntas enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 7 de 10 · LA CASA BLANCA PROJECT · ENTREGABLES  (/casa-blanca)
+-- 7 de 11 · LA CASA BLANCA PROJECT · ENTREGABLES  (/casa-blanca)
 --
 -- Lo que entregan de verdad los departamentos de agentes cuando Kev aprieta
 -- "Trabajar". El progreso de cada departamento se cuenta con estas filas: sin
@@ -435,7 +435,7 @@ alter table public.casa_blanca_entregables enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 8 de 10 · LA CASA BLANCA PROJECT · EL LÍMITE DIARIO DE LA IA
+-- 8 de 11 · LA CASA BLANCA PROJECT · EL LÍMITE DIARIO DE LA IA
 --
 -- Cada charla con un personaje la paga la cuenta de Anthropic de Kev. Una
 -- fila por persona y por día, y una fila '*' con el total del día (el techo
@@ -515,7 +515,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 9 de 10 · LA CASA BLANCA PROJECT · LA MEMORIA COMPARTIDA
+-- 9 de 11 · LA CASA BLANCA PROJECT · LA MEMORIA COMPARTIDA
 --
 -- Lo que vivió cada residente con todos los visitantes: las charlas, las
 -- conversaciones entre ellos, los consejos, las noticias, lo que entregó su
@@ -597,7 +597,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 10 de 10 · LA CASA BLANCA PROJECT · LA CONCIENCIA
+-- 10 de 11 · LA CASA BLANCA PROJECT · LA CONCIENCIA
 --
 -- El estado interior de cada residente: cómo amaneció, qué quiere lograr
 -- hoy, qué piensa, su diario y lo que opina de los demás. Cambia una vez por
@@ -687,13 +687,888 @@ begin
 end $$;
 
 
+-- ──────────────────────────────────────────────────────────────
+-- 11 de 11 · LA FÁBRICA DE VIDEOS  (La Casa Blanca Project en las redes)
+--
+-- Lo que pasa en la casa se convierte en 3 a 6 videos por día que se publican
+-- solos. Plan: kev-project-gta/estrategia-reto/11-FABRICA-DE-VIDEOS.md.
+-- Contrato: docs/fabrica/ESPECIFICACION.md.
+--
+-- Dos reglas mandan aquí, y las dos ya costaron plata en otro proyecto:
+--   · Reservar ANTES de mandar. Mandar y después marcar es publicar dos
+--     veces: si el proceso muere entre una cosa y la otra, el siguiente ve
+--     "sin marcar" y manda de nuevo. Cada paso que gasta o publica se reserva
+--     con un UPDATE condicional (estado + dueño + vencimiento) en UNA
+--     sentencia, con la hora de la base, nunca la de Vercel.
+--   · La fábrica NACE PAUSADA. Hasta que Kev la reanude desde /publicar, no
+--     se reserva nada: cada reserva mira `pausada` en la misma sentencia.
+-- ──────────────────────────────────────────────────────────────
+
+-- ── Los videos ──
+create table if not exists public.fabrica_videos (
+  id                  uuid primary key default gen_random_uuid(),
+  creado              timestamptz not null default now(),
+  actualizado         timestamptz not null default now(),
+  dia                 date not null,             -- el día de salida (Bolivia)
+  slot                int check (slot between 1 and 6),  -- null = reserva sin lugar
+  hora_salida         timestamptz,
+  es_reserva          boolean not null default false,
+  estado              text not null default 'idea' check (estado in (
+                        'idea', 'guion', 'aprobacion_pendiente', 'listo_para_render', 'renderizado',
+                        'calidad_ok', 'subido_parcial', 'programado', 'publicado', 'fallido', 'rechazado')),
+  pilar               text,
+  personajes          text[] not null default '{}',
+  semaforo            text check (semaforo in ('verde', 'amarillo')),
+  idea                jsonb,
+  episodio            jsonb,                     -- un Episodio de guion.ts
+  guion_hash          text,
+  textos              jsonb,                     -- título y texto por red, ya validados
+  avisos              text[] not null default '{}',
+  archivo             text,                      -- ruta en el almacén
+  archivo_bytes       bigint,
+  duracion_s          numeric(6,2),
+  calidad             jsonb,
+  aprobado_guion_por  text,
+  aprobado_guion_en   timestamptz,
+  aprobado_video_por  text,
+  aprobado_video_en   timestamptz,
+  motivo_rechazo      text,
+  -- La reserva: quién lo tiene, para qué y hasta cuándo.
+  dueno               text,
+  trabajo             text,
+  vence_en            timestamptz,
+  intentos            int not null default 0 check (intentos >= 0),
+  errores             jsonb not null default '[]'::jsonb   -- los últimos 20, cada uno con el cómo
+);
+
+comment on table public.fabrica_videos is
+  'Fábrica de videos: un video por fila, con su estado y su reserva. Ver docs/fabrica/ESPECIFICACION.md.';
+
+-- Un lugar del día lo ocupa un solo video. Las reservas no tienen lugar.
+create unique index if not exists fabrica_videos_slot_uq
+  on public.fabrica_videos (dia, slot) where slot is not null;
+create index if not exists fabrica_videos_estado_idx on public.fabrica_videos (estado);
+create index if not exists fabrica_videos_dia_idx on public.fabrica_videos (dia);
+
+-- ── Un envío por video y red ──
+-- Una fila por red y no un jsonb en el video: una fila se reserva con un
+-- UPDATE condicional; una clave dentro de un jsonb no.
+create table if not exists public.fabrica_envios (
+  id                   uuid primary key default gen_random_uuid(),
+  creado               timestamptz not null default now(),
+  actualizado          timestamptz not null default now(),
+  video_id             uuid not null references public.fabrica_videos(id) on delete cascade,
+  red                  text not null check (red in ('youtube', 'facebook', 'instagram', 'tiktok', 'x')),
+  estado               text not null default 'pendiente' check (estado in (
+                         'pendiente', 'subiendo', 'subido', 'programado', 'publicando', 'procesando',
+                         'ambiguo', 'publicado', 'confirmado', 'no_hoy', 'fallido', 'omitido')),
+  id_red               text,
+  enlace               text,
+  contenedor           text,                     -- Instagram: el contenedor que se procesa
+  media_id             text,                     -- X: el media subido por la VM
+  media_expira_en      timestamptz,
+  publish_at           timestamptz,              -- YouTube
+  publicado_en         timestamptz,
+  dueno                text,
+  reservado_en         timestamptz,
+  vence_en             timestamptz,
+  intentos             int not null default 0 check (intentos >= 0),
+  proximo_intento      timestamptz,
+  visibilidad          text,
+  verificado_en        timestamptz,
+  subtitulos           text not null default 'no_aplica' check (subtitulos in ('no_aplica', 'pendiente', 'ok', 'fallido')),
+  intentos_subtitulos  int not null default 0,
+  ultimo_error         jsonb,
+  unique (video_id, red)
+);
+
+comment on table public.fabrica_envios is
+  'Fábrica de videos: el envío de un video a una red, con su reserva. Se reserva antes de mandar, nunca después.';
+
+create index if not exists fabrica_envios_estado_idx on public.fabrica_envios (estado);
+
+-- ── El interruptor y los contadores del día (una sola fila) ──
+create table if not exists public.fabrica_estado (
+  id                  boolean primary key default true check (id),
+  pausada             boolean not null default true,   -- NACE PAUSADA
+  motivo              text default 'recién creada: la reanuda Kev',
+  pausada_por         text,
+  pausada_en          timestamptz default now(),
+  modo_aprobacion     boolean not null default true,
+  videos_por_dia      int not null default 3 check (videos_por_dia between 1 and 6),
+  tope_gasto_usd_dia  numeric(8,2) not null default 5 check (tope_gasto_usd_dia >= 0),  -- a decidir por Kev
+  dia                 date,
+  gasto_usd_dia       numeric(10,4) not null default 0,
+  publicados_dia      int not null default 0,
+  fallidos_dia        int not null default 0,
+  -- { "x": { "pausada": true, "motivo": "...", "fallos_seguidos": 2 } }
+  redes               jsonb not null default '{}'::jsonb,
+  ultimo_tick_en      timestamptz,
+  ultima_tanda_en     timestamptz,
+  ultima_tanda        jsonb
+);
+
+comment on table public.fabrica_estado is
+  'Fábrica de videos: el interruptor (pausada), los ajustes de Kev y los contadores del día. Una sola fila.';
+
+insert into public.fabrica_estado (id) values (true) on conflict (id) do nothing;
+
+-- ── Tokens cifrados (YouTube, X) ──
+-- Cifrados con FABRICA_CLAVE_TOKENS (AES-256-GCM, iv.tag.datos en base64): la
+-- base sola no alcanza para publicar. `version` permite rotar sin pisar: el
+-- refresh de X sería de un solo uso, y dos renovaciones a la vez dejarían
+-- guardado el que ya no sirve.
+create table if not exists public.fabrica_tokens (
+  red              text primary key,
+  cifrado          text not null,
+  version          int not null default 1,
+  expira_en        timestamptz,
+  renovando_hasta  timestamptz,
+  actualizado      timestamptz not null default now(),
+  ultimo_error     text
+);
+
+comment on table public.fabrica_tokens is 'Fábrica de videos: tokens de las redes, cifrados, con versión para rotarlos sin pisarse.';
+
+-- ── Candados diarios (la tanda de la VM y el parte de las 23:00) ──
+create table if not exists public.fabrica_candados (
+  que        text not null check (que in ('tanda', 'parte')),
+  dia        date not null,
+  intentos   int not null default 0,
+  reclamado  timestamptz not null default now(),
+  terminado  timestamptz,
+  primary key (que, dia)
+);
+
+comment on table public.fabrica_candados is 'Fábrica de videos: lo diario se reclama aquí, un ganador por día.';
+
+-- ── El parte diario ──
+-- Se guarda ANTES de mandarlo: si el canal falla, el parte existe igual y el
+-- vigilante ve que no salió.
+create table if not exists public.fabrica_reporte (
+  dia          date primary key,
+  generado_en  timestamptz not null default now(),
+  enviado_en   timestamptz,
+  canal        text,
+  resumen      jsonb not null default '{}'::jsonb,
+  texto        text not null default '',
+  error        text
+);
+
+comment on table public.fabrica_reporte is 'Fábrica de videos: el parte de cada día, guardado antes de mandarse.';
+
+-- RLS activo y SIN políticas, como el resto: solo el servidor (service-role).
+alter table public.fabrica_videos   enable row level security;
+alter table public.fabrica_envios   enable row level security;
+alter table public.fabrica_estado   enable row level security;
+alter table public.fabrica_tokens   enable row level security;
+alter table public.fabrica_candados enable row level security;
+alter table public.fabrica_reporte  enable row level security;
+
+
+-- ── Ayudantes ──
+
+-- Suma un error a la lista y deja los últimos 20. Cada error lleva el cómo.
+create or replace function public.fabrica_con_error(p_lista jsonb, p_error jsonb)
+returns jsonb
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(x.e order by x.n), '[]'::jsonb)
+  from (
+    select t.e, t.n
+    from jsonb_array_elements(
+      coalesce(p_lista, '[]'::jsonb) || jsonb_build_array(jsonb_build_object('cuando', now()) || p_error)
+    ) with ordinality as t(e, n)
+    order by t.n desc
+    limit 20
+  ) x;
+$$;
+
+-- Si cambió el día de Bolivia, los contadores vuelven a cero.
+create or replace function public.fabrica_al_dia()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.fabrica_estado
+  set dia = (now() at time zone 'America/La_Paz')::date,
+      gasto_usd_dia = 0, publicados_dia = 0, fallidos_dia = 0
+  where id and dia is distinct from (now() at time zone 'America/La_Paz')::date;
+$$;
+
+-- El latido del tick: deja la hora y devuelve el estado con el `now()` de la
+-- base, que es la hora con la que el tick decide.
+create or replace function public.fabrica_latido()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  e public.fabrica_estado;
+begin
+  perform public.fabrica_al_dia();
+  update public.fabrica_estado set ultimo_tick_en = now() where id returning * into e;
+  return to_jsonb(e) || jsonb_build_object('ahora', now());
+end;
+$$;
+
+-- Pausar: la fábrica entera (p_red null) o una red. El primer motivo se
+-- queda: si ya estaba pausada, una segunda pausa no tapa la causa.
+create or replace function public.fabrica_pausar(p_motivo text, p_por text, p_red text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  e public.fabrica_estado;
+begin
+  if p_red is null then
+    update public.fabrica_estado
+    set pausada = true, motivo = p_motivo, pausada_por = p_por, pausada_en = now()
+    where id and not pausada;
+  else
+    update public.fabrica_estado
+    set redes = jsonb_set(redes, array[p_red],
+      coalesce(redes -> p_red, '{}'::jsonb)
+        || jsonb_build_object('pausada', true, 'motivo', p_motivo, 'por', p_por, 'en', now()))
+    where id and coalesce((redes -> p_red ->> 'pausada')::boolean, false) = false;
+  end if;
+  select * into e from public.fabrica_estado where id;
+  return to_jsonb(e);
+end;
+$$;
+
+-- Reanudar. Lo llama solo la ruta de Kev: el vigilante y el equipo pausan,
+-- nunca reanudan.
+create or replace function public.fabrica_reanudar(p_por text, p_red text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  e public.fabrica_estado;
+begin
+  if p_red is null then
+    update public.fabrica_estado
+    set pausada = false, motivo = null, pausada_por = p_por, pausada_en = null
+    where id;
+  else
+    update public.fabrica_estado
+    set redes = jsonb_set(redes, array[p_red],
+      jsonb_build_object('pausada', false, 'fallos_seguidos', 0, 'por', p_por, 'en', now()))
+    where id;
+  end if;
+  select * into e from public.fabrica_estado where id;
+  return to_jsonb(e);
+end;
+$$;
+
+
+-- ── Reservas de videos ──
+
+-- Gana solo si el estado es uno de p_desde, nadie lo tiene (o su reserva
+-- venció), quedan intentos y la fábrica no está pausada: todo leído en la
+-- MISMA sentencia. El intento se suma al reservar: una caída también cuenta.
+create or replace function public.fabrica_reservar_video(
+  p_id uuid, p_desde text[], p_trabajo text, p_dueno text, p_vence_min int, p_max_intentos int)
+returns setof public.fabrica_videos
+language sql
+security definer
+set search_path = public
+as $$
+  update public.fabrica_videos v
+  set dueno = p_dueno, trabajo = p_trabajo,
+      vence_en = now() + make_interval(mins => p_vence_min),
+      intentos = v.intentos + 1, actualizado = now()
+  where v.id = p_id
+    and v.estado = any(p_desde)
+    and (v.dueno is null or v.vence_en < now())
+    and v.intentos < p_max_intentos
+    and exists (select 1 from public.fabrica_estado e where e.id and not e.pausada)
+  returning v.*;
+$$;
+
+-- Cierra solo quien tiene la reserva. p_campos trae lo que se guarda; las
+-- claves especiales:
+--   error           se suma a `errores` (con el cómo)
+--   mantener_dueno  true = cambia el estado sin soltar la reserva
+--   intentos        si no viene: vuelve a 0 al cambiar de estado (paso nuevo)
+create or replace function public.fabrica_terminar_video(p_id uuid, p_dueno text, p_hasta text, p_campos jsonb default '{}'::jsonb)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  c jsonb := coalesce(p_campos, '{}'::jsonb);
+  seguir boolean := coalesce((c ->> 'mantener_dueno')::boolean, false);
+  n int;
+begin
+  update public.fabrica_videos v
+  set estado         = p_hasta,
+      actualizado    = now(),
+      dueno          = case when seguir then v.dueno else null end,
+      trabajo        = case when seguir then v.trabajo else null end,
+      vence_en       = case when seguir then v.vence_en else null end,
+      intentos       = case when c ? 'intentos' then r.intentos
+                            when p_hasta <> v.estado then 0 else v.intentos end,
+      pilar          = case when c ? 'pilar' then r.pilar else v.pilar end,
+      personajes     = case when c ? 'personajes' then r.personajes else v.personajes end,
+      semaforo       = case when c ? 'semaforo' then r.semaforo else v.semaforo end,
+      idea           = case when c ? 'idea' then r.idea else v.idea end,
+      episodio       = case when c ? 'episodio' then r.episodio else v.episodio end,
+      guion_hash     = case when c ? 'guion_hash' then r.guion_hash else v.guion_hash end,
+      textos         = case when c ? 'textos' then r.textos else v.textos end,
+      avisos         = case when c ? 'avisos' then r.avisos else v.avisos end,
+      archivo        = case when c ? 'archivo' then r.archivo else v.archivo end,
+      archivo_bytes  = case when c ? 'archivo_bytes' then r.archivo_bytes else v.archivo_bytes end,
+      duracion_s     = case when c ? 'duracion_s' then r.duracion_s else v.duracion_s end,
+      calidad        = case when c ? 'calidad' then r.calidad else v.calidad end,
+      motivo_rechazo = case when c ? 'motivo_rechazo' then r.motivo_rechazo else v.motivo_rechazo end,
+      es_reserva     = case when c ? 'es_reserva' then r.es_reserva else v.es_reserva end,
+      errores        = case when c ? 'error' then public.fabrica_con_error(v.errores, c -> 'error') else v.errores end
+  from jsonb_populate_record(null::public.fabrica_videos, c - 'error' - 'mantener_dueno') r
+  where v.id = p_id and v.dueno = p_dueno;
+  get diagnostics n = row_count;
+  return n = 1;
+end;
+$$;
+
+-- Un cambio de estado sin red de por medio (el tick cierra un video cuando
+-- todas sus redes terminaron, lo pasa a programado…). El UPDATE condicional
+-- es la reserva: solo pasa si sigue en p_desde y nadie lo tiene.
+create or replace function public.fabrica_mover_video(p_id uuid, p_desde text[], p_hasta text, p_campos jsonb default '{}'::jsonb)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  c jsonb := coalesce(p_campos, '{}'::jsonb);
+  n int;
+begin
+  update public.fabrica_videos v
+  set estado = p_hasta, actualizado = now(),
+      intentos = case when p_hasta <> v.estado then 0 else v.intentos end,
+      motivo_rechazo = case when c ? 'motivo_rechazo' then c ->> 'motivo_rechazo' else v.motivo_rechazo end,
+      -- archivo: null cuando se borró del almacén
+      archivo = case when c ? 'archivo' then c ->> 'archivo' else v.archivo end,
+      errores = case when c ? 'error' then public.fabrica_con_error(v.errores, c -> 'error') else v.errores end
+  where v.id = p_id
+    and v.estado = any(p_desde)
+    and (v.dueno is null or v.vence_en < now());
+  get diagnostics n = row_count;
+  return n = 1;
+end;
+$$;
+
+
+-- ── Reservas de envíos ──
+
+-- Como reservar_video, y además: que ya sea la hora del próximo intento y que
+-- esa red no esté pausada.
+--   p_sumar       false = revisar sin gastar un intento (mirar si salió)
+--   p_aun_pausada true  = solo para DESPROGRAMAR YouTube, que es justo lo que
+--                         hay que hacer cuando la fábrica está pausada
+create or replace function public.fabrica_reservar_envio(
+  p_id uuid, p_desde text[], p_en_curso text, p_dueno text, p_vence_min int, p_max_intentos int,
+  p_sumar boolean default true, p_aun_pausada boolean default false)
+returns setof public.fabrica_envios
+language sql
+security definer
+set search_path = public
+as $$
+  update public.fabrica_envios v
+  set estado = p_en_curso, dueno = p_dueno, reservado_en = now(),
+      vence_en = now() + make_interval(mins => p_vence_min),
+      intentos = v.intentos + case when p_sumar then 1 else 0 end,
+      actualizado = now()
+  where v.id = p_id
+    and v.estado = any(p_desde)
+    and (v.dueno is null or v.vence_en < now())
+    and v.intentos < p_max_intentos
+    and (v.proximo_intento is null or v.proximo_intento <= now())
+    and (p_aun_pausada or exists (
+      select 1 from public.fabrica_estado e
+      where e.id and not e.pausada
+        and coalesce((e.redes -> v.red ->> 'pausada')::boolean, false) = false))
+  returning v.*;
+$$;
+
+-- Cierra solo quien tiene la reserva. Claves especiales de p_campos:
+--   error            se guarda en ultimo_error (con el cómo y la hora)
+--   publicado_ahora  true = publicado_en = now() de la base
+--   verificado_ahora true = verificado_en = now()
+--   intentos         si no viene, se conserva (lo decide la cola)
+create or replace function public.fabrica_terminar_envio(p_id uuid, p_dueno text, p_hasta text, p_campos jsonb default '{}'::jsonb)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  c jsonb := coalesce(p_campos, '{}'::jsonb);
+  n int;
+begin
+  update public.fabrica_envios v
+  set estado              = p_hasta,
+      actualizado         = now(),
+      dueno               = null,
+      vence_en            = null,
+      intentos            = case when c ? 'intentos' then r.intentos else v.intentos end,
+      id_red              = case when c ? 'id_red' then r.id_red else v.id_red end,
+      enlace              = case when c ? 'enlace' then r.enlace else v.enlace end,
+      contenedor          = case when c ? 'contenedor' then r.contenedor else v.contenedor end,
+      media_id            = case when c ? 'media_id' then r.media_id else v.media_id end,
+      media_expira_en     = case when c ? 'media_expira_en' then r.media_expira_en else v.media_expira_en end,
+      publish_at          = case when c ? 'publish_at' then r.publish_at else v.publish_at end,
+      proximo_intento     = case when c ? 'proximo_intento' then r.proximo_intento else v.proximo_intento end,
+      visibilidad         = case when c ? 'visibilidad' then r.visibilidad else v.visibilidad end,
+      subtitulos          = case when c ? 'subtitulos' then r.subtitulos else v.subtitulos end,
+      intentos_subtitulos = case when c ? 'intentos_subtitulos' then r.intentos_subtitulos else v.intentos_subtitulos end,
+      publicado_en        = case when coalesce((c ->> 'publicado_ahora')::boolean, false) then now() else v.publicado_en end,
+      verificado_en       = case when coalesce((c ->> 'verificado_ahora')::boolean, false) then now() else v.verificado_en end,
+      ultimo_error        = case when c ? 'error' then jsonb_build_object('cuando', now()) || (c -> 'error') else v.ultimo_error end
+  from jsonb_populate_record(null::public.fabrica_envios, c - 'error' - 'publicado_ahora' - 'verificado_ahora') r
+  where v.id = p_id and v.dueno = p_dueno;
+  get diagnostics n = row_count;
+  return n = 1;
+end;
+$$;
+
+-- Un cambio de estado de un envío sin red de por medio (omitir una red
+-- apagada, marcar publicado lo que YouTube ya sacó a la hora). Mismo
+-- criterio que fabrica_mover_video.
+create or replace function public.fabrica_mover_envio(p_id uuid, p_desde text[], p_hasta text, p_campos jsonb default '{}'::jsonb)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  c jsonb := coalesce(p_campos, '{}'::jsonb);
+  n int;
+begin
+  update public.fabrica_envios v
+  set estado = p_hasta, actualizado = now(),
+      publicado_en = case when coalesce((c ->> 'publicado_ahora')::boolean, false) then now() else v.publicado_en end,
+      ultimo_error = case when c ? 'error' then jsonb_build_object('cuando', now()) || (c -> 'error') else v.ultimo_error end
+  where v.id = p_id
+    and v.estado = any(p_desde)
+    and (v.dueno is null or v.vence_en < now());
+  get diagnostics n = row_count;
+  return n = 1;
+end;
+$$;
+
+-- Una reserva vencida en `subiendo` o `publicando` no se sabe si salió: pasa
+-- a `ambiguo`, y de ahí solo se sale mirando los posts recientes de la red.
+-- Es lo primero que hace cada tick y cada tanda.
+create or replace function public.fabrica_vencidos_a_ambiguo()
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n int;
+begin
+  update public.fabrica_envios
+  set ultimo_error = jsonb_build_object(
+        'cuando', now(), 'paso', estado, 'clase', 'ambiguo',
+        'como', 'la reserva de ' || dueno || ' venció en ' || estado || ' sin cerrarse'),
+      estado = 'ambiguo', dueno = null, vence_en = null, actualizado = now()
+  where estado in ('subiendo', 'publicando') and vence_en < now();
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+
+-- ── Aprobaciones vencidas y huecos ──
+
+-- Un guion sin respuesta de Kev en p_horas, o (en modo aprobación) un video
+-- sin OK a p_min_sin_ok minutos de su salida, no sale: queda rechazado y su
+-- lugar lo cubre la reserva. Devuelve cuántos y los lugares que quedaron libres.
+create or replace function public.fabrica_vencer_aprobaciones(p_horas int default 24, p_min_sin_ok int default 30)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n_guiones int;
+  huecos jsonb;
+begin
+  update public.fabrica_videos
+  set estado = 'rechazado', motivo_rechazo = 'sin aprobación del guion en ' || p_horas || ' h',
+      dueno = null, trabajo = null, vence_en = null, actualizado = now()
+  where estado = 'aprobacion_pendiente'
+    and actualizado < now() - make_interval(hours => p_horas)
+    and (dueno is null or vence_en < now());
+  get diagnostics n_guiones = row_count;
+
+  with rechazados as (
+    update public.fabrica_videos v
+    set estado = 'rechazado', motivo_rechazo = 'sin OK del video a ' || p_min_sin_ok || ' min de la salida',
+        dueno = null, trabajo = null, vence_en = null, actualizado = now()
+    where v.estado in ('calidad_ok', 'subido_parcial', 'programado')
+      and v.aprobado_video_en is null
+      and not v.es_reserva
+      and v.hora_salida is not null
+      and v.hora_salida < now() + make_interval(mins => p_min_sin_ok)
+      and (v.dueno is null or v.vence_en < now())
+      and exists (select 1 from public.fabrica_estado e where e.id and e.modo_aprobacion)
+    returning v.dia, v.slot, v.hora_salida
+  )
+  select coalesce(jsonb_agg(jsonb_build_object('dia', dia, 'slot', slot, 'hora', hora_salida)), '[]'::jsonb)
+  into huecos from rechazados;
+
+  return jsonb_build_object('guiones', n_guiones, 'videos', huecos);
+end;
+$$;
+
+-- Un lugar del día que no va a llegar a tiempo lo toma la reserva verde más
+-- vieja que esté lista (subida, y aprobada si hay modo aprobación). El que no
+-- llegó deja el lugar: si es verde y sigue vivo pasa a la reserva; un
+-- amarillo nunca es reserva y queda rechazado. Con `skip locked`, dos ticks a
+-- la vez no se llevan la misma reserva. Devuelve el video que tomó el lugar,
+-- o nada (lugar ocupado por uno listo, o reserva vacía).
+create or replace function public.fabrica_cubrir_hueco(p_dia date, p_slot int, p_hora timestamptz)
+returns setof public.fabrica_videos
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  viejo public.fabrica_videos;
+  hay_viejo boolean;
+  nuevo public.fabrica_videos;
+  modo boolean;
+begin
+  if not exists (select 1 from public.fabrica_estado e where e.id and not e.pausada) then
+    return;
+  end if;
+  select modo_aprobacion into modo from public.fabrica_estado where id;
+
+  select * into viejo from public.fabrica_videos where dia = p_dia and slot = p_slot for update;
+  hay_viejo := found;
+  if hay_viejo and viejo.estado in ('programado', 'publicado') then return; end if;
+  if hay_viejo and viejo.dueno is not null and viejo.vence_en > now() then return; end if;
+
+  select * into nuevo from public.fabrica_videos
+  where es_reserva and slot is null and semaforo = 'verde' and estado = 'subido_parcial'
+    and (dueno is null or vence_en < now())
+    and (not modo or aprobado_video_en is not null)
+  order by creado
+  limit 1
+  for update skip locked;
+  if not found then return; end if;
+
+  if hay_viejo then
+    update public.fabrica_videos
+    set slot = null,
+        es_reserva = (semaforo = 'verde' and estado not in ('fallido', 'rechazado', 'publicado')),
+        estado = case when semaforo = 'verde' or estado in ('fallido', 'rechazado') then estado else 'rechazado' end,
+        motivo_rechazo = case when semaforo = 'verde' or estado in ('fallido', 'rechazado') then motivo_rechazo
+                              else 'no llegó a tiempo y un amarillo no va a la reserva' end,
+        actualizado = now()
+    where id = viejo.id;
+  end if;
+
+  return query
+  update public.fabrica_videos
+  set dia = p_dia, slot = p_slot, hora_salida = p_hora, es_reserva = false, actualizado = now()
+  where id = nuevo.id
+  returning *;
+end;
+$$;
+
+
+-- ── Plata y fallos ──
+
+-- Se suma ANTES de gastar, y solo si no pasa el tope del día. Si pasa, la
+-- fábrica se pausa y devuelve ok: false: ese gasto no se hace.
+create or replace function public.fabrica_sumar_gasto(p_usd numeric)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  e public.fabrica_estado;
+begin
+  perform public.fabrica_al_dia();
+  update public.fabrica_estado
+  set gasto_usd_dia = gasto_usd_dia + p_usd
+  where id and not pausada and gasto_usd_dia + p_usd <= tope_gasto_usd_dia
+  returning * into e;
+  if found then
+    return jsonb_build_object('ok', true, 'gasto', e.gasto_usd_dia, 'tope', e.tope_gasto_usd_dia);
+  end if;
+
+  update public.fabrica_estado
+  set pausada = true, pausada_por = 'fabrica', pausada_en = now(),
+      motivo = 'tope de gasto: ' || gasto_usd_dia || ' + ' || p_usd || ' pasa de ' || tope_gasto_usd_dia || ' USD'
+  where id and not pausada;
+  select * into e from public.fabrica_estado where id;
+  return jsonb_build_object('ok', false, 'gasto', e.gasto_usd_dia, 'tope', e.tope_gasto_usd_dia, 'motivo', e.motivo);
+end;
+$$;
+
+-- El resultado de cada envío de una red: un éxito pone los fallos seguidos en
+-- 0; con 2 fallos seguidos, esa red se pausa sola.
+create or replace function public.fabrica_registrar_resultado(p_red text, p_ok boolean)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  fallos int;
+  r jsonb;
+begin
+  perform public.fabrica_al_dia();
+  update public.fabrica_estado
+  set redes = jsonb_set(redes, array[p_red],
+        coalesce(redes -> p_red, '{}'::jsonb) || jsonb_build_object('fallos_seguidos',
+          case when p_ok then 0 else coalesce((redes -> p_red ->> 'fallos_seguidos')::int, 0) + 1 end)),
+      publicados_dia = publicados_dia + case when p_ok then 1 else 0 end,
+      fallidos_dia = fallidos_dia + case when p_ok then 0 else 1 end
+  where id
+  returning (redes -> p_red ->> 'fallos_seguidos')::int into fallos;
+
+  if not p_ok and fallos >= 2 then
+    perform public.fabrica_pausar(fallos || ' fallos seguidos', 'fabrica', p_red);
+  end if;
+  select redes -> p_red into r from public.fabrica_estado where id;
+  return r;
+end;
+$$;
+
+
+-- ── Candados diarios ──
+
+-- Como casa_blanca_reclamar_reflexion: devuelve el día (de Bolivia) si lo
+-- ganó, o null si ya está hecho, lo tiene otro o se acabaron los intentos.
+create or replace function public.fabrica_reclamar(p_que text, p_intentos int, p_vence_min int)
+returns date
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  hoy date := (now() at time zone 'America/La_Paz')::date;
+  ganado date;
+begin
+  insert into public.fabrica_candados as c (que, dia, intentos, reclamado)
+  values (p_que, hoy, 1, now())
+  on conflict (que, dia) do update set intentos = c.intentos + 1, reclamado = now()
+    where c.terminado is null
+      and c.intentos < p_intentos
+      and c.reclamado < now() - make_interval(mins => p_vence_min)
+  returning c.dia into ganado;
+
+  if ganado is not null then
+    delete from public.fabrica_candados where dia < hoy - 30;
+  end if;
+  return ganado;
+end;
+$$;
+
+create or replace function public.fabrica_terminar_candado(p_que text, p_dia date)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n int;
+begin
+  update public.fabrica_candados set terminado = now()
+  where que = p_que and dia = p_dia and terminado is null;
+  get diagnostics n = row_count;
+  return n = 1;
+end;
+$$;
+
+
+-- ── El parte ──
+
+-- Se guarda antes de mandarlo. Si se vuelve a armar (el envío falló), se
+-- reescribe, pero un parte ya enviado no se toca.
+create or replace function public.fabrica_guardar_parte(p_dia date, p_resumen jsonb, p_texto text, p_canal text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n int;
+begin
+  insert into public.fabrica_reporte as r (dia, resumen, texto, canal)
+  values (p_dia, p_resumen, p_texto, p_canal)
+  on conflict (dia) do update
+    set resumen = excluded.resumen, texto = excluded.texto, canal = excluded.canal,
+        generado_en = now(), error = null
+    where r.enviado_en is null;
+  get diagnostics n = row_count;
+  return n = 1;
+end;
+$$;
+
+-- `enviado_en` solo si el canal confirmó; si no, queda el error con el cómo.
+create or replace function public.fabrica_parte_resultado(p_dia date, p_error text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.fabrica_reporte
+  set enviado_en = case when p_error is null then now() else enviado_en end,
+      error = p_error
+  where dia = p_dia;
+$$;
+
+
+-- ── Tokens ──
+
+-- Reserva la renovación de un token por p_vence_seg segundos. Gana uno.
+create or replace function public.fabrica_reservar_token(p_red text, p_vence_seg int)
+returns setof public.fabrica_tokens
+language sql
+security definer
+set search_path = public
+as $$
+  update public.fabrica_tokens
+  set renovando_hasta = now() + make_interval(secs => p_vence_seg)
+  where red = p_red and (renovando_hasta is null or renovando_hasta < now())
+  returning *;
+$$;
+
+-- Rota solo si nadie rotó antes (misma versión). Si da false, otro rotó: se
+-- relee el token, no se pisa.
+create or replace function public.fabrica_rotar_token(p_red text, p_version int, p_cifrado text, p_expira timestamptz)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n int;
+begin
+  update public.fabrica_tokens
+  set cifrado = p_cifrado, version = version + 1, expira_en = p_expira,
+      renovando_hasta = null, actualizado = now(), ultimo_error = null
+  where red = p_red and version = p_version;
+  get diagnostics n = row_count;
+  return n = 1;
+end;
+$$;
+
+
+-- Solo el servidor llama a estas funciones. Con la llave pública, cualquiera
+-- podría reanudar la fábrica o reservar envíos.
+do $$
+declare
+  f record;
+begin
+  for f in
+    select p.oid::regprocedure as firma
+    from pg_proc p
+    where p.pronamespace = 'public'::regnamespace and p.proname like 'fabrica\_%'
+  loop
+    execute format('revoke execute on function %s from public', f.firma);
+    if exists (select 1 from pg_roles where rolname = 'anon') then
+      execute format('revoke execute on function %s from anon', f.firma);
+    end if;
+    if exists (select 1 from pg_roles where rolname = 'authenticated') then
+      execute format('revoke execute on function %s from authenticated', f.firma);
+    end if;
+    if exists (select 1 from pg_roles where rolname = 'service_role') then
+      execute format('grant execute on function %s to service_role', f.firma);
+    end if;
+  end loop;
+end $$;
+
+
+-- ── Lo que pide la medición (etapa 6) en `publicaciones` ──
+-- Un dato que una red no reporta no es un cero: las cuatro columnas aceptan
+-- vacío y dejan de tener default. /api/publicaciones sigue mandando números
+-- siempre, así que lo de hoy no cambia.
+alter table public.publicaciones
+  alter column vistas drop not null,       alter column vistas drop default,
+  alter column likes drop not null,        alter column likes drop default,
+  alter column comentarios drop not null,  alter column comentarios drop default,
+  alter column compartidos drop not null,  alter column compartidos drop default;
+
+alter table public.publicaciones add column if not exists fabrica_video_id uuid
+  references public.fabrica_videos(id) on delete set null;
+alter table public.publicaciones add column if not exists id_red text;
+alter table public.publicaciones add column if not exists corte text check (corte in ('72h', '7d'));
+-- El cómo: pilar, visor, cámara del plano 1, personajes, voz, música, formato, duración.
+alter table public.publicaciones add column if not exists como jsonb;
+alter table public.publicaciones add column if not exists medido_en timestamptz;
+
+create unique index if not exists publicaciones_fabrica_corte_uq
+  on public.publicaciones (fabrica_video_id, red, corte) where fabrica_video_id is not null;
+
+
+-- ── El reloj: pg_cron llama al tick cada 10 minutos ──
+-- NO corre solo: está comentado a propósito. Necesita la web desplegada con
+-- /api/fabrica/tick y la clave FABRICA_CRON_SECRET. La clave NUNCA va en este
+-- archivo: se guarda una vez en Vault, a mano, y el bloque la lee de ahí.
+--
+-- Para encenderlo:
+--   1. Database → Extensions: activar pg_cron y pg_net.
+--   2. Guardar la clave (la misma de FABRICA_CRON_SECRET en Vercel), una vez:
+--        select vault.create_secret('<la clave>', 'fabrica_cron');
+--   3. Quitar los "-- " del bloque de abajo y correrlo solo. Se puede correr
+--      de nuevo: cron.schedule con el mismo nombre reemplaza el anterior.
+--   Para apagarlo: select cron.unschedule('fabrica-tick');
+--
+-- do $$
+-- declare
+--   falta text[] := '{}';
+--   hay_clave boolean := false;
+-- begin
+--   if not exists (select 1 from pg_extension where extname = 'pg_cron') then falta := falta || 'pg_cron'; end if;
+--   if not exists (select 1 from pg_extension where extname = 'pg_net') then falta := falta || 'pg_net'; end if;
+--   if to_regclass('vault.decrypted_secrets') is not null then
+--     execute 'select exists (select 1 from vault.decrypted_secrets where name = $1)' into hay_clave using 'fabrica_cron';
+--   end if;
+--   if not hay_clave then falta := falta || 'el secreto fabrica_cron en Vault'; end if;
+--   if cardinality(falta) > 0 then
+--     raise notice 'fabrica-tick NO se programó. Falta: %', array_to_string(falta, ', ');
+--     return;
+--   end if;
+--   perform cron.schedule('fabrica-tick', '*/10 * * * *', $cron$
+--     select net.http_post(
+--       url := 'https://kevproject.world/api/fabrica/tick',
+--       headers := jsonb_build_object(
+--         'Content-Type', 'application/json',
+--         'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'fabrica_cron')),
+--       body := '{}'::jsonb,
+--       timeout_milliseconds := 60000
+--     );
+--   $cron$);
+--   raise notice 'fabrica-tick programado: cada 10 minutos.';
+-- end $$;
+
+
 -- ══════════════════════════════════════════════════════════════
--- COMPROBACIÓN · tienen que salir 13 filas, todas "protegida"
+-- COMPROBACIÓN · tienen que salir 19 filas, todas "protegida"
 -- ══════════════════════════════════════════════════════════════
 
 select relname as tabla,
        case when relrowsecurity then 'protegida' else 'ABIERTA — avísame' end as estado
 from pg_class
 where relnamespace = 'public'::regnamespace
-  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial', 'preguntas', 'casa_blanca_entregables', 'casa_blanca_uso', 'casa_blanca_memoria', 'casa_blanca_conciencia', 'casa_blanca_reflexion')
+  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial', 'preguntas', 'casa_blanca_entregables', 'casa_blanca_uso', 'casa_blanca_memoria', 'casa_blanca_conciencia', 'casa_blanca_reflexion', 'fabrica_videos', 'fabrica_envios', 'fabrica_estado', 'fabrica_tokens', 'fabrica_candados', 'fabrica_reporte')
 order by relname;

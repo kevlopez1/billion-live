@@ -20,6 +20,7 @@ import { hashTexto } from "./avatar-geo"
 import { conFicha, vestuarioDe } from "./avatar-fichas"
 import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra } from "./avatar-materiales"
 import { texBalon, texPunto, texSombra } from "./avatar-texturas"
+import { esAndroide, matCejasLuz, matRopaAndroide, prepararAndroide } from "./avatar-androide"
 
 let matBalon: THREE.MeshStandardMaterial | null = null
 let geoBalon: THREE.SphereGeometry | null = null
@@ -39,10 +40,13 @@ export function crearAvatarReal(original: Personaje): Avatar {
   const ropa = vestir(cu, p)
   const { lote: lPiel, ojos: lOjos } = mallaPiel(cu, ropa.cobertura, { sombraBarba: ropa.sombraBarba })
   const espalda = ap.ropa.tipo === "traje" || ap.ropa.tipo === "uniforme_militar" ? 0.02 : 0.026
-  const lPelo = armarPelo(cu, p, { holguraEspalda: espalda, bajoSombrero: !!ap.sombrero && ap.sombrero !== "laurel" && ap.sombrero !== "corona_egipcia", sombreroY: 0.07 })
+  // Androide (Claude, ChatGPT): sin pelo (solo pestañas), cejas de luz y la
+  // piel con sus líneas (avatar-androide.ts). Se prepara antes de reproporcionar.
+  const andro = esAndroide(p) ? prepararAndroide(cu, p, lPiel) : null
+  const lPelo = andro ? andro.pelo : armarPelo(cu, p, { holguraEspalda: espalda, bajoSombrero: !!ap.sombrero && ap.sombrero !== "laurel" && ap.sombrero !== "corona_egipcia", sombreroY: 0.07 })
   // Largo de piernas, brazos y cuello de la ficha: se estira todo junto (piel,
   // ropa, pelo) antes de armar el esqueleto.
-  cu.reproporcionar([lPiel, lOjos, ropa.lote, lPelo, ...(ropa.lentes ? [ropa.lentes.lote] : []), ...(ropa.utileria ? [ropa.utileria] : [])])
+  cu.reproporcionar([lPiel, lOjos, ropa.lote, lPelo, ...(ropa.lentes ? [ropa.lentes.lote] : []), ...(ropa.utileria ? [ropa.utileria] : []), ...(andro?.cejas ? [andro.cejas] : [])])
 
   const { huesos, esqueleto } = cu.esqueleto()
   raiz.add(huesos[0])
@@ -116,11 +120,14 @@ export function crearAvatarReal(original: Personaje): Avatar {
     particulas.raycast = sinRayos
     raiz.add(particulas)
   } else {
-    piel(lPiel.geometria(), matPiel(cu.rasgos.f.piel.base))
-    piel(ropa.lote.geometria(), matRopa(ropa.tejido, ropa.numero))
+    const gPiel = lPiel.geometria()
+    andro?.atributos(gPiel)
+    piel(gPiel, andro ? andro.matPiel : matPiel(cu.rasgos.f.piel.base))
+    piel(ropa.lote.geometria(), andro ? matRopaAndroide(p, ropa.tejido) : matRopa(ropa.tejido, ropa.numero))
     // El pelo no proyecta sombra: con alfa recortado, las hebras dejaban manchas
     // de "tierra" en la frente y en las mejillas (mapa de sombras a 2 mm).
-    piel(lPelo.geometria(), matPelo(cu.rasgos.f.pelo.color, cu.rasgos.f.pelo.rizo >= 0.6), false)
+    piel(lPelo.geometria(), andro ? andro.matPestanas : matPelo(cu.rasgos.f.pelo.color, cu.rasgos.f.pelo.rizo >= 0.6), false)
+    if (andro?.cejas) piel(andro.cejas.geometria(), matCejasLuz(), false)
     piel(lOjos.geometria(), matOjo(cu.rasgos.iris, cu.rasgos.f.esclera), false)
     if (ropa.lentes) piel(ropa.lentes.lote.geometria(), matLente(ropa.lentes.sol), false)
     if (ropa.utileria) utileria = piel(ropa.utileria.geometria(), matRopa(ropa.tejido, ropa.numero))
@@ -204,14 +211,17 @@ export function crearAvatarReal(original: Personaje): Avatar {
   })
   propias.push(matRayos)
   const originales = new Map<THREE.Mesh, { mat: THREE.Material | THREE.Material[]; orden: number }>()
+  // La utilería ya está en `mallas` (la armó piel()): repetirla acá hacía que
+  // la segunda pasada guardara el material de rayos como "original" y el
+  // objeto quedara transparente a través de las paredes para siempre.
+  const todas: THREE.Mesh[] = balon ? [...mallas, balon] : mallas
   let enRayos = false
   function rayosX(on: boolean) {
     if (on === enRayos) return
     enRayos = on
-    const todas: THREE.Mesh[] = [...mallas, ...(utileria ? [utileria] : []), ...(balon ? [balon] : [])]
     for (const m of todas) {
       if (on) {
-        originales.set(m, { mat: m.material, orden: m.renderOrder })
+        if (m.material !== matRayos) originales.set(m, { mat: m.material, orden: m.renderOrder })
         m.material = matRayos
         m.renderOrder = 10
       } else {
