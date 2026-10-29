@@ -223,6 +223,12 @@ export interface Ctx {
   ahora: () => Date
   /** El token vigente de esa red, ya descifrado (tokens.ts), o null si no hay. */
   token: (red: RedId) => Promise<string | null>
+  /**
+   * Por qué el último token(red) dio null, ya clasificado (tokens.ts): la base
+   * o la renovación fallaron un rato → reintentable; nunca se cargó → no_hoy;
+   * inválido → fatal. Sin esto, el adaptador lo trata como fatal.
+   */
+  tokenFallo?: (red: RedId) => Fallo | null
   almacen: Almacen | null
   log: Log
 }

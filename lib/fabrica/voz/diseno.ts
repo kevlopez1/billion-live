@@ -16,7 +16,7 @@
 import type { Log } from "../tipos"
 import { esFallo } from "../redes/http"
 import type { Fallo } from "../tipos"
-import { arquetipoDe, conVoz, descripcionSegura, puedeHablarAlgunaVez } from "./arquetipos"
+import { arquetipoDe, conVoz, descripcionSegura, muestraSegura, puedeHablarAlgunaVez } from "./arquetipos"
 import { aprobar, huellaDescripcion, nombreEnElServicio, type EntradaVoz, type RegistroVoces } from "./registro"
 import type { Disenador } from "./tipos"
 
@@ -64,9 +64,9 @@ export function planDeDiseno(o: { solo?: string[]; previas: Candidatas; registro
       saltar.push({ id, porque: "no habla en la fábrica (vivo o fuera, semáforo): no se le diseña voz" })
       continue
     }
-    const errores = descripcionSegura(id, arq.descripcion)
+    const errores = [...descripcionSegura(id, arq.descripcion), ...muestraSegura(id, arq.muestra)]
     if (errores.length) {
-      saltar.push({ id, porque: `la descripción no pasa la guarda: ${errores.join("; ")}` })
+      saltar.push({ id, porque: `la descripción o la muestra no pasan la guarda: ${errores.join("; ")}` })
       continue
     }
     if (!o.rehacer && o.registro.voces[id]) {
@@ -118,7 +118,7 @@ export async function disenarVoces(ids: string[], previas: Candidatas, p: Puerto
   for (const [k, id] of ids.entries()) {
     const arq = arquetipoDe(id)
     // La guarda otra vez justo antes de mandar: lo que va a un tercero se revisa en el momento.
-    const errores = arq ? descripcionSegura(id, arq.descripcion) : [`${id}: sin arquetipo`]
+    const errores = arq ? [...descripcionSegura(id, arq.descripcion), ...muestraSegura(id, arq.muestra)] : [`${id}: sin arquetipo`]
     if (!arq || errores.length || !puedeHablarAlgunaVez(id)) {
       fallidas.push({ id, como: errores.join("; ") || `${id} no habla en la fábrica` })
       continue

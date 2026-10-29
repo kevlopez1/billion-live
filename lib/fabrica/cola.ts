@@ -121,7 +121,7 @@ export type Accion =
   | { tipo: "verificar"; envio: string; video: string; red: RedId }
   | { tipo: "avanzar_video"; video: string; desde: EstadoVideo; hasta: EstadoVideo; motivo?: string }
   | { tipo: "parte" }
-  | { tipo: "limpiar_almacen"; video: string; archivo: string }
+  | { tipo: "limpiar_almacen"; video: string; archivo: string; estado: "publicado" | "fallido" | "rechazado" }
 
 export interface EntradaPlan {
   estado: FilaEstado
@@ -146,6 +146,9 @@ const redPausada = (e: FilaEstado, red: RedId) => e.redes?.[red]?.pausada === tr
 const salidaYouTube = (e: FilaEnvio, v: FilaVideo | undefined) => (e.publish_at ? ms(e.publish_at) : ms(v?.hora_salida))
 
 /** ¿Este envío ya no va a cambiar? Un publicado sin verificar a las 24 h cuenta como cerrado. */
+/** Envíos que pueden estar leyendo el archivo del almacén ahora mismo (una subida o un contenedor que se procesa). */
+const LEYENDO_EL_ARCHIVO: readonly EstadoEnvio[] = ["subiendo", "publicando", "procesando"]
+
 export function envioCerrado(e: FilaEnvio, ahora: Date): boolean {
   if ((TERMINALES_ENVIO as readonly string[]).includes(e.estado)) return true
   return e.estado === "publicado" && ahora.getTime() - ms(e.publicado_en) > VERIFICAR_HASTA_H * 3600_000
@@ -332,11 +335,16 @@ export function planDelTick(p: EntradaPlan): Accion[] {
   // 9. El parte, desde las 23:00 (el candado de la base decide si ya salió).
   if (horaBolivia(ahora) >= HORA_PARTE) acciones.push({ tipo: "parte" })
 
-  // 10. El almacén: se borra lo publicado cuando todas sus redes cerraron.
+  // 10. El almacén: se borra lo publicado cuando todas sus redes cerraron, y
+  //     lo que ya no va a salir (fallido o rechazado) cuando ninguna red lo
+  //     está leyendo: si no, sus 45–90 MB quedan en el bucket para siempre.
   for (const v of videos) {
+    if (!v.archivo || (v.dueno && ms(v.vence_en) > t)) continue
     const es = porVideo.get(v.id) ?? []
-    if (v.estado === "publicado" && v.archivo && es.every((e) => envioCerrado(e, ahora))) {
-      acciones.push({ tipo: "limpiar_almacen", video: v.id, archivo: v.archivo })
+    if (v.estado === "publicado" && es.every((e) => envioCerrado(e, ahora))) {
+      acciones.push({ tipo: "limpiar_almacen", video: v.id, archivo: v.archivo, estado: v.estado })
+    } else if ((v.estado === "fallido" || v.estado === "rechazado") && !es.some((e) => LEYENDO_EL_ARCHIVO.includes(e.estado))) {
+      acciones.push({ tipo: "limpiar_almacen", video: v.id, archivo: v.archivo, estado: v.estado })
     }
   }
   return acciones
@@ -707,8 +715,8 @@ async function ejecutarAccion(
     case "limpiar_almacen": {
       if (!p.ctx.almacen) return "sin almacén configurado: no se borra"
       await p.ctx.almacen.borrar(a.archivo)
-      await base.moverVideo(a.video, ["publicado"], "publicado", { archivo: null })
-      return "borrado del almacén"
+      await base.moverVideo(a.video, [a.estado], a.estado, { archivo: null })
+      return `borrado del almacén (${a.estado})`
     }
   }
 

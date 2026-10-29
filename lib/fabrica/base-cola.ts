@@ -64,8 +64,8 @@ export interface BaseCola {
   reanudar(por: string, red?: RedId): Promise<FilaEstado>
   ajustar(campos: Partial<Pick<FilaEstado, "modo_aprobacion" | "videos_por_dia" | "tope_gasto_usd_dia">>): Promise<FilaEstado>
   /** El día (Bolivia) si lo ganó, o null. */
-  reclamar(que: "tanda" | "parte", intentos: number, venceMin: number): Promise<string | null>
-  terminarCandado(que: "tanda" | "parte", dia: string): Promise<boolean>
+  reclamar(que: "tanda" | `tanda:${string}` | "parte", intentos: number, venceMin: number): Promise<string | null>
+  terminarCandado(que: "tanda" | `tanda:${string}` | "parte", dia: string): Promise<boolean>
 }
 
 export interface BaseParte {

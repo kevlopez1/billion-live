@@ -12,8 +12,17 @@
 // │   --audio <voz.json>          tramos de audio + tiempos de     │
 // │                               cada línea (voz/voces.ts)        │
 // │   --renderer-log              que imprima «WebGL: <renderer>»  │
-// │ Hasta que el script los lea, renderListo() dice qué falta y la │
-// │ tanda NO pide voces (no se paga audio que no se va a usar).    │
+// │ Hasta que el script los nombre, renderListo() dice qué falta y │
+// │ la tanda NO pide voces (no se paga audio que no se va a usar). │
+// │                                                                │
+// │ Nombrarlas no alcanza (un comentario también las nombra): con  │
+// │ --audio, el render tiene que IMPRIMIR al correr una línea       │
+// │   AUDIO: <n> tramos                                            │
+// │ con n = los tramos de voz.json que mezcló en el MP4. Sin esa   │
+// │ línea, o con otro n, el video no sigue (no_hoy) y la tanda no  │
+// │ manda más renders esa noche. Y la calidad exige la pista de    │
+// │ audio a todo guion con diálogo (tanda.ts), con                 │
+// │ FABRICA_EXIGIR_AUDIO o sin ella.                               │
 // └──────────────────────────────────────────────────────────────┘
 // ──────────────────────────────────────────────────────────────
 
@@ -51,6 +60,16 @@ export function argsDelRender(p: PedidoRender, o: { script?: string; url: string
 export function rendererDeLaSalida(texto: string): string | null {
   let ultimo: string | null = null
   for (const m of texto.matchAll(/^\s*(?:\[[^\]]*\]\s*)?(?:webgl(?:\s+renderer)?|renderer)\s*[:=]\s*(.+?)\s*$/gim)) ultimo = m[1]
+  return ultimo
+}
+
+/**
+ * Cuántos tramos de voz dice el render que mezcló: la última línea
+ * «AUDIO: <n> tramos». null = no lo dijo (no leyó --audio o no mezcló nada).
+ */
+export function audioDeLaSalida(texto: string): number | null {
+  let ultimo: number | null = null
+  for (const m of texto.matchAll(/^\s*(?:\[[^\]]*\]\s*)?audio\s*:\s*(\d+)\s+tramos?\b/gim)) ultimo = Number(m[1])
   return ultimo
 }
 
@@ -137,6 +156,19 @@ export function renderConProceso(o: OpcionesRender): Renderizar {
     if (s.cortado) return { ok: false, clase: "reintentable", como: `el render se cortó a los ${Math.round(timeoutMs / 60_000)} min (la reserva dura 40): ${cola(s.texto)}` } satisfies Fallo
     if (s.codigo !== 0) return { ok: false, clase: "reintentable", como: `el render salió con código ${s.codigo} a los ${min} min: ${cola(s.texto)}` }
     if (!(await o.existe(p.salida))) return { ok: false, clase: "reintentable", como: `el render terminó bien pero no dejó ${p.salida}: ${cola(s.texto, 300)}` }
+    // La voz se confirma con lo que el render IMPRIMIÓ, no con lo que dice su código.
+    if (p.archivoVoz && p.tramosVoz > 0) {
+      const mezclados = audioDeLaSalida(s.texto)
+      if (mezclados !== p.tramosVoz)
+        return {
+          ok: false,
+          clase: "no_hoy",
+          como:
+            mezclados === null
+              ? `el render terminó pero no confirmó la voz: falta la línea «AUDIO: ${p.tramosVoz} tramos» en su salida (ENGANCHE: ¿lee --audio y mezcla la pista, o sigue con -an?). Un video con diálogo y sin voz no se publica: ${cola(s.texto, 300)}`
+              : `el render dice que mezcló ${mezclados} tramo(s) de voz y voz.json tiene ${p.tramosVoz}: el video quedaría con diálogos mudos`,
+        }
+    }
     const renderer = rendererDeLaSalida(s.texto)
     if (!renderer) o.log(`[fabrica/render] ${p.videoId}: el render no informó el WebGL (calidad.ts lo avisa; con FABRICA_EXIGIR_NVIDIA, rechaza)`)
     return { ok: true, archivo: p.salida, renderer, como: `render en ${min} min${renderer ? ` con ${renderer}` : ""}` }

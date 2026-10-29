@@ -106,6 +106,15 @@ async function main() {
     assert.match(texto, /Tanda: no corrió/)
   })
 
+  await prueba("armarParte: una tanda incompleta va arriba, con su motivo", () => {
+    const m = memoriaDelDia()
+    Object.assign(m.estado, { ultima_tanda: { resultado: "incompleta", motivo: "2 error(es); 3 de 3 lugar(es) del 2026-11-15 no llegaron al almacén" } })
+    const { texto } = armarParte({ dia: DIA, estado: m.estado, videos: [], envios: [], reservaVerde: 5, tokens: [], tanda: null })
+    assert.equal(texto.split("\n")[1], "TANDA INCOMPLETA: 2 error(es); 3 de 3 lugar(es) del 2026-11-15 no llegaron al almacén")
+    Object.assign(m.estado, { ultima_tanda: { resultado: "completa", motivo: null } })
+    assert.ok(!/TANDA/.test(armarParte({ dia: DIA, estado: m.estado, videos: [], envios: [], reservaVerde: 5, tokens: [], tanda: null }).texto))
+  })
+
   await prueba("armarParte: pausada lo dice primero", () => {
     const m = memoriaDelDia()
     Object.assign(m.estado, { pausada: true, motivo: "tope de gasto" })

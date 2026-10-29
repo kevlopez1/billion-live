@@ -3,12 +3,14 @@
 //
 // De lo que vivió la casa salen las ideas: 3 a 6 videos más 1 de reserva
 // (solo verdes). Las fuentes son de la casa, nunca de un visitante:
-//   - casa_blanca_memoria, tipos "conversacion", "trabajo" y "diario".
+//   - casa_blanca_memoria, tipos "conversacion_casa" (la pidió Kev, sin texto
+//     libre), "trabajo" y "diario".
 //     Fuera "charla" (resumen de una charla con un visitante), "noticia" (trae
 //     entre comillas la noticia que escribió el visitante), "consejo" (trae
-//     entre comillas el tema que escribió el visitante) y
-//     "conversacion_visitante" (una escena entre residentes sobre el tema que
-//     puso un visitante: su resumen trae ese texto).
+//     entre comillas el tema que escribió el visitante),
+//     "conversacion_visitante" (la pidió la ruta pública: su resumen puede
+//     traer el tema o el contexto que escribió el visitante) y "conversacion"
+//     (el tipo viejo: todas sus filas salieron de la ruta pública).
 //   - casa_blanca_conciencia: meta, pensamiento y opiniones de cada uno (la
 //     reflexión diaria).
 //   - ESPECIALES de personajes.ts, solo si la memoria no alcanza.
@@ -19,19 +21,17 @@
 // ──────────────────────────────────────────────────────────────
 
 import { ESPECIALES, PERSONAJES } from "@/components/casa-blanca/datos/personajes"
-import type { Conciencia, Recuerdo } from "@/lib/casa-blanca-memoria"
+import { TIPOS_DE_LA_CASA, TIPOS_DE_VISITANTE, type Conciencia, type Recuerdo } from "@/lib/casa-blanca-memoria"
 import { aliasDe, luzDe, nombradosEn, SEMAFORO, tercerosEn } from "./semaforo"
 import type { Pilar } from "./textos"
 
-/** Los tipos de recuerdo que puede usar la fábrica. Los demás traen texto de un visitante. */
-export const TIPOS_DE_LA_CASA = ["conversacion", "trabajo", "diario"] as const
-
 /**
- * Los que traen texto de un visitante: nunca entran. Cada tipo de
- * TIPOS_RECUERDO está en una de las dos listas (un test lo exige): un tipo
- * nuevo no puede colarse sin que alguien decida de qué lado va.
+ * Los tipos de recuerdo que puede usar la fábrica y los que traen texto de un
+ * visitante viven junto a TIPOS_RECUERDO (lib/casa-blanca-memoria.ts): el
+ * servidor de la casa también los usa para que una conversación de la casa
+ * no se escriba con material de visitantes.
  */
-export const TIPOS_DE_VISITANTE = ["charla", "conversacion_visitante", "noticia", "consejo"] as const
+export { TIPOS_DE_LA_CASA, TIPOS_DE_VISITANTE }
 
 export interface Idea {
   pilar: Pilar
@@ -76,6 +76,9 @@ const SALA_DE_GUERRA = ["suntzu", "napoleon", "socrates", "marco", "claude", "ch
 
 /** ¿Puede la fábrica usar un recuerdo de este tipo? Solo los de la casa; un tipo desconocido, no. */
 export const esDeLaCasa = (tipo: string) => (TIPOS_DE_LA_CASA as readonly string[]).includes(tipo)
+
+/** Una semilla que nombra a un visitante viene de algo que contó un visitante. */
+export const HABLA_DE_UN_VISITANTE = /\bvisitantes?\b/i
 
 export const parDe = (a: string, b: string) => [a, b].sort().join("|")
 const parDeLista = (ids: string[]) => (ids.length >= 2 ? parDe(ids[0], ids[1]) : null)
@@ -148,7 +151,7 @@ function candidatos(f: FuentesDeIdeas, dia: string): Candidato[] {
     // Lo que no es de la casa no entra, aunque el lector lo haya traído.
     if (!esDeLaCasa(r.tipo)) continue
     const peso = r.importancia * frescura(r.creado)
-    if (r.tipo === "conversacion") {
+    if (r.tipo === "conversacion_casa") {
       for (const otro of r.con) agregar("camara-oculta", r.personajeId, otro, [r.texto], [r.id], peso)
     } else {
       const pilar: Pilar = r.tipo === "diario" ? "historia" : "consejo"
@@ -214,7 +217,12 @@ export function elegirIdeas(f: FuentesDeIdeas, op: { dia: string; cuantas: numbe
   const todos = candidatos(f, op.dia)
     // Una semilla que nombra a un vivo, a alguien fuera o a una persona real de
     // fuera de la casa (Bezos, Evo…) invita al modelo a ponerlo: se descarta antes.
-    .filter((c) => !c.semilla.some((s) => nombradosEn(s, vivosYFuera).length || tercerosEn(s).length))
+    // Tampoco una que habla de un visitante: la reflexión diaria (diario y
+    // conciencia) lee también las charlas, noticias y consejos de visitantes,
+    // y tiene la orden de llamarlo «un visitante». Esa semilla puede traer su
+    // tema contado por el residente: fuera. (Riesgo que queda: una reflexión
+    // que retoma el tema de un visitante sin nombrarlo: lo decide Kev.)
+    .filter((c) => !c.semilla.some((s) => nombradosEn(s, vivosYFuera).length || tercerosEn(s).length || HABLA_DE_UN_VISITANTE.test(s)))
     .sort((a, b) => b.puntaje - a.puntaje || a.par.localeCompare(b.par) || a.fuentes[0].localeCompare(b.fuentes[0]))
 
   const elegidas: Idea[] = []

@@ -23,6 +23,7 @@
 // verdad o los de mentira (--seco); el test corre la cadena entera sin red.
 // ──────────────────────────────────────────────────────────────
 
+import { createHash } from "node:crypto"
 import type { Episodio } from "@/components/casa-blanca/estudio/guion"
 import { rutaDelVideo, TIPO_MP4 } from "./almacen"
 import type { ResultadoCalidad } from "./calidad"
@@ -76,6 +77,8 @@ export const RESERVA_MAX = 5
 export const RESERVA_POR_NOCHE = 2
 /** Las redes cuyo archivo sube la VM antes de la salida (lo pesado no entra en Vercel). */
 export const REDES_PESADAS: readonly RedId[] = ["youtube", "x"]
+/** Un lugar del día está listo cuando su video ya está en el almacén (o más adelante). */
+export const LISTOS_PARA_SALIR: readonly EstadoVideo[] = ["subido_parcial", "programado", "publicado"]
 
 // ── Filas y puertos ───────────────────────────────────────────
 
@@ -102,15 +105,16 @@ export interface NuevaFilaVideo {
 export interface BaseTanda {
   vencidosAAmbiguo(): Promise<number>
   leerEstado(): Promise<FilaEstado>
-  reclamar(que: "tanda", intentos: number, venceMin: number): Promise<string | null>
-  terminarCandado(que: "tanda", dia: string): Promise<boolean>
+  /** "tanda" = la de cada noche; "tanda:<día de salida>" = una corrida a mano con --dia (su propio candado). */
+  reclamar(que: ClaveTanda, intentos: number, venceMin: number): Promise<string | null>
+  terminarCandado(que: ClaveTanda, dia: string): Promise<boolean>
   /** fabrica_sumar_gasto: suma ANTES de gastar; ok false = tope del día (la fábrica queda pausada). */
   sumarGasto(usd: number): Promise<{ ok: boolean; gasto: number; tope: number; motivo?: string }>
   /** Los videos de esos días de salida. */
   videosDe(dias: string[]): Promise<FilaVideoTanda[]>
   /** Las reservas (sin lugar) que siguen vivas, de cualquier día. */
   reservasVivas(): Promise<FilaVideoTanda[]>
-  /** Los últimos guiones escritos (más nuevos primero), para la similitud. */
+  /** Los últimos `n` guiones escritos (más nuevos primero) y los de toda reserva viva, para la similitud. */
   guionesRecientes(n: number): Promise<Episodio[]>
   /** Inserta una idea. `ocupado` = ese lugar del día ya tiene video (unique dia, slot). */
   insertarVideo(f: NuevaFilaVideo): Promise<{ ok: true; id: string } | { ok: false; ocupado: boolean; como: string }>
@@ -125,6 +129,8 @@ export interface BaseTanda {
   guardarResumen(resumen: ResumenTanda): Promise<void>
 }
 
+export type ClaveTanda = "tanda" | `tanda:${string}`
+
 /** Lo que pide la tanda al render (scripts/casa-blanca-render.mjs, como proceso hijo). */
 export interface PedidoRender {
   videoId: string
@@ -133,6 +139,8 @@ export interface PedidoRender {
   archivoEpisodio: string
   /** El manifiesto de la voz (voz.json): tramos de audio y tiempos de cada línea. null = sin diálogo. */
   archivoVoz: string | null
+  /** Cuántos tramos tiene voz.json: el render tiene que confirmar que mezcló esos («AUDIO: <n> tramos»). */
+  tramosVoz: number
   salida: string
 }
 export type ResultadoRender = { ok: true; archivo: string; renderer: string | null; como: string } | Fallo
@@ -198,8 +206,13 @@ export interface ResumenTanda {
   seco: boolean
   empezo: string
   termino: string | null
-  /** completa | pausada (no se reclamó o se paró en el medio) | sin_reclamar (hecha, de otro o sin intentos) | error */
-  resultado: "completa" | "pausada" | "sin_reclamar" | "cortada" | "error"
+  /**
+   * completa | incompleta (terminó, pero hubo errores y algún lugar del día de
+   * salida no llegó a subido_parcial: mañana falta algo) | pausada (no se
+   * reclamó) | sin_reclamar (hecha, de otro o sin intentos) | cortada (pausa o
+   * tope en el medio) | error
+   */
+  resultado: "completa" | "incompleta" | "pausada" | "sin_reclamar" | "cortada" | "error"
   motivo: string | null
   diaReclamado: string | null
   diaSalida: string | null
@@ -324,6 +337,48 @@ export function videoParaRed(v: FilaVideoTanda, e: FilaEnvio): VideoParaRed {
   }
 }
 
+/** La voz de un video lista para el render: su manifiesto en disco y lo que se guarda en la calidad. */
+export interface VozLista {
+  /** voz.json; null = el episodio no tiene diálogo. */
+  archivo: string | null
+  tramos: number
+  proveedor: string
+  falso: boolean
+  caracteres: number
+}
+
+/**
+ * La huella de la voz de un video: el guion, el proveedor y la voz aprobada
+ * de cada uno que habla. Si nada de eso cambió, el audio en disco sirve.
+ */
+export function huellaDeVoz(v: Pick<FilaVideoTanda, "guion_hash">, ep: Episodio, proveedor: Pick<ProveedorVoz, "nombre" | "modelo" | "falso">, registro: RegistroVoces): string {
+  const hablan = [...new Set(lineasDelEpisodio(ep).map((l) => l.personaje))].sort()
+  const guion = v.guion_hash || createHash("sha256").update(JSON.stringify(ep)).digest("hex")
+  const datos = { guion, proveedor: proveedor.nombre, modelo: proveedor.modelo, falso: proveedor.falso, voces: hablan.map((id) => [id, registro.voces[id] ?? null]) }
+  return createHash("sha256").update(JSON.stringify(datos)).digest("hex").slice(0, 32)
+}
+
+/** El voz.json que dejó una corrida anterior, si es de esta misma huella y sus audios siguen en disco. */
+export async function vozEnDisco(disco: Disco, carpeta: string, huella: string): Promise<VozLista | null> {
+  const archivo = `${carpeta}/voz.json`
+  try {
+    if (!(await disco.existe(archivo))) return null
+    const m = JSON.parse(new TextDecoder().decode(await disco.leer(archivo))) as {
+      huella?: string
+      proveedor?: string
+      falso?: boolean
+      caracteres?: number
+      tramos?: Array<{ archivo?: string }>
+    }
+    if (m.huella !== huella || !Array.isArray(m.tramos) || !m.tramos.length || typeof m.falso !== "boolean") return null
+    for (const t of m.tramos) if (!t.archivo || !(await disco.existe(t.archivo))) return null
+    return { archivo, tramos: m.tramos.length, proveedor: String(m.proveedor ?? "?"), falso: m.falso, caracteres: Number(m.caracteres) || 0 }
+  } catch {
+    // Un manifiesto ilegible no se reusa: se pide la voz de nuevo.
+    return null
+  }
+}
+
 /** El error que se guarda en la base: paso, clase y el cómo tal cual. */
 const err = (paso: string, como: string, clase: ErrorGuardado["clase"] = "fatal", codigo?: string): ErrorGuardado => ({
   paso,
@@ -387,19 +442,23 @@ export async function ejecutarTanda(p: TandaPuertos): Promise<ResumenTanda> {
   //    se cortó). Reclamar ahora tomaría el candado de hoy y la tanda de esta
   //    noche ya no podría hacer los videos de mañana.
   const retoma = !p.diaSalida && horaBolivia(p.ahora()) < HORA_RETOMA
+  // Con un día de salida a mano (--dia) la corrida tiene su propio candado,
+  // por día de salida: si tomara el de la noche («tanda» de hoy), la tanda de
+  // las 22:00 ya no podría reclamar y mañana saldría sin videos.
+  const clave: ClaveTanda = p.diaSalida ? `tanda:${p.diaSalida}` : "tanda"
   let reclamado: string | null
   if (retoma) {
     reclamado = sumarDias(diaBolivia(p.ahora()), -1)
     log(`son las ${horaBolivia(p.ahora())} en Bolivia: se retoma la tanda de anoche (${reclamado}) sin ideas nuevas; cada video se reserva igual`)
   } else {
     try {
-      reclamado = await p.base.reclamar("tanda", INTENTOS_TANDA, VENCE_TANDA_MIN)
+      reclamado = await p.base.reclamar(clave, INTENTOS_TANDA, VENCE_TANDA_MIN)
     } catch (e) {
       anotarError("tanda", `fabrica_reclamar: ${textoDe(e)}`)
       return cerrar("error", "no se pudo reclamar el día")
     }
     if (!reclamado) {
-      log(`el día no se reclamó: ya está hecho, otra máquina lo tiene (vence a los ${VENCE_TANDA_MIN} min) o se gastaron los ${INTENTOS_TANDA} intentos`)
+      log(`el día no se reclamó (candado «${clave}»): ya está hecho, otra máquina lo tiene (vence a los ${VENCE_TANDA_MIN} min) o se gastaron los ${INTENTOS_TANDA} intentos`)
       return cerrar("sin_reclamar", "día ya reclamado")
     }
   }
@@ -446,6 +505,8 @@ export async function ejecutarTanda(p: TandaPuertos): Promise<ResumenTanda> {
       anotarError(paso, `error inesperado (la reserva vence sola y otra corrida lo retoma): ${(e as Error)?.stack?.split("\n").slice(0, 3).join(" | ") ?? textoDe(e)}`, id)
     }
   }
+  /** Un render que no confirmó la voz (no_hoy): esa noche no se manda ningún otro. */
+  let renderBloqueado: string | null = null
   const reservarGasto = async (usd: number, que: string): Promise<boolean> => {
     if (usd <= 0) return true
     const g = await p.base.sumarGasto(usd)
@@ -489,9 +550,26 @@ export async function ejecutarTanda(p: TandaPuertos): Promise<ResumenTanda> {
   }
   try {
     // Al retomar se cierra el candado de anoche (si sigue abierto): el parte dirá que terminó.
-    await p.base.terminarCandado("tanda", diaReclamado)
+    await p.base.terminarCandado(clave, diaReclamado)
   } catch (e) {
     anotarError("tanda", `no se pudo cerrar el candado de la tanda: ${textoDe(e)}`)
+  }
+  // Una noche que no dejó listos los lugares de mañana no es «completa», aunque
+  // haya terminado: el parte, el panel y el código de salida lo tienen que ver.
+  // El candado se cierra igual: lo que quedó se retoma por video (antes de las
+  // 12:00 sola; después, con --dia, que tiene su propio candado).
+  if (r.errores.length) {
+    const lugares = horariosDelDia(estado.videos_por_dia, dia).length
+    let listos: number | null = null
+    try {
+      listos = (await p.base.videosDe([dia])).filter((v) => v.slot !== null && LISTOS_PARA_SALIR.includes(v.estado)).length
+    } catch (e) {
+      anotarError("tanda", `no se pudo contar los lugares listos del ${dia}: ${textoDe(e)}`)
+    }
+    if (listos === null || listos < lugares) {
+      const cuantos = listos === null ? "no se pudo contar cuántos lugares quedaron listos" : `${lugares - listos} de ${lugares} lugar(es) del ${dia} no llegaron al almacén`
+      return cerrar("incompleta", `${r.errores.length} error(es); ${cuantos}. Se retoma sola antes de las ${HORA_RETOMA}; después, con --dia ${dia}`)
+    }
   }
   return cerrar("completa", null)
 
@@ -652,6 +730,10 @@ export async function ejecutarTanda(p: TandaPuertos): Promise<ResumenTanda> {
         let fila: FilaVideoTanda | null = v
         if (fila.estado === "listo_para_render") {
           if ((proveedor.falso && !p.seco) || noRender) return
+          if (renderBloqueado) {
+            log(`${v.id} · no se renderiza: ${renderBloqueado}`)
+            return
+          }
           fila = await vozYRender(fila, proveedor)
           if (!fila) return
         }
@@ -687,51 +769,71 @@ export async function ejecutarTanda(p: TandaPuertos): Promise<ResumenTanda> {
       r.pasos[paso as Exclude<PasoTanda, "ideas">].fallos++
     }
     const carpeta = p.disco.carpetaDe(v.id)
+    const huella = huellaDeVoz(v, ep, proveedor, p.registroVoces)
 
-    // La voz: el gasto se reserva en la base ANTES de pedirla.
-    const caracteres = lineasDelEpisodio(ep).reduce((s, l) => s + l.texto.length, 0)
-    const usd = costoUsdEstimado(caracteres, proveedor)
-    if (!(await reservarGasto(usd, `voz de ${v.id}`))) {
-      await p.base.terminarVideo(v.id, p.dueno, "listo_para_render", { error: err("voz", `tope de gasto del día: USD ${usd} de voz no entran`, "no_hoy") })
-      throw new Parada(`tope de gasto del día en las voces (${v.id})`)
-    }
-    let rv2: ResultadoVoces | Fallo
-    try {
-      rv2 = await voces(ep, { proveedor, registro: p.registroVoces, dia, log: p.log })
-    } catch (e) {
-      rv2 = { ok: false, clase: "reintentable", como: `voces lanzó: ${textoDe(e)}` }
-    }
-    if (esFallo(rv2)) {
-      await volver("voz", rv2)
-      if (rv2.clase === "no_hoy") throw new Parada(`la voz dice que hoy no: ${rv2.como}`)
-      return null
-    }
-    for (const a of rv2.avisos) r.avisos.push(`${v.id}: ${a}`)
-    let archivoVoz: string | null = null
-    try {
-      const tramos = []
-      for (const [k, t] of rv2.tramos.entries()) {
-        const ruta = `${carpeta}/voz-${k + 1}.${t.formato}`
-        await p.disco.escribir(ruta, t.audio)
-        tramos.push({ archivo: ruta, formato: t.formato, duracionS: t.duracionS, como: t.como })
+    // La voz ya está en disco para este mismo episodio y las mismas voces (un
+    // render anterior falló): se reusa. Pedirla de nuevo pagaría otra vez los
+    // mismos caracteres en cada reintento del render.
+    const pedirVoz = async (): Promise<VozLista | null> => {
+      // La voz: el gasto se reserva en la base ANTES de pedirla.
+      const caracteres = lineasDelEpisodio(ep).reduce((s, l) => s + l.texto.length, 0)
+      const usd = costoUsdEstimado(caracteres, proveedor)
+      if (!(await reservarGasto(usd, `voz de ${v.id}`))) {
+        await p.base.terminarVideo(v.id, p.dueno, "listo_para_render", { error: err("voz", `tope de gasto del día: USD ${usd} de voz no entran`, "no_hoy") })
+        throw new Parada(`tope de gasto del día en las voces (${v.id})`)
       }
-      if (tramos.length) {
-        archivoVoz = `${carpeta}/voz.json`
-        await p.disco.escribir(
-          archivoVoz,
-          JSON.stringify(
-            { proveedor: rv2.proveedor, modelo: rv2.modelo, falso: rv2.falso, tramos, lineas: rv2.lineas, vozPorPlanoS: rv2.vozPorPlanoS },
-            null,
-            2,
-          ),
-        )
+      let rv2: ResultadoVoces | Fallo
+      try {
+        rv2 = await voces(ep, { proveedor, registro: p.registroVoces, dia, log: p.log })
+      } catch (e) {
+        rv2 = { ok: false, clase: "reintentable", como: `voces lanzó: ${textoDe(e)}` }
       }
-    } catch (e) {
-      await volver("voz", { ok: false, clase: "reintentable", como: `no se pudo escribir el audio en ${carpeta}: ${textoDe(e)}` })
-      return null
+      if (esFallo(rv2)) {
+        await volver("voz", rv2)
+        if (rv2.clase === "no_hoy") throw new Parada(`la voz dice que hoy no: ${rv2.como}`)
+        return null
+      }
+      for (const a of rv2.avisos) r.avisos.push(`${v.id}: ${a}`)
+      let archivoVoz: string | null = null
+      try {
+        const tramos = []
+        for (const [k, t] of rv2.tramos.entries()) {
+          const ruta = `${carpeta}/voz-${k + 1}.${t.formato}`
+          await p.disco.escribir(ruta, t.audio)
+          tramos.push({ archivo: ruta, formato: t.formato, duracionS: t.duracionS, como: t.como })
+        }
+        if (tramos.length) {
+          archivoVoz = `${carpeta}/voz.json`
+          await p.disco.escribir(
+            archivoVoz,
+            JSON.stringify(
+              {
+                huella,
+                proveedor: rv2.proveedor,
+                modelo: rv2.modelo,
+                falso: rv2.falso,
+                caracteres: rv2.caracteres,
+                tramos,
+                lineas: rv2.lineas,
+                vozPorPlanoS: rv2.vozPorPlanoS,
+              },
+              null,
+              2,
+            ),
+          )
+        }
+      } catch (e) {
+        await volver("voz", { ok: false, clase: "reintentable", como: `no se pudo escribir el audio en ${carpeta}: ${textoDe(e)}` })
+        return null
+      }
+      r.pasos.voz.ok++
+      log(`${v.id} · voz: ${rv2.tramos.length} tramo(s), ${rv2.lineas.length} línea(s), ${rv2.caracteres} caracteres (${rv2.proveedor}${rv2.falso ? ", DE PRUEBA" : ""})`)
+      return { archivo: archivoVoz, tramos: rv2.tramos.length, proveedor: rv2.proveedor, falso: rv2.falso, caracteres: rv2.caracteres }
     }
-    r.pasos.voz.ok++
-    log(`${v.id} · voz: ${rv2.tramos.length} tramo(s), ${rv2.lineas.length} línea(s), ${rv2.caracteres} caracteres (${rv2.proveedor}${rv2.falso ? ", DE PRUEBA" : ""})`)
+    const previa = await vozEnDisco(p.disco, carpeta, huella)
+    if (previa) log(`${v.id} · voz: se reusa ${previa.archivo} (mismo episodio y mismas voces: no se paga de nuevo)`)
+    const voz = previa ?? (await pedirVoz())
+    if (!voz) return null
 
     // El render.
     const archivoEpisodio = `${carpeta}/episodio.json`
@@ -739,15 +841,17 @@ export async function ejecutarTanda(p: TandaPuertos): Promise<ResumenTanda> {
     let ren: ResultadoRender
     try {
       await p.disco.escribir(archivoEpisodio, JSON.stringify(ep, null, 2))
-      ren = await p.render({ videoId: v.id, episodio: ep, archivoEpisodio, archivoVoz, salida })
+      ren = await p.render({ videoId: v.id, episodio: ep, archivoEpisodio, archivoVoz: voz.archivo, tramosVoz: voz.tramos, salida })
     } catch (e) {
       ren = { ok: false, clase: "reintentable", como: `el render lanzó: ${textoDe(e)}` }
     }
     if (esFallo(ren)) {
       await volver("render", ren)
+      // El render no confirmó la voz: los demás saldrían igual. Esta noche no se manda otro.
+      if (ren.clase === "no_hoy") renderBloqueado = ren.como
       return null
     }
-    const calidadPrevia = { renderer: ren.renderer, render: ren.como, voz: { proveedor: rv2.proveedor, falso: rv2.falso, caracteres: rv2.caracteres } }
+    const calidadPrevia = { renderer: ren.renderer, render: ren.como, voz: { proveedor: voz.proveedor, falso: voz.falso, caracteres: voz.caracteres } }
     const ok = await p.base.terminarVideo(v.id, p.dueno, "renderizado", { calidad: calidadPrevia })
     if (!ok) {
       anotarError("render", "se renderizó pero la reserva ya no era nuestra: no se guardó", v.id)
@@ -790,6 +894,15 @@ export async function ejecutarTanda(p: TandaPuertos): Promise<ResumenTanda> {
       anotarError("calidad", `la revisión lanzó: ${textoDe(e)}`, v.id)
       r.pasos.calidad.fallos++
       return null
+    }
+    // Un guion con diálogo sale con su voz o no sale, con FABRICA_EXIGIR_AUDIO o
+    // sin ella: la voz ya se pagó, y un render a medio enganchar (lee --audio
+    // pero sigue con -an) publicaría un video mudo en las cinco redes.
+    const audio = res.medido.audio
+    if (lineasDelEpisodio(ep).length && (!audio || "sinPista" in audio)) {
+      const motivo = audio ? "sin pista de audio y el guion tiene diálogo (la fábrica la exige siempre)" : "no se midió la pista de audio y el guion tiene diálogo"
+      if (!res.motivos.some((m) => /pista de audio/.test(m))) res = { ...res, ok: false, veredicto: "rechazado", motivos: [...res.motivos, motivo] }
+      else res = { ...res, ok: false, veredicto: "rechazado" }
     }
     const guardada = { ...previa, ...res }
     const bytes = res.medido.bytes

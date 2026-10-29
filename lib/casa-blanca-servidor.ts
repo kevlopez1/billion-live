@@ -36,6 +36,7 @@ import {
   sinDatosPersonales,
   terminarReflexion,
   tipoDeConversacion,
+  TIPOS_DE_LA_CASA,
   ultimosRecuerdos,
   type Conciencia,
   type CuantosRecuerdos,
@@ -520,7 +521,8 @@ function recuerdosPorCabeza(n: number): CuantosRecuerdos {
 const COMO_LO_VIVIO: Record<TipoRecuerdo, string> = {
   charla: "charla con un visitante",
   conversacion: "conversación",
-  conversacion_visitante: "conversación sobre el tema de un visitante",
+  conversacion_casa: "conversación",
+  conversacion_visitante: "conversación",
   consejo: "consejo",
   noticia: "noticia",
   trabajo: "trabajo",
@@ -653,7 +655,7 @@ function sinEtiqueta(s: string, p?: Personaje): string {
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; status: number; error: string }
 
-type Llamada<T> = {
+export type Llamada<T> = {
   accion: string
   modelo: string
   /**
@@ -967,14 +969,36 @@ async function recordarEscena(ids: string[], tipo: TipoRecuerdo, texto: string, 
   await guardarRecuerdos(ids.map((id) => ({ personajeId: id, tipo, texto, importancia, con: ids.filter((x) => x !== id) })))
 }
 
-/** La memoria y la conciencia de los que están en una escena, leídas a la vez. */
-async function interiorDeEscena(ids: string[]) {
+/**
+ * La memoria y la conciencia de los que están en una escena, leídas a la vez.
+ * Con `soloTipos`, la memoria trae solo esos tipos (una conversación de la
+ * casa no se escribe con lo que contó un visitante).
+ */
+async function interiorDeEscena(ids: string[], soloTipos?: readonly TipoRecuerdo[]) {
   const [memoria, conciencias] = await Promise.all([recuerdosDe(ids, recuerdosPorCabeza(ids.length)), leerConciencias(ids)])
+  if (soloTipos) for (const [id, rs] of memoria) memoria.set(id, rs.filter((r) => soloTipos.includes(r.tipo)))
   return [bloqueConciencia(ids, conciencias), bloqueMemoria(ids, memoria)]
 }
 
-export async function conversar(p: PedidoConversar): Promise<Resultado<RespuestaConversacion>> {
-  const [recaudado, interiorEscena] = await Promise.all([recaudadoActual(), interiorDeEscena(p.ids)])
+/** Lo que se le puede inyectar a conversar(): quién pide y, en las pruebas, la IA y la memoria de mentira. */
+export interface OpcionesConversar {
+  /** true solo si la ruta verificó la clave de Kev (autorizado(req) === true). */
+  deKev?: boolean
+  pedir?: <T>(op: Llamada<T>) => Promise<Resultado<T>>
+  recordar?: (ids: string[], tipo: TipoRecuerdo, texto: string, importancia: number) => Promise<void>
+  interior?: (ids: string[], soloTipos?: readonly TipoRecuerdo[]) => Promise<string[]>
+  recaudado?: () => Promise<number>
+}
+
+export async function conversar(p: PedidoConversar, op: OpcionesConversar = {}): Promise<Resultado<RespuestaConversacion>> {
+  // El tipo del recuerdo se decide por QUIÉN pide, antes de llamar a la IA: de
+  // la casa solo si es Kev y sin texto libre. Todo lo demás es de visitante.
+  const tipo = tipoDeConversacion(p, op.deKev === true)
+  const deLaCasa = tipo === "conversacion_casa"
+  const [recaudado, interiorEscena] = await Promise.all([
+    (op.recaudado ?? recaudadoActual)(),
+    (op.interior ?? interiorDeEscena)(p.ids, deLaCasa ? TIPOS_DE_LA_CASA : undefined),
+  ])
   const sistema = sistemaGuionista(recaudado, "PRESENTES", p.ids, 2, "media")
   const usuario = [
     `ESCENA: ${describirLugar(p.lugarId)}`,
@@ -990,7 +1014,7 @@ export async function conversar(p: PedidoConversar): Promise<Resultado<Respuesta
     .filter(Boolean)
     .join("\n\n")
 
-  const r = await pedir({
+  const r = await (op.pedir ?? pedir)({
     accion: "conversar",
     modelo: MODELO,
     sistema,
@@ -1006,8 +1030,8 @@ export async function conversar(p: PedidoConversar): Promise<Resultado<Respuesta
   if (limpia.ok) {
     const lugar = LUGAR[p.lugarId]?.nombre ?? ""
     const resumen = paraRecordar(limpia.datos.resumen, 300)
-    // Con tema del visitante, el resumen trae su texto: va con su propio tipo y la fábrica no lo usa.
-    await recordarEscena(p.ids, tipoDeConversacion(p.tema), resumen && lugar ? `${lugar} · ${resumen}` : resumen, importanciaDe(r.datos.importancia, 4))
+    // Pedida por un visitante (o con texto libre), el resumen puede traer su texto: va con su tipo y la fábrica no lo usa.
+    await (op.recordar ?? recordarEscena)(p.ids, tipo, resumen && lugar ? `${lugar} · ${resumen}` : resumen, importanciaDe(r.datos.importancia, 4))
   }
   return limpia
 }

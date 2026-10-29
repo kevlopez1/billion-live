@@ -48,14 +48,26 @@ export function baseTandaSupabase(db: Cliente): BaseTanda {
       return (data ?? []) as FilaVideoTanda[]
     },
     async guionesRecientes(n) {
-      const { data, error } = await db
-        .from("fabrica_videos")
-        .select("episodio")
-        .not("episodio", "is", null)
-        .order("creado", { ascending: false })
-        .limit(n)
-      if (error) falla("leer los guiones recientes", error)
-      return (data ?? []).map((f: { episodio: unknown }) => f.episodio as Episodio)
+      // Por `actualizado`, no por `creado`: `creado` es cuando se insertó la
+      // IDEA, y una reserva de hace varias noches con guion de anoche quedaría
+      // fuera. Además, TODAS las reservas vivas con guion: pueden salir
+      // cualquier día de la semana, así que siempre cuentan para la similitud.
+      const [recientes, reservas] = await Promise.all([
+        db.from("fabrica_videos").select("id, episodio").not("episodio", "is", null).order("actualizado", { ascending: false }).limit(n),
+        db
+          .from("fabrica_videos")
+          .select("id, episodio")
+          .not("episodio", "is", null)
+          .eq("es_reserva", true)
+          .is("slot", null)
+          .not("estado", "in", "(publicado,fallido,rechazado)"),
+      ])
+      if (recientes.error) falla("leer los guiones recientes", recientes.error)
+      if (reservas.error) falla("leer los guiones de la reserva", reservas.error)
+      const vistos = new Set<string>()
+      return [...(recientes.data ?? []), ...(reservas.data ?? [])]
+        .filter((f: { id: string }) => (vistos.has(f.id) ? false : (vistos.add(f.id), true)))
+        .map((f: { episodio: unknown }) => f.episodio as Episodio)
     },
     async insertarVideo(f) {
       const { data, error } = await db

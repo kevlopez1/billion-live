@@ -118,6 +118,16 @@ async function main() {
     assert.equal(red.llamadas.filter((l) => l.url.includes("googleapis")).length, 0)
   })
 
+  await prueba("sin token porque la base falló (tokenFallo reintentable): reintentable, no fatal; sin cargar: no_hoy", async () => {
+    for (const clase of ["reintentable", "no_hoy"] as const) {
+      const red = youtubeBien()
+      const c = { ...ctxFalso(red.fetch, { tokens: { youtube: null } }), tokenFallo: () => ({ ok: false as const, clase, como: `tokens: ${clase}` }) }
+      const r = await crearYouTube().subir!(video, c)
+      assert.ok(!r.ok && r.clase === clase && new RegExp(`tokens: ${clase}`).test(r.como), JSON.stringify(r))
+      assert.equal(red.llamadas.filter((l) => l.url.includes("googleapis")).length, 0)
+    }
+  })
+
   await prueba("programar: privado + publishAt + etiqueta de IA (update reemplaza todo el status)", async () => {
     const red = youtubeBien()
     const publishAt = "2026-11-12T18:00:00.000Z"

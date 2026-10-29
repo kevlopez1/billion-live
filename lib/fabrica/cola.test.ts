@@ -201,6 +201,42 @@ const plan = (m: Memoria, extra: { fabricaActiva?: boolean; activas?: RedId[] } 
 async function main() {
   // ── El interruptor ──────────────────────────────────────────
 
+  await prueba("almacén: se borra lo publicado y cerrado, y lo fallido o rechazado que nadie está leyendo", () => {
+    const m = memoria(mas(SALIDA, 30))
+    const fallido = video({ estado: "fallido" })
+    const rechazado = video({ estado: "rechazado", slot: 2 })
+    const leyendo = video({ estado: "fallido", slot: 3 })
+    const sinArchivo = video({ estado: "fallido", slot: 4, archivo: null })
+    const reservado = video({ estado: "rechazado", slot: 5, dueno: "tanda:x", vence_en: iso(mas(SALIDA, 60)) })
+    m.videos.push(fallido, rechazado, leyendo, sinArchivo, reservado)
+    m.envios.push(
+      envio(fallido, "facebook", { estado: "fallido" }),
+      envio(fallido, "youtube", { estado: "omitido" }),
+      envio(rechazado, "tiktok"),
+      envio(leyendo, "instagram", { estado: "procesando" }),
+    )
+    const a = plan(m).filter((x) => x.tipo === "limpiar_almacen")
+    assert.deepEqual(
+      a.map((x) => (x.tipo === "limpiar_almacen" ? `${x.video}:${x.estado}` : "")).sort(),
+      [`${fallido.id}:fallido`, `${rechazado.id}:rechazado`].sort(),
+    )
+  })
+
+  await prueba("almacén: el tick borra el MP4 de un fallido y le limpia `archivo`", async () => {
+    const m = memoria(mas(SALIDA, 30))
+    const v = video({ estado: "fallido" })
+    m.videos.push(v)
+    m.envios.push(envio(v, "facebook", { estado: "fallido" }))
+    const borrados: string[] = []
+    const almacen = { subir: async () => {}, urlFirmada: async () => "", borrar: async (r: string) => void borrados.push(r) }
+    const archivo = v.archivo
+    const r = await ejecutarTick({ base: baseEnMemoria(m), adaptadores: {}, ctx: { ...ctx, almacen }, env: ENV_TODO, reloj: () => 0, log: () => {} })
+    assert.ok(r.hechas.some((h) => h.accion === "limpiar_almacen" && /fallido/.test(h.resultado)), JSON.stringify(r.hechas))
+    assert.deepEqual(borrados, [archivo])
+    assert.equal(m.videos[0].archivo, null)
+    assert.equal(m.videos[0].estado, "fallido")
+  })
+
   await prueba("pausada: el plan solo baja YouTube programado (nada se publica)", () => {
     const m = memoria(mas(SALIDA, 1), true)
     const v = video()

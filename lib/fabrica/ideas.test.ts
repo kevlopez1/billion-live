@@ -44,17 +44,17 @@ const conc = (personajeId: string, opiniones: Conciencia["opiniones"], extra: Pa
 function fuentes(): FuentesDeIdeas {
   return {
     recuerdos: [
-      rec("napoleon", "conversacion", "Discutí con Sun Tzu sobre ajedrez en la biblioteca y perdí tres partidas.", ["suntzu"], 8),
-      rec("cleopatra", "conversacion", "Le enseñé a Leonardo a negociar con mercaderes de especias.", ["leonardo"], 7),
+      rec("napoleon", "conversacion_casa", "Discutí con Sun Tzu sobre ajedrez en la biblioteca y perdí tres partidas.", ["suntzu"], 8),
+      rec("cleopatra", "conversacion_casa", "Le enseñé a Leonardo a negociar con mercaderes de especias.", ["leonardo"], 7),
       rec("socrates", "diario", "Hoy le hice tantas preguntas a Claude que se quedó pensando en silencio.", ["claude"], 6),
       rec("lincoln", "trabajo", "Mi equipo entregó: plan de alianzas para vender fuera de Bolivia", [], 7),
-      rec("marco", "conversacion", "Jesús me habló del perdón junto a la fuente del jardín.", ["jesus"], 9),
+      rec("marco", "conversacion_casa", "Jesús me habló del perdón junto a la fuente del jardín.", ["jesus"], 9),
       // Lo que trae texto de un visitante no entra aunque el lector lo traiga.
       rec("napoleon", "charla", "Un visitante me contó que su jefe lo explota.", [], 10),
       rec("suntzu", "noticia", "Llegó la noticia «el dólar sube». Dije: «el agua toma la forma del terreno»", ["napoleon"], 10),
       rec("lincoln", "consejo", "Consejo sobre «cómo ganar las elecciones»: votamos y ganó la prudencia.", ["napoleon"], 10),
       // Una semilla que nombra a un vivo: fuera.
-      rec("leonardo", "conversacion", "Elon me mostró un cohete y le dibujé uno mejor.", ["chatgpt"], 10),
+      rec("leonardo", "conversacion_casa", "Elon me mostró un cohete y le dibujé uno mejor.", ["chatgpt"], 10),
     ],
     conciencias: [
       conc("chatgpt", { claude: { valor: -45, frase: "Piensa tres segundos antes de cada respuesta." } }, { pensamiento: "Hoy hice 400 listas." }),
@@ -99,14 +99,14 @@ async function main() {
     const r = elegirIdeas(fuentes(), { dia: DIA, cuantas: 6 })
     const semillas = [...r.ideas, ...(r.reserva ? [r.reserva] : [])].flatMap((i) => i.semilla).join(" ")
     assert.ok(!/visitante|dólar|elecciones|Elon/.test(semillas), semillas)
-    assert.deepEqual([...TIPOS_DE_LA_CASA], ["conversacion", "trabajo", "diario"])
+    assert.deepEqual([...TIPOS_DE_LA_CASA], ["conversacion_casa", "trabajo", "diario"])
   })
 
   await prueba("una conversación sobre el tema de un visitante nunca entra, aunque pese más que todo", () => {
     const f: FuentesDeIdeas = {
       recuerdos: [
         rec("lincoln", "conversacion_visitante", "Jardín · Hablamos de cómo despedir a mi cuñado sin que se enoje.", ["socrates"], 10, "2026-11-14T23:00:00Z"),
-        rec("cleopatra", "conversacion", "Le enseñé a Leonardo a negociar con mercaderes de especias.", ["leonardo"], 3),
+        rec("cleopatra", "conversacion_casa", "Le enseñé a Leonardo a negociar con mercaderes de especias.", ["leonardo"], 3),
       ],
       conciencias: [],
       historial: [],
@@ -126,12 +126,87 @@ async function main() {
     assert.ok(!esDeLaCasa("conversacion_visitante") && !esDeLaCasa("charla") && !esDeLaCasa("algo-nuevo"))
   })
 
-  await prueba("conversar() con tema del visitante guarda su propio tipo; sin tema, una conversación de la casa", () => {
-    assert.equal(tipoDeConversacion("¿Cómo le pido un aumento a mi jefe?"), "conversacion_visitante")
-    assert.equal(tipoDeConversacion(undefined), "conversacion")
-    assert.equal(tipoDeConversacion(null), "conversacion")
-    assert.equal(tipoDeConversacion("   "), "conversacion")
-    assert.ok(!esDeLaCasa(tipoDeConversacion("un tema cualquiera")))
+  await prueba("el tipo de una conversación lo decide quién la pide: de la casa solo Kev y sin texto libre", () => {
+    assert.equal(tipoDeConversacion({}, true), "conversacion_casa")
+    assert.equal(tipoDeConversacion({ tema: "   ", contexto: { actividad: "", recuerdos: [] } }, true), "conversacion_casa")
+    assert.equal(tipoDeConversacion({}, false), "conversacion_visitante", "un visitante sin tema sigue siendo un visitante")
+    assert.equal(tipoDeConversacion({ tema: "¿Cómo le pido un aumento a mi jefe?" }, true), "conversacion_visitante")
+    assert.equal(tipoDeConversacion({ contexto: { actividad: "discutiendo cómo despedir a mi cuñado" } }, true), "conversacion_visitante")
+    assert.equal(tipoDeConversacion({ contexto: { hora: "mi cuñado" } }, true), "conversacion_visitante")
+    assert.equal(tipoDeConversacion({ contexto: { recuerdos: ["mi cuñado me debe plata"] } }, true), "conversacion_visitante")
+    assert.equal(tipoDeConversacion({ contexto: { recuerdos: { lincoln: ["mi cuñado"] } } }, true), "conversacion_visitante")
+    assert.ok(!esDeLaCasa("conversacion"), "el tipo viejo salió siempre de la ruta pública")
+  })
+
+  await prueba("conversar() de un visitante, sin tema y con texto en el contexto: se guarda como de visitante y la fábrica no lo ve", async () => {
+    const { conversar } = await import("@/lib/casa-blanca-servidor")
+    const guardados: Array<{ tipo: string; texto: string }> = []
+    const usuarios: string[] = []
+    const tiposPedidos: Array<readonly string[] | undefined> = []
+    const fake = {
+      pedir: async (op: { usuario: string }) => {
+        usuarios.push(op.usuario)
+        return {
+          ok: true as const,
+          datos: {
+            lineas: [
+              { id: "lincoln", texto: "Despedir a un cuñado pide paciencia." },
+              { id: "marco", texto: "Y templanza, sobre todo." },
+            ],
+            resumen: "Hablamos de cómo despedir a un cuñado sin que se enoje.",
+            afinidad: [],
+            importancia: 9,
+          },
+        }
+      },
+      recordar: async (_ids: string[], tipo: string, texto: string) => {
+        guardados.push({ tipo, texto })
+      },
+      interior: async (_ids: string[], soloTipos?: readonly string[]) => (tiposPedidos.push(soloTipos), []),
+      recaudado: async () => 0,
+    } as unknown as Parameters<typeof conversar>[1]
+    const pedido = {
+      accion: "conversar" as const,
+      lugarId: "sala-gabinete",
+      ids: ["lincoln", "marco"],
+      contexto: { actividad: "discutiendo cómo despedir a mi cuñado", recuerdos: ["mi cuñado me debe plata"] },
+    }
+    const r = await conversar(pedido as Parameters<typeof conversar>[0], fake)
+    assert.ok(r.ok, JSON.stringify(r))
+    assert.equal(guardados.length, 1)
+    assert.equal(guardados[0].tipo, "conversacion_visitante")
+    assert.ok(!esDeLaCasa(guardados[0].tipo))
+    assert.match(usuarios[0], /cuñado/, "el texto del visitante sí llega a la escena (por eso el tipo)")
+    assert.equal(tiposPedidos[0], undefined, "una escena de visitante lee toda la memoria, como antes")
+    // La misma escena pedida por Kev sin texto libre: de la casa, y su memoria solo de la casa.
+    const r2 = await conversar({ ...pedido, contexto: undefined } as Parameters<typeof conversar>[0], { ...fake, deKev: true })
+    assert.ok(r2.ok)
+    assert.equal(guardados[1].tipo, "conversacion_casa")
+    assert.deepEqual([...(tiposPedidos[1] ?? [])], [...TIPOS_DE_LA_CASA])
+    // Pedida por Kev pero con texto libre: de visitante.
+    await conversar({ ...pedido, tema: "algo" } as Parameters<typeof conversar>[0], { ...fake, deKev: true })
+    assert.equal(guardados[2].tipo, "conversacion_visitante")
+  })
+
+  await prueba("el tipo viejo «conversacion» (todo de la ruta pública) no entra aunque pese más que todo", () => {
+    const f: FuentesDeIdeas = {
+      recuerdos: [rec("lincoln", "conversacion", "Jardín · Hablamos de cómo despedir a mi cuñado.", ["socrates"], 10, "2026-11-14T23:00:00Z")],
+      conciencias: [],
+      historial: [],
+    }
+    const r = elegirIdeas(f, { dia: DIA, cuantas: 6 })
+    assert.ok(![...r.ideas, ...(r.reserva ? [r.reserva] : [])].some((i) => i.fuentes.includes(f.recuerdos[0].id)))
+  })
+
+  await prueba("un diario o un pensamiento que habla de un visitante no es semilla (la reflexión lee lo de los visitantes)", () => {
+    const f: FuentesDeIdeas = {
+      recuerdos: [rec("socrates", "diario", "Un visitante me preguntó cómo ganar las elecciones y no supe qué decirle.", ["claude"], 10)],
+      conciencias: [conc("chatgpt", { claude: { valor: -80, frase: "Le dio la razón a un visitante sin pensarlo." } })],
+      historial: [],
+    }
+    const r = elegirIdeas(f, { dia: DIA, cuantas: 6 })
+    const semillas = [...r.ideas, ...(r.reserva ? [r.reserva] : [])].flatMap((i) => i.semilla).join(" ")
+    assert.ok(!/visitante/i.test(semillas), semillas)
   })
 
   await prueba("un vivo nunca protagoniza (aunque tenga opiniones fuertes)", () => {
@@ -141,7 +216,7 @@ async function main() {
 
   await prueba("un amarillo puede ser idea, nunca reserva", () => {
     const f = fuentes()
-    f.recuerdos = [rec("marco", "conversacion", "Jesús me habló del perdón junto a la fuente.", ["jesus"], 9)]
+    f.recuerdos = [rec("marco", "conversacion_casa", "Jesús me habló del perdón junto a la fuente.", ["jesus"], 9)]
     f.conciencias = []
     const r = elegirIdeas(f, { dia: DIA, cuantas: 3 })
     assert.ok(r.ideas.some((i) => i.par === "jesus|marco"))
@@ -208,7 +283,7 @@ async function main() {
     const b = await leerFuentesDeIdeas(sinMemoria, DIA)
     assert.ok(b.ok && b.fuentes.recuerdos.length === 0 && b.fuentes.conciencias.length === 1)
     assert.equal(pedidoDesde, "2026-11-08")
-    assert.deepEqual([...pedidoTipos], ["conversacion", "trabajo", "diario"])
+    assert.deepEqual([...pedidoTipos], ["conversacion_casa", "trabajo", "diario"])
   })
 
   console.log(fallos ? `\n${fallos} fallaron` : "\ntodas pasaron")

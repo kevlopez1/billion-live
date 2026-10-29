@@ -139,13 +139,11 @@ export function baseTandaEnMemoria(m: MemoriaTanda): BaseTanda {
       return copia(m.videos.filter((v) => v.es_reserva && v.slot === null && !TERMINALES.includes(v.estado)))
     },
     async guionesRecientes(k) {
-      return copia(
-        m.videos
-          .filter((v) => v.episodio)
-          .sort((a, b) => t(b.creado) - t(a.creado))
-          .slice(0, k)
-          .map((v) => v.episodio as Episodio),
-      )
+      // Como la base: los k más nuevos y, además, toda reserva viva con guion.
+      const conGuion = m.videos.filter((v) => v.episodio)
+      const recientes = [...conGuion].sort((a, b) => t(b.creado) - t(a.creado)).slice(0, k)
+      const reservas = conGuion.filter((v) => v.es_reserva && v.slot === null && !["publicado", "fallido", "rechazado"].includes(v.estado))
+      return copia([...new Set([...recientes, ...reservas])].map((v) => v.episodio as Episodio))
     },
     async insertarVideo(f) {
       if (f.slot !== null && m.videos.some((v) => v.dia === f.dia && v.slot === f.slot)) {
@@ -376,8 +374,16 @@ export function renderDeMentira(disco: Disco, pedidos: Array<{ videoId: string; 
   }
 }
 
-/** La calidad de mentira: aprueba con la duración que el guion dice y el peso del archivo. */
-export function calidadDeMentira(disco: Disco, rechazar: (id: string) => string | null = () => null): RevisarCalidad {
+/**
+ * La calidad de mentira: aprueba con la duración que el guion dice y el peso
+ * del archivo, y una pista de audio "medida" (con `audio: "sin_pista"`, el
+ * MP4 sale mudo, como el render de hoy con -an).
+ */
+export function calidadDeMentira(
+  disco: Disco,
+  rechazar: (id: string) => string | null = () => null,
+  audio: "medido" | "sin_pista" = "medido",
+): RevisarCalidad {
   return async (archivo, ep) => {
     const bytes = (await disco.leer(archivo)).byteLength
     const d = duracionDelVideo(ep)
@@ -397,7 +403,7 @@ export function calidadDeMentira(disco: Disco, rechazar: (id: string) => string 
         duracionS: d,
         bytes,
         limiteBytes: 50 * 1024 * 1024,
-        audio: null,
+        audio: audio === "sin_pista" ? { sinPista: true } : { maxDb: -3, mediaDb: -20, muestras: Math.round(d * 48_000), en0db: 0, codec: "aac", duracionS: d },
         negros: [],
         congelados: [],
         etiqueta: null,

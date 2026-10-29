@@ -11,7 +11,7 @@ import { prueba, terminar } from "../redes/falso"
 import { esFallo } from "../redes/http"
 import { nombradosEn, tercerosEn } from "../semaforo"
 import { formasDeVoseo } from "../voseo"
-import { ACENTO, ARQUETIPOS, arquetipoDe, conVoz, descripcionSegura, hablaEnLaFabrica, puedeHablarAlgunaVez } from "./arquetipos"
+import { ACENTO, ARQUETIPOS, arquetipoDe, conVoz, descripcionSegura, EVOCACIONES, hablaEnLaFabrica, muestraSegura, puedeHablarAlgunaVez } from "./arquetipos"
 import { disenarVoces, elegirVoz, planDeDiseno, type Candidatas } from "./diseno"
 import { crearVozFalsa, duracionDeTexto, duracionDeWav, tonoDe, wav } from "./falso"
 import { aprobar, huellaDescripcion, nombreEnElServicio, registroVacio, validarRegistro, vozDe, type EntradaVoz, type RegistroVoces } from "./registro"
@@ -54,6 +54,14 @@ async function main() {
     }
   })
 
+  await prueba("muestraSegura: atrapa la frase o la anécdota de la persona real (las muestras viejas)", () => {
+    assert.ok(muestraSegura("socrates", "Disculpa, amigo, yo no sé nada, por eso pregunto.").some((e) => /no se nada/.test(e)))
+    assert.ok(muestraSegura("lincoln", "Cuando era muchacho partía leña antes del amanecer.").some((e) => /lena/.test(e)))
+    assert.ok(muestraSegura("marco", "Recuerda que todo pasa: el aplauso de hoy.").some((e) => /todo pasa/.test(e)))
+    assert.ok(muestraSegura("jesus", "Mira esa higuera: nadie la apura.").length)
+    for (const id of conVoz()) assert.ok(id in EVOCACIONES, `${id}: sin lista de evocaciones (decidir cuáles)`)
+  })
+
   await prueba("arquetipos: las muestras miden 100 a 1.000, sin nombres, sin PRIME ni el reto, sin voseo", () => {
     for (const a of ARQUETIPOS) {
       assert.ok(a.muestra.length >= 100 && a.muestra.length <= 1000, `${a.id}: ${a.muestra.length} caracteres`)
@@ -61,6 +69,7 @@ async function main() {
       assert.deepEqual(tercerosEn(a.muestra), [], `${a.id}: nombra a un tercero`)
       assert.deepEqual(comercialEn(a.muestra), [], `${a.id}: marca comercial`)
       assert.deepEqual(formasDeVoseo(a.muestra), [], `${a.id}: voseo`)
+      if (puedeHablarAlgunaVez(a.id)) assert.deepEqual(muestraSegura(a.id, a.muestra), [], `${a.id}: la muestra evoca a la persona real`)
       assert.deepEqual(formasDeVoseo(a.resumen), [], `${a.id}: voseo en el resumen`)
       assert.ok(!/["“”]/.test(a.muestra), `${a.id}: una muestra no lleva citas entre comillas`)
     }

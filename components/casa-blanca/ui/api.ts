@@ -30,7 +30,7 @@ export interface ConcienciaServidor {
 export interface RecuerdoServidor {
   id?: string
   texto: string
-  tipo: "charla" | "conversacion" | "conversacion_visitante" | "consejo" | "noticia" | "trabajo" | "diario"
+  tipo: "charla" | "conversacion" | "conversacion_casa" | "conversacion_visitante" | "consejo" | "noticia" | "trabajo" | "diario"
   creado: string
   con: string[]
 }

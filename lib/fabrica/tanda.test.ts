@@ -10,6 +10,8 @@ import {
   destinoDeGuionFallido,
   diaDeSalida,
   ejecutarTanda,
+  huellaDeVoz,
+  vozEnDisco,
   planDeIdeas,
   reservasNuevas,
   resumenEnTexto,
@@ -30,7 +32,7 @@ import {
   subidasDeMentira,
   type MemoriaTanda,
 } from "./tanda-falsos"
-import { argsDelRender, faltaEnElRender, renderConProceso, renderListo, rendererDeLaSalida } from "./render-proceso"
+import { argsDelRender, audioDeLaSalida, faltaEnElRender, renderConProceso, renderListo, rendererDeLaSalida } from "./render-proceso"
 import { instanteBolivia, type Fallo, type RedId } from "./tipos"
 import { crearVozFalsa } from "./voz/falso"
 import { registroVacio } from "./voz/registro"
@@ -52,6 +54,8 @@ const NOCHE = new Date("2026-11-14T02:00:00Z")
 type Opciones = Partial<Omit<TandaPuertos, "base" | "ideas" | "disco" | "ctx">> & {
   m?: MemoriaTanda
   rechazarCalidad?: (id: string) => string | null
+  /** "sin_pista" = el MP4 sale mudo (el render de hoy, con -an). */
+  audioCalidad?: "medido" | "sin_pista"
   fallosSubida?: Partial<Record<RedId, Fallo["clase"]>>
 }
 
@@ -71,7 +75,7 @@ function armar(o: Opciones = {}) {
     voz: { proveedor: crearVozFalsa(), como: "voz falsa", falta: [] },
     registroVoces: registroVacio(),
     render: renderDeMentira(disco, renders),
-    calidad: calidadDeMentira(disco, o.rechazarCalidad),
+    calidad: calidadDeMentira(disco, o.rechazarCalidad, o.audioCalidad),
     almacen,
     adaptadores: subidasDeMentira(ahora, o.fallosSubida ?? {}),
     ctx: ctxSinRed(ahora, almacen, () => {}),
@@ -379,7 +383,7 @@ async function main() {
 
   await prueba("render como proceso: argumentos, WebGL del log, código de salida y archivo que falta", async () => {
     const ep = JSON.parse(JSON.stringify(salidaDeMentira("napoleon", "suntzu", 0).episodio))
-    const pedido = { videoId: "v1", episodio: { id: "fab-x", ...ep }, archivoEpisodio: "/t/v1/episodio.json", archivoVoz: "/t/v1/voz.json", salida: "/t/v1/video.mp4" }
+    const pedido = { videoId: "v1", episodio: { id: "fab-x", ...ep }, archivoEpisodio: "/t/v1/episodio.json", archivoVoz: "/t/v1/voz.json", tramosVoz: 2, salida: "/t/v1/video.mp4" }
     assert.deepEqual(argsDelRender(pedido, { url: "http://localhost:3110", calidad: "media" }), [
       "scripts/casa-blanca-render.mjs", "--ep", "v1", "--episodio", "/t/v1/episodio.json", "--audio", "/t/v1/voz.json",
       "--formato", "16:9", "--calidad", "media", "--url", "http://localhost:3110", "--out", "/t/v1/video.mp4", "--renderer-log",
@@ -392,14 +396,23 @@ async function main() {
     const fuente = () => "--episodio --audio"
     const correr = (codigo: number | null, texto: string, cortado = false) => async () => ({ codigo, texto, cortado })
     const conExiste = (existe: boolean) => ({ leerFuente: fuente, existe: async () => existe, url: "u", calidad: "media", log: () => {} })
-    const bien = await renderConProceso({ ...conExiste(true), correr: correr(0, "WebGL: ANGLE (NVIDIA, Tesla T4)") })(pedido)
-    assert.ok(bien.ok && bien.renderer === "ANGLE (NVIDIA, Tesla T4)")
+    const bien = await renderConProceso({ ...conExiste(true), correr: correr(0, "WebGL: ANGLE (NVIDIA, Tesla T4)\nAUDIO: 2 tramos mezclados") })(pedido)
+    assert.ok(bien.ok && bien.renderer === "ANGLE (NVIDIA, Tesla T4)", JSON.stringify(bien))
+    assert.equal(audioDeLaSalida("[render] audio: 3 tramos"), 3)
+    assert.equal(audioDeLaSalida("--audio <voz.json>  tramos de audio"), null, "la ayuda del script no es una confirmación")
     const mal = await renderConProceso({ ...conExiste(true), correr: correr(1, "Error: page.goto: net::ERR_CONNECTION_REFUSED") })(pedido)
     assert.ok(!mal.ok && mal.clase === "reintentable" && /código 1/.test(mal.como) && /ERR_CONNECTION_REFUSED/.test(mal.como))
     const sinArchivo = await renderConProceso({ ...conExiste(false), correr: correr(0, "listo") })(pedido)
     assert.ok(!sinArchivo.ok && /no dejó \/t\/v1\/video.mp4/.test(sinArchivo.como))
     const cortado = await renderConProceso({ ...conExiste(true), correr: correr(null, "cuadro 900", true) })(pedido)
     assert.ok(!cortado.ok && /se cortó/.test(cortado.como))
+    // Nombrar --audio en el código no alcanza: sin la línea AUDIO al correr, el video no sigue.
+    const mudo = await renderConProceso({ ...conExiste(true), correr: correr(0, "WebGL: ANGLE (NVIDIA, Tesla T4)\nlisto") })(pedido)
+    assert.ok(!mudo.ok && mudo.clase === "no_hoy" && /AUDIO: 2 tramos/.test(mudo.como), JSON.stringify(mudo))
+    const aMedias = await renderConProceso({ ...conExiste(true), correr: correr(0, "AUDIO: 1 tramo") })(pedido)
+    assert.ok(!aMedias.ok && /mezcló 1 tramo/.test(aMedias.como))
+    const sinVoz = await renderConProceso({ ...conExiste(true), correr: correr(0, "listo") })({ ...pedido, archivoVoz: null, tramosVoz: 0 })
+    assert.ok(sinVoz.ok, "sin diálogo no hay voz que confirmar")
     const noArranca = await renderConProceso({ ...conExiste(true), correr: async () => Promise.reject(new Error("spawn node ENOENT")) })(pedido)
     assert.ok(!noArranca.ok && noArranca.clase === "fatal" && /ENOENT/.test(noArranca.como))
   })
@@ -416,7 +429,9 @@ async function main() {
       return reservar(...a)
     }
     const r = await ejecutarTanda({ ...p, tomas })
-    assert.equal(r.resultado, "completa")
+    // Terminó, pero un lugar de mañana quedó sin video: «incompleta», con cómo retomarla.
+    assert.equal(r.resultado, "incompleta", resumenEnTexto(r))
+    assert.match(r.motivo ?? "", /--dia 2026-11-14/)
     assert.ok(r.errores.some((e) => e.paso === "render" && /ECONNRESET/.test(e.como) && e.video), JSON.stringify(r.errores))
     assert.ok(m.videos.filter((v) => v.estado === "subido_parcial").length >= 2, estados(m).join(" "))
   })
@@ -459,6 +474,78 @@ async function main() {
     assert.equal(pedidos, 1, "después del primer no_hoy no se pide más")
     assert.equal(renders.length, 0)
     assert.ok(m.videos.some((v) => v.estado === "listo_para_render" && JSON.stringify(v.errores).includes("quota_exceeded")))
+  })
+
+  await prueba("un video con diálogo y sin pista de audio se rechaza aunque FABRICA_EXIGIR_AUDIO esté apagada", async () => {
+    const { m, p, almacen } = armar({ audioCalidad: "sin_pista" })
+    const r = await ejecutarTanda({ ...p, tomas })
+    const rechazados = m.videos.filter((v) => v.estado === "rechazado")
+    assert.ok(rechazados.length >= 3, estados(m).join(" "))
+    for (const v of rechazados) assert.match(v.motivo_rechazo ?? "", /sin pista de audio y el guion tiene diálogo/)
+    assert.equal(almacen.archivos.size, 0, "nada mudo llega al almacén")
+    assert.equal(m.envios.length, 0)
+    assert.equal(r.resultado, "incompleta", resumenEnTexto(r))
+  })
+
+  await prueba("un render que no confirma la voz (sin «AUDIO: n tramos»): no sigue y esa noche no se manda otro", async () => {
+    const intentos: string[] = []
+    const { m, p } = armar({
+      render: async (q) => (intentos.push(q.videoId), { ok: false, clase: "no_hoy", como: "el render terminó pero no confirmó la voz: falta la línea «AUDIO: 1 tramos»" }),
+    })
+    const r = await ejecutarTanda({ ...p, tomas })
+    assert.equal(intentos.length, 1, "después del primero, ninguno")
+    assert.equal(m.videos.filter((v) => v.estado === "listo_para_render").length >= 3, true, estados(m).join(" "))
+    assert.ok(r.errores.some((e) => e.paso === "render" && /no confirmó la voz/.test(e.como)))
+    assert.equal(r.pasos.voz.ok, 1, "solo se pagó la voz del que se intentó")
+    assert.equal(r.resultado, "incompleta")
+  })
+
+  await prueba("un render que falla y se reintenta no paga la voz de nuevo: se reusa voz.json", async () => {
+    const falsa = crearVozFalsa()
+    let pedidosDeVoz = 0
+    let caidas = 0
+    const { m, p, disco } = armar({ voz: { proveedor: { ...falsa, dialogo: (x) => (pedidosDeVoz++, falsa.dialogo(x)) }, como: "falsa", falta: [] } })
+    const real = p.render
+    // La primera vez, cada render se cae (WebGL); la segunda sale.
+    p.render = async (q) => (caidas < 100 && !disco.archivos.has(`${q.salida}.ya`) ? (caidas++, await disco.escribir(`${q.salida}.ya`, "1"), { ok: false, clase: "reintentable", como: "WebGL context lost" }) : real(q))
+    await ejecutarTanda({ ...p, tomas })
+    const vozPrimera = pedidosDeVoz
+    assert.ok(vozPrimera >= 3 && caidas === vozPrimera, `voz ${vozPrimera}, caídas ${caidas}`)
+    // Otra corrida (a mano, con --dia: tiene su propio candado) retoma los que quedaron.
+    const r2 = await ejecutarTanda({ ...p, tomas, diaSalida: "2026-11-14" })
+    assert.equal(pedidosDeVoz, vozPrimera, "la voz que ya estaba en disco no se vuelve a pedir")
+    assert.ok(r2.pasos.render.ok >= 3, resumenEnTexto(r2))
+    assert.ok(m.videos.filter((v) => v.estado === "subido_parcial").length >= 3, estados(m).join(" "))
+  })
+
+  await prueba("--dia toma su propio candado: la tanda de esa noche reclama igual", async () => {
+    const m = memoriaNueva(new Date("2026-11-13T14:00:00Z")) // 10:00 del 13 en Bolivia
+    const { p } = armar({ m })
+    const manual = await ejecutarTanda({ ...p, tomas, diaSalida: "2026-11-13" })
+    assert.equal(manual.diaSalida, "2026-11-13")
+    assert.ok(m.candados.get("tanda:2026-11-13|2026-11-13")?.terminado, "su candado se cierra")
+    assert.ok(!m.candados.has("tanda|2026-11-13"), "no toca el de la noche")
+    m.ahora = new Date(NOCHE)
+    const noche = await ejecutarTanda({ ...p, tomas })
+    assert.notEqual(noche.resultado, "sin_reclamar", resumenEnTexto(noche))
+    assert.equal(noche.diaSalida, "2026-11-14")
+  })
+
+  await prueba("la voz.json de otro episodio o de otras voces no se reusa", async () => {
+    const { disco } = armar()
+    const reg = registroVacio()
+    const ep = JSON.parse(JSON.stringify(salidaDeMentira("napoleon", "suntzu", 0).episodio))
+    const falsa = crearVozFalsa()
+    const h = huellaDeVoz({ guion_hash: "abc" }, ep, falsa, reg)
+    await disco.escribir("/seco/v/voz-1.wav", new Uint8Array(4))
+    await disco.escribir("/seco/v/voz.json", JSON.stringify({ huella: h, proveedor: "falso", falso: true, caracteres: 10, tramos: [{ archivo: "/seco/v/voz-1.wav" }] }))
+    assert.equal((await vozEnDisco(disco, "/seco/v", h))?.tramos, 1)
+    assert.notEqual(huellaDeVoz({ guion_hash: "otro" }, ep, falsa, reg), h, "otro guion")
+    assert.notEqual(huellaDeVoz({ guion_hash: "abc" }, ep, { ...falsa, falso: false, nombre: "elevenlabs" }, reg), h, "otro proveedor")
+    const conVoz = { version: 1 as const, voces: { napoleon: { voiceId: "x" } } } as unknown as ReturnType<typeof registroVacio>
+    assert.notEqual(huellaDeVoz({ guion_hash: "abc" }, ep, falsa, conVoz), h, "otra voz aprobada")
+    disco.archivos.delete("/seco/v/voz-1.wav")
+    assert.equal(await vozEnDisco(disco, "/seco/v", h), null, "sin su audio en disco, no")
   })
 
   console.log(fallos ? `\n${fallos} fallaron` : "\ntodas pasaron")

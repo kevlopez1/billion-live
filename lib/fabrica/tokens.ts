@@ -113,7 +113,7 @@ export async function accesoVigente(red: RedId, p: PuertosToken): Promise<{ ok: 
   if (!clave) return { ok: false, clase: "fatal", como: `tokens: falta FABRICA_CLAVE_TOKENS (32 bytes en hex o base64)` }
   const leer = async (): Promise<{ fila: FilaToken; cred: Credencial } | Fallo> => {
     const fila = await p.base.leer(red)
-    if (!fila) return { ok: false, clase: "fatal", como: `tokens: no hay token de ${red} en fabrica_tokens (cargarlo con scripts/fabrica/cargar-token.ts)` }
+    if (!fila) return { ok: false, clase: "fatal", codigo: "sin_cargar", como: `tokens: no hay token de ${red} en fabrica_tokens (cargarlo con scripts/fabrica/cargar-token.ts)` }
     try {
       return { fila, cred: descifrar(fila.cifrado, clave) }
     } catch (e) {
@@ -182,19 +182,40 @@ export async function accesoVigente(red: RedId, p: PuertosToken): Promise<{ ok: 
   return { ok: true, acceso: r.acceso }
 }
 
-/** Para Ctx.token: el acceso o null, con el cómo en el log (nunca un null mudo). */
-export function tokenPara(p: PuertosToken): (red: RedId) => Promise<string | null> {
-  return async (red) => {
+/**
+ * Cómo tiene que tratar un adaptador un token que no llegó. Lo que se envía
+ * todavía no salió, así que nada es ambiguo:
+ *   - la base falló o la renovación falló un rato (5xx, red, otro renovando,
+ *     ambiguo) → reintentable: un 503 de Supabase no pierde la noche;
+ *   - nunca se cargó (no hay fila) → no_hoy: queda para cuando Kev lo cargue,
+ *     sin contar como fallo de la red;
+ *   - lo demás (inválido, sin clave, no se descifra) → fatal.
+ */
+export function claseSinToken(f: Fallo): Fallo {
+  if (f.codigo === "sin_cargar") return { ...f, clase: "no_hoy" }
+  if (f.clase === "ambiguo" || f.clase === "reintentable") return { ...f, clase: "reintentable" }
+  return f
+}
+
+/** Para Ctx.token: el acceso o null, con el cómo en el log (nunca un null mudo). `fallo(red)` dice por qué fue null. */
+export function tokenPara(p: PuertosToken): ((red: RedId) => Promise<string | null>) & { fallo: (red: RedId) => Fallo | null } {
+  const ultimo = new Map<RedId, Fallo>()
+  const token = async (red: RedId) => {
+    ultimo.delete(red)
     try {
       const r = await accesoVigente(red, p)
       if (r.ok) return r.acceso
-      console.error(`[fabrica/tokens] sin token de ${red}: ${r.como}`)
+      ultimo.set(red, claseSinToken(r))
+      console.error(`[fabrica/tokens] sin token de ${red} (${claseSinToken(r).clase}): ${r.como}`)
       return null
     } catch (e) {
-      console.error(`[fabrica/tokens] sin token de ${red}: la base falló (${e instanceof Error ? e.message : e})`)
+      const como = `tokens: la base falló al leer o renovar el de ${red} (${e instanceof Error ? e.message : e})`
+      ultimo.set(red, { ok: false, clase: "reintentable", como })
+      console.error(`[fabrica/tokens] sin token de ${red} (reintentable): ${como}`)
       return null
     }
   }
+  return Object.assign(token, { fallo: (red: RedId) => ultimo.get(red) ?? null })
 }
 
 // ── La base real (Supabase, service-role) ─────────────────────

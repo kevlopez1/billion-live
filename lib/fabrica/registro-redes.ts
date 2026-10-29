@@ -142,14 +142,19 @@ export function ctxReal(env: Entorno, p: PuertosCtx = {}): Ctx {
     const db = getAdminClient()
     baseTokens = db ? baseTokensSupabase(db) : null
   }
-  const token: Ctx["token"] = baseTokens
-    ? tokenPara({ base: baseTokens, env, fetch: f, ahora, renovadores: RENOVADORES, log })
-    : async (red) => {
-        console.error(`[fabrica/registro-redes] token de ${red}: sin base de tokens (falta SUPABASE_SERVICE_ROLE_KEY); se devuelve null`)
-        return null
-      }
+  const tp = baseTokens ? tokenPara({ base: baseTokens, env, fetch: f, ahora, renovadores: RENOVADORES, log }) : null
+  const token: Ctx["token"] =
+    tp ??
+    (async (red) => {
+      console.error(`[fabrica/registro-redes] token de ${red}: sin base de tokens (falta SUPABASE_SERVICE_ROLE_KEY); se devuelve null`)
+      return null
+    })
+  // Por qué no llegó el token: un 503 de la base no es lo mismo que un token inválido.
+  const tokenFallo: Ctx["tokenFallo"] = tp
+    ? tp.fallo
+    : () => ({ ok: false, clase: "fatal", como: "sin base de tokens: falta SUPABASE_SERVICE_ROLE_KEY" })
 
   const almacen = p.almacen !== undefined ? p.almacen : almacenDesdeEnv(env, { storage: p.storage, log })
 
-  return { fetch: f, env, ahora, token, almacen, log }
+  return { fetch: f, env, ahora, token, tokenFallo, almacen, log }
 }

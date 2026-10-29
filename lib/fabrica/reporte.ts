@@ -93,6 +93,10 @@ export function armarParte(d: DatosParte): { resumen: ResumenParte; texto: strin
   const r = resumen
   const lineas: string[] = [`Fábrica de videos · parte del ${d.dia}`]
   if (r.pausas.fabrica) lineas.push(`PAUSADA: ${r.pausas.fabrica}`)
+  // La última tanda que no terminó bien va arriba: una noche bloqueada no se puede ver igual que una buena.
+  const ultima = r.tanda.detalle as { resultado?: unknown; motivo?: unknown } | null
+  if (ultima && ["incompleta", "cortada", "error"].includes(String(ultima.resultado)))
+    lineas.push(`TANDA ${String(ultima.resultado).toUpperCase()}: ${typeof ultima.motivo === "string" ? ultima.motivo : "sin motivo"}`)
   for (const p of r.pausas.redes) lineas.push(`Red pausada: ${p.red} (${p.motivo})`)
   const prod = Object.entries(r.producidos).map(([k, v]) => `${k} ${v}`).join(", ")
   lineas.push(`Videos del día: ${delDia.length}${prod ? ` (${prod})` : ""}`)

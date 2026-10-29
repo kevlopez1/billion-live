@@ -115,11 +115,13 @@ async function main() {
       const c = ctxReal(COMPLETO, { baseTokens: base, almacen: almacenFalso, ahora: () => new Date("2026-11-12T16:00:00Z"), fetch: (async () => new Response("no")) as typeof fetch, log: callar })
       assert.equal(await c.token("youtube"), "acceso-yt")
       assert.equal(await c.token("x"), null)
+      // Por qué fue null, para el adaptador: sin cargar = no_hoy (no fallido).
+      assert.equal(c.tokenFallo?.("x")?.clase, "no_hoy")
       assert.equal(c.almacen, almacenFalso)
     } finally {
       console.error = original
     }
-    assert.ok(errores.some((e) => /sin token de x: .*no hay token de x en fabrica_tokens/.test(e)), errores.join("\n"))
+    assert.ok(errores.some((e) => /sin token de x \(no_hoy\): .*no hay token de x en fabrica_tokens/.test(e)), errores.join("\n"))
   })
 
   await prueba("ctxReal: sin base de tokens ni almacén, null con el cómo en el log", async () => {

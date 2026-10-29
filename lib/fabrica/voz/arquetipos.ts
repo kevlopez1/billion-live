@@ -16,7 +16,8 @@
 // y su guía de prompts están en inglés, SIN VERIFICAR que en español rinda
 // igual). `resumen` es lo mismo en español, para que Kev elija.
 // `muestra` es lo que dice cada candidata (100 a 1.000 caracteres): texto
-// propio, nunca una cita, sin nombres, sin PRIME ni el reto.
+// propio, nunca una cita, sin nombres, sin PRIME ni el reto, y sin las
+// frases o anécdotas de la persona real (muestraSegura, EVOCACIONES).
 //
 // Quién recibe voz: solo quien puede hablar en un video (luz verde o
 // amarillo en semaforo.ts). Los vivos salen de fondo y sin voz; Trump y
@@ -61,7 +62,7 @@ export const ARQUETIPOS: readonly Arquetipo[] = [
     55,
     `A tall, lean man in his mid-fifties. Warm, slightly reedy baritone with a soft rasp. Slow, deliberate pace with long pauses, like someone telling a story by a fire. Gentle, dry humor and a quiet melancholy. Low energy, very steady. Speaks ${ACENTO} with clear diction and no regional accent.`,
     "Hombre de unos 55 años. Barítono cálido con un poco de aspereza. Lento, con pausas largas, como quien cuenta una historia junto al fuego. Humor seco y algo de melancolía. Energía baja y estable.",
-    "Cuando era muchacho partía leña antes del amanecer. Aprendí que un hacha bien afilada ahorra la mitad del trabajo. Con las ideas pasa igual: piénsalas bien antes de levantarlas, y el golpe sale solo.",
+    "Siéntate, que el café todavía está caliente. Te cuento algo que me pasó esta mañana: perdí las llaves, las busqué por toda la casa y estaban en mi bolsillo. Me reí un buen rato. A veces lo que buscamos ya lo llevamos encima.",
   ),
   a(
     "napoleon",
@@ -69,7 +70,7 @@ export const ARQUETIPOS: readonly Arquetipo[] = [
     38,
     `A compact, restless man in his late thirties. Bright, cutting tenor with a commanding edge. Quick, impatient pace and short clipped sentences; theatrical and proud, raises his voice when excited. High energy. Speaks ${ACENTO} with crisp, emphatic diction.`,
     "Hombre de unos 38 años. Tenor brillante y cortante, de mando. Rápido, impaciente, frases cortas; teatral y orgulloso, sube la voz cuando se entusiasma. Energía alta.",
-    "¡Otra reunión sin plan de batalla! Escuchen bien: primero el terreno, después los cañones y al final, la gloria. Quien duda pierde el puente. ¡En marcha, ahora mismo, que el tiempo no espera a nadie!",
+    "¡Otra reunión sin orden del día! Escuchen bien: primero la lista, después los números y al final, los aplausos. El que llega tarde lava las tazas. ¡A trabajar, ahora mismo, que la mañana no espera a nadie!",
   ),
   a(
     "leonardo",
@@ -77,7 +78,7 @@ export const ARQUETIPOS: readonly Arquetipo[] = [
     60,
     `A gentle man around sixty. Warm, airy light baritone with a hint of breath. Curious and full of wonder; the pace speeds up and slows down as ideas arrive, and he sometimes trails off mid-sentence. Medium energy, kind and soft-spoken. Speaks ${ACENTO} with soft, relaxed diction.`,
     "Hombre de unos 60 años. Barítono liviano, cálido y con aire. Curioso y maravillado: acelera y frena según le llegan las ideas, a veces deja la frase a medias. Energía media, amable.",
-    "Observa cómo cae la luz sobre el agua... no, espera, mira el ala de esa paloma. Cada pluma sigue una proporción. Si pudiera medirla con calma, podría construir una máquina que... bueno, primero el dibujo.",
+    "Observa cómo cae la luz sobre la mesa... no, espera, mira la sombra de esa taza. Cambia con cada minuto. Si pudiera medirla con calma, podría saber la hora sin reloj... bueno, primero termino el desayuno.",
   ),
   a(
     "cleopatra",
@@ -93,7 +94,7 @@ export const ARQUETIPOS: readonly Arquetipo[] = [
     65,
     `An older man in his mid-sixties. Low, quiet, slightly grainy voice, soft at the edges. Very slow pace with long silences between phrases; calm, enigmatic and economical with words. Low energy, perfectly even volume. Speaks ${ACENTO} with careful, unhurried pronunciation.`,
     "Hombre de unos 65 años. Voz baja, tranquila y algo granulada. Muy lento, con silencios largos entre frases; sereno, enigmático, de pocas palabras. Energía baja, volumen parejo.",
-    "El agua no discute con la piedra. La rodea, espera y al final la piedra cede. Antes de empezar cualquier pelea, pregúntate en silencio: ¿conozco el terreno, o solo conozco mis ganas de ganar?",
+    "Antes de responder, respira. La prisa habla fuerte y dice poco. Mira quién está en la sala, qué quiere cada uno y qué callan. Después, si todavía hace falta, habla. Casi siempre ya no hace falta.",
   ),
   a(
     "marco",
@@ -101,7 +102,7 @@ export const ARQUETIPOS: readonly Arquetipo[] = [
     52,
     `A composed man in his early fifties. Steady, warm, mid-low baritone with a calm resonance. Sober, measured pace; short sentences delivered like notes written to himself. Serene and introspective, never rushed. Low energy. Speaks ${ACENTO} with clean, quiet diction.`,
     "Hombre de unos 52 años. Barítono medio bajo, cálido y firme. Sobrio y medido; frases cortas, como notas que se escribe a sí mismo. Sereno e introspectivo. Energía baja.",
-    "Recuerda que todo pasa: el aplauso de hoy y la ofensa de ayer. Haz bien lo que te toca en esta hora, sin queja y sin prisa. Lo demás no depende de ti, así que no le entregues tu calma.",
+    "Esta mañana anoté tres cosas antes de salir del cuarto. Ordenar la mesa. Escuchar antes de opinar. No enojarme por el ruido del pasillo. La tercera ya la rompí dos veces. Mañana la anoto de nuevo.",
   ),
   a(
     "socrates",
@@ -109,7 +110,7 @@ export const ARQUETIPOS: readonly Arquetipo[] = [
     68,
     `A friendly older man near seventy. Gravelly, good-natured voice with a smile in it. Relaxed, conversational pace; playful and gently ironic, his sentences often rise into questions. Medium energy. Speaks ${ACENTO} with warm, easygoing diction.`,
     "Hombre de casi 70 años. Voz ronca y bonachona, con una sonrisa adentro. Relajado y conversador; juguetón e irónico, muchas frases terminan en pregunta. Energía media.",
-    "Disculpa, amigo, yo no sé nada, por eso pregunto. Dices que el éxito es tener mucho. ¿Y quien tiene mucho y no duerme tranquilo, ha tenido éxito? Ayúdame a entenderlo, porque me confundo con facilidad.",
+    "Disculpa, amigo, una pregunta nada más. Dices que el éxito es tener mucho. ¿Y quien tiene mucho y no duerme tranquilo, ha tenido éxito? Ayúdame a entenderlo, porque me confundo con facilidad.",
   ),
   a(
     "mason",
@@ -117,7 +118,7 @@ export const ARQUETIPOS: readonly Arquetipo[] = [
     62,
     `A man in his early sixties with a deep, resonant bass voice. Slow, ceremonial pace with dramatic pauses; mysterious and grave, with a playful wink underneath. Low to medium energy. Speaks ${ACENTO} with rounded, solemn diction.`,
     "Hombre de unos 62 años. Bajo profundo y resonante. Lento y ceremonioso, con pausas dramáticas; misterioso y grave, con un guiño por debajo. Energía baja a media.",
-    "Toda gran obra empieza con una piedra angular y una escuadra bien puesta. ¿Lo que hay detrás de esa puerta? Ah, eso se aprende más adelante. Paciencia, querido amigo, paciencia. Todo a su debido tiempo.",
+    "Todo buen plan empieza por los cimientos, nunca por el techo. ¿Lo que hay detrás de esa puerta? Ah, eso se aprende más adelante. Paciencia, querido amigo, paciencia. Todo a su debido tiempo.",
   ),
   a(
     "iluminado",
@@ -166,7 +167,7 @@ export const ARQUETIPOS: readonly Arquetipo[] = [
     33,
     `A man in his early thirties with a soft, warm, gentle baritone. Calm, unhurried pace; compassionate and kind, with a light, gentle humor. Low energy, never harsh or loud. Speaks ${ACENTO} with soft, clear diction.`,
     "Hombre de unos 33 años. Barítono suave y cálido. Tranquilo, sin prisa; compasivo y amable, con un humor ligero. Energía baja, nunca áspero.",
-    "Siéntate un momento, no hay prisa. Mira esa higuera: nadie la apura y aun así da fruto a su tiempo. ¿Por qué te apuras tanto tú? Respira, que el camino sigue ahí mañana.",
+    "Siéntate un momento, no hay prisa. Mira esa planta de la ventana: nadie la apura y aun así crece. ¿Por qué te apuras tanto tú? Respira. Lo que tenías que hacer hoy también va a estar ahí mañana.",
   ),
   // ── Vivos: de fondo y sin voz. Escritos, nunca diseñados. ──
   a(
@@ -307,6 +308,48 @@ export const PISTAS_DE_IDENTIDAD: readonly string[] = [
 const minus = (t: string) => sinTildes(t).toLowerCase()
 
 /** Las razones por las que una descripción no puede ir a Voice Design (vacío = pasa). */
+/**
+ * Lo que la muestra no puede evocar de cada persona real: sus frases y
+ * anécdotas más conocidas, en minúsculas y sin tildes. Voice Design ajusta la
+ * actuación al texto que lee: una muestra que evoca a la persona empuja la
+ * voz hacia la imitación. Se busca como subcadena del texto plano.
+ */
+export const EVOCACIONES: Readonly<Record<string, readonly string[]>> = {
+  lincoln: ["lena", "hacha", "esclav", "casa dividida", "honest", "union"],
+  napoleon: ["batalla", "canon", "gloria", "imposible", "puente", "imperio", "ejercito"],
+  leonardo: ["paloma", "volar", "maquina voladora", "sonrisa", "pincel", "lienzo"],
+  cleopatra: ["serpiente", "aspid", "nilo", "piramide"],
+  suntzu: ["terreno", "enemigo", "guerra", "el agua", "general"],
+  marco: ["todo pasa", "recuerda que", "no depende de ti", "memento", "emperador"],
+  socrates: ["no se nada", "solo se", "cicuta", "conocete"],
+  mason: ["piedra angular", "escuadra", "compas", "templo", "logia", "gran arquitecto"],
+  iluminado: ["piramide", "el ojo", "nuevo orden"],
+  claude: [],
+  chatgpt: [],
+  kobe: ["mamba", "cuatro de la manana", "canasta", "anillo"],
+  jobs: ["manzana", "una cosa mas", "hambriento", "insensato", "garaje"],
+  jesus: ["higuera", "pan", "pescad", "projimo", "sembrador", "el camino", "la verdad", "padre"],
+}
+
+/**
+ * Lo mismo que descripcionSegura, para el texto de muestra (va a Voice Design
+ * junto con la descripción): sin nombres, sin pistas de identidad y sin las
+ * frases o anécdotas conocidas de la persona (EVOCACIONES).
+ */
+export function muestraSegura(id: string, muestra: string): string[] {
+  const errores: string[] = []
+  const nombrados = nombradosEn(muestra, PERSONAJES.map((p) => p.id))
+  if (nombrados.length) errores.push(`${id}: la muestra nombra a ${nombrados.join(", ")}`)
+  const terceros = tercerosEn(muestra)
+  if (terceros.length) errores.push(`${id}: la muestra nombra a una persona real (${terceros.join(", ")})`)
+  const plano = ` ${minus(muestra).replace(/[^\p{L}\p{N}.]+/gu, " ")} `
+  const pistas = PISTAS_DE_IDENTIDAD.filter((p) => plano.includes(` ${minus(p)}`) || plano.includes(` ${minus(p).trim()} `))
+  if (pistas.length) errores.push(`${id}: la muestra tiene pistas de identidad (${[...new Set(pistas.map((p) => p.trim()))].join(", ")})`)
+  const evoca = (EVOCACIONES[id] ?? []).filter((e) => plano.includes(` ${e}`))
+  if (evoca.length) errores.push(`${id}: la muestra evoca a la persona real (${evoca.join(", ")})`)
+  return errores
+}
+
 export function descripcionSegura(id: string, descripcion: string): string[] {
   const errores: string[] = []
   const d = descripcion.trim()

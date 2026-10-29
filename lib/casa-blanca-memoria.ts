@@ -23,17 +23,54 @@ const COLUMNAS_MEMORIA = "id, creado, personaje_id, tipo, texto, importancia, co
 const COLUMNAS_CONCIENCIA = "personaje_id, dia, animo, meta, pensamiento, diario, opiniones, actualizado"
 
 /**
- * "conversacion_visitante": una escena entre residentes sobre un tema que
- * escribió un visitante (conversar() con `tema`). Va aparte de "conversacion"
- * porque su resumen trae el texto del visitante, y la fábrica de videos nunca
- * usa el texto de un visitante (lib/fabrica/ideas.ts, TIPOS_DE_LA_CASA).
+ * Las conversaciones entre residentes (conversar()) se guardan según QUIÉN
+ * las pidió, no según si traen `tema`:
+ *   - "conversacion_casa": la pidió Kev (con su clave) y sin texto libre (ni
+ *     tema, ni contexto.actividad, ni contexto.recuerdos, ni contexto.hora).
+ *     Es la única que puede usar la fábrica de videos (lib/fabrica/ideas.ts,
+ *     TIPOS_DE_LA_CASA).
+ *   - "conversacion_visitante": cualquier otra. La ruta pública acepta texto
+ *     libre en el contexto que va tal cual al prompt, y el resumen lo puede
+ *     traer: la fábrica nunca usa el texto de un visitante.
+ *   - "conversacion": el tipo viejo. Todas las filas que lo tienen salieron
+ *     de la ruta pública (ningún componente de la página llama a conversar),
+ *     así que cuenta como de visitante. Ya no se escribe.
  */
-export const TIPOS_RECUERDO = ["charla", "conversacion", "conversacion_visitante", "consejo", "noticia", "trabajo", "diario"] as const
+export const TIPOS_RECUERDO = ["charla", "conversacion", "conversacion_casa", "conversacion_visitante", "consejo", "noticia", "trabajo", "diario"] as const
 export type TipoRecuerdo = (typeof TIPOS_RECUERDO)[number]
 
-/** El tipo del recuerdo de una conversación entre residentes: aparte si el tema lo puso un visitante. */
-export const tipoDeConversacion = (temaDelVisitante?: string | null): TipoRecuerdo =>
-  temaDelVisitante?.trim() ? "conversacion_visitante" : "conversacion"
+/**
+ * Los tipos que puede usar la fábrica de videos: los escribe la casa sola o
+ * Kev. Los demás traen (o pueden traer) texto de un visitante. Cada tipo de
+ * TIPOS_RECUERDO está en una de las dos listas (lib/fabrica/ideas.test.ts lo
+ * exige): un tipo nuevo no se cuela sin que alguien decida de qué lado va.
+ */
+export const TIPOS_DE_LA_CASA = ["conversacion_casa", "trabajo", "diario"] as const satisfies readonly TipoRecuerdo[]
+export const TIPOS_DE_VISITANTE = ["charla", "conversacion", "conversacion_visitante", "noticia", "consejo"] as const satisfies readonly TipoRecuerdo[]
+
+/** Lo que mira tipoDeConversacion de un pedido: el tema y el texto libre del contexto. */
+export interface OrigenConversacion {
+  tema?: string | null
+  contexto?: { hora?: string | null; actividad?: string | null; recuerdos?: unknown } | null
+}
+
+const conTexto = (s: string | null | undefined) => !!s?.trim()
+/** ¿Trae recuerdos escritos por quien pide? (lista o por residente; vacíos no cuentan). */
+function traeRecuerdos(r: unknown): boolean {
+  if (Array.isArray(r)) return r.some((x) => typeof x === "string" && x.trim())
+  if (r && typeof r === "object") return Object.values(r).some((v) => Array.isArray(v) && v.some((x) => typeof x === "string" && x.trim()))
+  return false
+}
+
+/**
+ * El tipo del recuerdo de una conversación entre residentes. De la casa solo
+ * si la pidió Kev y no trae ningún texto libre; si no, de visitante.
+ */
+export function tipoDeConversacion(p: OrigenConversacion, deKev: boolean): TipoRecuerdo {
+  const c = p.contexto ?? {}
+  const textoLibre = conTexto(p.tema) || conTexto(c.actividad) || conTexto(c.hora) || traeRecuerdos(c.recuerdos)
+  return deKev && !textoLibre ? "conversacion_casa" : "conversacion_visitante"
+}
 /** El mismo tope que el check de la tabla. */
 export const MAX_RECUERDO = 400
 

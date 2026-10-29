@@ -6,6 +6,8 @@
 //       las voces, renderiza, revisa la calidad, sube al almacén y hace las
 //       subidas pesadas (YouTube, X). Antes de las 12:00 de Bolivia no
 //       reclama: retoma la tanda de anoche (ver lib/fabrica/tanda.ts).
+//       --dia AAAA-MM-DD: llena los lugares de ese día de salida con su propio
+//       candado («tanda:<día>»), sin tocar el de la tanda de la noche.
 //
 //   npx tsx scripts/fabrica/tanda.ts --seco [--carpeta <dir>] [--render-real]
 //       EN SECO: base, IA, voz, render, calidad, almacén y redes de mentira.
@@ -22,8 +24,10 @@
 // FABRICA_RENDER_URL (http://localhost:3110), FABRICA_RENDER_CALIDAD (media),
 // FABRICA_LIMITE_MB, FABRICA_EXIGIR_AUDIO, FABRICA_EXIGIR_NVIDIA.
 //
-// Sale con 0 = terminó (o no había nada que hacer: pausada, día ya hecho),
-// 1 = se cortó o falló (el cómo va en el log y en fabrica_estado.ultima_tanda),
+// Sale con 0 = terminó con los lugares del día listos (o no había nada que
+// hacer: pausada, día ya hecho), 1 = se cortó, falló o quedó incompleta (hubo
+// errores y algún lugar de mañana no llegó al almacén; el cómo va en el log y
+// en fabrica_estado.ultima_tanda),
 // 2 = argumentos o configuración que impiden empezar.
 // ──────────────────────────────────────────────────────────────
 
@@ -207,7 +211,7 @@ async function main(): Promise<number> {
 
   const r = await ejecutarTanda(p)
   console.log(`\n${resumenEnTexto(r)}`)
-  return r.resultado === "cortada" || r.resultado === "error" ? 1 : 0
+  return r.resultado === "cortada" || r.resultado === "error" || r.resultado === "incompleta" ? 1 : 0
 }
 
 main()

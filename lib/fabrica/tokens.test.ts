@@ -152,6 +152,42 @@ async function main() {
     assert.ok(logs.some((l) => /sin token de x/.test(l)))
   })
 
+  await prueba("tokenPara dice POR QUÉ dio null: base caída o renovación 5xx = reintentable, sin cargar = no_hoy, inválido = fatal", async () => {
+    const viejo = console.error
+    console.error = () => {}
+    // Supabase responde 503 al leer: no es un token inválido, la subida se reintenta.
+    const caida = baseMemoria({ refresh: "r1" })
+    caida.base.leer = async () => {
+      throw new Error("[fabrica/tokens] leer x falló: 503 Service Unavailable")
+    }
+    const tp1 = tokenPara({ base: caida.base, env, fetch, ahora: () => ahora, renovadores: {} })
+    assert.equal(await tp1("x"), null)
+    assert.equal(tp1.fallo("x")?.clase, "reintentable")
+    assert.match(tp1.fallo("x")?.como ?? "", /503/)
+    // La renovación da 5xx (reintentable) o se corta (ambiguo): para la subida, reintentable.
+    for (const clase of ["reintentable", "ambiguo"] as const) {
+      const m = baseMemoria({ refresh: "r1" })
+      const tp = tokenPara({ base: m.base, env, fetch, ahora: () => ahora, renovadores: { x: async () => ({ ok: false, clase, como: "x.token: HTTP 503" }) } })
+      assert.equal(await tp("x"), null)
+      assert.equal(tp.fallo("x")?.clase, "reintentable", clase)
+    }
+    // Nunca se cargó: no_hoy (se omite hasta que Kev corra cargar-token), con el script en el cómo.
+    const tp2 = tokenPara({ base: baseMemoria(null).base, env, fetch, ahora: () => ahora, renovadores: {} })
+    assert.equal(await tp2("x"), null)
+    assert.equal(tp2.fallo("x")?.clase, "no_hoy")
+    assert.match(tp2.fallo("x")?.como ?? "", /cargar-token/)
+    // Inválido: fatal.
+    const tp3 = tokenPara({ base: baseMemoria({ refresh: "r1" }).base, env, fetch, ahora: () => ahora, renovadores: { x: async () => ({ ok: false, clase: "fatal", como: "invalid_grant" }) } })
+    await tp3("x")
+    assert.equal(tp3.fallo("x")?.clase, "fatal")
+    // Un acceso que llega borra el fallo anterior.
+    const m4 = baseMemoria({ refresh: "r1", acceso: "a1", accesoExpira: new Date(ahora.getTime() + 3600_000).toISOString() })
+    const tp4 = tokenPara({ base: m4.base, env, fetch, ahora: () => ahora, renovadores: {} })
+    assert.equal(await tp4("x"), "a1")
+    assert.equal(tp4.fallo("x"), null)
+    console.error = viejo
+  })
+
   terminar()
 }
 

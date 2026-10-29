@@ -114,8 +114,9 @@ export async function POST(req: Request) {
     }
 
     // Kev no tiene límite; el resto, 25 por día y un techo global.
+    const esKev = autorizado(req) === true
     let quedan: number | null = null
-    if (autorizado(req) !== true) {
+    if (!esKev) {
       const cupo = await consumirCupo(req)
       if (!cupo.ok) {
         return json({ error: cupo.mensaje, limite: cupo.motivo }, 429, { "Retry-After": String(cupo.reintentarEn) })
@@ -128,7 +129,8 @@ export async function POST(req: Request) {
       case "hablar":
         return responder(await hablar(pedido, quienPide(req)), extra)
       case "conversar":
-        return responder(await conversar(pedido), extra)
+        // Quién pide decide el tipo del recuerdo: solo lo de Kev puede llegar a la fábrica de videos.
+        return responder(await conversar(pedido, { deKev: esKev }), extra)
       case "consejo":
         return responder(await consejo(pedido), extra)
       case "noticia":

@@ -109,11 +109,20 @@ export interface OpcionesX {
   esperaMaxMs?: number
 }
 
-const sinToken = (paso: string): Fallo => ({
-  ok: false,
-  clase: "fatal",
-  como: `${paso}: sin token de X (renovación fallida o sin cargar: ver fabrica_tokens.ultimo_error)`,
-})
+/**
+ * Sin token: la clase la dice tokens.ts (Ctx.tokenFallo). Un fallo pasajero
+ * de la base o de la renovación es reintentable, un token sin cargar es
+ * no_hoy; solo lo inválido es fatal (y sin el dato, fatal como antes).
+ */
+const sinToken = (paso: string, c: Ctx): Fallo => {
+  const f = c.tokenFallo?.("x")
+  return {
+    ok: false,
+    clase: f?.clase ?? "fatal",
+    como: `${paso}: sin token de X${f ? ` (${f.como})` : " (renovación fallida o sin cargar: ver fabrica_tokens.ultimo_error)"}`,
+    ...(f?.codigo ? { codigo: f.codigo } : {}),
+  }
+}
 
 const auth = (t: string) => ({ Authorization: `Bearer ${t}` })
 
@@ -139,7 +148,7 @@ export function crearX(o: OpcionesX = {}): Adaptador {
     async subir(v, c) {
       const paso = "x.subir"
       const t = await c.token("x")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       const bytes = await bytesDelArchivo(c, v.archivo, paso)
       if (esFallo(bytes)) return bytes
       const json = { ...auth(t), "Content-Type": "application/json" }
@@ -205,7 +214,7 @@ export function crearX(o: OpcionesX = {}): Adaptador {
       if (errores.length) return { ok: false, clase: "fatal", como: `${paso}: ${errores.join("; ")}`, codigo: "texto_invalido" }
       if (!v.mediaId) return { ok: false, clase: "fatal", como: `${paso}: sin media_id (la VM no subió el video a X)` }
       const t = await c.token("x")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       const r = await pedir(
         c,
         `${X_API}/tweets`,
@@ -238,7 +247,7 @@ export function crearX(o: OpcionesX = {}): Adaptador {
     async recientes(desde, c) {
       const paso = "x.recientes"
       const t = await c.token("x")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       const quien = await yo(t, c)
       if (esFallo(quien)) return quien
       const inicio = new Date(Math.max(desde.getTime(), c.ahora().getTime() - 7 * 86400_000)).toISOString().replace(/\.\d{3}Z$/, "Z")

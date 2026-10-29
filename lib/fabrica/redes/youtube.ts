@@ -136,11 +136,20 @@ export interface OpcionesYouTube {
   msSubida?: number
 }
 
-const sinToken = (paso: string): Fallo => ({
-  ok: false,
-  clase: "fatal",
-  como: `${paso}: sin token de YouTube (renovación fallida o sin cargar: ver fabrica_tokens.ultimo_error)`,
-})
+/**
+ * Sin token: la clase la dice tokens.ts (Ctx.tokenFallo). Un fallo pasajero
+ * de la base o de la renovación es reintentable, un token sin cargar es
+ * no_hoy; solo lo inválido es fatal (y sin el dato, fatal como antes).
+ */
+const sinToken = (paso: string, c: Ctx): Fallo => {
+  const f = c.tokenFallo?.("youtube")
+  return {
+    ok: false,
+    clase: f?.clase ?? "fatal",
+    como: `${paso}: sin token de YouTube${f ? ` (${f.como})` : " (renovación fallida o sin cargar: ver fabrica_tokens.ultimo_error)"}`,
+    ...(f?.codigo ? { codigo: f.codigo } : {}),
+  }
+}
 
 const auth = (t: string) => ({ Authorization: `Bearer ${t}` })
 
@@ -186,7 +195,7 @@ export function crearYouTube(o: OpcionesYouTube = {}): Adaptador & {
       const sin = sinEtiqueta(paso, cuerpo)
       if (sin) return sin
       const t = await c.token("youtube")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       const bytes = await bytesDelArchivo(c, v.archivo, paso)
       if (esFallo(bytes)) return bytes
 
@@ -257,7 +266,7 @@ export function crearYouTube(o: OpcionesYouTube = {}): Adaptador & {
         return { ok: false, clase: "fatal", como: `${paso}: publishAt ${publishAt} fuera de la ventana (entre 1 min y ${VENTANA_PUBLISH_AT_MIN} min desde ahora)` }
       }
       const t = await c.token("youtube")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       const s = await actualizarStatus(v.idRed, statusDe({ publishAt }), t, c, paso)
       if (esFallo(s)) return s
       if (s.privacyStatus !== "private" || !mismoInstante(s.publishAt, publishAt)) {
@@ -270,7 +279,7 @@ export function crearYouTube(o: OpcionesYouTube = {}): Adaptador & {
       const paso = "youtube.publicar"
       if (!v.idRed) return { ok: false, clase: "fatal", como: `${paso}: sin id de YouTube (la VM no lo subió)` }
       const t = await c.token("youtube")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       const s = await actualizarStatus(v.idRed, statusDe({ privacyStatus: "public" }), t, c, paso)
       if (esFallo(s)) return s
       // Releer: un proyecto sin auditar acepta el update y deja el video bloqueado en privado.
@@ -290,7 +299,7 @@ export function crearYouTube(o: OpcionesYouTube = {}): Adaptador & {
     async desprogramar(idRed, c) {
       const paso = "youtube.desprogramar"
       const t = await c.token("youtube")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       const s = await actualizarStatus(idRed, statusDe(), t, c, paso)
       if (esFallo(s)) return s
       if (s.privacyStatus !== "private" || s.publishAt) {
@@ -317,7 +326,7 @@ export function crearYouTube(o: OpcionesYouTube = {}): Adaptador & {
     async recientes(desde, c) {
       const paso = "youtube.recientes"
       const t = await c.token("youtube")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       // La lista de subidas del canal (incluye los privados para el dueño): 1 + 1 unidades, no search (100).
       const ch = await pedir(c, `${YT_API}/channels?part=contentDetails&mine=true`, { headers: auth(t) }, { ms: 15_000, idempotente: true, paso })
       if (esFallo(ch)) return ch
@@ -349,7 +358,7 @@ export function crearYouTube(o: OpcionesYouTube = {}): Adaptador & {
       const paso = "youtube.subtitular"
       if (!contenido.trim()) return { ok: false, clase: "fatal", como: `${paso}: subtítulos vacíos` }
       const t = await c.token("youtube")
-      if (!t) return sinToken(paso)
+      if (!t) return sinToken(paso, c)
       const limite = `fabrica${Math.random().toString(36).slice(2)}`
       const meta = { snippet: { videoId: idRed, language: idioma, name: "Español", isDraft: false } }
       const cuerpo =
