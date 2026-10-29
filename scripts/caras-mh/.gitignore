@@ -1,0 +1,6 @@
+# Datos de MakeHuman (124+ MB, se bajan aparte: ver README.md) y lo que se genera desde ellos
+vendor/
+convertido/
+out/
+_fichas.mjs
+banco/app.js

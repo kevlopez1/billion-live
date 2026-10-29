@@ -1,0 +1,767 @@
+{
+ "_nota": "FASE 6: bloque mh por residente (ExtraMH de fichas-mh.ts) = extra-g1+g2+g3+z-final unidos; los que faltan salen del EXTRA incorporado de fichas-mh.ts. Para la parte 2: scripts/caras-mh/extra-mh.json.",
+ "trump": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.82,
+  "cejas": "eyebrow010",
+  "detalles": {
+   "head/head-fat-decr|incr": 0.8,
+   "head/head-square": 0.45,
+   "chin/chin-width-decr|incr": 0.4,
+   "neck/neck-double-decr|incr": 0.7,
+   "eyes/r-eye-eyefold-down|up": -0.55,
+   "eyes/l-eye-eyefold-down|up": -0.55,
+   "eyes/r-eye-height2-decr|incr": -0.3,
+   "eyes/l-eye-height2-decr|incr": -0.3,
+   "cheek/r-cheek-volume-decr|incr": 0.4,
+   "cheek/l-cheek-volume-decr|incr": 0.4,
+   "mouth/mouth-scale-horiz-decr|incr": -0.4,
+   "mouth/mouth-upperlip-volume-decr|incr": -0.5,
+   "mouth/mouth-lowerlip-volume-decr|incr": 0.2,
+   "head/head-scale-horiz-decr|incr": 0.3,
+   "cheek/r-cheek-trans-down|up": -0.3,
+   "cheek/l-cheek-trans-down|up": -0.3
+  },
+  "expresion": {
+   "mouth-pursing": 0.25,
+   "mouth-protusion": 0.08,
+   "eye-left-slit": 0.3,
+   "eye-right-slit": 0.3,
+   "mouth-compression": 0.15
+  }
+ },
+ "musk": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.78,
+  "cejas": "eyebrow001",
+  "detalles": {
+   "head/head-square": 0.8,
+   "chin/chin-width-decr|incr": 0.6,
+   "cheek/r-cheek-volume-decr|incr": 0.3,
+   "cheek/l-cheek-volume-decr|incr": 0.3,
+   "eyes/r-eye-eyefold-down|up": -0.45,
+   "eyes/l-eye-eyefold-down|up": -0.45,
+   "eyes/r-eye-push1-in|out": -0.5,
+   "eyes/l-eye-push1-in|out": -0.5,
+   "eyes/r-eye-scale-decr|incr": -0.3,
+   "eyes/l-eye-scale-decr|incr": -0.3,
+   "eyes/r-eye-trans-in|out": 0.2,
+   "eyes/l-eye-trans-in|out": 0.2,
+   "eyes/r-eye-bag-decr|incr": 0.3,
+   "eyes/l-eye-bag-decr|incr": 0.3,
+   "eyebrows/eyebrows-trans-down|up": -0.3,
+   "head/head-scale-horiz-decr|incr": 0.35,
+   "head/head-scale-vert-decr|incr": -0.2,
+   "head/head-rectangular": 0.3,
+   "eyes/r-eye-push2-in|out": -0.3,
+   "eyes/l-eye-push2-in|out": -0.3,
+   "chin/chin-bones-decr|incr": 0.3
+  },
+  "expresionLados": {
+   "mouth-corner-puller": [
+    0.05,
+    0.5
+   ]
+  }
+ },
+ "altman": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.35,
+  "detalles": {
+   "head/head-oval": 0.4,
+   "head/head-age-decr|incr": -0.3,
+   "chin/chin-width-decr|incr": -0.4,
+   "eyes/r-eye-scale-decr|incr": 0.2,
+   "eyes/l-eye-scale-decr|incr": 0.2,
+   "eyes/r-eye-height2-decr|incr": 0.3,
+   "eyes/l-eye-height2-decr|incr": 0.3,
+   "mouth/mouth-scale-horiz-decr|incr": -0.2
+  },
+  "expresion": {
+   "eye-left-opened-up": 0.3,
+   "eye-right-opened-up": 0.3,
+   "eyebrows-left-inner-up": 0.15,
+   "eyebrows-right-inner-up": 0.15
+  }
+ },
+ "thiel": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.42,
+  "detalles": {
+   "head/head-oval": 0.4,
+   "forehead/forehead-scale-vert-decr|incr": 0.5,
+   "chin/chin-width-decr|incr": 0.5,
+   "cheek/r-cheek-inner-decr|incr": -0.5,
+   "cheek/l-cheek-inner-decr|incr": -0.5,
+   "eyes/r-eye-height2-decr|incr": -0.15,
+   "eyes/l-eye-height2-decr|incr": -0.15,
+   "mouth/mouth-upperlip-volume-decr|incr": -0.3,
+   "mouth/mouth-lowerlip-volume-decr|incr": -0.2,
+   "chin/chin-prominent-decr|incr": 0.3,
+   "chin/chin-height-decr|incr": 0.3,
+   "eyes/r-eye-eyefold-down|up": -0.3,
+   "eyes/l-eye-eyefold-down|up": -0.3
+  },
+  "expresion": {
+   "eye-left-slit": 0.15,
+   "eye-right-slit": 0.15,
+   "mouth-corner-puller": 0.05
+  }
+ },
+ "karp": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.25,
+  "musculo": 0.5,
+  "detalles": {
+   "head/head-oval": 0.3,
+   "nose/nose-hump-decr|incr": 0.4,
+   "mouth/mouth-scale-horiz-decr|incr": 0.2,
+   "nose/nose-scale-vert-decr|incr": 0.2,
+   "head/head-scale-horiz-decr|incr": 0.4,
+   "cheek/r-cheek-volume-decr|incr": 0.3,
+   "cheek/l-cheek-volume-decr|incr": 0.3
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.45,
+   "mouth-upward-retraction": 0.2,
+   "eyebrows-left-up": 0.35,
+   "eyebrows-right-up": 0.35
+  }
+ },
+ "pichai": {
+  "etnia": {
+   "african": 0.15,
+   "asian": 0.15,
+   "caucasian": 0.7
+  },
+  "peso": 0.62,
+  "piel": "middleage_lightskinned_male",
+  "detalles": {
+   "head/head-round": 0.5,
+   "forehead/forehead-scale-vert-decr|incr": 0.4,
+   "head/head-scale-horiz-decr|incr": 0.15,
+   "cheek/r-cheek-volume-decr|incr": 0.3,
+   "cheek/l-cheek-volume-decr|incr": 0.3
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.35,
+   "eye-left-slit": 0.12,
+   "eye-right-slit": 0.12
+  }
+ },
+ "amodei": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.75,
+  "detalles": {
+   "head/head-round": 0.9,
+   "head/head-age-decr|incr": -0.2,
+   "head/head-scale-horiz-decr|incr": 0.35,
+   "head/head-scale-vert-decr|incr": -0.25,
+   "cheek/r-cheek-volume-decr|incr": 0.5,
+   "cheek/l-cheek-volume-decr|incr": 0.5,
+   "neck/neck-double-decr|incr": 0.3,
+   "chin/chin-width-decr|incr": 0.2
+  },
+  "expresionLados": {
+   "mouth-corner-puller": [
+    0.1,
+    0.25
+   ]
+  }
+ },
+ "hormozi": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.6,
+  "musculo": 0.8,
+  "detalles": {
+   "head/head-square": 0.3,
+   "eyebrows/eyebrows-trans-down|up": -0.3,
+   "eyes/r-eye-eyefold-down|up": -0.2,
+   "eyes/l-eye-eyefold-down|up": -0.2,
+   "head/head-scale-horiz-decr|incr": 0.2,
+   "eyebrows/eyebrows-trans-backward|forward": 0.3
+  }
+ },
+ "tate": {
+  "etnia": {
+   "african": 0.2,
+   "asian": 0,
+   "caucasian": 0.8
+  },
+  "peso": 0.6,
+  "musculo": 0.9,
+  "calva": true,
+  "piel": "middleage_lightskinned_male",
+  "detalles": {
+   "head/head-square": 0.3,
+   "head/head-rectangular": 0.0,
+   "chin/chin-width-decr|incr": 0.7,
+   "chin/chin-bones-decr|incr": 0.6,
+   "eyebrows/eyebrows-trans-down|up": -0.3,
+   "eyebrows/eyebrows-trans-backward|forward": 0.5,
+   "eyes/r-eye-height2-decr|incr": -0.35,
+   "eyes/l-eye-height2-decr|incr": -0.35,
+   "eyes/r-eye-eyefold-down|up": -0.3,
+   "eyes/l-eye-eyefold-down|up": -0.3,
+   "neck/neck-scale-horiz-decr|incr": 0.8,
+   "nose/nose-width2-decr|incr": 0.3,
+   "eyes/r-eye-push1-in|out": -0.4,
+   "eyes/l-eye-push1-in|out": -0.4,
+   "head/head-scale-horiz-decr|incr": 0.2,
+   "forehead/forehead-temple-decr|incr": 0.3,
+   "head/head-round": 0.2
+  },
+  "expresion": {
+   "eye-left-slit": 0.25,
+   "eye-right-slit": 0.25,
+   "mouth-compression": 0.2
+  },
+  "expresionLados": {
+   "mouth-corner-puller": [
+    0.04,
+    0.22
+   ]
+  },
+  "montaje": {
+   "barbaEspesor": 0.4
+  },
+  "cejasFicha": {
+   "grosor": 1.6,
+   "alto": -0.25,
+   "arco": 0.05
+  }
+ },
+ "gadzhi": {
+  "etnia": {
+   "african": 0,
+   "asian": 0.1,
+   "caucasian": 0.9
+  },
+  "peso": 0.3,
+  "musculo": 0.55,
+  "detalles": {
+   "head/head-oval": 0.6,
+   "head/head-invertedtriangular": 0.25,
+   "cheek/r-cheek-inner-decr|incr": -0.4,
+   "cheek/l-cheek-inner-decr|incr": -0.4,
+   "cheek/r-cheek-volume-decr|incr": -0.3,
+   "cheek/l-cheek-volume-decr|incr": -0.3,
+   "chin/chin-width-decr|incr": -0.4,
+   "chin/chin-bones-decr|incr": 0.15,
+   "cheek/r-cheek-bones-decr|incr": 0.35,
+   "cheek/l-cheek-bones-decr|incr": 0.35,
+   "eyebrows/eyebrows-trans-down|up": -0.25,
+   "eyebrows/eyebrows-trans-backward|forward": 0.25,
+   "eyes/r-eye-height2-decr|incr": -0.2,
+   "eyes/l-eye-height2-decr|incr": -0.2,
+   "eyes/r-eye-corner1-down|up": 0.2,
+   "eyes/l-eye-corner1-down|up": 0.2,
+   "nose/nose-width1-decr|incr": -0.25,
+   "head/head-scale-horiz-decr|incr": -0.1,
+   "mouth/mouth-scale-horiz-decr|incr": 0.15,
+   "mouth/mouth-scale-depth-decr|incr": -0.3
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.12
+  },
+  "cejasFicha": {
+   "grosor": 1.5,
+   "alto": -0.15,
+   "arco": 0.08
+  }
+ },
+ "jobs": {
+  "etnia": {
+   "african": 0,
+   "asian": 0.05,
+   "caucasian": 0.95
+  },
+  "peso": 0.2,
+  "musculo": 0.35,
+  "detalles": {
+   "head/head-oval": 0.4,
+   "cheek/r-cheek-inner-decr|incr": -0.6,
+   "cheek/l-cheek-inner-decr|incr": -0.6,
+   "mouth/mouth-laugh-lines-in|out": 0.7,
+   "mouth/mouth-scale-horiz-decr|incr": 0.2,
+   "chin/chin-width-decr|incr": -0.3,
+   "eyes/r-eye-eyefold-down|up": -0.2,
+   "eyes/l-eye-eyefold-down|up": -0.2,
+   "forehead/forehead-scale-vert-decr|incr": 0.3,
+   "eyes/r-eye-push1-in|out": -0.25,
+   "eyes/l-eye-push1-in|out": -0.25
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.3,
+   "eye-left-slit": 0.1,
+   "eye-right-slit": 0.1
+  },
+  "montaje": {
+   "barbaEspesor": 0.35
+  }
+ },
+ "kobe": {
+  "etnia": {
+   "african": 0.9,
+   "asian": 0,
+   "caucasian": 0.1
+  },
+  "peso": 0.4,
+  "musculo": 0.75,
+  "pelo": null,
+  "cejas": "eyebrow009",
+  "detalles": {
+   "nose/nose-flaring-decr|incr": 0.4,
+   "chin/chin-width-decr|incr": 0.4,
+   "chin/chin-bones-decr|incr": 0.5,
+   "head/head-scale-horiz-decr|incr": 0.15,
+   "cheek/r-cheek-bones-decr|incr": 0.2,
+   "cheek/l-cheek-bones-decr|incr": 0.2
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.6,
+   "mouth-upward-retraction": 0.3,
+   "eye-left-slit": 0.15,
+   "eye-right-slit": 0.15
+  },
+  "montaje": {
+   "sinBarbaHoy": true
+  },
+  "cueroLinea": {
+   "patillas": -4
+  },
+  "limpiaCuero": {
+   "alto": -3,
+   "patillas": 6
+  }
+ },
+ "lincoln": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.15,
+  "musculo": 0.45,
+  "piel": "old_lightskinned_male",
+  "cejas": "eyebrow001",
+  "detalles": {
+   "head/head-oval": 0.3,
+   "mouth/mouth-laugh-lines-in|out": 1,
+   "cheek/l-cheek-inner-decr|incr": -1,
+   "cheek/r-cheek-inner-decr|incr": -1,
+   "cheek/l-cheek-volume-decr|incr": -0.5,
+   "cheek/r-cheek-volume-decr|incr": -0.5,
+   "head/head-age-decr|incr": 0.6,
+   "chin/chin-height-decr|incr": 0.4,
+   "nose/nose-hump-decr|incr": 0.4,
+   "eyes/r-eye-eyefold-down|up": -0.3,
+   "eyes/l-eye-eyefold-down|up": -0.3
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.08
+  },
+  "cejasFicha": {
+   "grosor": 1.55,
+   "pobladas": 0.5
+  }
+ },
+ "napoleon": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.7,
+  "musculo": 0.5,
+  "detalles": {
+   "head/head-round": 0.5,
+   "cheek/r-cheek-volume-decr|incr": 0.6,
+   "cheek/l-cheek-volume-decr|incr": 0.6,
+   "forehead/forehead-scale-vert-decr|incr": 0.35,
+   "mouth/mouth-scale-horiz-decr|incr": -0.15,
+   "chin/chin-prominent-decr|incr": 0.4,
+   "chin/chin-width-decr|incr": 0.3,
+   "chin/chin-height-decr|incr": 0.2,
+   "neck/neck-double-decr|incr": 0.3,
+   "nose/nose-greek-decr|incr": 0.4,
+   "nose/nose-scale-depth-decr|incr": 0.2,
+   "eyebrows/eyebrows-trans-down|up": -0.2,
+   "eyes/r-eye-push1-in|out": -0.25,
+   "eyes/l-eye-push1-in|out": -0.25,
+   "mouth/mouth-upperlip-volume-decr|incr": -0.1,
+   "head/head-scale-horiz-decr|incr": 0.25,
+   "mouth/mouth-scale-depth-decr|incr": -0.3
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.06
+  },
+  "cejasFicha": {
+   "grosor": 1.1,
+   "arco": 0.1
+  }
+ },
+ "leonardo": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.3,
+  "musculo": 0.4,
+  "piel": "old_lightskinned_male",
+  "detalles": {
+   "head/head-age-decr|incr": 0.6,
+   "eyebrows/eyebrows-trans-down|up": -0.3,
+   "eyebrows/eyebrows-trans-backward|forward": 0.6,
+   "eyes/r-eye-eyefold-down|up": -0.35,
+   "eyes/l-eye-eyefold-down|up": -0.35,
+   "eyes/r-eye-push1-in|out": -0.5,
+   "eyes/l-eye-push1-in|out": -0.5,
+   "cheek/r-cheek-inner-decr|incr": -0.5,
+   "cheek/l-cheek-inner-decr|incr": -0.5,
+   "forehead/forehead-scale-vert-decr|incr": 0.4
+  },
+  "expresion": {},
+  "barbaFicha": {
+   "mejillas": 0.45
+  },
+  "cejasFicha": {
+   "grosor": 1.7,
+   "pobladas": 1,
+   "alto": -0.1
+  }
+ },
+ "cleopatra": {
+  "etnia": {
+   "african": 0.1,
+   "asian": 0.05,
+   "caucasian": 0.85
+  },
+  "peso": 0.4,
+  "cejas": "eyebrow006",
+  "pestanas": "eyelashes02",
+  "detalles": {
+   "nose/nose-hump-decr|incr": 0.4,
+   "head/head-oval": 0.5,
+   "chin/chin-prominent-decr|incr": 0.1,
+   "chin/chin-height-decr|incr": -0.25,
+   "cheek/r-cheek-volume-decr|incr": 0.3,
+   "cheek/l-cheek-volume-decr|incr": 0.3,
+   "mouth/mouth-scale-horiz-decr|incr": 0.2,
+   "mouth/mouth-scale-depth-decr|incr": -0.3
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.12
+  }
+ },
+ "suntzu": {
+  "etnia": {
+   "african": 0,
+   "asian": 0.85,
+   "caucasian": 0.15
+  },
+  "peso": 0.4,
+  "musculo": 0.35,
+  "detalles": {
+   "head/head-oval": 0.5,
+   "nose/nose-scale-depth-decr|incr": -0.2,
+   "nose/nose-width1-decr|incr": 0.2,
+   "eyes/r-eye-eyefold-down|up": -0.25,
+   "eyes/l-eye-eyefold-down|up": -0.25,
+   "eyes/r-eye-height2-decr|incr": -0.1,
+   "eyes/l-eye-height2-decr|incr": -0.1,
+   "mouth/mouth-laugh-lines-in|out": 0.45,
+   "chin/chin-height-decr|incr": 0.2,
+   "head/head-age-decr|incr": 0.4
+  },
+  "expresion": {
+   "eye-left-slit": 0.1,
+   "eye-right-slit": 0.1
+  },
+  "cejasFicha": {
+   "grosor": 0.95,
+   "arco": 0.05,
+   "inclinacion": -0.35,
+   "largo": 1.1
+  },
+  "montaje": {
+   "sinBigoteHoy": true,
+   "cueroSuave": 3
+  },
+  "barbaFicha": {
+   "bigote": 0,
+   "bigoteFino": 1,
+   "caida": 0.4,
+   "densidad": 1
+  }
+ },
+ "marco": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.4,
+  "musculo": 0.5,
+  "detalles": {
+   "head/head-oval": 0.4,
+   "eyes/r-eye-eyefold-down|up": -0.6,
+   "eyes/l-eye-eyefold-down|up": -0.6,
+   "eyes/r-eye-height1-decr|incr": -0.3,
+   "eyes/l-eye-height1-decr|incr": -0.3,
+   "nose/nose-greek-decr|incr": 0.4,
+   "forehead/forehead-scale-vert-decr|incr": 0.2,
+   "head/head-age-decr|incr": 0.7,
+   "cheek/r-cheek-inner-decr|incr": -0.3,
+   "cheek/l-cheek-inner-decr|incr": -0.3,
+   "mouth/mouth-laugh-lines-in|out": 0.4,
+   "eyes/r-eye-push1-in|out": 0.3,
+   "eyes/l-eye-push1-in|out": 0.3,
+   "eyes/r-eye-push2-in|out": 0.2,
+   "eyes/l-eye-push2-in|out": 0.2,
+   "eyes/r-eye-bag-decr|incr": 0.2,
+   "eyes/l-eye-bag-decr|incr": 0.2
+  },
+  "expresion": {
+   "eyebrows-left-inner-up": 0.25,
+   "eyebrows-right-inner-up": 0.25,
+   "eye-left-slit": 0.3,
+   "eye-right-slit": 0.3,
+   "mouth-corner-puller": 0.08
+  },
+  "montaje": {
+   "barbaEspesor": 0.5,
+   "cueroSuave": 3,
+   "rizoFino": 2.2
+  }
+ },
+ "socrates": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.7,
+  "pelo": null,
+  "calva": true,
+  "corona": {
+   "tope": 7.6,
+   "largo": 0.32,
+   "rizo": 0.7
+  },
+  "cejas": "eyebrow009",
+  "detalles": {
+   "head/head-round": 0.9,
+   "head/head-scale-vert-decr|incr": -0.4,
+   "head/head-scale-horiz-decr|incr": 0.4,
+   "head/head-fat-decr|incr": 0.8,
+   "forehead/forehead-nubian-decr|incr": 0.6,
+   "nose/nose-septumangle-decr|incr": 0.5,
+   "nose/nose-scale-vert-decr|incr": -0.6,
+   "nose/nose-flaring-decr|incr": 0.45,
+   "nose/nose-hump-decr|incr": -1,
+   "nose/nose-width3-decr|incr": 0.3,
+   "nose/nose-point-down|up": 0.5,
+   "mouth/mouth-scale-vert-decr|incr": 0.3,
+   "eyes/r-eye-push1-in|out": 0.5,
+   "eyes/l-eye-push1-in|out": 0.5,
+   "eyes/r-eye-push2-in|out": 0.5,
+   "eyes/l-eye-push2-in|out": 0.5,
+   "eyes/r-eye-scale-decr|incr": 0.3,
+   "eyes/l-eye-scale-decr|incr": 0.3,
+   "cheek/r-cheek-volume-decr|incr": -0.3,
+   "cheek/l-cheek-volume-decr|incr": -0.3,
+   "nose/nose-curve-concave|convex": -0.4,
+   "nose/nose-width1-decr|incr": 0.4,
+   "nose/nose-scale-horiz-decr|incr": -0.3,
+   "nose/nose-point-width-decr|incr": -0.4,
+   "eyes/r-eye-height2-decr|incr": 0.5,
+   "eyes/l-eye-height2-decr|incr": 0.5,
+   "eyebrows/eyebrows-trans-down|up": 0.35,
+   "eyes/r-eye-bag-decr|incr": -0.3,
+   "eyes/l-eye-bag-decr|incr": -0.3
+  },
+  "expresionLados": {
+   "mouth-corner-puller": [
+    0.08,
+    0.25
+   ]
+  },
+  "expresion": {
+   "eyebrows-left-up": 0.2,
+   "eyebrows-right-up": 0.2,
+   "eyebrows-left-inner-up": 0.15,
+   "eyebrows-right-inner-up": 0.15,
+   "eye-left-opened-up": 0.3,
+   "eye-right-opened-up": 0.3
+  },
+  "cejasFicha": {
+   "grosor": 1.0,
+   "alto": 0.3,
+   "inclinacion": 0.35
+  },
+  "montaje": {
+   "bigoteBaja": 0.006
+  },
+  "piel": "middleage_lightskinned_male"
+ },
+ "jesus": {
+  "etnia": {
+   "african": 0,
+   "asian": 0.05,
+   "caucasian": 0.95
+  },
+  "peso": 0.3,
+  "musculo": 0.45,
+  "detalles": {
+   "head/head-oval": 0.5,
+   "nose/nose-scale-vert-decr|incr": 0.15,
+   "nose/nose-width2-decr|incr": -0.2,
+   "eyes/r-eye-eyefold-down|up": -0.15,
+   "eyes/l-eye-eyefold-down|up": -0.15,
+   "cheek/r-cheek-inner-decr|incr": -0.3,
+   "cheek/l-cheek-inner-decr|incr": -0.3
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.12,
+   "eye-left-slit": 0.05,
+   "eye-right-slit": 0.05
+  },
+  "montaje": {
+   "cueroSuave": 3
+  }
+ },
+ "mason": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.5,
+  "musculo": 0.45,
+  "detalles": {
+   "head/head-rectangular": 0.5,
+   "head/head-age-decr|incr": 0.6,
+   "mouth/mouth-laugh-lines-in|out": 0.8,
+   "eyes/r-eye-eyefold-down|up": -0.45,
+   "eyes/l-eye-eyefold-down|up": -0.45,
+   "forehead/forehead-scale-vert-decr|incr": 0.2,
+   "cheek/r-cheek-inner-decr|incr": -0.4,
+   "cheek/l-cheek-inner-decr|incr": -0.4
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.15,
+   "eyebrows-left-inner-up": 0.05,
+   "eyebrows-right-inner-up": 0.05
+  },
+  "cejasFicha": {
+   "grosor": 1.6,
+   "pobladas": 1,
+   "largo": 1.1
+  },
+  "montaje": {
+   "cueroSuave": 3
+  }
+ },
+ "iluminado": {
+  "etnia": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "peso": 0.25,
+  "musculo": 0.4,
+  "detalles": {
+   "head/head-invertedtriangular": 0.6,
+   "chin/chin-width-decr|incr": -0.6,
+   "chin/chin-prominent-decr|incr": 0.3,
+   "chin/chin-bones-decr|incr": 0.2,
+   "cheek/r-cheek-inner-decr|incr": -0.5,
+   "cheek/l-cheek-inner-decr|incr": -0.5,
+   "nose/nose-scale-vert-decr|incr": 0.1,
+   "nose/nose-point-width-decr|incr": -0.3
+  },
+  "expresion": {
+   "mouth-compression": 0.15,
+   "mouth-corner-puller": 0.05
+  }
+ },
+ "claude": {
+  "etnia": {
+   "african": 0.05,
+   "asian": 0.1,
+   "caucasian": 0.85
+  },
+  "peso": 0.4,
+  "musculo": 0.4,
+  "iris": "#7F93A6",
+  "detalles": {
+   "head/head-oval": 0.5,
+   "cheek/r-cheek-bones-decr|incr": 0.2,
+   "cheek/l-cheek-bones-decr|incr": 0.2,
+   "nose/nose-scale-vert-decr|incr": -0.1
+  },
+  "expresionLados": {
+   "mouth-corner-puller": [
+    0.14,
+    0.32
+   ]
+  },
+  "expresion": {
+   "eye-left-slit": 0.08,
+   "eye-right-slit": 0.08
+  }
+ },
+ "chatgpt": {
+  "etnia": {
+   "african": 0.05,
+   "asian": 0.05,
+   "caucasian": 0.9
+  },
+  "peso": 0.45,
+  "musculo": 0.55,
+  "iris": "#A9824E",
+  "detalles": {
+   "head/head-square": 0.3,
+   "chin/chin-width-decr|incr": 0.3
+  },
+  "expresion": {
+   "mouth-corner-puller": 0.05
+  },
+  "cejasFicha": {
+   "grosor": 0.28,
+   "arco": 0.15,
+   "densidad": 1,
+   "largo": 0.95
+  }
+ }
+}
