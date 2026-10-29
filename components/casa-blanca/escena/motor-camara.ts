@@ -125,6 +125,8 @@ export interface DepsCamara {
 interface CtxToma {
   /** Estado suavizado del seguimiento (tomas que siguen a alguien). */
   seguir(dt: number, out: Pose): boolean
+  /** La toma la pidió el estudio (con `corte`): las tomas que tienen otra versión para video la usan. */
+  estudio: boolean
 }
 
 interface Toma {
@@ -135,8 +137,9 @@ interface Toma {
   /** La toma pasa por el ascensor: cambia de nivel sin fundido (el velo de los cruces de losa lo tapa). */
   ascensor?: boolean
   /** Negro propio de la toma (0..1), además del de los cruces de losa. */
-  velo?(t: number): number
-  nivel(t: number): NivelId
+  /** `estudio`: la toma la pidió el estudio (ver CtxToma.estudio). */
+  velo?(t: number, estudio?: boolean): number
+  nivel(t: number, estudio?: boolean): NivelId
   pose(t: number, out: Pose, ctx: CtxToma, dt: number): boolean
 }
 
@@ -211,25 +214,58 @@ const CORTE_CIUDAD = ALTURA_NIVEL.n3 - LOSA - 0.6
 
 // ── Descenso a la ciudad (toma de cine) ──────────────────────
 const PAB = PABELLON_ASCENSOR
+/** Tramos de la toma (fracción de su duración) y de dónde arranca el acercamiento por el jardín. */
+interface TramosDescenso {
+  tubo: number
+  negro: number
+  ciudad: number
+  mirador: number
+  /** Lo que tarda en cerrar y en abrir el negro sobre la roca. */
+  cierre: number
+  apertura: number
+  /** Pose inicial: x, alto, z desde el pabellón; y alto del punto mirado. */
+  desde: { x: number; y: number; dz: number; miraY: number }
+}
+/** Página viva: como siempre (jardín ~4,8 s, caída ~4,6 s). */
+const DC_VIVO: TramosDescenso = {
+  tubo: 0.3,
+  negro: 0.52,
+  ciudad: 0.56,
+  mirador: 0.85,
+  cierre: 0.03,
+  apertura: 0.05,
+  desde: { x: -14, y: 26, dz: 64, miraY: 4 },
+}
 /**
- * Tramos de la toma (fracción de sus 16 s). La caída por el pozo es lo
- * principal (~9,6 s); el jardín (2,2 s) y el tubo (2,6 s) la presentan, y el
- * negro sobre la roca dura medio segundo: cierra en `cierre`, se queda hasta
- * `ciudad` y abre en `apertura` (0,3 s cada uno), con la caída ya empezada.
+ * Estudio (videos): la caída por el pozo es lo principal (~9,6 s de 16); el
+ * jardín (2,2 s) y el tubo (2,6 s) la presentan, y el negro sobre la roca dura
+ * medio segundo: cierra en `cierre`, se queda hasta `ciudad` y abre en
+ * `apertura` (0,3 s cada uno), con la caída ya empezada. El acercamiento sale
+ * de más cerca que el jardín entero: dura poco y no puede ser un latigazo.
  */
-const DC = { tubo: 0.14, negro: 0.3, ciudad: 0.31, mirador: 0.91, cierre: 0.02, apertura: 0.02 }
+const DC_ESTUDIO: TramosDescenso = {
+  tubo: 0.14,
+  negro: 0.3,
+  ciudad: 0.31,
+  mirador: 0.91,
+  cierre: 0.02,
+  apertura: 0.02,
+  desde: { x: -10, y: 17, dz: 36, miraY: 3 },
+}
+const tramosDescenso = (estudio?: boolean) => (estudio ? DC_ESTUDIO : DC_VIVO)
 /** Altura de la cámara en la parte del ascensor de la toma (t de 0 a 1 dentro del tramo). */
 const alturaBajada = (k: number) => lerp(ALTO_TUBO.superficie, CORTE_CIUDAD, muySuave(k))
 const _pc = { pos: new THREE.Vector3(), mira: new THREE.Vector3(), fov: 50 } as Pose
-function poseDescensoCiudad(t: number, o: Pose) {
+function poseDescensoCiudad(t: number, o: Pose, estudio?: boolean) {
   // Jardín Sur hacia el pabellón; el tubo por los tres subsuelos; un instante
   // en negro (la roca sobre la ciudad); la bajada de ciudad.ts y el Mirador.
+  const DC = tramosDescenso(estudio)
   if (t < DC.tubo) {
     const k = muySuave(tramo(t, 0, DC.tubo))
     poseTubo(ALTO_TUBO.superficie, _pc)
-    // Desde más cerca que el jardín entero: el acercamiento dura poco y no puede ser un latigazo.
-    o.pos.set(lerp(-10, _pc.pos.x, k), lerp(17, _pc.pos.y, k), lerp(PAB.z + 36, _pc.pos.z, k))
-    o.mira.set(lerp(0, _pc.mira.x, k), lerp(3, _pc.mira.y, k), lerp(PAB.z - 6, _pc.mira.z, k))
+    const d = DC.desde
+    o.pos.set(lerp(d.x, _pc.pos.x, k), lerp(d.y, _pc.pos.y, k), lerp(PAB.z + d.dz, _pc.pos.z, k))
+    o.mira.set(lerp(0, _pc.mira.x, k), lerp(d.miraY, _pc.mira.y, k), lerp(PAB.z - 6, _pc.mira.z, k))
     o.fov = lerp(46, _pc.fov, k)
   } else if (t < DC.negro) {
     poseTubo(alturaBajada(tramo(t, DC.tubo, DC.negro)), o)
@@ -244,13 +280,15 @@ function poseDescensoCiudad(t: number, o: Pose) {
     o.fov = lerp(fov, m.fov, k)
   }
 }
-function nivelDescensoCiudad(t: number): NivelId {
+function nivelDescensoCiudad(t: number, estudio?: boolean): NivelId {
+  const DC = tramosDescenso(estudio)
   if (t < DC.tubo) return S
   if (t < DC.negro) return nivelDeAltura(alturaBajada(tramo(t, DC.tubo, DC.negro)))
   return "ciudad"
 }
 /** Negro de la toma: sube al final del tubo, se queda en la roca y se abre sobre la ciudad. */
-function veloDescensoCiudad(t: number): number {
+function veloDescensoCiudad(t: number, estudio?: boolean): number {
+  const DC = tramosDescenso(estudio)
   if (t < DC.negro - DC.cierre) return 0
   if (t < DC.negro) return tramo(t, DC.negro - DC.cierre, DC.negro)
   if (t < DC.ciudad) return 1
@@ -364,8 +402,8 @@ const TOMAS: Toma[] = [
     ascensor: true,
     nivel: nivelDescensoCiudad,
     velo: veloDescensoCiudad,
-    pose(t, o) {
-      poseDescensoCiudad(t, o)
+    pose(t, o, ctx) {
+      poseDescensoCiudad(t, o, ctx.estudio)
       return true
     },
   },
@@ -546,7 +584,12 @@ export class ControlCamara {
   private interactuando = false
   private intro: { t: number; resolver: () => void } | null = null
   private promesaIntro: Promise<void> | null = null
-  private cine: { i: number; t: number; fija: boolean; cambiando: boolean; sostener: boolean } | null = null
+  /**
+   * `corte`: la pidió el estudio. Además de los cortes secos al empezar, un
+   * cambio de nivel dentro de la toma es un corte (sin fundido) y las tomas con
+   * versión para video la usan (CtxToma.estudio).
+   */
+  private cine: { i: number; t: number; fija: boolean; cambiando: boolean; sostener: boolean; corte: boolean } | null = null
   private seguirId: string | null = null
   private seguirListo = false
   /** Opción del estudio: bajo un pasillo techado, la cámara debajo del techo (OpcionesCamara.techos). */
@@ -710,7 +753,7 @@ export class ControlCamara {
       this.controles.enabled = false
       this.controles.autoRotate = false
       const i = fija >= 0 ? fija : this.cine && !this.cine.fija ? this.cine.i : 0
-      this.cine = { i, t: 0, fija: fija >= 0, cambiando: false, sostener: !!op.sostener }
+      this.cine = { i, t: 0, fija: fija >= 0, cambiando: false, sostener: !!op.sostener, corte: !!op.corte }
       this.empezarToma(i, !!op.corte)
     } else if (modo === "nivel") {
       const n = this.deps.nivel()
@@ -953,11 +996,12 @@ export class ControlCamara {
 
   private nivelDeToma(toma: Toma, t: number): NivelId {
     if (toma.id === "seguir" && this.seguirId) return this.deps.personaje(this.seguirId)?.nivel ?? S
-    return toma.nivel(t)
+    return toma.nivel(t, !!this.cine?.corte)
   }
 
   private ctxToma(): CtxToma {
     return {
+      estudio: !!this.cine?.corte,
       seguir: (dt, out) => {
         if (!this.seguirId || !this.deps.personaje(this.seguirId)?.visible) this.seguirId = this.deps.elegirPersonaje()
         if (!this.seguirId) return false
@@ -1033,7 +1077,9 @@ export class ControlCamara {
       const t = Math.min(1, c.t)
       const n = this.nivelDeToma(toma, t)
       if (n !== this.deps.nivel()) {
-        if (toma.ascensor) this.deps.aplicarNivel(n)
+        // Ascensor: los cruces de losa lo tapan. Estudio: corte seco dentro del plano, sin
+        // fundido (y sin la pose congelada del otro nivel mientras se funde).
+        if (toma.ascensor || c.corte) this.deps.aplicarNivel(n)
         else {
           c.cambiando = true
           this.deps.fundir(() => {
@@ -1044,7 +1090,7 @@ export class ControlCamara {
       }
       if (!toma.pose(t, this.pose, this.ctxToma(), dt)) c.t = 1
       else this.ponerPose(this.pose)
-      this.velo = toma.ascensor ? Math.max(veloCruce(this.pose.pos.y), toma.velo?.(t) ?? 0) : 0
+      this.velo = toma.ascensor ? Math.max(veloCruce(this.pose.pos.y), toma.velo?.(t, c.corte) ?? 0) : 0
       if (c.t >= 1) {
         // El estudio: la toma fija se queda en su última pose (pose(1) cada cuadro) hasta el próximo corte.
         if (c.fija && c.sostener) c.t = 1

@@ -129,7 +129,8 @@ export function crearAvatarReal(original: Personaje): Avatar {
     piel(lPelo.geometria(), andro ? andro.matPestanas : matPelo(cu.rasgos.f.pelo.color, cu.rasgos.f.pelo.rizo >= 0.6), false)
     if (andro?.cejas) piel(andro.cejas.geometria(), matCejasLuz(), false)
     piel(lOjos.geometria(), matOjo(cu.rasgos.iris, cu.rasgos.f.esclera), false)
-    if (ropa.lentes) piel(ropa.lentes.lote.geometria(), matLente(ropa.lentes.sol), false)
+    // (el androide lleva solo la montura de alambre: el cristal, con el reflejo del cielo, le tapaba los ojos)
+    if (ropa.lentes && !andro) piel(ropa.lentes.lote.geometria(), matLente(ropa.lentes.sol), false)
     if (ropa.utileria) utileria = piel(ropa.utileria.geometria(), matRopa(ropa.tejido, ropa.numero))
     if (ap.accesorios.includes("balon")) {
       matBalon ??= new THREE.MeshStandardMaterial({ map: texBalon(), roughness: 0.72, metalness: 0 })

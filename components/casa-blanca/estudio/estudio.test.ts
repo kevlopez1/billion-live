@@ -4,7 +4,7 @@
 // Sale con código 1 si algo falla. Mismo estilo que motor/simulacion.test.ts.
 // ──────────────────────────────────────────────────────────────
 
-import { CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
+import { CHALLENGE_RECORD_DEADLINE, CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
 import { ESPECIALES, PERSONAJES } from "../datos/personajes"
 import { LUGAR } from "../lugares"
 import { Simulacion } from "../motor/simulacion"
@@ -17,7 +17,11 @@ import {
   avisosDelEpisodio,
   codigoDeTiempo,
   cuadroDeTiempo,
+  diasEntreFechas,
+  ESTRENO_SIN_CALENDARIO,
   enElGuion,
+  fechaEnPalabras,
+  instanteDelEstreno,
   horarioDialogo,
   lineaActiva,
   lugarDelPlano,
@@ -244,6 +248,39 @@ async function main() {
     ok(textoFinal("{RECAUDADO} y {RECAUDADO}").split("$").length === 3, "todas las apariciones")
     ok(textoFinal("Sin marcas.") === "Sin marcas.", "un texto sin marcas no cambia")
     ok(!/\{[A-Z]+\}/.test(MUESTRA.planos.map((p) => textoFinal(p.rotulo ?? "")).join(" ")), "en la muestra no queda ninguna marca sin reemplazar")
+  }
+
+  seccion("Fechas: el día del video sale de su estreno, nunca del reloj ni a mano")
+  {
+    // El "DÍA N DEL RETO" de la Sala de Control y {DIAS_AL_RECORD} salen del estreno del episodio.
+    ok(instanteDelEstreno({ fecha: "2026-11-08", hora: "19:00" }) === Date.parse("2026-11-08T23:00:00Z"), "estreno: hora de Bolivia (UTC−4)")
+    ok(Number.isNaN(instanteDelEstreno({ fecha: "8-11-2026", hora: "19:00" })) && Number.isNaN(instanteDelEstreno({ fecha: "2026-11-08", hora: "7pm" })), "una fecha u hora mal escrita no es un instante")
+    ok(Number.isFinite(instanteDelEstreno(ESTRENO_SIN_CALENDARIO)), "la muestra tiene una fecha fija válida")
+    for (const e of CALENDARIO) ok(Number.isFinite(instanteDelEstreno(e)), `${e.episodio.id}: el estudio puede usar su estreno (${e.fecha} ${e.hora})`)
+    ok(diasEntreFechas("2026-11-29", CHALLENGE_RECORD_DEADLINE) === Math.round((Date.parse(CHALLENGE_RECORD_DEADLINE) - Date.parse("2026-11-29")) / 86_400_000), "días de calendario entre dos fechas")
+    ok(diasEntreFechas("2026-11-29", "2026-12-30") === 31 && diasEntreFechas("2026-12-31", "2026-12-30") === -1, "29-nov → 30-dic = 31 días")
+    ok(fechaEnPalabras("2026-12-30") === "30 de diciembre" && fechaEnPalabras("2027-01-05") === "5 de enero", "la fecha en palabras")
+    const dias = diasEntreFechas("2026-11-29", CHALLENGE_RECORD_DEADLINE)
+    ok(textoFinal("faltan {DIAS_AL_RECORD} días", "2026-11-29") === `faltan ${dias} días`, "{DIAS_AL_RECORD} cuenta desde el estreno")
+    ok(textoFinal("faltan {DIAS_AL_RECORD} días", "2026-11-30") === `faltan ${dias - 1} días`, "un día después, uno menos")
+    ok(textoFinal("el {FECHA_RECORD}") === `el ${fechaEnPalabras(CHALLENGE_RECORD_DEADLINE)}`, "{FECHA_RECORD} sale de lib/contador.ts")
+    // En pantalla, una cuenta de días o una fecha del año escrita a mano miente en cuanto se mueve el calendario.
+    // Las citas «…» (el nombre de una tarea real) y una fecha histórica con su año ("2 de diciembre de 1805") pasan.
+    const MES = "enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre"
+    const aMano = new RegExp(`(?:faltan|quedan)\\s+\\d+\\s+días|\\b\\d{1,2}\\s+de\\s+(?:${MES})\\b(?!\\s+de\\s+\\d{4})`, "iu")
+    ok(aMano.test("Quedan 31 días.") && aMano.test("el 30 de diciembre") && !aMano.test("2 de diciembre de 1805") && !aMano.test("el {FECHA_RECORD}"), "la guarda reconoce una fecha o cuenta a mano")
+    for (const e of [...CALENDARIO.map((c) => c.episodio), MUESTRA]) {
+      const textos = [e.titulo, ...e.planos.flatMap((p) => [p.titulo, p.rotulo, ...(p.dialogo ?? []).map((l) => l.texto)])]
+      const malos = textos.filter((t): t is string => !!t && aMano.test(t.replace(/«[^»]*»/g, "")))
+      ok(malos.length === 0, `${e.id}: sin fechas ni cuentas de días a mano (${malos.join(" | ")})`)
+      const sueltas = textos.flatMap((t) => (t ? textoFinal(t).match(/\{[^{}]*\}/g) ?? [] : []))
+      ok(sueltas.length === 0, `${e.id}: ninguna marca sin reemplazar (${sueltas.join(", ")})`)
+    }
+    const ep19 = CALENDARIO.find((c) => c.episodio.id.startsWith("ep19"))
+    if (ep19) {
+      const rot = ep19.episodio.planos.map((p) => textoFinal(p.rotulo ?? "", ep19.fecha)).join(" | ")
+      ok(rot.includes(`faltan ${diasEntreFechas(ep19.fecha, CHALLENGE_RECORD_DEADLINE)} días`), `ep19: la cuenta sale de su estreno (${ep19.fecha})`)
+    }
   }
 
   seccion("Cámaras: número, nombre, lugar y visor")

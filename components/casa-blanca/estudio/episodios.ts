@@ -1046,7 +1046,7 @@ export const CALENDARIO: EntradaCalendario[] = [
       planos: [
         { dur: 5, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:00", tituloEn: "arriba", titulo: "Un mes después: {RECAUDADO}", rotulo: "Sala de Control · contador real del reto" },
         { dur: 8, camara: { tipo: "toma", toma: "maqueta" }, hora: "17:10", maqueta: true, titulo: "Capítulo 5 · Un mes en la casa", rotulo: "24 residentes · 22 departamentos · 2.200 puestos de IA" },
-        { dur: 7, camara: { tipo: "toma", toma: "sala-guerra" }, hora: "15:05", reunir: ["suntzu", "napoleon", "marco", "socrates", "claude", "chatgpt", "lincoln", "cleopatra"], titulo: "Récord: 30 de diciembre. Quedan 31 días.", rotulo: "Tarea real de Estrategia: «Escenarios para el 30 de diciembre»" },
+        { dur: 7, camara: { tipo: "toma", toma: "sala-guerra" }, hora: "15:05", reunir: ["suntzu", "napoleon", "marco", "socrates", "claude", "chatgpt", "lincoln", "cleopatra"], titulo: "Récord: {FECHA_RECORD}. Quedan {DIAS_AL_RECORD} días.", rotulo: "Tarea real de Estrategia: «Escenarios para el 30 de diciembre»" },
         { dur: 4.5, camara: { tipo: "seguir", personaje: "napoleon" }, reunir: ["napoleon", "suntzu", "marco", "socrates", "claude", "chatgpt", "lincoln", "cleopatra"], visor: "camara",
           dialogo: [
             { quien: "suntzu", texto: "Primero, el ritmo: cuánto hay que sumar cada semana." },
@@ -1087,14 +1087,14 @@ export const CALENDARIO: EntradaCalendario[] = [
             { quien: "chatgpt", texto: "¡Y si se llega, tengo tres celebraciones listas!" },
           ],
         },
-        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:05", tituloEn: "arriba", titulo: "{RECAUDADO} de {META}", rotulo: "Contador real · faltan 31 días para el récord" },
+        { dur: 6, camara: { tipo: "lugar", lugar: "ciudad-club" }, hora: "18:05", tituloEn: "arriba", titulo: "{RECAUDADO} de {META}", rotulo: "Contador real · faltan {DIAS_AL_RECORD} días para el récord" },
         { dur: 5.5, camara: { tipo: "seguir", personaje: "mason" }, hora: "18:35", reunir: ["mason", "claude"], visor: "camara", rotulo: "Biblioteca · Subsuelo 3",
           dialogo: [
             { quien: "claude", texto: "¿Llegamos al récord?" },
-            { quien: "mason", texto: "Eso se aprende el 30 de diciembre." },
+            { quien: "mason", texto: "Eso se aprende el {FECHA_RECORD}." },
           ],
         },
-        { dur: 6, camara: { tipo: "toma", toma: "maqueta" }, hora: "17:40", maqueta: true, titulo: "30 de diciembre: ¿se llega al récord?", rotulo: "La Casa Blanca Project · la temporada 1 sigue en diciembre" },
+        { dur: 6, camara: { tipo: "toma", toma: "maqueta" }, hora: "17:40", maqueta: true, titulo: "{FECHA_RECORD}: ¿se llega al récord?", rotulo: "La Casa Blanca Project · la temporada 1 sigue en diciembre" },
       ],
     },
   },

@@ -64,13 +64,17 @@ uniform float uModo;
 uniform vec3 uLinea;
 uniform vec3 uMetal;
 uniform vec3 uSSS;
+uniform float uDesat;
 varying vec3 vAnd;
 varying vec2 vMano;
 varying vec2 vMat;
 // Línea con borde suave de un píxel; si es más fina que un píxel, se apaga (sin parpadeo a distancia).
-float andLinea( float d, float w ) {
+float andLineaK( float d, float w, float k ) {
 	float fw = max( fwidth( d ), 1e-6 );
-	return ( 1.0 - smoothstep( w - fw, w + fw, d ) ) * clamp( w * 1.6 / fw, 0.0, 1.0 );
+	return ( 1.0 - smoothstep( w - fw, w + fw, d ) ) * clamp( w * k / fw, 0.0, 1.0 );
+}
+float andLinea( float d, float w ) {
+	return andLineaK( d, w, 1.6 );
 }
 float andSeg( vec2 p, vec2 a, vec2 b ) {
 	vec2 pa = p - a;
@@ -100,22 +104,32 @@ float andVoronoi( vec3 x ) {
 		vec3 g = mg + vec3( float( i ), float( j ), float( k ) );
 		vec3 r = g + 0.2 + 0.6 * andHash( n + g ) - f;
 		vec3 dr = r - mr;
-		if ( dot( dr, dr ) > 1e-5 ) md = min( md, dot( 0.5 * ( mr + r ), normalize( dr ) ) );
+		if ( dot( dr, dr ) > 1e-3 ) md = min( md, dot( 0.5 * ( mr + r ), normalize( dr ) ) );
 	}
 	return md;
 }
 // Líneas de la cabeza y el cuello (coordenadas locales de la cabeza en reposo, m).
-float andLineas( vec3 l ) {
+// Trapecio cerrado en el plano (|x|, z): adelante (z = zf) más angosto que atrás (z = zb).
+float andTrapecio( vec2 q, float zf, float af, float zb, float ab ) {
+	return min( min( andSeg( q, vec2( 0.0, zf ), vec2( af, zf ) ), andSeg( q, vec2( 0.0, zb ), vec2( ab, zb ) ) ), andSeg( q, vec2( af, zf ), vec2( ab, zb ) ) );
+}
+// rel: cuánto relieve lleva la línea (el panel es un corte con bisel: el doble).
+float andLineas( vec3 l, out float rel ) {
 	float zona = smoothstep( -0.29, -0.26, l.y );
 	float m = 0.0;
+	rel = 1.0;
 	if ( uModo < 0.5 ) {
-		// ChatGPT. Panel trapezoidal en la coronilla (más angosto adelante).
+		// ChatGPT. Panel trapezoidal cerrado en lo alto de la coronilla, hacia
+		// adelante (más angosto adelante), con doble línea: se lee como un corte.
 		vec2 q = vec2( abs( l.x ), l.z );
-		float dp = min( min( andSeg( q, vec2( 0.0, 0.066 ), vec2( 0.024, 0.066 ) ), andSeg( q, vec2( 0.0, -0.018 ), vec2( 0.036, -0.018 ) ) ), andSeg( q, vec2( 0.024, 0.066 ), vec2( 0.036, -0.018 ) ) );
-		m = max( m, andLinea( dp, 0.0007 ) * smoothstep( 0.075, 0.092, l.y ) );
-		// De la sien, por delante de la oreja y la mejilla, hasta la mandíbula.
+		float dp = min( andTrapecio( q, 0.066, 0.02, 0.012, 0.032 ), andTrapecio( q, 0.0635, 0.0177, 0.0145, 0.0295 ) );
+		float panel = andLinea( dp, 0.0006 ) * smoothstep( 0.035, 0.05, l.y );
+		m = max( m, panel );
+		rel = 1.0 + panel;
+		// De la sien, por delante de la oreja y la mejilla, hasta la mandíbula
+		// (empieza 2-3 cm por debajo del panel: separadas, no una línea de pelo).
 		vec2 s = vec2( l.y, l.z );
-		float ds = min( min( andSeg( s, vec2( 0.098, 0.052 ), vec2( 0.048, 0.054 ) ), andSeg( s, vec2( 0.048, 0.054 ), vec2( 0.006, 0.026 ) ) ), min( andSeg( s, vec2( 0.006, 0.026 ), vec2( -0.044, 0.014 ) ), andSeg( s, vec2( -0.044, 0.014 ), vec2( -0.082, 0.024 ) ) ) );
+		float ds = min( min( andSeg( s, vec2( 0.062, 0.053 ), vec2( 0.048, 0.054 ) ), andSeg( s, vec2( 0.048, 0.054 ), vec2( 0.006, 0.026 ) ) ), min( andSeg( s, vec2( 0.006, 0.026 ), vec2( -0.044, 0.014 ) ), andSeg( s, vec2( -0.044, 0.014 ), vec2( -0.082, 0.024 ) ) ) );
 		m = max( m, andLinea( ds, 0.0007 ) * smoothstep( 0.046, 0.058, abs( l.x ) ) );
 		// Costado del cuello.
 		float zc = mix( -0.022, -0.042, clamp( ( - l.y - 0.035 ) / 0.175, 0.0, 1.0 ) );
@@ -129,7 +143,8 @@ float andLineas( vec3 l ) {
 		float cara = smoothstep( 0.035, 0.065, l.z ) * smoothstep( 0.075, 0.045, l.y ) * smoothstep( -0.135, -0.1, l.y ) * smoothstep( 0.068, 0.05, abs( l.x ) );
 		float denso = andVoronoi( p * 40.0 ) * ( 1.0 / 40.0 );
 		float ralo = andVoronoi( p * 17.0 + 7.3 ) * ( 1.0 / 17.0 );
-		m = max( andLinea( denso, 0.00024 ) * ( 1.0 - cara ), andLinea( ralo, 0.00028 ) * 0.9 );
+		// (se apagan antes con la distancia: a media distancia, una cabeza limpia y no sucia)
+		m = max( andLineaK( denso, 0.00024, 1.0 ) * ( 1.0 - cara ), andLineaK( ralo, 0.00028, 1.0 ) * 0.9 * ( 1.0 - 0.7 * cara ) );
 	}
 	return m * zona;
 }
@@ -142,7 +157,7 @@ float andJuntas( float seg ) {
 	} else {
 		d = min( abs( seg - 0.1 ), abs( seg - 0.62 ) ) * 0.09;
 	}
-	return andLinea( d, 0.0007 );
+	return andLinea( d, 0.0008 );
 }
 vec3 andNormal( vec3 p, vec3 n, float h, float fd ) {
 	vec3 dpx = dFdx( p );
@@ -162,23 +177,32 @@ export function matPielAndroide(lineas: Estilo["lineas"]): THREE.MeshPhysicalMat
   const clave = `piel-${lineas}`
   let m = mats.get(clave)
   if (m) return m
-  // #6F7F95 a la luz y #3E4A5C a la sombra: como albedo, algo más bajo (el sol y el ACES lo suben).
+  // Albedo calibrado en la escena real (/casa-blanca, Pórtico Norte, junto a
+  // Altman; mejilla medida a las 12:00, 17:30 y 22:00), no en el banco: a la
+  // sombra, el cielo y el rebote del césped ya tiñen todo de azul verdoso. Con
+  // un gris oscuro y reflejos azules (#85868A × 0,56) la piel salía azul cobalto
+  // saturado a mediodía (28,59,92), azul marino a la hora dorada y negra de noche.
+  // Con este gris claro, apenas cálido, y reflejos neutros: (99,129,148) a
+  // mediodía (objetivo #6F7F95 = 111,127,149), gris claro a las 17:30 y de noche
+  // tan legible como la cara de Altman. El azul lo pone la luz, no el material.
   m = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color("#85868A").multiplyScalar(0.56),
+    color: new THREE.Color(0.5, 0.42, 0.35),
     vertexColors: true,
     roughness: 0.6,
     metalness: 0,
     sheen: 0.35,
     sheenRoughness: 0.45,
-    sheenColor: new THREE.Color("#a9b4c4").multiplyScalar(0.3),
-    specularIntensity: 0.55,
-    specularColor: new THREE.Color("#eef3ff"),
+    sheenColor: new THREE.Color(0.1, 0.1, 0.1),
+    specularIntensity: 0.45,
+    specularColor: new THREE.Color(1, 1, 1),
   })
   const uniforms = {
     uModo: { value: lineas === "panel" ? 0 : 1 },
     uLinea: { value: new THREE.Color("#1b2029") },
-    uMetal: { value: new THREE.Color("#2A2E35") },
-    uSSS: { value: new THREE.Color(0.08, 0.1, 0.15) },
+    // (algo más neutro que #2A2E35: el cielo ya le pone el azul al metal)
+    uMetal: { value: new THREE.Color("#33363C") },
+    uSSS: { value: new THREE.Color(0.1, 0.1, 0.1) },
+    uDesat: { value: 0.65 },
   }
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms)
@@ -191,19 +215,29 @@ export function matPielAndroide(lineas: Estilo["lineas"]): THREE.MeshPhysicalMat
         "#include <color_fragment>",
         [
           "#include <color_fragment>",
-          "\tfloat andM = andLineas( vAnd );",
-          "\tfloat andMano = smoothstep( 0.35, 0.65, vMano.x );",
+          "\tfloat andRel;",
+          "\tfloat andM = andLineas( vAnd, andRel );",
+          // (todo vértice con algo de peso de la mano es metal: a medio camino quedaban dientes oscuros en los nudillos)
+          "\tfloat andMano = smoothstep( 0.08, 0.2, vMano.x );",
           "\tfloat andJ = andJuntas( vMano.y ) * andMano;",
-          "\tdiffuseColor.rgb = mix( diffuseColor.rgb, uLinea, andM * 0.82 * ( 1.0 - andMano ) );",
+          // Grietas de Claude gris oscuro (no negras); costuras de ChatGPT oscuras.
+          "\tdiffuseColor.rgb = mix( diffuseColor.rgb, uLinea, andM * mix( 0.82, 0.5, uModo ) * ( 1.0 - andMano ) );",
           // Metal: un poco más claro en el centro de cada segmento, oscuro en la junta.
           "\tdiffuseColor.rgb = mix( diffuseColor.rgb, uMetal * ( 1.0 - 0.8 * andJ ), andMano );",
         ].join("\n"),
       )
-      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = mix( max( roughness * vMat.x / 0.55, 0.48 ), 0.42, andMano );")
-      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = 0.7 * andMano;")
+      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = mix( max( roughness * vMat.x / 0.55, 0.48 ), 0.55, andMano );")
+      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = 0.5 * andMano;")
       .replace(
         "#include <normal_fragment_maps>",
-        "#include <normal_fragment_maps>\n\tfloat andH = - ( andM * ( 1.0 - andMano ) + andJ ) * 0.00022;\n\tvec3 andN = andNormal( - vViewPosition, normal, andH, faceDirection );\n\tif ( andH < -1e-7 ) normal = andN;",
+        "#include <normal_fragment_maps>\n\tfloat andH = - ( andM * andRel * ( 1.0 - andMano ) + andJ * 3.0 ) * 0.00022;\n\tvec3 andN = andNormal( - vViewPosition, normal, andH, faceDirection );\n\tif ( andH < -1e-7 ) normal = andN;",
+      )
+      // La luz del cielo y del césped (la indirecta) llega a la piel con menos
+      // color: a la sombra, el gris azulado se veía azul cobalto (el cielo le
+      // sumaba su azul al del material). El sol y las lámparas, intactos.
+      .replace(
+        "#include <lights_fragment_end>",
+        "#if defined( RE_IndirectDiffuse )\n\tirradiance = mix( irradiance, vec3( dot( irradiance, vec3( 0.2126, 0.7152, 0.0722 ) ) ), uDesat );\n\tiblIrradiance = mix( iblIrradiance, vec3( dot( iblIrradiance, vec3( 0.2126, 0.7152, 0.0722 ) ) ), uDesat );\n#endif\n#include <lights_fragment_end>",
       )
       .replace(
         "#include <lights_physical_pars_fragment>",
@@ -225,10 +259,10 @@ export function matPielAndroide(lineas: Estilo["lineas"]): THREE.MeshPhysicalMat
   return m
 }
 
-/** Cejas de luz (ChatGPT): blanco por encima de 1 en el buffer HDR, así las toma el bloom. */
+/** Cejas de luz (ChatGPT): blanco muy por encima de 1 en el buffer HDR, así las toma el bloom. */
 let matLuz: THREE.MeshBasicMaterial | null = null
 export function matCejasLuz(): THREE.MeshBasicMaterial {
-  matLuz ??= new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 2.7, 2.9) })
+  matLuz ??= new THREE.MeshBasicMaterial({ color: new THREE.Color(5.6, 5.8, 6.2) })
   matLuz.name = "androide-cejas-luz"
   return matLuz
 }
@@ -271,13 +305,13 @@ const ANCHO: Record<string, number> = { A: 0.78, C: 0.74, D: 0.72, E: 0.6, G: 0.
 
 const texturas = new Map<string, THREE.CanvasTexture>()
 /**
- * Canvas 1024×256 con el nombre (transparente alrededor). El resto de la ropa
- * lee uv1 = (0,02, 0,98): un parche blanco arriba a la izquierda, fuera de la
+ * Canvas 1024×256 con el nombre: solo cuenta el alfa (cuánto de cada texel es
+ * letra). El resto de la ropa lee uv1 = (0,02, 0,98), transparente, fuera de la
  * caja de las letras (CAJA, en px), que es lo único que usa la calcomanía.
  */
 const CAJA = { x0: 64, y0: 20, w: 1024, h: 256 }
 function texEstampado(texto: string, e: Estilo): THREE.CanvasTexture {
-  const clave = `${texto}|${e.letras}|${e.colorLetras}`
+  const clave = `${texto}|${e.letras}`
   let t = texturas.get(clave)
   if (t) return t
   const W = 1024
@@ -287,12 +321,11 @@ function texEstampado(texto: string, e: Estilo): THREE.CanvasTexture {
   c.height = Hc
   const g = c.getContext("2d")!
   g.clearRect(0, 0, W, Hc)
-  g.fillStyle = "#ffffff"
-  g.fillRect(0, 0, 48, 16)
   const gruesas = e.letras === "gruesas"
-  // Alto de letra, grosor del trazo y separación (en altos de letra).
+  // Alto de letra, grosor del trazo y separación (en altos de letra). Las finas
+  // no bajan de 0,115: con menos, a la distancia de juego el nombre desaparecía.
   const alto = gruesas ? 168 : 118
-  const grosor = gruesas ? 0.2 : 0.075
+  const grosor = gruesas ? 0.22 : 0.115
   const sep = gruesas ? 0.14 : 0.62
   const lw = grosor * alto
   const anchos = [...texto].map((ch) => (ANCHO[ch] ?? 0.7) * alto)
@@ -302,11 +335,11 @@ function texEstampado(texto: string, e: Estilo): THREE.CanvasTexture {
   g.translate((CAJA.x0 + W) / 2, (CAJA.y0 + Hc) / 2)
   g.scale(esc, esc)
   g.translate(-total / 2, -alto / 2)
-  g.strokeStyle = e.colorLetras
+  g.strokeStyle = "#ffffff"
   g.lineWidth = lw
   g.lineCap = gruesas ? "butt" : "square"
-  g.lineJoin = "miter"
-  g.miterLimit = 6
+  // (redondeado: con inglete, la punta de la A sobresalía por encima de las demás)
+  g.lineJoin = "round"
   let x = 0
   ;[...texto].forEach((ch, i) => {
     const w = anchos[i]
@@ -332,7 +365,6 @@ function texEstampado(texto: string, e: Estilo): THREE.CanvasTexture {
   })
   g.restore()
   t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
   t.anisotropy = 8
   t.channel = 1
   texturas.set(clave, t)
@@ -342,7 +374,12 @@ function texEstampado(texto: string, e: Estilo): THREE.CanvasTexture {
 const ropas = new Map<string, THREE.MeshPhysicalMaterial>()
 // AJUSTE-TEMPORAL (calibración en la escena; se quita al terminar)
 if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") (window as unknown as Record<string, unknown>).__androideMats = { mats, ropas }
-/** Sudadera de punto con el nombre estampado en el pecho (un material por androide). */
+/**
+ * Sudadera de punto con el nombre estampado en el pecho (un material por androide).
+ * La tinta se mezcla con el color de la tela según el alfa de la textura, sin
+ * recortar: con un alphaTest, los trazos finos se diluían en los mipmaps y a la
+ * distancia de juego "CLAUDE" desaparecía y "CHATGPT" se leía "CHATGP1".
+ */
 export function matRopaAndroide(p: Personaje, tejido: Tejido): THREE.MeshPhysicalMaterial {
   const e = estiloDe(p.id)
   const texto = p.nombre.toUpperCase()
@@ -363,15 +400,19 @@ export function matRopaAndroide(p: Personaje, tejido: Tejido): THREE.MeshPhysica
     sheenColor: new THREE.Color(0.16, 0.16, 0.17),
     specularIntensity: 0.5,
     map: texEstampado(texto, e),
-    alphaTest: 0.5,
   })
   m.shadowSide = THREE.DoubleSide
+  // Tinta: el color de las letras como albedo (con el mismo tope de 0,86 que la tela).
+  const uLetra = { value: new THREE.Color(e.colorLetras).multiplyScalar(0.86) }
   m.onBeforeCompile = (sh) => {
+    sh.uniforms.uLetra = uLetra
     sh.vertexShader = sh.vertexShader
       .replace("#include <common>", "#include <common>\nattribute vec2 aMat;\nvarying vec2 vMat;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\n\tvMat = aMat;")
     sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nvarying vec2 vMat;")
+      .replace("#include <common>", "#include <common>\nvarying vec2 vMat;\nuniform vec3 uLetra;")
+      .replace("#include <map_fragment>", "float andTinta = 0.0;\n#ifdef USE_MAP\n\tandTinta = texture2D( map, vMapUv ).a;\n#endif")
+      .replace("#include <color_fragment>", "#include <color_fragment>\n\tdiffuseColor.rgb = mix( diffuseColor.rgb, uLetra, andTinta );")
       .replace("#include <roughnessmap_fragment>", "float roughnessFactor = roughness * vMat.x;")
       .replace("#include <metalnessmap_fragment>", "float metalnessFactor = max( metalness, vMat.y );")
   }
@@ -395,7 +436,8 @@ export function estampar(lote: Lote, cu: Cuerpo, p: Personaje, punto: (y: number
   const ancho = (e.letras === "gruesas" ? 0.25 : 0.24) * s
   const alto = (ancho * (CAJA.h - CAJA.y0)) / (CAJA.w - CAJA.x0)
   const bultos = 0.4
-  const holg = 0.0125
+  // 1 mm sobre la tela (con 3,5 mm las letras flotaban y hacían sombra propia).
+  const holg = 0.01
   const v = new THREE.Vector3()
   const w = new THREE.Vector3()
   // Ángulo por largo de arco a la altura del pecho, para que las letras no se estiren a los costados.
@@ -427,7 +469,8 @@ export function estampar(lote: Lote, cu: Cuerpo, p: Personaje, punto: (y: number
   const filas = 4
   const ids: number[][] = []
   const centros: THREE.Vector3[] = []
-  const blanco: RGBA = [1, 1, 1, 1]
+  // El parche es de la tela misma (su color y la uv de su tejido): fuera de las letras no se nota.
+  const tela: RGBA = rgba(p.apariencia.ropa.color)
   for (let i = 0; i <= filas; i++) {
     const fila: number[] = []
     const vv = i / filas
@@ -438,7 +481,7 @@ export function estampar(lote: Lote, cu: Cuerpo, p: Personaje, punto: (y: number
       punto(y, a, bultos, holg, v)
       const u1 = (CAJA.x0 + u * (CAJA.w - CAJA.x0)) / CAJA.w
       const v1 = (vv * (CAJA.h - CAJA.y0)) / CAJA.h
-      fila.push(lote.v(v.x, v.y, v.z, 0, 0, blanco, cu.pesosTronco(v.x, y, v.z), [0.75, 0], [u1, v1]))
+      fila.push(lote.v(v.x, v.y, v.z, a * 0.16, y, tela, cu.pesosTronco(v.x, y, v.z), [0.92, 0], [u1, v1]))
     }
     ids.push(fila)
     centros.push(new THREE.Vector3(0, y, 0))
@@ -468,7 +511,8 @@ function cejasDeLuz(cu: Cuerpo): Lote {
         const t = k / cols
         const x = lado * lerp(0.012, 0.053, t) * cab.r.ancho
         // Tira recta, apenas arqueada, que se afina hacia la sien.
-        const media = lerp(0.0016, 0.0011, t) * (t < 0.06 ? 0.6 + t * 6.6 : 1)
+        // (de 3,6 a 4,8 mm de alto: más finas no llegan a un píxel a la distancia de juego)
+        const media = lerp(0.0024, 0.0018, t) * (t < 0.06 ? 0.6 + t * 6.6 : 1)
         const y = o.y + 0.0205 + 0.003 * Math.sin(Math.PI * Math.min(1, t * 1.1)) - 0.0035 * t + w * media
         _l.set(x, y, 0.1).normalize()
         const tt = cab.rayo(0, 0, 0, _l.x, _l.y, _l.z, 0.16)
@@ -582,6 +626,15 @@ export function prepararAndroide(cu: Cuerpo, p: Personaje, piel: Lote): Androide
         else {
           const [u0, u1] = palma[izq >= wm * 0.5 ? 0 : 1]
           mano[i * 2 + 1] = Math.min(0.999, Math.max(0, (uv.getY(i) - u0) / Math.max(1e-6, u1 - u0)))
+        }
+      }
+      // Las zonas de color de la piel humana (orejas y mejillas rosadas, el rojo de
+      // la boca) quedan en gris: se guarda solo cuánto oscurecen.
+      const col = g.getAttribute("color") as THREE.BufferAttribute | undefined
+      if (col) {
+        for (let i = 0; i < col.count; i++) {
+          const y = 0.2126 * col.getX(i) + 0.7152 * col.getY(i) + 0.0722 * col.getZ(i)
+          col.setXYZ(i, y, y, y)
         }
       }
       g.setAttribute("aAnd", new THREE.BufferAttribute(and, 3))

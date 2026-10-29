@@ -28,6 +28,7 @@ import { useLatido } from "./latido"
 const TIPO_RECUERDO: Record<RecuerdoServidor["tipo"], string> = {
   charla: "Charla",
   conversacion: "Conversación",
+  conversacion_visitante: "Conversación",
   consejo: "Consejo",
   noticia: "Noticia",
   trabajo: "Trabajo",

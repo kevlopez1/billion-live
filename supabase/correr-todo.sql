@@ -532,11 +532,19 @@ create table if not exists public.casa_blanca_memoria (
   id            uuid primary key default gen_random_uuid(),
   creado        timestamptz not null default now(),
   personaje_id  text not null,           -- el id del residente: 'hormozi', 'claude'…
-  tipo          text not null check (tipo in ('charla', 'conversacion', 'consejo', 'noticia', 'trabajo', 'diario')),
+  tipo          text not null check (tipo in ('charla', 'conversacion', 'conversacion_visitante', 'consejo', 'noticia', 'trabajo', 'diario')),
   texto         text not null check (char_length(texto) between 1 and 400),
   importancia   int  not null default 5 check (importancia between 1 and 10),
   con           text[] not null default '{}'   -- los otros residentes que estaban
 );
+
+-- 'conversacion_visitante' (sumado después): una charla entre residentes
+-- sobre un tema que escribió un visitante. Su resumen trae ese texto, así
+-- que va aparte de 'conversacion' y la fábrica de videos no la lee. La tabla
+-- puede venir de antes con el check viejo: se reemplaza (idempotente).
+alter table public.casa_blanca_memoria drop constraint if exists casa_blanca_memoria_tipo_check;
+alter table public.casa_blanca_memoria add constraint casa_blanca_memoria_tipo_check
+  check (tipo in ('charla', 'conversacion', 'conversacion_visitante', 'consejo', 'noticia', 'trabajo', 'diario'));
 
 comment on table public.casa_blanca_memoria is
   'Recuerdos de los residentes de La Casa Blanca Project, compartidos entre todos los visitantes. Sin datos personales.';

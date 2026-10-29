@@ -1342,7 +1342,8 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       // Escote: redondo, o en V (el suéter de Pichai y de Amodei) con la camisa o
       // la camiseta de abajo a la vista.
       const enV = !!ves.cuelloV
-      const escote = (a: number) => 0.016 * Hh * Math.pow(Math.max(0, Math.sin(a)), 3)
+      // (androide: sudadera de cuello redondo más cerrado)
+      const escote = (a: number) => (tipo === "androide" ? 0.01 : 0.016) * Hh * Math.pow(Math.max(0, Math.sin(a)), 3)
       const ve = (a: number) => (enV ? 0.07 * Hh * Math.max(0, 1 - Math.abs(normAng(a) - FRENTE) / 0.5) : 0)
       const topeSueter = (a: number) => 0.836 * Hh - Math.max(escote(a), ve(a))
       S.tronco({
@@ -1367,6 +1368,9 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
         } else S.cuello({ y0: 0.818 * Hh, y1: (a) => 0.84 * Hh - escote(a), holg0: 0.006, holg1: 0.003, color: escalarRGBA(abajo, 0.92), mat: MAT_ALGODON, filas: 1 })
       // (y0 por debajo del escote: con 0,826 la banda quedaba invertida adelante, donde el
       // escote baja a 0,824, y dibujaba una línea oscura suelta sobre el pecho)
+      } else if (tipo === "androide") {
+        // Sudadera: cuello de canalé alto y cerrado, más oscuro que la tela.
+        S.cuello({ y0: 0.812 * Hh, y1: (a) => 0.846 * Hh - escote(a), holg0: 0.012, holg1: 0.005, color: escalarRGBA(C1, 0.85), mat: [0.92, 0], filas: 3 })
       } else S.cuello({ y0: 0.818 * Hh, y1: (a) => 0.84 * Hh - escote(a), holg0: 0.0095, holg1: 0.004, color: escalarRGBA(C1, 0.92), mat: MAT_ALGODON, filas: 1 })
       if (remera) mangas(C1, 0.15 * s, 0.01, { mat: MAT_ALGODON })
       else mangas(C1, 9, 0.011, { mat: [0.92, 0], puno: escalarRGBA(C1, 0.9) })

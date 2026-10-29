@@ -85,6 +85,13 @@ export interface OpcionesEscena {
    * con false no se ven nunca (el estudio).
    */
   letreros?: boolean
+  /**
+   * El instante (ms) que la escena muestra en lo que depende de la fecha (el
+   * "DÍA N DEL RETO" de la Sala de Control, ciudad.ts). Sin él, el reloj de la
+   * máquina. El estudio pasa el del estreno del episodio: el video dice el día
+   * en que sale, no el día en que se filmó, y dos filmaciones dan lo mismo.
+   */
+  ahora?: number
 }
 
 /** Lo que el motor ofrece además del contrato Escena. */
@@ -266,7 +273,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
   const seleccionables = new Map<THREE.Object3D, string>()
   let nocheActual = 0
 
-  const ctx: CtxEscena = {
+  const ctx: CtxEscena & { ahora?: number } = {
+    ahora: opciones.ahora,
     scene,
     niveles,
     calidad,

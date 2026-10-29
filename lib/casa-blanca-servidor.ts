@@ -35,6 +35,7 @@ import {
   recuerdosDe,
   sinDatosPersonales,
   terminarReflexion,
+  tipoDeConversacion,
   ultimosRecuerdos,
   type Conciencia,
   type CuantosRecuerdos,
@@ -519,6 +520,7 @@ function recuerdosPorCabeza(n: number): CuantosRecuerdos {
 const COMO_LO_VIVIO: Record<TipoRecuerdo, string> = {
   charla: "charla con un visitante",
   conversacion: "conversación",
+  conversacion_visitante: "conversación sobre el tema de un visitante",
   consejo: "consejo",
   noticia: "noticia",
   trabajo: "trabajo",
@@ -1004,7 +1006,8 @@ export async function conversar(p: PedidoConversar): Promise<Resultado<Respuesta
   if (limpia.ok) {
     const lugar = LUGAR[p.lugarId]?.nombre ?? ""
     const resumen = paraRecordar(limpia.datos.resumen, 300)
-    await recordarEscena(p.ids, "conversacion", resumen && lugar ? `${lugar} · ${resumen}` : resumen, importanciaDe(r.datos.importancia, 4))
+    // Con tema del visitante, el resumen trae su texto: va con su propio tipo y la fábrica no lo usa.
+    await recordarEscena(p.ids, tipoDeConversacion(p.tema), resumen && lugar ? `${lugar} · ${resumen}` : resumen, importanciaDe(r.datos.importancia, 4))
   }
   return limpia
 }

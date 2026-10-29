@@ -54,6 +54,12 @@ declare global {
 
 const EPISODIOS: Episodio[] = [...CALENDARIO.map((e) => e.episodio), MUESTRA]
 
+/** Cuándo sale el episodio (su entrada del calendario); la muestra no tiene: el reproductor usa una fecha fija. */
+function estrenoDe(id: string): { fecha: string; hora: string } | undefined {
+  const e = CALENDARIO.find((c) => c.episodio.id === id)
+  return e ? { fecha: e.fecha, hora: e.hora } : undefined
+}
+
 function buscarEpisodio(id: string | null): Episodio | null {
   if (!id) return CALENDARIO[0]?.episodio ?? MUESTRA
   return EPISODIOS.find((e) => e.id === id) ?? null
@@ -277,7 +283,7 @@ export default function Estudio() {
       if (!vivo) return
       let motor: Motor
       try {
-        motor = crearEstudio(oculto, salida, { ep, formato: fmt, visor: visorRef.current, calidad, recursos, alto: params?.alto ?? undefined, fps: params?.fps ?? undefined })
+        motor = crearEstudio(oculto, salida, { ep, formato: fmt, visor: visorRef.current, calidad, recursos, alto: params?.alto ?? undefined, fps: params?.fps ?? undefined, estreno: estrenoDe(ep.id) })
       } catch (e) {
         console.error("[estudio] no se pudo crear:", e)
         return fallar(`No se pudo crear la escena: ${e instanceof Error ? e.message : String(e)}`)

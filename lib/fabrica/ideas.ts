@@ -5,8 +5,10 @@
 // (solo verdes). Las fuentes son de la casa, nunca de un visitante:
 //   - casa_blanca_memoria, tipos "conversacion", "trabajo" y "diario".
 //     Fuera "charla" (resumen de una charla con un visitante), "noticia" (trae
-//     entre comillas la noticia que escribió el visitante) y "consejo" (trae
-//     entre comillas el tema que escribió el visitante).
+//     entre comillas la noticia que escribió el visitante), "consejo" (trae
+//     entre comillas el tema que escribió el visitante) y
+//     "conversacion_visitante" (una escena entre residentes sobre el tema que
+//     puso un visitante: su resumen trae ese texto).
 //   - casa_blanca_conciencia: meta, pensamiento y opiniones de cada uno (la
 //     reflexión diaria).
 //   - ESPECIALES de personajes.ts, solo si la memoria no alcanza.
@@ -23,6 +25,13 @@ import type { Pilar } from "./textos"
 
 /** Los tipos de recuerdo que puede usar la fábrica. Los demás traen texto de un visitante. */
 export const TIPOS_DE_LA_CASA = ["conversacion", "trabajo", "diario"] as const
+
+/**
+ * Los que traen texto de un visitante: nunca entran. Cada tipo de
+ * TIPOS_RECUERDO está en una de las dos listas (un test lo exige): un tipo
+ * nuevo no puede colarse sin que alguien decida de qué lado va.
+ */
+export const TIPOS_DE_VISITANTE = ["charla", "conversacion_visitante", "noticia", "consejo"] as const
 
 export interface Idea {
   pilar: Pilar
@@ -64,6 +73,9 @@ const ORDEN_PILARES: readonly Pilar[] = ["camara-oculta", "historia", "consejo"]
 const SALA_DE_GUERRA = ["suntzu", "napoleon", "socrates", "marco", "claude", "chatgpt"]
 
 // ── Pares y temas ─────────────────────────────────────────────
+
+/** ¿Puede la fábrica usar un recuerdo de este tipo? Solo los de la casa; un tipo desconocido, no. */
+export const esDeLaCasa = (tipo: string) => (TIPOS_DE_LA_CASA as readonly string[]).includes(tipo)
 
 export const parDe = (a: string, b: string) => [a, b].sort().join("|")
 const parDeLista = (ids: string[]) => (ids.length >= 2 ? parDe(ids[0], ids[1]) : null)
@@ -134,7 +146,7 @@ function candidatos(f: FuentesDeIdeas, dia: string): Candidato[] {
 
   for (const r of f.recuerdos) {
     // Lo que no es de la casa no entra, aunque el lector lo haya traído.
-    if (!(TIPOS_DE_LA_CASA as readonly string[]).includes(r.tipo)) continue
+    if (!esDeLaCasa(r.tipo)) continue
     const peso = r.importancia * frescura(r.creado)
     if (r.tipo === "conversacion") {
       for (const otro of r.con) agregar("camara-oculta", r.personajeId, otro, [r.texto], [r.id], peso)

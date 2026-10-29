@@ -38,7 +38,10 @@ import {
   pulsoDeMano,
   rotuloDeCamara,
   tamanoDeSalida,
-  textoFinal,
+  textoFinal as textoDelGuion,
+  ESTRENO_SIN_CALENDARIO,
+  instanteDelEstreno,
+  type Estreno,
   visorDe,
   type LineaTiempo,
 } from "./linea"
@@ -60,6 +63,12 @@ export interface OpcionesEstudio {
   alto?: number
   /** Cuadros por segundo (vista previa: 24). Sin él, los del guion (30). */
   fps?: number
+  /**
+   * Cuándo sale el video (su entrada del CALENDARIO). La escena muestra ese día
+   * (el "DÍA N DEL RETO" de la Sala de Control) y {DIAS_AL_RECORD} cuenta desde
+   * él. Sin él, ESTRENO_SIN_CALENDARIO: nunca el reloj de la máquina.
+   */
+  estreno?: Estreno
 }
 
 export interface Estudio {
@@ -84,6 +93,10 @@ export interface Estudio {
 /** Lo que hace falta para que el estudio arranque (y que el canvas de la escena mida W×H). */
 export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement, op: OpcionesEstudio): Estudio {
   const { ep, recursos } = op
+  const estreno = op.estreno ?? ESTRENO_SIN_CALENDARIO
+  const ahora = instanteDelEstreno(estreno)
+  if (!Number.isFinite(ahora)) throw new Error(`fecha de estreno inválida: ${estreno.fecha} ${estreno.hora}`)
+  const textoFinal = (t: string) => textoDelGuion(t, estreno.fecha)
   const { ancho: W, alto: H } = tamanoDeSalida(op.formato, op.alto)
   const linea = armarLinea(ep, op.fps ?? ep.fps)
   const fps = linea.fps
@@ -100,7 +113,7 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
   lienzo.style.height = `${H}px`
   lienzo.style.display = "block"
   contenedor.appendChild(lienzo)
-  const escena: EscenaMotor = crearEscena(lienzo, { personajes: PERSONAJES, calidad: op.calidad, pixelRatio: 1, letreros: false })
+  const escena: EscenaMotor = crearEscena(lienzo, { personajes: PERSONAJES, calidad: op.calidad, pixelRatio: 1, letreros: false, ahora })
   escena.redimensionar()
 
   const primera = ep.planos[0]?.hora

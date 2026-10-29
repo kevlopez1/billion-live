@@ -33,7 +33,7 @@
 
 import { spawn } from "node:child_process"
 import { createHash } from "node:crypto"
-import { appendFileSync, writeFileSync } from "node:fs"
+import { appendFileSync, existsSync, renameSync, unlinkSync, writeFileSync } from "node:fs"
 import { createRequire } from "node:module"
 
 const require = createRequire(import.meta.url)
@@ -87,7 +87,28 @@ async function main() {
     args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
   })
   let ffmpeg = null
+  /** El video se escribe aparte y toma su nombre solo al terminar bien: un render cortado no deja un .mp4 que parezca completo. */
+  let parcial = null
+  let completo = false
   let renderEmpezado = false
+  /** Un render que no terminó no deja ni ffmpeg vivo ni el parcial (también si lo cortan con SIGTERM/SIGINT). */
+  const limpiar = async () => {
+    if (!completo) {
+      if (ffmpeg && ffmpeg.exitCode === null && ffmpeg.signalCode === null) ffmpeg.kill("SIGKILL")
+      try {
+        if (parcial && existsSync(parcial)) unlinkSync(parcial)
+      } catch (e) {
+        console.error(`\nNo se pudo borrar ${parcial}: ${e?.message ?? e}`)
+      }
+    }
+    await navegador.close().catch(() => {})
+  }
+  for (const senal of ["SIGTERM", "SIGINT"])
+    process.once(senal, () => {
+      cortado = true
+      console.error(`\n${senal}: render cortado, no queda video`)
+      limpiar().finally(() => process.exit(1))
+    })
   let recargada = false
   try {
     // La ventana es chica a propósito: el cuadro se arma en un canvas propio de W×H, no en la pantalla.
@@ -114,6 +135,7 @@ async function main() {
     const hasta = o.hasta ? Math.min(cuadros, Math.round(Number(o.hasta) * fps)) : cuadros
     if (!(hasta > desde)) throw new Error(`tramo vacío: cuadros ${desde}…${hasta}`)
     const out = o.out ?? `${info.ep}-${info.formato.replace(":", "x")}.mp4`
+    parcial = `${out}.parcial.mp4`
 
     ffmpeg = spawn(
       "ffmpeg",
@@ -121,27 +143,54 @@ async function main() {
         "-hide_banner", "-loglevel", "error", "-y",
         "-f", "image2pipe", "-framerate", String(fps), "-c:v", "mjpeg", "-i", "-",
         "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
-        "-r", String(fps), "-movflags", "+faststart", "-an", out,
+        "-r", String(fps), "-movflags", "+faststart", "-an", parcial,
       ],
       { stdio: ["pipe", "inherit", "inherit"] },
     )
     let fallaFfmpeg = null
+    let cerrado = false
+    /** La escritura que espera 'drain': si ffmpeg se cae, 'drain' no llega nunca y se rechaza aquí. */
+    let pendiente = null
+    // Si ffmpeg se cae a mitad (otro proceso lo mató, disco lleno…), falla la escritura que espera
+    // y el próximo cuadro, sin seguir dibujando en vano ni quedarse colgado.
+    const fallar = (e) => {
+      fallaFfmpeg ??= e
+      const p = pendiente
+      pendiente = null
+      p?.mal(fallaFfmpeg)
+    }
     const terminado = new Promise((ok, mal) => {
       ffmpeg.on("error", mal)
-      ffmpeg.on("close", (c, senal) => (c === 0 ? ok() : mal(new Error(`ffmpeg terminó antes de tiempo (código ${c}${senal ? `, señal ${senal}` : ""})`))))
+      ffmpeg.on("close", (c, senal) => {
+        cerrado = true
+        if (c === 0 && !pendiente) ok()
+        else mal(new Error(`ffmpeg terminó antes de tiempo (código ${c}${senal ? `, señal ${senal}` : ""})`))
+      })
     })
-    // Si ffmpeg se cae a mitad (otro proceso lo mató, disco lleno…), se avisa en el próximo cuadro, sin seguir dibujando en vano.
-    terminado.catch((e) => {
-      fallaFfmpeg = e
-    })
-    ffmpeg.stdin.on("error", (e) => {
-      fallaFfmpeg ??= new Error(`no se pudo escribir a ffmpeg: ${e.message}`)
-    })
+    terminado.catch(fallar)
+    ffmpeg.stdin.on("error", (e) => fallar(new Error(`no se pudo escribir a ffmpeg: ${e.message}`)))
     const escribir = (buf) =>
       new Promise((ok, mal) => {
         if (fallaFfmpeg) return mal(fallaFfmpeg)
-        ffmpeg.stdin.write(buf) ? ok() : ffmpeg.stdin.once("drain", ok)
+        if (cerrado) return mal(new Error("ffmpeg ya se cerró"))
+        if (ffmpeg.stdin.write(buf)) return ok()
+        const yo = { mal }
+        pendiente = yo
+        ffmpeg.stdin.once("drain", () => {
+          if (pendiente !== yo) return
+          pendiente = null
+          ok()
+        })
       })
+    /** Un cuadro que no vuelve (WebGL trabado) no cuelga el render para siempre. */
+    const LIMITE_CUADRO_MS = 10 * 60_000
+    const conLimite = (promesa, i) => {
+      let reloj
+      const limite = new Promise((_, mal) => {
+        reloj = setTimeout(() => mal(new Error(`el cuadro ${i} no volvió en ${LIMITE_CUADRO_MS / 60_000} min: la página quedó trabada`)), LIMITE_CUADRO_MS)
+      })
+      return Promise.race([promesa, limite]).finally(() => clearTimeout(reloj))
+    }
 
     if (o.hashes) writeFileSync(o.hashes, "")
     const total = hasta - desde
@@ -150,12 +199,15 @@ async function main() {
     const sesion = info.sesion
     renderEmpezado = true
     for (let i = desde; i < hasta; i++) {
-      const r = await pagina.evaluate(async (i) => {
-        const e = window.__estudio
-        if (!e) return { sesion: null, datos: "" }
-        await e.cuadro(i)
-        return { sesion: (await e.listo).sesion, datos: e.salida.toDataURL("image/jpeg", 0.92) }
-      }, i)
+      const r = await conLimite(
+        pagina.evaluate(async (i) => {
+          const e = window.__estudio
+          if (!e) return { sesion: null, datos: "" }
+          await e.cuadro(i)
+          return { sesion: (await e.listo).sesion, datos: e.salida.toDataURL("image/jpeg", 0.92) }
+        }, i),
+        i,
+      )
       if (recargada || r.sesion !== sesion) throw new Error(`la página se recargó a mitad del render (cuadro ${i}): no se mezclan dos corridas en un video. Vuelve a correrlo.`)
       const datos = r.datos
       const buf = Buffer.from(datos.slice(datos.indexOf(",") + 1), "base64")
@@ -168,15 +220,21 @@ async function main() {
     }
     ffmpeg.stdin.end()
     await terminado
+    renameSync(parcial, out)
+    completo = true
     const s = (Date.now() - tRender) / 1000
     console.error(`\nListo: ${out} · ${total} cuadros en ${seg(s)} (${(s / total).toFixed(2)} s/cuadro)`)
   } finally {
-    if (ffmpeg && ffmpeg.exitCode === null && !ffmpeg.stdin.writableEnded) ffmpeg.stdin.end()
-    await navegador.close()
+    // Cortado: ffmpeg no cierra un .mp4 "válido" con lo que alcanzó a recibir, y el parcial se borra.
+    await limpiar()
   }
 }
 
+/** Lo cortó una señal: el error de la página que se cierra a mitad de un cuadro no es la causa. */
+let cortado = false
+
 main().catch((e) => {
+  if (cortado) return
   console.error(`\nError: ${e?.message ?? e}`)
   process.exit(1)
 })

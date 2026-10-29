@@ -11,7 +11,7 @@
 // el último plano sigue detrás de la tarjeta final.
 // ──────────────────────────────────────────────────────────────
 
-import { CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
+import { CHALLENGE_RECORD_DEADLINE, CHALLENGE_TARGET, RECAUDADO } from "@/lib/contador"
 import { CELDAS, LUGAR } from "../lugares"
 import { usd } from "../ui/formato"
 import { horaANumero, type CamaraPlano, type Episodio, type Formato, type LineaDialogo, type Plano, type Visor } from "./guion"
@@ -130,12 +130,50 @@ export function opacidad(local: number, desde: number, hasta: number, fundido = 
 
 // ── Textos ────────────────────────────────────────────────────
 
+/** Cuándo sale un video: fecha "2026-10-30" y hora de Bolivia "19:00" (EntradaCalendario). */
+export interface Estreno {
+  fecha: string
+  hora: string
+}
+
 /**
- * Los números que se escriben en un guion como marcas, nunca a mano:
- * {RECAUDADO} sale de lib/contador.ts (como en la home), {META} es la meta del reto.
+ * Un episodio fuera del calendario (la muestra) usa esta fecha fija: lo que un
+ * video muestra nunca sale del reloj de la máquina que lo filma.
  */
-export function textoFinal(texto: string): string {
-  return texto.replace(/\{RECAUDADO\}/g, usd(RECAUDADO)).replace(/\{META\}/g, usd(CHALLENGE_TARGET))
+export const ESTRENO_SIN_CALENDARIO: Estreno = { fecha: "2026-10-30", hora: "19:00" }
+
+/** El instante (ms) del estreno. Bolivia es UTC−4 todo el año. NaN si la fecha o la hora no son válidas. */
+export function instanteDelEstreno(e: Estreno): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(e.fecha) || !/^\d{2}:\d{2}$/.test(e.hora)) return NaN
+  return Date.parse(`${e.fecha}T${e.hora}:00-04:00`)
+}
+
+const DIA_MS = 86_400_000
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+/** Días de calendario entre dos fechas "AAAA-MM-DD" (sin horas: no depende de la zona horaria). */
+export function diasEntreFechas(desde: string, hasta: string): number {
+  return Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / DIA_MS)
+}
+
+/** "2026-12-30" → "30 de diciembre". */
+export function fechaEnPalabras(fecha: string): string {
+  const [, m, d] = fecha.split("-").map(Number)
+  return `${d} de ${MESES[m - 1]}`
+}
+
+/**
+ * Los números y fechas que se escriben en un guion como marcas, nunca a mano:
+ * {RECAUDADO} sale de lib/contador.ts (como en la home), {META} es la meta del reto,
+ * {FECHA_RECORD} la fecha del ritmo récord (CHALLENGE_RECORD_DEADLINE) y
+ * {DIAS_AL_RECORD} los días que le faltan desde `fecha`, la del estreno del video.
+ */
+export function textoFinal(texto: string, fecha: string = ESTRENO_SIN_CALENDARIO.fecha): string {
+  return texto
+    .replace(/\{RECAUDADO\}/g, usd(RECAUDADO))
+    .replace(/\{META\}/g, usd(CHALLENGE_TARGET))
+    .replace(/\{FECHA_RECORD\}/g, fechaEnPalabras(CHALLENGE_RECORD_DEADLINE))
+    .replace(/\{DIAS_AL_RECORD\}/g, String(Math.max(0, diasEntreFechas(fecha, CHALLENGE_RECORD_DEADLINE))))
 }
 
 /** 5,4 s a 30 fps → "00:00:05:12". */

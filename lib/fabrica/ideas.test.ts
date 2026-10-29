@@ -3,7 +3,8 @@
 
 import assert from "node:assert/strict"
 import type { Conciencia, Recuerdo } from "@/lib/casa-blanca-memoria"
-import { elegirIdeas, leerFuentesDeIdeas, mismoTema, palabrasClave, parDe, TIPOS_DE_LA_CASA, type FuentesDeIdeas, type PuertoIdeas } from "./ideas"
+import { TIPOS_RECUERDO, tipoDeConversacion } from "@/lib/casa-blanca-memoria"
+import { elegirIdeas, esDeLaCasa, leerFuentesDeIdeas, mismoTema, palabrasClave, parDe, TIPOS_DE_LA_CASA, TIPOS_DE_VISITANTE, type FuentesDeIdeas, type PuertoIdeas } from "./ideas"
 import { luzDe } from "./semaforo"
 
 let fallos = 0
@@ -99,6 +100,38 @@ async function main() {
     const semillas = [...r.ideas, ...(r.reserva ? [r.reserva] : [])].flatMap((i) => i.semilla).join(" ")
     assert.ok(!/visitante|dólar|elecciones|Elon/.test(semillas), semillas)
     assert.deepEqual([...TIPOS_DE_LA_CASA], ["conversacion", "trabajo", "diario"])
+  })
+
+  await prueba("una conversación sobre el tema de un visitante nunca entra, aunque pese más que todo", () => {
+    const f: FuentesDeIdeas = {
+      recuerdos: [
+        rec("lincoln", "conversacion_visitante", "Jardín · Hablamos de cómo despedir a mi cuñado sin que se enoje.", ["socrates"], 10, "2026-11-14T23:00:00Z"),
+        rec("cleopatra", "conversacion", "Le enseñé a Leonardo a negociar con mercaderes de especias.", ["leonardo"], 3),
+      ],
+      conciencias: [],
+      historial: [],
+    }
+    const r = elegirIdeas(f, { dia: DIA, cuantas: 6 })
+    const todas = [...r.ideas, ...(r.reserva ? [r.reserva] : [])]
+    assert.ok(!todas.some((i) => /cuñado/.test(i.semilla.join(" "))), JSON.stringify(todas.map((i) => i.semilla)))
+    assert.ok(!todas.some((i) => i.fuentes.includes(f.recuerdos[0].id)))
+    assert.ok(todas.some((i) => i.par === "cleopatra|leonardo"), "la conversación de la casa sí entra")
+  })
+
+  await prueba("cada tipo de recuerdo está de un lado: de la casa o de un visitante (nunca de los dos, nunca de ninguno)", () => {
+    const casa = new Set<string>(TIPOS_DE_LA_CASA)
+    const visitante = new Set<string>(TIPOS_DE_VISITANTE)
+    for (const t of TIPOS_RECUERDO) assert.ok(casa.has(t) !== visitante.has(t), `${t}: casa=${casa.has(t)} visitante=${visitante.has(t)}`)
+    for (const t of [...casa, ...visitante]) assert.ok((TIPOS_RECUERDO as readonly string[]).includes(t), `${t} no es un tipo de recuerdo`)
+    assert.ok(!esDeLaCasa("conversacion_visitante") && !esDeLaCasa("charla") && !esDeLaCasa("algo-nuevo"))
+  })
+
+  await prueba("conversar() con tema del visitante guarda su propio tipo; sin tema, una conversación de la casa", () => {
+    assert.equal(tipoDeConversacion("¿Cómo le pido un aumento a mi jefe?"), "conversacion_visitante")
+    assert.equal(tipoDeConversacion(undefined), "conversacion")
+    assert.equal(tipoDeConversacion(null), "conversacion")
+    assert.equal(tipoDeConversacion("   "), "conversacion")
+    assert.ok(!esDeLaCasa(tipoDeConversacion("un tema cualquiera")))
   })
 
   await prueba("un vivo nunca protagoniza (aunque tenga opiniones fuertes)", () => {

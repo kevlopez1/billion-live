@@ -22,8 +22,18 @@ const TABLA_REFLEXION = "casa_blanca_reflexion"
 const COLUMNAS_MEMORIA = "id, creado, personaje_id, tipo, texto, importancia, con"
 const COLUMNAS_CONCIENCIA = "personaje_id, dia, animo, meta, pensamiento, diario, opiniones, actualizado"
 
-export const TIPOS_RECUERDO = ["charla", "conversacion", "consejo", "noticia", "trabajo", "diario"] as const
+/**
+ * "conversacion_visitante": una escena entre residentes sobre un tema que
+ * escribió un visitante (conversar() con `tema`). Va aparte de "conversacion"
+ * porque su resumen trae el texto del visitante, y la fábrica de videos nunca
+ * usa el texto de un visitante (lib/fabrica/ideas.ts, TIPOS_DE_LA_CASA).
+ */
+export const TIPOS_RECUERDO = ["charla", "conversacion", "conversacion_visitante", "consejo", "noticia", "trabajo", "diario"] as const
 export type TipoRecuerdo = (typeof TIPOS_RECUERDO)[number]
+
+/** El tipo del recuerdo de una conversación entre residentes: aparte si el tema lo puso un visitante. */
+export const tipoDeConversacion = (temaDelVisitante?: string | null): TipoRecuerdo =>
+  temaDelVisitante?.trim() ? "conversacion_visitante" : "conversacion"
 /** El mismo tope que el check de la tabla. */
 export const MAX_RECUERDO = 400
 
