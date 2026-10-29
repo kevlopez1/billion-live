@@ -24,6 +24,8 @@ export const HUESOS = [
   "claviculaI", "hombroI", "codoI", "manoI", "dedosI", "dedos2I", "pulgarI",
   "claviculaD", "hombroD", "codoD", "manoD", "dedosD", "dedos2D", "pulgarD",
   "musloI", "rodillaI", "tobilloI", "puntaI", "musloD", "rodillaD", "tobilloD", "puntaD",
+  // (al final, para no mover ningún índice ni nombre de arriba: el índice, que señala y hace la pinza)
+  "indiceI", "indice2I", "indiceD", "indice2D",
 ] as const
 export type NombreHueso = (typeof HUESOS)[number]
 const PADRE: Record<NombreHueso, NombreHueso | null> = {
@@ -33,6 +35,7 @@ const PADRE: Record<NombreHueso, NombreHueso | null> = {
   claviculaD: "pecho", hombroD: "claviculaD", codoD: "hombroD", manoD: "codoD", dedosD: "manoD", dedos2D: "dedosD", pulgarD: "manoD",
   musloI: "cadera", rodillaI: "musloI", tobilloI: "rodillaI", puntaI: "tobilloI",
   musloD: "cadera", rodillaD: "musloD", tobilloD: "rodillaD", puntaD: "tobilloD",
+  indiceI: "manoI", indice2I: "indiceI", indiceD: "manoD", indice2D: "indiceD",
 }
 export const H = Object.fromEntries(HUESOS.map((n, i) => [n, i])) as Record<NombreHueso, number>
 
@@ -72,9 +75,9 @@ const TRONCO_H = [
   [0.75, 0.171, 0.112, -0.104, -0.003],
   [0.775, 0.176, 0.097, -0.104, -0.007],
   [0.795, 0.18, 0.08, -0.1, -0.012],
-  [0.806, 0.172, 0.066, -0.094, -0.016],
-  [0.816, 0.156, 0.054, -0.09, -0.02],
-  [0.825, 0.13, 0.044, -0.085, -0.024],
+  [0.806, 0.176, 0.066, -0.094, -0.016],
+  [0.816, 0.166, 0.054, -0.09, -0.02],
+  [0.825, 0.14, 0.044, -0.085, -0.024],
   [0.833, 0.1, 0.038, -0.08, -0.026],
   [0.839, 0.078, 0.036, -0.077, -0.028],
 ]
@@ -95,9 +98,9 @@ const TRONCO_M = [
   [0.75, 0.155, 0.098, -0.09, -0.003],
   [0.775, 0.158, 0.088, -0.09, -0.007],
   [0.795, 0.16, 0.072, -0.088, -0.012],
-  [0.806, 0.153, 0.06, -0.083, -0.016],
-  [0.816, 0.138, 0.05, -0.079, -0.02],
-  [0.825, 0.115, 0.042, -0.075, -0.024],
+  [0.806, 0.156, 0.06, -0.083, -0.016],
+  [0.816, 0.146, 0.05, -0.079, -0.02],
+  [0.825, 0.122, 0.042, -0.075, -0.024],
   [0.833, 0.09, 0.036, -0.071, -0.026],
   [0.839, 0.07, 0.034, -0.068, -0.028],
 ]
@@ -234,6 +237,8 @@ export class Cuerpo {
   readonly holgura: number
   /** Cuánto se adelanta la parte alta del tronco (encorvado). */
   readonly zTop: number
+  /** Androides: uv.y de los dedos = 0..1 de la base a la punta (lo lee avatar-androide); si no, metros. */
+  readonly uvDedoFraccion: boolean
   private filas: FilaCabeza[] | null = null
 
   constructor(p: Personaje, holguraRopa = 0) {
@@ -246,6 +251,7 @@ export class Cuerpo {
     const base = fi.cuerpo
     this.k = this.fem && !fi.conFicha ? { ...base, hombros: base.hombros * 0.87, pecho: base.pecho * 0.9, mBrazos: base.mBrazos * 0.86, mAntebrazos: base.mAntebrazos * 0.86, mPiernas: base.mPiernas * 0.95, cintura: base.cintura * 0.98 } : base
     this.holgura = holguraRopa
+    this.uvDedoFraccion = p.apariencia.ropa.tipo === "androide"
     const k = this.k
     const hs = Math.pow(s, 0.5) * (this.fem ? 0.94 : 1) * k.cabeza
     // Encorvado: la parte alta del tronco y la cabeza van hacia adelante.
@@ -284,7 +290,8 @@ export class Cuerpo {
     for (const [lado, L] of [[1, "I"], [-1, "D"]] as const) {
       const hx = 0.176 * s * k.hombros
       const hom = V(lado * hx, 0.805 * Hh, -0.028 * s + enc * 0.02 * s)
-      const rB = 0.037 * s * k.mBrazos
+      // (radio medial del brazo a media altura, con los músculos)
+      const rB = this.radiosBrazo(0.17 * s)[2] * 1.02
       const cx = Math.max(hx + 0.022 * s, anchoCintura + rB + 0.012 + holguraRopa * 1.6)
       const codo = V(lado * cx, hom.y - 0.33 * s, -0.04 * s + enc * 0.02 * s)
       const mx = Math.max(cx + 0.006 * s, anchoCadera + 0.024 * s + holguraRopa * 1.4)
@@ -304,6 +311,16 @@ export class Cuerpo {
     }
     this.brazos = [this.cadenaBrazo("I", 1), this.cadenaBrazo("D", -1)]
     this.piernas = [this.cadenaPierna("I", 1), this.cadenaPierna("D", -1)]
+    // dedos2: en el promedio de las articulaciones PIP (con la flexión de reposo de la mano).
+    for (const [i, L] of [[0, "I"], [1, "D"]] as const) {
+      const pip = new THREE.Vector3()
+      const gd = geoDedos(this, this.brazos[i])
+      for (const d of gd) pip.add(d.j[1])
+      j[`dedos2${L}`] = pip.multiplyScalar(0.25)
+      // El índice tiene su hueso (nudillo y PIP): señala, cuenta y hace la pinza.
+      j[`indice${L}`] = gd[0].j[0].clone()
+      j[`indice2${L}`] = gd[0].j[1].clone()
+    }
   }
 
   private cadenaBrazo(L: "I" | "D", lado: 1 | -1): Cadena {
@@ -420,7 +437,7 @@ export class Cuerpo {
     const k = this.k
     // Factor de ancho por zona: cadera abajo, cintura, pecho, hombros arriba.
     const fw =
-      t < 0.56 ? k.cadera : t < 0.6 ? lerp(k.cadera, k.cintura, (t - 0.56) / 0.04) : t < 0.68 ? k.cintura : t < 0.72 ? lerp(k.cintura, k.pecho, (t - 0.68) / 0.04) : t < 0.775 ? k.pecho : lerp(k.pecho, k.hombros, clamp((t - 0.775) / 0.03, 0, 1))
+      t < 0.56 ? k.cadera : t < 0.6 ? lerp(k.cadera, k.cintura, (t - 0.56) / 0.04) : t < 0.68 ? k.cintura : t < 0.72 ? lerp(k.cintura, k.pecho, (t - 0.68) / 0.04) : t < 0.775 ? k.pecho : t < 0.833 ? lerp(lerp(k.pecho, k.hombros, clamp((t - 0.775) / 0.03, 0, 1)), 1 + (k.hombros - 1) * 0.35, campana(t, 0.823, 0.009)) : k.hombros
     const fp = t < 0.68 ? lerp(1, k.prof, 0.5) : k.prof
     // Vientre: alto (bajo el esternón) o bajo (en el ombligo); se ensancha un poco.
     const tB = lerp(0.6, 0.665, clamp(k.panzaAlta, 0, 1))
@@ -472,6 +489,24 @@ export class Cuerpo {
       nz[j] = -tx / l
     }
     const mu = k.mPecho
+    // Hombro: casquete redondo sobre la cabeza del húmero, del mismo ancho que
+    // el brazo debajo (así el brazo sale del deltoides sin escalón ni "ala").
+    // (el centro del casquete, 2,5 cm por debajo de la articulación: ahí el deltoides es más ancho)
+    const yj = 0.805 * Hh - 0.025 * s
+    const hx = 0.176 * s * k.hombros
+    // (radios del brazo a la altura de la articulación: el casquete no sobresale del brazo)
+    const rAr = this.radiosBrazo(0.03 * s)
+    const rA = rAr[0] * 0.98
+    const rAz = (rAr[1] + rAr[3]) * 0.5 * 0.97
+    const zJ = -0.028 * s + clamp(k.encorvado, 0, 1) * 0.02 * s
+    const dy = y - yj
+    const fCap = dy >= 0 ? Math.sqrt(Math.max(0, 1 - (dy / (0.62 * rA + 0.035 * s)) ** 2)) : Math.sqrt(Math.max(0, 1 - (dy / (0.026 * s)) ** 2))
+    const ex = rA * fCap
+    const ez = rAz * fCap
+    // Debajo de la articulación, el casquete sigue al eje del brazo (que baja abierto hacia el codo).
+    const jc = this.j.codoI
+    const pend = jc && this.j.hombroI ? (jc.x - this.j.hombroI.x) / Math.max(0.1, this.j.hombroI.y - jc.y) : 0
+    const hxC = hx + (dy < 0 ? -dy * pend : 0)
     for (let j = 0; j < M; j++) {
       const x = xs[j]
       const ax = Math.abs(x)
@@ -481,7 +516,10 @@ export class Cuerpo {
         d += fr * 0.03 * s * campana(ax, 0.068 * s, 0.045 * s) * campana(y, 0.722 * Hh, 0.045 * s)
         d += (1 - fr) * 0.02 * s * campana(ax, 0.064 * s, 0.055 * s) * campana(y, 0.5 * Hh, 0.05 * s)
       } else {
-        d += fr * 0.011 * s * mu * campana(ax, 0.066 * s, 0.045 * s) * campana(y, 0.738 * Hh, 0.04 * s)
+        // Pectoral: borde de abajo marcado (sube hacia la axila), se pierde hacia la clavícula.
+        const yL = 0.712 * Hh + (ax - 0.05 * s) * 0.3
+        const pec = suave(yL - 0.014 * s, yL + 0.008 * s, y) * (1 - suave(0.765 * Hh, 0.805 * Hh, y)) * suave(0.01 * s, 0.035 * s, ax) * (1 - suave(0.115 * s, 0.155 * s, ax))
+        d += fr * s * (0.007 + 0.011 * Math.max(0, mu - 1)) * (0.55 + 0.45 * this.definicion) * pec * (0.6 + 0.4 * campana(ax, 0.07 * s, 0.05 * s))
         d -= fr * 0.003 * s * campana(ax, 0, 0.012 * s) * campana(y, 0.74 * Hh, 0.05 * s)
         d += (1 - fr) * 0.015 * s * campana(ax, 0.062 * s, 0.05 * s) * campana(y, 0.505 * Hh, 0.045 * s)
       }
@@ -490,7 +528,18 @@ export class Cuerpo {
       d -= (1 - fr) * 0.012 * s * campana(ax, 0, 0.01 * s) * suave(0.53 * Hh, 0.5 * Hh, y)
       // Deltoides: los hombros son parte del tronco (el brazo nace debajo, sin unión
       // visible). Es forma, no músculo: la ropa lo conserva entero.
-      const delt = 0.046 * s * k.mDeltoides * this.k.hombros * suave(0.1 * s, 0.168 * s, ax) * campana(y, 0.788 * Hh, 0.026 * Hh) * (this.fem ? 0.72 : 1)
+      // Unión con el elipsoide del hombro: si el punto queda dentro, sale por su normal hasta el borde.
+      let delt = 0
+      if (ex > 1e-4 && ax > 0.08 * s) {
+        const px = ax - hxC
+        const pz = zs[j] - zJ
+        const qx = Math.abs(nx[j])
+        const qz = nz[j]
+        const A = (qx / ex) ** 2 + (qz / ez) ** 2
+        const B = 2 * ((px * qx) / (ex * ex) + (pz * qz) / (ez * ez))
+        const Cc = (px / ex) ** 2 + (pz / ez) ** 2 - 1
+        if (Cc < 0) delt = ((-B + Math.sqrt(Math.max(0, B * B - 4 * A * Cc))) / (2 * A)) * suave(0.08 * s, 0.13 * s, ax)
+      }
       // Clavículas
       d += fr * 0.004 * s * campana(y, 0.812 * Hh - ax * 0.05, 0.01 * s) * suave(0.015 * s, 0.04 * s, ax) * suave(0.16 * s, 0.12 * s, ax)
       xs[j] += nx[j] * (d * bultos + delt)
@@ -538,7 +587,7 @@ export class Cuerpo {
 
   /** Alturas de las filas del tronco (m). */
   filasTronco(): number[] {
-    const fr = [0.448, 0.458, 0.468, 0.48, 0.495, 0.51, 0.525, 0.54, 0.555, 0.57, 0.585, 0.6, 0.615, 0.63, 0.645, 0.66, 0.675, 0.69, 0.705, 0.72, 0.735, 0.75, 0.763, 0.775, 0.787, 0.798, 0.808, 0.817, 0.825, 0.832, 0.838]
+    const fr = [0.448, 0.458, 0.468, 0.48, 0.495, 0.51, 0.525, 0.54, 0.555, 0.57, 0.585, 0.6, 0.615, 0.63, 0.645, 0.66, 0.675, 0.69, 0.705, 0.72, 0.735, 0.75, 0.763, 0.775, 0.782, 0.79, 0.797, 0.804, 0.811, 0.818, 0.825, 0.832, 0.838]
     return fr.map((f) => f * this.H)
   }
 
@@ -715,18 +764,69 @@ export class Cuerpo {
     return out.copy(m.c).addScaledVector(m.L, x).addScaledVector(m.N, z)
   }
 
-  /** Radios del brazo en u (m), escalados por altura y músculo. */
+  /** Punto de un anillo del brazo (piel o manga): sección con músculos en u. */
+  puntoBrazo(m: Marco, r: number[], u: number, a: number, out: THREE.Vector3): THREE.Vector3 {
+    return Cuerpo.puntoAnillo(m, r, a, 2.2, out)
+  }
+
+  /**
+   * Definición muscular (0..1): cuánto se marcan los músculos bajo la piel.
+   * Sube con la masa muscular de la ficha y baja con la grasa (panza).
+   */
+  get definicion(): number {
+    const k = this.k
+    const e = Math.max(k.mBrazos, k.mAntebrazos, k.mPiernas) - 1
+    return clamp(0.4 + 0.9 * e - 8 * k.panza - (this.fem ? 0.15 : 0), 0.1, 1)
+  }
+
+  /**
+   * Radios del brazo en u (m): [lateral, frente, medial, atrás].
+   * La masa muscular de la ficha agranda los VIENTRES de los músculos
+   * (deltoides, bíceps, tríceps, braquiorradial y flexores) más que los
+   * huesos: el codo y la muñeca crecen poco. Así un brazo fuerte tiene forma
+   * (y no es un tubo parejo más grueso).
+   */
   radiosBrazo(u: number): number[] {
     const s = this.s
     const us = u / s
     const k = this.k
-    // Brazo, antebrazo y mano: cada uno con su músculo (la mano, con su tamaño).
-    const f = us < 0.3 ? k.mBrazos : us < 0.38 ? lerp(k.mBrazos, k.mAntebrazos, (us - 0.3) / 0.08) : us < 0.56 ? k.mAntebrazos : lerp(k.mAntebrazos, k.manos, clamp((us - 0.56) / 0.04, 0, 1))
+    const eB = k.mBrazos - 1
+    const eA = k.mAntebrazos - 1
+    const masa = (e: number, kv: number) => 1 + (e < 0 ? e * 0.85 : e * kv)
+    const fUp = masa(eB, 0.42)
+    const fCodo = masa(eB, 0.22)
+    const fFo = masa(eA, 0.45)
+    const fMun = masa(eA, 0.18)
+    const f =
+      us < 0.26 ? fUp : us < 0.32 ? lerp(fUp, fCodo, suave(0.26, 0.32, us)) : us < 0.35 ? fCodo : us < 0.41 ? lerp(fCodo, fFo, suave(0.35, 0.41, us)) : us < 0.47 ? fFo : us < 0.565 ? lerp(fFo, fMun, suave(0.47, 0.565, us)) : lerp(fMun, k.manos, clamp((us - 0.565) / 0.04, 0, 1))
     // (los brazos se leían finos como fideos en todo el elenco: +12 % el brazo,
     // +5 % el antebrazo; la mano queda igual)
     const base = us < 0.56 ? 1.05 + 0.07 * (1 - suave(0.26, 0.36, us)) : lerp(1.05, 1, clamp((us - 0.56) / 0.04, 0, 1))
     const g = (this.fem ? 0.94 : 1) * base
-    return [1, 2, 3, 4].map((i) => tablaSuave(BRAZO, us, i) * s * f * g)
+    const r = [1, 2, 3, 4].map((i) => tablaSuave(BRAZO, us, i) * s * f * g)
+    if (us > 0.6) return r
+    // Vientres musculares (m): crecen con la masa y se marcan con la definición.
+    const mB = Math.max(0, eB)
+    const mA = Math.max(0, eA)
+    const mD = Math.max(0, k.mDeltoides - 1)
+    const df = 0.45 + 0.55 * this.definicion
+    const fem = this.fem ? 0.6 : 1
+    const sc = s * fem
+    // Deltoides (lateral) y su inserción en V; bíceps (frente); tríceps (atrás) con el tendón plano encima del codo.
+    r[0] += sc * ((0.002 + 0.006 * mD) * campana(us, 0.07, 0.05) - 0.0016 * df * campana(us, 0.21, 0.03))
+    r[1] += sc * (0.0015 + 0.011 * mB) * df * campana(us, 0.19, 0.055)
+    r[3] += sc * ((0.0015 + 0.009 * mB) * df * campana(us, 0.13, 0.06) - 0.0014 * df * campana(us, 0.27, 0.025))
+    r[2] -= sc * 0.0012 * df * campana(us, 0.24, 0.04)
+    // Codo: el olécranon atrás y el epicóndilo medial.
+    r[3] += s * 0.0018 * campana(us, 0.325, 0.014)
+    r[2] += s * 0.0012 * campana(us, 0.315, 0.014)
+    // Antebrazo: braquiorradial y extensores (lateral, arriba), flexores (medial); se afina hacia la muñeca.
+    r[0] += sc * (0.003 + 0.009 * mA) * df * campana(us, 0.395, 0.05)
+    r[1] += sc * (0.0015 + 0.004 * mA) * campana(us, 0.405, 0.055)
+    r[2] += sc * (0.0018 + 0.006 * mA) * df * campana(us, 0.4, 0.05)
+    // Muñeca: la cabeza del cúbito (del lado del meñique, atrás).
+    r[3] += s * 0.0012 * campana(us, 0.552, 0.012)
+    return r
   }
   radiosPierna(u: number): number[] {
     const s = this.s
@@ -735,7 +835,28 @@ export class Cuerpo {
     const g = this.fem ? 1.04 : 1
     const ca = us < 0.4 ? k.cadera : 1
     const f = us < 0.38 ? k.mPiernas * k.muslo : us < 0.46 ? lerp(k.mPiernas * k.muslo, k.mPantorrillas, (us - 0.38) / 0.08) : k.mPantorrillas
-    return [1, 2, 3, 4].map((i) => tablaSuave(PIERNA, us, i) * s * f * g * (i === 1 && us < 0.25 ? ca : 1))
+    // (los huesos no crecen con el músculo: rodilla y tobillo, la mitad)
+    const fh = us > 0.4 && us < 0.47 ? lerp(f, 1 + (f - 1) * 0.5, campana(us, 0.435, 0.025)) : us > 0.74 ? lerp(f, 1 + (f - 1) * 0.4, suave(0.74, 0.82, us)) : f
+    const r = [1, 2, 3, 4].map((i) => tablaSuave(PIERNA, us, i) * s * fh * g * (i === 1 && us < 0.25 ? ca : 1))
+    const df = 0.45 + 0.55 * this.definicion
+    const mP = Math.max(0, k.mPiernas - 1)
+    const mC = Math.max(0, k.mPantorrillas - 1)
+    const sc = s * (this.fem ? 0.6 : 1)
+    // Muslo: el vasto medial (la "lágrima" sobre la rodilla, adentro) y el cuádriceps.
+    r[2] += sc * (0.002 + 0.008 * mP) * df * campana(us, 0.355, 0.04)
+    r[1] += sc * (0.0015 + 0.006 * mP) * df * campana(us, 0.2, 0.08)
+    // Rótula y tendón; atrás, el hueco de la rodilla.
+    r[1] += s * 0.0035 * campana(us, 0.43, 0.018) - s * 0.0012 * campana(us, 0.475, 0.015)
+    // Gemelos: el interno más grande y más bajo que el externo.
+    r[2] += sc * (0.003 + 0.008 * mC) * df * campana(us, 0.565, 0.055)
+    r[0] += sc * (0.002 + 0.006 * mC) * df * campana(us, 0.53, 0.045)
+    r[3] += sc * (0.001 + 0.006 * mC) * df * campana(us, 0.54, 0.05)
+    // Tibia plana al frente; tendón de Aquiles (el tobillo se angosta atrás) y maléolos.
+    r[1] -= s * 0.0015 * campana(us, 0.66, 0.07)
+    r[3] -= s * 0.004 * suave(0.7, 0.8, us) * (1 - suave(0.84, 0.87, us))
+    r[2] += s * 0.0022 * campana(us, 0.842, 0.016)
+    r[0] += s * 0.0022 * campana(us, 0.856, 0.016)
+    return r
   }
 
   pesosBrazo(lado: 1 | -1, u: number): Pesos {
@@ -1057,23 +1178,24 @@ function mallaBoca(lote: Lote, cu: Cuerpo, b: { sup: number[]; inf: number[]; l:
   lote.pieza()
 }
 
-/** Brazo + mano (palma con los cinco dedos). */
+/** Brazo (tubo del hombro a la muñeca) + mano. */
 function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura, tc: RGBA) {
   const s = cu.s
   const lado = c.lado
   const uMano = c.u[3]
-  const uFin = c.largo
+  // El tubo del brazo termina antes de la muñeca: la mano es una grilla propia
+  // (palma de 32 columnas soldada a los dedos) que se cose a este último anillo.
+  const uFin = cub.manos ? c.largo - 0.004 * s : uMano - 0.006 * s
   const cols = 16
   const filas: number[] = []
   // El brazo nace DENTRO del hombro (el deltoides es del tronco): sin tapa
   // asomando ni costura en los brazos desnudos.
   const u0 = 0.014 * s
-  for (let u = u0; u < uFin - 0.001; ) {
+  for (let u = u0; u < uFin - 0.012 * s; ) {
     filas.push(u)
-    const enMano = u > uMano - 0.02 * s
-    u += (u < 0.06 * s ? 0.016 : enMano ? 0.018 : 0.032) * s
+    u += (u < 0.06 * s ? 0.016 : u > uMano - 0.07 * s ? 0.022 : 0.032) * s
   }
-  filas.push(uFin - 0.004 * s)
+  filas.push(uFin)
   const ids: number[][] = []
   const centros: THREE.Vector3[] = []
   const cubierto: boolean[] = []
@@ -1081,134 +1203,483 @@ function mallaBrazo(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura, tc: RGBA)
   for (const u of filas) {
     c.marco(u, _m)
     const r = cu.radiosBrazo(u)
-    // Los primeros anillos, más finos: quedan bajo la piel del hombro.
-    const ent = lerp(0.6, 1, suave(u0, 0.075 * s, u))
-    r[0] *= ent
-    r[1] *= lerp(0.8, 1, ent)
-    r[3] *= lerp(0.8, 1, ent)
+    // Arriba de la articulación, el brazo queda justo dentro del casquete del
+    // hombro (anilloTronco): se cruzan casi tangentes, sin escalón ni borde.
+    const dyH = _m.c.y - (0.805 * cu.H - 0.025 * s)
+    const rTop = cu.radiosBrazo(0.03 * s)[0] * 0.98
+    const ent = dyH > 0 ? Math.min(1, (0.9 * rTop * Math.sqrt(Math.max(0.04, 1 - (dyH / (0.62 * rTop + 0.035 * s)) ** 2))) / Math.max(1e-4, r[0])) : 1
+    for (let q = 0; q < 4; q++) r[q] *= ent
     const fila: number[] = []
     const pesos = cu.pesosBrazo(lado, u)
-    const nudillo = suave(uMano + 0.06 * s, uMano + 0.09 * s, u)
     for (let k = 0; k < cols; k++) {
       const a = (k / cols) * Math.PI * 2
-      Cuerpo.puntoAnillo(_m, r, a, 2.2, P)
-      // Dorso de la mano y nudillos apenas más rojizos.
-      const t = 1 - 0.05 * nudillo * Math.max(0, Math.cos(a))
-      const pw: Pesos = nudillo > 0.01 ? [...pesos.map(([h, w]) => [h, w * (1 - nudillo * 0.5)] as [number, number]), [H[`dedos${lado > 0 ? "I" : "D"}`], nudillo * 0.5]] : pesos
-      fila.push(lote.v(P.x, P.y, P.z, (k / cols) * 0.2, u, [tc[0], t * tc[1], t * tc[2], 1], pw, [0.55, 0]))
+      cu.puntoBrazo(_m, r, u, a, P)
+      fila.push(lote.v(P.x, P.y, P.z, (k / cols) * 0.2, u, [tc[0], tc[1], tc[2], 1], pesos, [0.55, 0]))
     }
     ids.push(fila)
     centros.push(_m.c.clone())
     cubierto.push(cub.brazo(lado, u))
   }
   lote.tiras(ids, true, { centros, emitir: (i) => !(cubierto[i] && cubierto[i + 1]) })
-  lote.pieza()
-  if (!cub.manos) mallaDedos(lote, cu, c, tc)
+  if (cub.manos) {
+    lote.pieza()
+    return
+  }
+  mallaMano(lote, cu, c, ids[ids.length - 1], tc)
 }
 
-/** Cuatro dedos y el pulgar como tubos que nacen de la palma. */
-function mallaDedos(lote: Lote, cu: Cuerpo, c: Cadena, tc: RGBA) {
+// ── La mano ───────────────────────────────────────────────────
+//
+// Palma de 32 columnas (16 por el dorso, del meñique al índice; 16 por la
+// palma, del índice al meñique). En la fila de los nudillos cada dedo toma
+// 4 columnas del dorso y 4 de la palma: su anillo de 8 ES esa fila (sin
+// grietas). Entre dedo y dedo, una membrana hasta el primer tercio de la
+// falange y el fondo de la horquilla. Cada dedo tiene tres falanges con la
+// flexión de reposo horneada (cascada: el meñique más doblado que el índice),
+// sección en "D" (dorso plano, yema llena), nudillos y uña. El pulgar sale de
+// la eminencia tenar con dos falanges. Los huesos (dedos, dedos2, pulgar)
+// siguen sumando la curva de la animación encima.
+
+/** Dedos: [centro a lo ancho, dorso(+)/palma(-), arco de nudillos, largo, radio, abertura, flexión MCP, PIP, DIP] (m, rad; mano de 1,78 m). */
+const DEDOS: Array<[number, number, number, number, number, number, number, number, number]> = [
+  [0.029, 0.0004, -0.003, 0.088, 0.0099, 0.07, 0.17, 0.26, 0.12],
+  [0.009, 0.0008, 0.0, 0.095, 0.0101, 0.015, 0.23, 0.33, 0.15],
+  [-0.011, 0.0004, -0.004, 0.089, 0.0095, -0.045, 0.3, 0.4, 0.19],
+  [-0.03, -0.001, -0.013, 0.071, 0.0083, -0.11, 0.38, 0.46, 0.22],
+]
+/** Largo de las falanges (proximal, media, distal) / largo del dedo. */
+const FALANGES = [0.47, 0.28, 0.25]
+/** Filas de un dedo: [segmento (0..2) o -1..-2 = articulación PIP/DIP, fracción, ancho, dorso, palma]. */
+const FILAS_DEDO: Array<[number, number, number, number, number]> = [
+  [0, 0, 1.0, 1.06, 1.12],
+  [0, 0.32, 0.96, 0.83, 0.97],
+  [-1, 0, 0.94, 0.88, 0.8],
+  [-2, 0, 0.86, 0.78, 0.78],
+  [2, 0.3, 0.86, 0.72, 0.9],
+  [2, 0.6, 0.85, 0.7, 0.9],
+  [2, 0.82, 0.72, 0.6, 0.78],
+  [2, 0.95, 0.42, 0.34, 0.44],
+]
+
+export interface GeoDedo {
+  /** Base (nudillo), PIP, DIP y punta. */
+  j: [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3]
+  /** Dirección y dorso de la palma (0) y de cada falange (1..3). */
+  d: THREE.Vector3[]
+  dor: THREE.Vector3[]
+  /** A lo ancho (hacia el índice). */
+  w: THREE.Vector3
+  r: number
+  largo: number
+}
+
+/** Esqueleto de los cuatro dedos en reposo (en el espacio del avatar). */
+export function geoDedos(cu: Cuerpo, c: Cadena): GeoDedo[] {
+  const s = cu.s
+  const g = s * (cu.fem ? 0.9 : 1) * cu.k.manos
+  const m: Marco = { c: new THREE.Vector3(), T: new THREE.Vector3(), N: new THREE.Vector3(), L: new THREE.Vector3() }
+  c.marco(c.largo, m)
+  const out: GeoDedo[] = []
+  for (const [cN, cL, arco, largo, radio, abre, mcp, pip, dip] of DEDOS) {
+    const B = m.c.clone().addScaledVector(m.N, cN * g).addScaledVector(m.L, cL * g).addScaledVector(m.T, arco * g)
+    const d0 = m.T.clone().addScaledVector(m.N, abre).normalize()
+    const dor0 = m.L.clone().addScaledVector(d0, -m.L.dot(d0)).normalize()
+    const w = m.N.clone().addScaledVector(d0, -m.N.dot(d0))
+    w.addScaledVector(dor0, -w.dot(dor0)).normalize()
+    const d = [d0]
+    const dor = [dor0]
+    // Flexión hacia la palma (-dorso), articulación por articulación.
+    for (const th of [mcp, pip, dip]) {
+      const a = d[d.length - 1]
+      const b = dor[dor.length - 1]
+      const co = Math.cos(th)
+      const si = Math.sin(th)
+      d.push(a.clone().multiplyScalar(co).addScaledVector(b, -si))
+      dor.push(b.clone().multiplyScalar(co).addScaledVector(a, si))
+    }
+    const L = largo * g
+    const pip3 = B.clone().addScaledVector(d[1], L * FALANGES[0])
+    const dip3 = pip3.clone().addScaledVector(d[2], L * FALANGES[1])
+    const tip = dip3.clone().addScaledVector(d[3], L * FALANGES[2])
+    out.push({ j: [B, pip3, dip3, tip], d, dor, w, r: radio * g, largo: L })
+  }
+  return out
+}
+
+/** Triángulo con la cara hacia `afuera` (dirección). */
+function triHacia(lote: Lote, a: number, b: number, c: number, afuera: THREE.Vector3) {
+  const P = lote.pos
+  const e1x = P[b * 3] - P[a * 3], e1y = P[b * 3 + 1] - P[a * 3 + 1], e1z = P[b * 3 + 2] - P[a * 3 + 2]
+  const e2x = P[c * 3] - P[a * 3], e2y = P[c * 3 + 1] - P[a * 3 + 1], e2z = P[c * 3 + 2] - P[a * 3 + 2]
+  const nx = e1y * e2z - e1z * e2y
+  const ny = e1z * e2x - e1x * e2z
+  const nz = e1x * e2y - e1y * e2x
+  if (nx * afuera.x + ny * afuera.y + nz * afuera.z >= 0) lote.t(a, b, c)
+  else lote.t(a, c, b)
+}
+
+function mallaMano(lote: Lote, cu: Cuerpo, c: Cadena, anilloBrazo: number[], tc: RGBA) {
   const s = cu.s
   const lado = c.lado
   const L = lado > 0 ? "I" : "D"
-  c.marco(c.largo - 0.004 * s, _m)
-  const base = _m.c.clone()
-  const T = _m.T.clone()
-  const N = _m.N.clone()
-  const Lat = _m.L.clone()
-  const g = (cu.fem ? 0.9 : 1) * cu.k.manos
-  // [posición frente-atrás, largo, radio]
-  const dedos: Array<[number, number, number]> = [
-    [0.027, 0.075, 0.0091],
-    [0.0085, 0.082, 0.0094],
-    [-0.0095, 0.077, 0.0088],
-    [-0.026, 0.061, 0.0078],
-  ]
-  const j2 = cu.j[`dedos2${L}`]
+  const g = s * (cu.fem ? 0.9 : 1) * cu.k.manos
+  const uMano = c.u[3]
+  const uK = c.largo
+  const uW = uMano + 0.004 * s
+  const fi = cu.rasgos.f
+  // Palmas (y yemas) más claras; mucho más en las pieles oscuras.
+  const cb = new THREE.Color(fi.piel.base)
+  const Y = 0.2126 * cb.r + 0.7152 * cb.g + 0.0722 * cb.b
+  const kD = 1 - suave(0.04, 0.32, Y)
+  const pal: RGBA = [tc[0] * (1.04 + 0.75 * kD), tc[1] * (1.02 + 0.85 * kD), tc[2] * (1.02 + 0.9 * kD), 1]
+  const nudo: RGBA = [tc[0] * 0.99, tc[1] * 0.93, tc[2] * 0.92, 1]
+  const una: RGBA = [tc[0] * 1.24 * (1 + 0.5 * kD), tc[1] * 1.04 * (1 + 0.6 * kD), tc[2] * 1.02 * (1 + 0.7 * kD), 1]
+  const borde: RGBA = [tc[0] * 1.6 * (1 + 0.6 * kD), tc[1] * 1.52 * (1 + 0.7 * kD), tc[2] * 1.42 * (1 + 0.8 * kD), 1]
+  const mezcla = (a: RGBA, b: RGBA, t: number): RGBA => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t), 1]
+  const MATP: Mat2 = [0.55, 0]
+  const MATU: Mat2 = [0.25, 0]
+  const dedos = geoDedos(cu, c)
+  const hD = H[`dedos${L}`]
+  const hD2 = H[`dedos2${L}`]
+  const hM = H[`mano${L}`]
+  // El índice va con su propio hueso (no en los androides: su sombreador de la
+  // mano reconoce los huesos de los dedos de siempre).
+  const conIndice = !cu.uvDedoFraccion
+  const hI = conIndice ? H[`indice${L}`] : hD
+  const hI2 = conIndice ? H[`indice2${L}`] : hD2
   const P = new THREE.Vector3()
-  const m: Marco = { c: new THREE.Vector3(), T: new THREE.Vector3(), N: new THREE.Vector3(), L: new THREE.Vector3() }
-  for (const [f, largo, radio] of dedos) {
-    const l = largo * s * g
-    const r = radio * s * g
-    const a0 = base.clone().addScaledVector(N, f * s * g).addScaledVector(T, -0.012 * s)
-    // Dedos un poco convergentes.
-    const dir = T.clone().addScaledVector(N, -f * 0.25).normalize()
-    const filas = [0, 0.3, 0.45, 0.6, 0.76, 0.88, 0.96, 1]
-    const ids: number[][] = []
-    const centros: THREE.Vector3[] = []
-    const cols = 6
-    for (const t of filas) {
-      m.c.copy(a0).addScaledVector(dir, t * (l + 0.012 * s))
-      m.T.copy(dir)
-      m.N.copy(N)
-      m.L.copy(Lat)
-      // Falanges: un poco más anchas en las articulaciones, la punta redonda.
-      const nud = 1 + 0.08 * campana(t, 0.45, 0.06) + 0.06 * campana(t, 0.75, 0.05)
-      const punta = t > 0.88 ? Math.sqrt(Math.max(0, 1 - ((t - 0.88) / 0.12) ** 2)) : 1
-      const rr = r * (1 - 0.18 * t) * nud * punta + (t >= 1 ? 0.0004 : 0)
-      const radios = [rr * 0.95, rr, rr * 0.95, rr]
-      const fila: number[] = []
-      // Peso: falange proximal → dedos; el resto → dedos2 (articulación promedio).
-      const yRel = m.c.distanceTo(base)
-      const d2 = base.distanceTo(j2)
-      const w2 = suave(d2 - 0.006 * s, d2 + 0.006 * s, yRel)
-      const pw: Pesos = [[H[`dedos${L}`], 1 - w2], [H[`dedos2${L}`], w2]]
-      for (let k = 0; k < cols; k++) {
-        const a = (k / cols) * Math.PI * 2
-        Cuerpo.puntoAnillo(m, radios, a, 2.2, P)
-        // Uñas: lado del dorso (lateral) de la última falange, claras y brillantes.
-        const una = t > 0.76 && t < 0.97 && Math.cos(a) > 0.35 ? 1 : 0
-        const col: RGBA = una ? [1.08 * tc[0], 0.98 * tc[1], 0.96 * tc[2], 1] : [tc[0], 0.985 * tc[1], 0.98 * tc[2], 1]
-        fila.push(lote.v(P.x, P.y, P.z, k / cols, t, col, pw, una ? [0.3, 0] : [0.55, 0]))
+  const Q = new THREE.Vector3()
+  const mk: Marco = { c: new THREE.Vector3(), T: new THREE.Vector3(), N: new THREE.Vector3(), L: new THREE.Vector3() }
+  c.marco(uK, mk)
+
+  // ── Dedos: anillos de 8 (j = 0..3 dorso, del lado del meñique al del índice; 4..7 palma, al revés) ──
+  const ANGD = [0, 1, 2, 3, 4, 5, 6, 7].map((j) => ((157.5 - 45 * j) * Math.PI) / 180)
+  const anillos: number[][][] = []
+  const fd = new THREE.Vector3()
+  const fdor = new THREE.Vector3()
+  for (let f = 0; f < 4; f++) {
+    const G = dedos[f]
+    const [, , , , , , mcp, pip, dip] = DEDOS[f]
+    const flex = [mcp, pip, dip]
+    const filasD: number[][] = []
+    let sAcum = 0
+    const sPIP = G.largo * FALANGES[0]
+    const sDIP = sPIP + G.largo * FALANGES[1]
+    for (let i = 0; i < FILAS_DEDO.length; i++) {
+      const [seg, fr, kw, kd, kp] = FILAS_DEDO[i]
+      let k1 = 1
+      if (seg < 0) {
+        // Articulación: sección en la bisectriz (se alarga en el plano de la flexión).
+        const a = -seg
+        Q.copy(G.j[a])
+        fd.copy(G.d[a]).add(G.d[a + 1]).normalize()
+        fdor.copy(G.dor[a]).add(G.dor[a + 1]).normalize()
+        k1 = 1 / Math.cos(flex[a] / 2)
+        sAcum = a === 1 ? sPIP : sDIP
+      } else if (i === 0) {
+        // Nudillo: en la bisectriz entre la palma y la falange.
+        Q.copy(G.j[0])
+        fd.copy(G.d[0]).add(G.d[1]).normalize()
+        fdor.copy(G.dor[0]).add(G.dor[1]).normalize()
+        k1 = 1 / Math.cos(flex[0] / 2)
+        sAcum = 0
+      } else {
+        const lSeg = G.largo * FALANGES[seg]
+        Q.copy(G.j[seg]).addScaledVector(G.d[seg + 1], lSeg * fr)
+        fd.copy(G.d[seg + 1])
+        fdor.copy(G.dor[seg + 1])
+        sAcum = (seg === 0 ? 0 : seg === 1 ? sPIP : sDIP) + lSeg * fr
       }
-      ids.push(fila)
-      centros.push(m.c.clone())
+      const t = sAcum / G.largo
+      const r = G.r * (1 - 0.1 * t)
+      // Pesos: nudillo y membrana mezclan con la mano; después, dedos → dedos2 en la PIP.
+      const w2 = suave(sPIP - 0.006 * s, sPIP + 0.006 * s, sAcum)
+      const d1 = f === 0 ? hI : hD
+      const d2 = f === 0 ? hI2 : hD2
+      const pw: Pesos = i === 0 ? [[hM, 0.5], [d1, 0.5]] : i === 1 ? [[hM, 0.12], [d1, 0.88]] : [[d1, 1 - w2], [d2, w2]]
+      const fila: number[] = []
+      for (let j = 0; j < 8; j++) {
+        const a = ANGD[j]
+        const ca = Math.cos(a)
+        const sa = Math.sin(a)
+        const dorso = sa > 0
+        let x = r * kw * ca
+        let y = r * (dorso ? kd * k1 : kp * k1) * sa
+        // Uña: plana y apenas levantada sobre la falange distal.
+        const enUna = i >= 4 && i <= 6 && dorso ? (j === 1 || j === 2 ? 1 : 0.35) : 0
+        if (enUna > 0) {
+          y += 0.00025 * s * enUna
+          if (j === 0 || j === 3) y -= 0.0006 * s * (i >= 5 ? 1 : 0.5)
+        }
+        P.copy(Q).addScaledVector(G.w, x).addScaledVector(fdor, y)
+        let col: RGBA
+        if (!dorso) col = i === 0 ? mezcla(tc, pal, 0.7) : pal
+        else if (enUna > 0) col = mezcla(tc, i === 6 && enUna === 1 ? borde : una, enUna)
+        else col = i === 0 || i === 2 || i === 3 ? nudo : [tc[0], tc[1], tc[2], 1]
+        // (uv.y: en el nudillo y la membrana, la u del brazo; en el dedo, 0..1 de la base a la punta — avatar-androide lo lee así)
+        const vy = i <= 1 ? uK + 0.002 * s * i : cu.uvDedoFraccion ? t : uK + sAcum
+        fila.push(lote.v(P.x, P.y, P.z, (j / 8) * 0.06 * (r / 0.0095), vy, col, pw, enUna > 0.5 ? MATU : dorso ? MATP : [0.6, 0]))
+      }
+      filasD.push(fila)
     }
-    lote.tiras(ids, true, { centros })
-    // Cerrar la punta
-    const ult = ids[ids.length - 1]
-    const pc = m.c.clone().addScaledVector(dir, 0.0006)
-    const tip = lote.v(pc.x, pc.y, pc.z, 0.5, 1, tc, [[H[`dedos2${L}`], 1]], [0.55, 0])
-    for (let k = 0; k < cols; k++) lote.t(tip, ult[k], ult[(k + 1) % cols])
-    lote.pieza()
+    anillos.push(filasD)
   }
-  // Pulgar: de la base de la muñeca hacia adelante y abajo.
+
+  // ── Palma: de la muñeca (anillo como el del brazo) a la fila de los nudillos ──
+  const NC = 32
+  const angM: number[] = []
+  for (let m = 0; m < NC; m++) angM.push(-Math.PI / 2 + (2 * Math.PI * (m + 0.5)) / NC)
+  // Columna m de la palma ↔ (dedo, j) en la fila de los nudillos.
+  const colDedo = (m: number): [number, number] => (m < 16 ? [3 - Math.floor(m / 4), m % 4] : [Math.floor((m - 16) / 4), 4 + ((m - 16) % 4)])
+  const nudillos: number[] = []
+  for (let m = 0; m < NC; m++) {
+    const [f, j] = colDedo(m)
+    nudillos.push(anillos[f][0][j])
+  }
+  // Coordenadas (ancho, dorso) de cada columna en la fila de los nudillos, en el marco de uK.
+  const xK = new Float64Array(NC)
+  const yK = new Float64Array(NC)
+  for (let m = 0; m < NC; m++) {
+    const v = nudillos[m]
+    P.set(lote.pos[v * 3], lote.pos[v * 3 + 1], lote.pos[v * 3 + 2]).sub(mk.c)
+    xK[m] = P.dot(mk.N)
+    yK[m] = P.dot(mk.L)
+  }
+  const arcoM = (m: number) => DEDOS[colDedo(m)[0]][2] * g
+  const TS = [0, 0.3, 0.6, 0.85]
+  const ANCHO = [[0, 0.03], [0.24, 0.0355], [0.48, 0.0392], [0.7, 0.0398], [0.87, 0.0392], [1, 0.039]]
+  const DORSO = [[0, 0.018], [0.24, 0.0128], [0.48, 0.0108], [0.7, 0.01], [0.87, 0.0098], [1, 0.0098]]
+  const PALMA = [[0, 0.019], [0.24, 0.0152], [0.48, 0.013], [0.7, 0.012], [0.87, 0.0118], [1, 0.0118]]
+  const filasP: number[][] = []
+  const centrosP: THREE.Vector3[] = []
+  for (const t of TS) {
+    const u = lerp(uW, uK, t)
+    c.marco(u, _m)
+    const fila: number[] = []
+    const rB = cu.radiosBrazo(u)
+    const W = tablaSuave(ANCHO, t, 1) * g
+    const Hd = tablaSuave(DORSO, t, 1) * g
+    const Hp = tablaSuave(PALMA, t, 1) * g
+    const kK = t <= 0 ? 0 : Math.pow(suave(0.3, 1, t), 1.4) * 0.85
+    // Pesos: brazo → mano; cerca de los nudillos, un poco de dedos.
+    const pb = cu.pesosBrazo(lado, u)
+    const wd = 0.3 * suave(0.6, 0.9, t)
+    const pw: Pesos = wd > 0.001 ? [...pb.map(([h, w]) => [h, w * (1 - wd)] as [number, number]), [hD, wd]] : pb
+    for (let m = 0; m < NC; m++) {
+      const a = angM[m]
+      const ca = Math.cos(a)
+      const sa = Math.sin(a)
+      if (t <= 0) {
+        cu.puntoBrazo(_m, rB, u, a, P)
+      } else {
+        // Sección: caja redondeada (dorso plano, palma con tenar, hipotenar y hueco).
+        const p = 2.6
+        let x = W * Math.sign(sa) * Math.pow(Math.abs(sa), 2 / p)
+        const wn = x / W
+        let hp = Hp
+        hp += 0.0072 * g * campana(wn, 0.6, 0.32) * campana(t, 0.3, 0.2)
+        hp += 0.0034 * g * campana(wn, -0.7, 0.26) * campana(t, 0.45, 0.25)
+        hp -= 0.0026 * g * campana(wn, 0.05, 0.32) * campana(t, 0.56, 0.16)
+        // Dorso: metacarpianos apenas marcados hacia los nudillos.
+        let hd = Hd * (1 + 0.05 * suave(0.4, 0.85, t) * Math.cos(wn * Math.PI * 2.1))
+        let y = (ca >= 0 ? hd : hp) * Math.sign(ca) * Math.pow(Math.abs(ca), 2 / p)
+        // Hacia los nudillos, la sección se acerca a la de los dedos.
+        x = lerp(x, xK[m], kK)
+        y = lerp(y, yK[m], kK)
+        P.copy(_m.c).addScaledVector(_m.N, x).addScaledVector(_m.L, y).addScaledVector(_m.T, arcoM(m) * t * t)
+      }
+      const dorso = ca > 0
+      const kp = dorso ? 0 : suave(0.0, 0.3, t)
+      const col = mezcla(tc, pal, kp)
+      fila.push(lote.v(P.x, P.y, P.z, (m / NC) * 0.2, u, col, pw, dorso ? MATP : [0.6, 0]))
+    }
+    filasP.push(fila)
+    centrosP.push(_m.c.clone())
+  }
+  filasP.push(nudillos)
+  centrosP.push(mk.c.clone())
+  lote.tiras(filasP, true, { centros: centrosP })
+
+  // ── Costura brazo (16) → muñeca (32), por ángulo ──
   {
-    const cmc = cu.j[`pulgar${L}`]
-    const dir = T.clone().multiplyScalar(0.82).addScaledVector(N, 0.5).addScaledVector(Lat, -0.15).normalize()
-    const l = 0.085 * s * g
-    const r = 0.0105 * s * g
-    const filas = [0, 0.2, 0.45, 0.62, 0.8, 0.92, 1]
-    const ids: number[][] = []
-    const centros: THREE.Vector3[] = []
-    const cols = 6
-    const Np = Lat.clone().cross(dir).normalize().multiplyScalar(-lado)
-    for (const t of filas) {
-      m.c.copy(cmc).addScaledVector(dir, t * l)
-      m.T.copy(dir)
-      m.N.copy(Np)
-      m.L.copy(Lat)
-      const punta = t > 0.86 ? Math.sqrt(Math.max(0, 1 - ((t - 0.86) / 0.14) ** 2)) : 1
-      const eminencia = 1 + 0.45 * suave(0.45, 0.0, t)
-      const rr = r * (1 - 0.15 * t) * punta * eminencia + (t >= 1 ? 0.0004 : 0)
-      const fila: number[] = []
-      const pw: Pesos = t < 0.25 ? [[H[`mano${L}`], 1 - t * 2], [H[`pulgar${L}`], t * 2 + 0.5]] : [[H[`pulgar${L}`], 1]]
-      for (let k = 0; k < cols; k++) {
-        const a = (k / cols) * Math.PI * 2
-        Cuerpo.puntoAnillo(m, [rr, rr * 0.9, rr, rr * 0.9], a, 2.2, P)
-        const una = t > 0.72 && t < 0.96 && Math.sin(a) > 0.3 ? 1 : 0
-        fila.push(lote.v(P.x, P.y, P.z, k / cols, t, una ? [1.08 * tc[0], 0.98 * tc[1], 0.96 * tc[2], 1] : tc, pw, una ? [0.3, 0] : [0.55, 0]))
-      }
-      ids.push(fila)
-      centros.push(m.c.clone())
+    const A = anilloBrazo
+    const nA = A.length
+    const B = filasP[0]
+    const angA = (k: number) => (2 * Math.PI * k) / nA
+    // B ordenado por ángulo desde 0.
+    let m0 = 0
+    while (angM[m0] < 0) m0++
+    const angB = (q: number) => {
+      const m = (m0 + q) % NC
+      return angM[m] + (m < m0 ? 2 * Math.PI : 0)
     }
-    lote.tiras(ids, true, { centros })
-    const ult = ids[ids.length - 1]
-    const pc = m.c.clone()
-    const tip = lote.v(pc.x, pc.y, pc.z, 0.5, 1, tc, [[H[`pulgar${L}`], 1]], [0.55, 0])
-    for (let k = 0; k < cols; k++) lote.t(tip, ult[k], ult[(k + 1) % cols])
-    lote.pieza()
+    const idB = (q: number) => B[(m0 + q) % NC]
+    let i = 0
+    let q = 0
+    c.marco(uW, _m)
+    const cen = _m.c
+    const afuera = new THREE.Vector3()
+    const tri = (a: number, b: number, d: number) => {
+      afuera.set(lote.pos[a * 3] - cen.x, lote.pos[a * 3 + 1] - cen.y, lote.pos[a * 3 + 2] - cen.z)
+      triHacia(lote, a, b, d, afuera)
+    }
+    while (i < nA || q < NC) {
+      const sigA = i < nA ? angA(i + 1) : Infinity
+      const sigB = q < NC ? angB(q + 1) : Infinity
+      if (sigA <= sigB) {
+        tri(A[i % nA], A[(i + 1) % nA], idB(q % NC))
+        i++
+      } else {
+        tri(A[i % nA], idB((q + 1) % NC), idB(q % NC))
+        q++
+      }
+    }
   }
+
+  // ── Tubos de los dedos, membranas y horquillas ──
+  for (let f = 0; f < 4; f++) {
+    const filasD = anillos[f]
+    const G = dedos[f]
+    const centros = filasD.map((fila) => {
+      const v = fila[0]
+      const w = fila[4]
+      return new THREE.Vector3((lote.pos[v * 3] + lote.pos[w * 3]) / 2, (lote.pos[v * 3 + 1] + lote.pos[w * 3 + 1]) / 2, (lote.pos[v * 3 + 2] + lote.pos[w * 3 + 2]) / 2).addScaledVector(G.w, 0)
+    })
+    // Centro real de cada anillo (promedio de los 8).
+    for (let i = 0; i < filasD.length; i++) {
+      const cc = centros[i].set(0, 0, 0)
+      for (const v of filasD[i]) cc.x += lote.pos[v * 3], cc.y += lote.pos[v * 3 + 1], cc.z += lote.pos[v * 3 + 2]
+      cc.multiplyScalar(1 / 8)
+    }
+    // Entre nudillo y membrana, los costados que dan a otro dedo quedan dentro de la membrana.
+    lote.tiras(filasD, true, { centros, emitir: (i, j) => !(i === 0 && ((j === 3 && f > 0) || (j === 7 && f < 3))) })
+    // Punta redonda (la yema sobresale un poco hacia la palma).
+    const ult = filasD[filasD.length - 1]
+    const pc = G.j[3].clone().addScaledVector(G.dor[3], -0.12 * G.r)
+    const tip = lote.v(pc.x, pc.y, pc.z, 0.03, cu.uvDedoFraccion ? 1 : uK + G.largo, pal, [[f === 0 ? hI2 : hD2, 1]], [0.55, 0])
+    for (let k = 0; k < 8; k++) triHacia(lote, tip, ult[k], ult[(k + 1) % 8], G.d[3])
+  }
+  {
+    const dorso = mk.L.clone()
+    const palma = mk.L.clone().negate()
+    const dist = mk.T.clone()
+    for (let f = 0; f < 3; f++) {
+      const a = anillos[f]
+      const b = anillos[f + 1]
+      // Dorso: b.j3 — a.j0; palma: a.j7 — b.j4 (filas 0 y 1); horquilla en la fila 1.
+      for (const [v0, v1, w0, w1, n] of [
+        [b[0][3], a[0][0], b[1][3], a[1][0], dorso],
+        [a[0][7], b[0][4], a[1][7], b[1][4], palma],
+      ] as Array<[number, number, number, number, THREE.Vector3]>) {
+        triHacia(lote, v0, v1, w1, n)
+        triHacia(lote, v0, w1, w0, n)
+      }
+      triHacia(lote, b[1][3], a[1][0], a[1][7], dist)
+      triHacia(lote, b[1][3], a[1][7], b[1][4], dist)
+    }
+  }
+  lote.pieza()
+  mallaPulgar(lote, cu, c, tc, pal, una, borde)
+}
+
+/** Pulgar: metacarpiano (forma la eminencia tenar) y dos falanges, con uña. */
+function mallaPulgar(lote: Lote, cu: Cuerpo, c: Cadena, tc: RGBA, pal: RGBA, una: RGBA, borde: RGBA) {
+  const s = cu.s
+  const lado = c.lado
+  const L = lado > 0 ? "I" : "D"
+  const g = s * (cu.fem ? 0.9 : 1) * cu.k.manos
+  const m: Marco = { c: new THREE.Vector3(), T: new THREE.Vector3(), N: new THREE.Vector3(), L: new THREE.Vector3() }
+  c.marco(c.u[3] + 0.03 * s, m)
+  const cmc = cu.j[`pulgar${L}`].clone().addScaledVector(m.L, 0.004 * g)
+  // Metacarpiano: hacia abajo, adelante y fuera de la palma; las falanges, más hacia abajo.
+  const d0 = m.T.clone().multiplyScalar(0.86).addScaledVector(m.N, 0.42).addScaledVector(m.L, -0.2).normalize()
+  // Dorso del pulgar (la uña): adelante y algo afuera.
+  const dor0 = m.N.clone().multiplyScalar(0.85).addScaledVector(m.L, 0.52)
+  dor0.addScaledVector(d0, -dor0.dot(d0)).normalize()
+  const w = new THREE.Vector3().crossVectors(d0, dor0).normalize()
+  const d = [d0]
+  const dor = [dor0]
+  for (const th of [0.36, 0.3]) {
+    const a = d[d.length - 1]
+    const b = dor[dor.length - 1]
+    d.push(a.clone().multiplyScalar(Math.cos(th)).addScaledVector(b, -Math.sin(th)))
+    dor.push(b.clone().multiplyScalar(Math.cos(th)).addScaledVector(a, Math.sin(th)))
+  }
+  const LM = 0.04 * g
+  const L1 = 0.028 * g
+  const L2 = 0.025 * g
+  const mcp = cmc.clone().addScaledVector(d[0], LM)
+  const ip = mcp.clone().addScaledVector(d[1], L1)
+  const tip = ip.clone().addScaledVector(d[2], L2)
+  const largo = LM + L1 + L2
+  const r0 = 0.0102 * g
+  // [punto, segmento, fracción, ancho, dorso, palma]
+  const filas: Array<[THREE.Vector3, number, number, number, number, number]> = [
+    [cmc, 0, 0, 0.5, 0.5, 0.5],
+    [cmc, 0, 0.42, 1.22, 1.06, 1.26],
+    [mcp, -1, 0, 1.04, 0.95, 0.92],
+    [ip, -2, 0, 0.98, 0.86, 0.84],
+    [ip, 2, 0.3, 0.96, 0.78, 0.95],
+    [ip, 2, 0.6, 0.94, 0.75, 0.94],
+    [ip, 2, 0.82, 0.8, 0.64, 0.8],
+    [ip, 2, 0.95, 0.46, 0.36, 0.46],
+  ]
+  const ANGD = [0, 1, 2, 3, 4, 5, 6, 7].map((j) => ((157.5 - 45 * j) * Math.PI) / 180)
+  const P = new THREE.Vector3()
+  const Q = new THREE.Vector3()
+  const fd = new THREE.Vector3()
+  const fdor = new THREE.Vector3()
+  const ids: number[][] = []
+  const centros: THREE.Vector3[] = []
+  const hM = H[`mano${L}`]
+  const hP = H[`pulgar${L}`]
+  for (let i = 0; i < filas.length; i++) {
+    const [base, seg, fr, kw, kd, kp] = filas[i]
+    let sAc = 0
+    if (seg < 0) {
+      const a = -seg
+      Q.copy(base)
+      fd.copy(d[a - 1]).add(d[a]).normalize()
+      fdor.copy(dor[a - 1]).add(dor[a]).normalize()
+      sAc = a === 1 ? LM : LM + L1
+    } else {
+      const lSeg = [LM, L1, L2][seg]
+      Q.copy(base).addScaledVector(d[seg], lSeg * fr)
+      fd.copy(d[seg])
+      fdor.copy(dor[seg])
+      sAc = (seg === 0 ? 0 : seg === 1 ? LM : LM + L1) + lSeg * fr
+    }
+    const t = sAc / largo
+    // (dentro de la palma, casi todo mano; en la tenar, mezcla; las falanges, pulgar)
+    const wp = suave(0.12, 0.45, t)
+    const pw: Pesos = wp >= 0.999 ? [[hP, 1]] : [[hM, 1 - wp], [hP, wp + 0.0001]]
+    const fila: number[] = []
+    for (let j = 0; j < 8; j++) {
+      const a = ANGD[j]
+      const ca = Math.cos(a)
+      const sa = Math.sin(a)
+      const dorso = sa > 0
+      let y = r0 * (dorso ? kd : kp) * sa
+      const enUna = i >= 4 && i <= 6 && dorso ? (j === 1 || j === 2 ? 1 : 0.35) : 0
+      if (enUna > 0) y += 0.00025 * s * enUna
+      P.copy(Q).addScaledVector(w, r0 * kw * ca).addScaledVector(fdor, y)
+      const col: RGBA = !dorso ? pal : enUna > 0 ? (i === 6 && enUna === 1 ? borde : una) : tc
+      fila.push(lote.v(P.x, P.y, P.z, (j / 8) * 0.065, cu.uvDedoFraccion ? t : c.u[3] + sAc, col, pw, enUna > 0.5 ? [0.3, 0] : [0.55, 0]))
+    }
+    ids.push(fila)
+    centros.push(Q.clone())
+  }
+  lote.tiras(ids, true, { centros })
+  const ult = ids[ids.length - 1]
+  const pc = tip.clone().addScaledVector(dor[2], -0.12 * r0)
+  const vt = lote.v(pc.x, pc.y, pc.z, 0.03, cu.uvDedoFraccion ? 1 : c.u[3] + largo, pal, [[hP, 1]], [0.55, 0])
+  for (let k = 0; k < 8; k++) triHacia(lote, vt, ult[k], ult[(k + 1) % 8], d[2])
+  // Base (queda dentro de la palma).
+  const pri = ids[0]
+  const vb = lote.v(cmc.x, cmc.y, cmc.z, 0.03, 0, tc, [[hM, 1]], [0.55, 0])
+  const atras = d[0].clone().negate()
+  for (let k = 0; k < 8; k++) triHacia(lote, vb, pri[(k + 1) % 8], pri[k], atras)
+  lote.pieza()
 }
 
 function mallaPierna(lote: Lote, cu: Cuerpo, c: Cadena, cub: Cobertura, tc: RGBA) {

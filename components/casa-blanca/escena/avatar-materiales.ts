@@ -15,7 +15,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import * as THREE from "three"
-import { texArrugas, texNumero, texOjo, texPelo, texPielColor, texPielNormal, texRizos, texTela, type Tejido } from "./avatar-texturas"
+import { TELA_REPETIR, texArrugas, texNumero, texOjo, texPelo, texPielColor, texPielNormal, texRizos, texRizosDir, texTelas, type Tejido } from "./avatar-texturas"
 
 /** Lee la rugosidad y el metal del vértice (atributo aMat) y, si hay color de dispersión, envuelve la luz. */
 function inyectar(m: THREE.MeshPhysicalMaterial, sss: THREE.Color | null) {
@@ -111,14 +111,96 @@ export function matPiel(color: string): THREE.MeshPhysicalMaterial {
   return m
 }
 
+// ── Ropa ──────────────────────────────────────────────────────
+// Por vértice (aArr): x = tela (capa de texTelas), y = pliegue (tipo + 2·fuerza
+// en la parte decimal), z, w = coordenadas del pliegue (a lo largo, alrededor).
+// Por tela: repetición física, fuerza del relieve, terciopelo (sheen, teñido con
+// el color de la prenda) y barniz (cuero de vestir, charol).
+const N_TELAS = 16
+const fl = (a: number[]) => `float[${N_TELAS}]( ${a.map((x) => x.toFixed(3)).join(", ")} )`
+const TELA_NORMAL = [0.65, 0.35, 0.55, 1.0, 0.5, 0.75, 0.55, 0.4, 0.5, 0.8, 1.0, 0.6, 0, 0, 0, 0.5]
+const TELA_SHEEN = [0.55, 0.22, 0.4, 0.75, 0.22, 0.3, 0.85, 0.35, 0.0, 0.2, 0.65, 0.0, 0.0, 0, 0.0, 0.9]
+// Especular por tela (la tela mate no tiene brillo puntual: la camisa blanca se quemaba en el cuello).
+const TELA_ESPEC = [0.7, 0.45, 0.5, 0.4, 0.5, 0.5, 0.35, 1, 1, 0.6, 0.4, 0.6, 1, 1, 1, 0.35]
+const TELA_BARNIZ = [0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0, 0, 0, 0.75, 0]
+
+const GLSL_ROPA_PARS = /* glsl */ `
+uniform sampler2DArray uTelas;
+varying vec4 vTela;
+varying vec2 vTelaUv;
+const float TELA_REP[${N_TELAS}] = ${fl(TELA_REPETIR)};
+const float TELA_NOR[${N_TELAS}] = ${fl(TELA_NORMAL)};
+const float TELA_SHE[${N_TELAS}] = ${fl(TELA_SHEEN)};
+const float TELA_BAR[${N_TELAS}] = ${fl(TELA_BARNIZ)};
+const float TELA_ESP[${N_TELAS}] = ${fl(TELA_ESPEC)};
+float plA( float x ) { float q = sin( x ); return sqrt( q * q + 0.03 ) - 0.17; }
+// Altura de los pliegues (0..~0,85) según el tipo y la posición en la prenda.
+float pliegueH( float tipo, float s, float t ) {
+	float h = 0.0;
+	if ( tipo < 1.5 ) {
+		// Manga: s = u / u(codo); t = ángulo (pi/2 = pliegue del codo).
+		float fr = pow( max( 0.0, sin( t ) ), 1.5 );
+		float codo = exp( - pow( ( s - 1.0 ) / 0.17, 2.0 ) );
+		h += codo * fr * 0.5 * ( plA( ( s - 1.0 ) * 17.0 + ( t - 1.5708 ) * 2.4 ) + plA( ( s - 1.0 ) * 17.0 - ( t - 1.5708 ) * 2.4 ) );
+		h += smoothstep( 1.55, 1.85, s ) * 0.7 * plA( s * 34.0 + 0.7 * sin( t * 2.0 ) );
+		h += exp( - pow( ( s - 0.2 ) / 0.13, 2.0 ) ) * max( 0.0, - cos( t ) ) * 0.7 * plA( s * 15.0 + t * 1.6 );
+		h += 0.08 * ( 1.0 + sin( t * 3.0 + s * 9.0 ) );
+	} else if ( tipo < 2.5 ) {
+		// Pernera: s = u / u(rodilla); t = ángulo (pi/2 = adelante).
+		float atras = max( 0.0, - sin( t ) );
+		float fr = max( 0.0, sin( t ) );
+		h += exp( - pow( ( s - 1.0 ) / 0.15, 2.0 ) ) * pow( atras, 1.2 ) * plA( ( s - 1.0 ) * 22.0 + 0.9 * cos( t ) );
+		h += exp( - pow( ( s - 0.2 ) / 0.15, 2.0 ) ) * smoothstep( 0.1, 0.8, fr ) * 0.8 * plA( s * 19.0 - ( t - 1.5708 ) * 3.2 );
+		h += smoothstep( 1.75, 1.97, s ) * ( 0.4 + 0.6 * fr ) * plA( s * 27.0 + 0.6 * sin( t ) );
+		h += 0.06 * ( 1.0 + sin( t * 3.0 + s * 4.0 ) );
+	} else if ( tipo < 3.5 ) {
+		// Torso: s = y / estatura; t = ángulo (pi/2 = adelante, 0 y pi = costados).
+		float lado = pow( abs( cos( t ) ), 2.0 );
+		h += exp( - pow( ( s - 0.615 ) / 0.035, 2.0 ) ) * 0.5 * plA( t * 11.0 + s * 18.0 + 0.8 * sin( t * 3.0 ) );
+		h += exp( - pow( ( s - 0.725 ) / 0.045, 2.0 ) ) * lado * 0.8 * plA( s * 34.0 + abs( sin( t ) ) * 5.0 );
+		h += 0.08 * ( 1.0 + sin( t * 5.0 + s * 11.0 + 0.6 * sin( t * 2.3 ) ) );
+	} else if ( tipo < 4.5 ) {
+		// Caída (faldas, túnicas, capas): pliegues casi verticales que crecen hacia el ruedo.
+		float g = 0.35 + 0.65 * smoothstep( 0.62, 0.15, s );
+		h += g * plA( t * 9.0 + 4.0 * s + 0.8 * sin( t * 3.0 + s * 7.0 ) );
+		h += g * 0.45 * plA( t * 17.0 - 3.0 * s + 1.3 );
+	} else {
+		// Banda (manto cruzado): pliegues a lo largo. s = 0..1 a lo largo, t = -1..1 a lo ancho.
+		h += plA( t * 4.7 + s * 6.0 + 0.5 * sin( s * 13.0 ) ) * 0.9 + 0.3 * plA( t * 9.0 - s * 3.0 );
+	}
+	return h;
+}
+// Relieve por derivadas de pantalla (sin tangentes): h en metros.
+vec3 telaRelieve( vec3 p, vec3 n, float h, float fd ) {
+	vec3 dpx = dFdx( p );
+	vec3 dpy = dFdy( p );
+	vec3 r1 = cross( dpy, n );
+	vec3 r2 = cross( n, dpx );
+	float det = dot( dpx, r1 ) * fd;
+	vec3 g = sign( det ) * ( dFdx( h ) * r1 + dFdy( h ) * r2 );
+	return normalize( abs( det ) * n - g );
+}
+mat3 telaTBN( vec3 p, vec3 n, vec2 uv ) {
+	vec3 q0 = dFdx( p );
+	vec3 q1 = dFdy( p );
+	vec2 st0 = dFdx( uv );
+	vec2 st1 = dFdy( uv );
+	vec3 q1p = cross( q1, n );
+	vec3 q0p = cross( n, q0 );
+	vec3 T = q1p * st0.x + q0p * st1.x;
+	vec3 B = q1p * st0.y + q0p * st1.y;
+	float det = max( dot( T, T ), dot( B, B ) );
+	float sc = det == 0.0 ? 0.0 : inversesqrt( det );
+	return mat3( T * sc, B * sc, n );
+}
+`
+
+/** Ropa: un solo material (las telas van por vértice). `numero`: textura con el número de camiseta (canal uv1). */
 const ropas = new Map<string, THREE.MeshPhysicalMaterial>()
-/** Ropa de un tejido. `numero`: textura con el número de camiseta (canal uv1). */
-export function matRopa(tejido: Tejido, numero?: { texto: string; relleno: string; borde: string }): THREE.MeshPhysicalMaterial {
-  const clave = `${tejido}|${numero ? `${numero.texto}${numero.relleno}${numero.borde}` : ""}`
+export function matRopa(_tejido: Tejido, numero?: { texto: string; relleno: string; borde: string }): THREE.MeshPhysicalMaterial {
+  const clave = `telas|${numero ? `${numero.texto}${numero.relleno}${numero.borde}` : ""}`
   let m = ropas.get(clave)
   if (m) return m
-  const nor = texTela(tejido)
-  nor.repeat.set(26, 26)
   m = new THREE.MeshPhysicalMaterial({
     // Ninguna tela refleja más del ~85 %: una camisa blanca al sol se quemaba
     // a blanco y el resplandor (bloom) lavaba la cara de al lado.
@@ -126,12 +208,13 @@ export function matRopa(tejido: Tejido, numero?: { texto: string; relleno: strin
     vertexColors: true,
     roughness: 1,
     metalness: 0,
-    normalMap: nor,
-    normalScale: new THREE.Vector2(0.55, 0.55),
-    sheen: tejido === "seda" ? 0.2 : 0.45,
-    sheenRoughness: 0.7,
-    sheenColor: new THREE.Color(0.16, 0.16, 0.17),
-    specularIntensity: 0.55,
+    // El terciopelo y el barniz se encienden aquí y cada tela dice cuánto (shader).
+    sheen: 1,
+    sheenRoughness: 0.6,
+    sheenColor: new THREE.Color(1, 1, 1),
+    clearcoat: 1,
+    clearcoatRoughness: 0.12,
+    specularIntensity: 0.5,
   })
   // Sombras de las dos caras: el ala de un sombrero, una cinta o el alambre de
   // unas gafas son láminas abiertas; con la cara de atrás sola, solo el contorno
@@ -141,14 +224,147 @@ export function matRopa(tejido: Tejido, numero?: { texto: string; relleno: strin
     m.map = texNumero(numero.texto, numero.relleno, numero.borde)
     m.alphaTest = 0.5
   }
-  inyectar(m, null)
+  const telas = texTelas()
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTelas = { value: telas }
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute vec2 aMat;\nvarying vec2 vMat;\nattribute vec4 aArr;\nvarying vec4 vTela;\nvarying vec2 vTelaUv;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\n\tvMat = aMat;\n\tvTela = aArr;\n\tvTelaUv = uv;")
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", "#include <common>\nvarying vec2 vMat;\n" + GLSL_ROPA_PARS)
+      .replace(
+        "#include <color_fragment>",
+        [
+          "#include <color_fragment>",
+          "\tint telaC = int( vTela.x + 0.5 );",
+          "\tvec4 telaT = texture( uTelas, vec3( vTelaUv * TELA_REP[ telaC ], float( telaC ) ) );",
+          "\tvec4 telaM = texture( uTelas, vec3( vTelaUv * 2.0, 13.0 ) );",
+          "\tfloat plTipo = floor( vTela.y );",
+          "\tfloat plF = fract( vTela.y ) * 2.0;",
+          "\tfloat plH = plTipo > 0.5 ? pliegueH( plTipo, vTela.z, vTela.w ) * plF : 0.0;",
+          "\tdiffuseColor.rgb *= telaT.b * 2.0 * ( telaM.b * 2.0 ) * ( 1.0 - 0.22 * plF * ( 0.85 - plH ) * step( 0.5, plTipo ) );",
+        ].join("\n"),
+      )
+      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = clamp( roughness * vMat.x * telaT.a * 2.0 * telaM.a * 2.0, 0.04, 1.0 );")
+      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = max( metalness, vMat.y );")
+      .replace(
+        "#include <normal_fragment_maps>",
+        [
+          "#include <normal_fragment_maps>",
+          "\tif ( plH > 0.0 ) normal = telaRelieve( - vViewPosition, normal, - plH * 0.0045, faceDirection );",
+          "\tvec2 telaN = ( telaT.rg * 2.0 - 1.0 ) * TELA_NOR[ telaC ] + ( telaM.rg * 2.0 - 1.0 ) * 0.25;",
+          "\tnormal = normalize( telaTBN( - vViewPosition, normal, vTelaUv ) * vec3( telaN, 1.0 ) );",
+        ].join("\n"),
+      )
+      .replace(
+        "#include <lights_physical_fragment>",
+        [
+          "#include <lights_physical_fragment>",
+          // Terciopelo teñido con el color de la prenda (lana y punto: borde aterciopelado).
+          "\tmaterial.sheenColor = TELA_SHE[ telaC ] * ( 0.08 + 0.92 * min( diffuseColor.rgb * 2.5, vec3( 1.0 ) ) ) * ( 1.0 - metalnessFactor );",
+          "\tmaterial.clearcoat = TELA_BAR[ telaC ];",
+          "\tmaterial.specularColorBlended *= TELA_ESP[ telaC ];",
+          "\tmaterial.specularColor *= TELA_ESP[ telaC ];",
+          "\tmaterial.specularF90 *= TELA_ESP[ telaC ];",
+          "\tmaterial.clearcoatRoughness = telaC == 14 ? 0.1 : 0.25;",
+        ].join("\n"),
+      )
+  }
+  m.customProgramCacheKey = () => "cb-avatar-telas"
   m.name = `ropa-${clave}`
   ropas.set(clave, m)
   return m
 }
 
 const pelos = new Map<string, THREE.MeshPhysicalMaterial>()
-/** Pelo, barba y cejas: hebras con alfa recortado y brillo anisotrópico (teñido por `color`). */
+
+// Sombreado del pelo (se inyecta en el MeshPhysical):
+// - Brillo de Kajiya-Kay con dos lóbulos a lo largo de la hebra: la hebra es la
+//   dirección de v en la UV de la tarjeta (en los rizos, la que trae texRizosDir),
+//   sacada de las derivadas de pantalla (sin atributo nuevo). El primero, blanco,
+//   corrido hacia la raíz y angosto; el segundo, teñido del color del pelo,
+//   corrido hacia la punta, ancho y salpicado (lo enciende el brillo del mechón).
+//   El brillo de cada mechón de la textura corre la banda: cada mechón brilla a
+//   otra altura, como el pelo real.
+// - Luz a través del pelo: de contraluz el contorno se enciende con el color del
+//   pelo (la luz atraviesa las hebras), más en el borde de la silueta.
+// - Luz indirecta entibiada (uTibio): el cielo azul ponía las canas menta y el pelo
+//   negro azul marino. Con el sol bajo (luz naranja) se apaga, porque al
+//   atardecer sumado al sol saturaba los rubios.
+// - Borde con alfa a la cobertura (MSAA): la cobertura sigue al alfa en todo el
+//   rango 0,24–0,8 (no un escalón en 0,42), así las hebras ralas del borde dejan
+//   ver la piel y la línea del pelo se desvanece en vez de cortarse. Sin MSAA
+//   (calidad media y baja) es un recorte en 0,27.
+// - Capas de abajo opacas (aMat.y = 1): la textura no les abre huecos, así el
+//   cielo y la piel no se ven a través de la masa del pelo.
+const PELO_COMUN = [
+  "uniform vec3 uTibio;",
+  "uniform vec4 uKK;",
+  "uniform vec4 uKK2;",
+  "uniform vec3 uBrillo;",
+  "#ifdef PELO_RIZOS",
+  "uniform sampler2D uDirRizo;",
+  "#endif",
+  "varying float vKK;",
+  "varying float vOpaco;",
+  "vec3 gPeloT;",
+  "float gPeloJ;",
+  "float gPeloK;",
+].join("\n")
+
+const PELO_HEBRA = [
+  "{",
+  "\tvec3 pp = - vViewPosition;",
+  "\tvec3 dp1 = dFdx( pp );",
+  "\tvec3 dp2 = dFdy( pp );",
+  "\tvec2 du1 = dFdx( vMapUv );",
+  "\tvec2 du2 = dFdy( vMapUv );",
+  "\tfloat sD = ( du1.x * du2.y - du2.x * du1.y ) >= 0.0 ? 1.0 : -1.0;",
+  "\tvec3 pv = ( dp2 * du1.x - dp1 * du2.x ) * sD;",
+  "#ifdef PELO_RIZOS",
+  "\tvec3 pu = ( dp1 * du2.y - dp2 * du1.y ) * sD;",
+  "\tvec2 dr = texture2D( uDirRizo, vMapUv ).rg * 2.0 - 1.0;",
+  "\tpv = pu * dr.x + pv * dr.y;",
+  "#endif",
+  "\tpv -= normal * dot( pv, normal );",
+  "\tgPeloT = dot( pv, pv ) > 1e-20 ? normalize( pv ) : vec3( 0.0, 1.0, 0.0 );",
+  "\tgPeloJ = texture2D( map, vMapUv ).r;",
+  // Cerca del remolino la UV gira sobre sí misma (la tangente no existe): sin brillo ahí.
+  "\tfloat giroUV = max( fwidth( vMapUv.x ), fwidth( vMapUv.y ) );",
+  "\tgPeloK = vKK * ( 1.0 - smoothstep( 0.08, 0.3, giroUV ) );",
+  "}",
+].join("\n")
+
+const PELO_LUZ = [
+  "vec3 irradiance = dotNL * directLight.color;",
+  "\t{",
+  "\t\tvec3 Lk = directLight.direction;",
+  "\t\tvec3 Hk = normalize( Lk + geometryViewDir );",
+  "\t\tfloat jk = ( gPeloJ - 0.72 ) * 0.9;",
+  "\t\tvec3 T1 = normalize( gPeloT + geometryNormal * ( uKK.x + jk ) );",
+  "\t\tvec3 T2 = normalize( gPeloT + geometryNormal * ( uKK.y + jk ) );",
+  "\t\tfloat d1 = dot( T1, Hk );",
+  "\t\tfloat d2 = dot( T2, Hk );",
+  "\t\tfloat s1 = pow( max( 1.0 - d1 * d1, 0.0 ), uKK.z );",
+  "\t\tfloat s2 = pow( max( 1.0 - d2 * d2, 0.0 ), uKK.w );",
+  // Las hebras se tapan entre sí: el brillo solo del lado iluminado.
+  "\t\tfloat visK = smoothstep( -0.15, 0.4, dot( geometryNormal, Lk ) );",
+  // La luna (luz azul) brilla menos: con la exposición de la noche el pelo negro quedaba con una franja blanca.
+  "\t\tvisK *= 1.0 - 0.5 * smoothstep( 1.1, 1.5, directLight.color.b / max( directLight.color.r, 1e-4 ) );",
+  "\t\treflectedLight.directSpecular += ( uBrillo * s1 * uKK2.x + material.diffuseColor * s2 * uKK2.y * smoothstep( 0.55, 0.95, gPeloJ ) ) * visK * gPeloK * directLight.color;",
+  // Difusa de hebra (Kajiya-Kay: depende del ángulo con la hebra, no de la normal):
+  // la cara de abajo de un copete o de un mechón ya no queda negra.
+  "\t\tfloat tl = dot( gPeloT, Lk );",
+  "\t\tfloat difK = mix( dotNL, sqrt( max( 1.0 - tl * tl, 0.0 ) ) * 0.6, 0.35 );",
+  "\t\treflectedLight.directDiffuse += max( difK - dotNL, 0.0 ) * min( vKK + 0.4, 1.0 ) * directLight.color * BRDF_Lambert( material.diffuseContribution );",
+  // Contraluz: la luz atraviesa las hebras (más en el borde de la silueta).
+  "\t\tfloat trasK = pow( saturate( dot( geometryViewDir, - Lk ) ), 3.0 );",
+  "\t\tfloat bordeK = 1.0 - abs( dot( geometryNormal, geometryViewDir ) );",
+  "\t\treflectedLight.directDiffuse += trasK * ( 0.25 + 0.75 * bordeK * bordeK ) * uKK2.z * min( vKK, 1.0 ) * material.diffuseColor * directLight.color;",
+  "\t}",
+].join("\n")
+
+/** Pelo, barba y cejas: hebras con alfa a la cobertura y brillo anisotrópico (teñido por `color`). */
 export function matPelo(color: string, rizado = false): THREE.MeshPhysicalMaterial {
   const clave = `${color}${rizado ? "|rizos" : ""}`
   let m = pelos.get(clave)
@@ -170,15 +386,15 @@ export function matPelo(color: string, rizado = false): THREE.MeshPhysicalMateri
     alphaToCoverage: true,
     side: THREE.DoubleSide,
     // Los bucles, más mates (con el brillo del pelo lacio parecían de metal).
-    roughness: rizado ? 0.78 : 0.52,
+    roughness: rizado ? 0.8 : 0.6,
     metalness: 0,
     // (el brillo de terciopelo del pelo claro también tomaba el cielo: nada en canas y rubios claros)
-    sheen: rizado ? 0.08 : 0.35 * (1 - THREE.MathUtils.smoothstep(hsl.l, 0.45, 0.7)),
-    sheenRoughness: 0.45,
+    sheen: rizado ? 0.06 : 0.2 * (1 - THREE.MathUtils.smoothstep(hsl.l, 0.45, 0.7)),
+    sheenRoughness: 0.5,
     sheenColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.25).multiplyScalar(0.5 - 0.25 * hsl.l),
-    // El pelo claro (canas, rubio) reflejaba el cielo y se veía celeste o
-    // verdoso: menos especular y un reflejo teñido del propio pelo.
-    specularIntensity: (0.45 - 0.3 * hsl.l) * (rizado ? 0.5 : 1),
+    // El brillo de verdad es el anisotrópico (abajo): el especular redondo queda
+    // bajo (el pelo claro reflejaba el cielo y se veía celeste o verdoso).
+    specularIntensity: (0.22 - 0.14 * hsl.l) * (rizado ? 0.6 : 1),
     // (y el pelo negro reflejaba el cielo: barbas y bigotes oscuros salían azules)
     specularColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.35 - 0.15 * hsl.l),
   })
@@ -189,16 +405,59 @@ export function matPelo(color: string, rizado = false): THREE.MeshPhysicalMateri
   const hs = { h: 0, s: 0, l: 0 }
   c.getHSL(hs, THREE.SRGBColorSpace)
   const tibio = new THREE.Vector3(1, 0.94 - 0.4 * hs.l, 0.87 - 0.47 * hs.l)
+  // Brillo anisotrópico: corrimientos (raíz, punta), exponentes (la mitad del de
+  // Kajiya-Kay: se eleva 1 - cos²) y fuerzas. El oscuro brilla más (contraste);
+  // el claro, menos y más ancho (el rubio y las canas ya son claros).
+  const kk = rizado ? new THREE.Vector4(-0.05, 0.12, 22, 6) : new THREE.Vector4(-0.1, 0.14, 85, 10)
+  const kk2 = new THREE.Vector4((rizado ? 0.05 : 0.13) * (1 - 0.45 * hs.l), (rizado ? 0.14 : 0.4) * (1 - 0.3 * hs.l), 0.55, 0)
+  // El brillo blanco, apenas teñido del pelo (en el negro, casi blanco; en el castaño, dorado).
+  const brillo = new THREE.Color(color).lerp(new THREE.Color("#fff4e6"), 0.75)
+  const dir = rizado ? texRizosDir() : null
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uTibio = { value: tibio }
-    sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform vec3 uTibio;")
+    sh.uniforms.uKK = { value: kk }
+    sh.uniforms.uKK2 = { value: kk2 }
+    sh.uniforms.uBrillo = { value: brillo }
+    if (dir) sh.uniforms.uDirRizo = { value: dir }
+    // aMat.x = fuerza del brillo de esa parte (pelo, barba, cejas, pestañas; avatar-pelo.ts).
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute vec2 aMat;\nvarying float vKK;\nvarying float vOpaco;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\n\tvKK = aMat.x;\n\tvOpaco = aMat.y;")
+    sh.fragmentShader = (dir ? "#define PELO_RIZOS\n" : "") + sh.fragmentShader
+      .replace("#include <common>", "#include <common>\n" + PELO_COMUN)
+      .replace("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\n" + PELO_HEBRA)
+      .replace("#include <color_fragment>", "#include <color_fragment>\n\tdiffuseColor.a = max( diffuseColor.a, vOpaco * smoothstep( 0.6, 2.0, vColor.a ) * 1.2 );")
+      .replace("#include <lights_physical_pars_fragment>", THREE.ShaderChunk.lights_physical_pars_fragment.replace("vec3 irradiance = dotNL * directLight.color;", PELO_LUZ))
+      .replace(
+        "#include <alphatest_fragment>",
+        [
+          "#ifdef ALPHA_TO_COVERAGE",
+          // Cobertura parcial en todo el rango (0,24–0,8): las hebras ralas del borde y
+          // de las capas de afuera dejan ver lo de abajo (con MSAA, mezcla de verdad).
+          "\tdiffuseColor.a = smoothstep( 0.24, max( 0.8, 0.24 + fwidth( diffuseColor.a ) ), diffuseColor.a );",
+          "\tif ( diffuseColor.a < 0.05 ) discard;",
+          "#else",
+          "#include <alphatest_fragment>",
+          "#endif",
+        ].join("\n"),
+      )
       .replace(
         "#include <lights_fragment_maps>",
-        "#include <lights_fragment_maps>\n\tirradiance *= uTibio;\n\tiblIrradiance *= uTibio;\n#if defined( RE_IndirectSpecular )\n\tradiance *= uTibio;\n#endif",
+        [
+          "#include <lights_fragment_maps>",
+          "\tvec3 tibioK = uTibio;",
+          "#if NUM_DIR_LIGHTS > 0",
+          "\ttibioK = mix( vec3( 1.0 ), uTibio, smoothstep( 0.4, 0.8, directionalLights[ 0 ].color.b / max( directionalLights[ 0 ].color.r, 1e-4 ) ) );",
+          "#endif",
+          "\tirradiance *= tibioK;",
+          "\tiblIrradiance *= tibioK;",
+          "#if defined( RE_IndirectSpecular )",
+          "\tradiance *= tibioK;",
+          "#endif",
+        ].join("\n"),
       )
   }
-  m.customProgramCacheKey = () => "pelo-tibio"
+  m.customProgramCacheKey = () => (dir ? "pelo-kk-rizos" : "pelo-kk")
   m.name = `pelo-${clave}`
   pelos.set(clave, m)
   return m
