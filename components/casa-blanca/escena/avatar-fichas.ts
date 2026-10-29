@@ -809,7 +809,7 @@ export const FICHAS: Record<string, Ficha> = {
     cuerpo: { anchoHombros: 0.42, musculo: { brazos: 0.9, deltoides: 0.9 } },
     // Sudadera óxido (#5A2E22 es como se ve en la referencia): como albedo, más
     // claro y menos saturado; en la escena, a la sombra, salía negra.
-    ap: { ropa: { color: "#945D3F" } },
+    ap: { ropa: { color: "#946348" } },
     cara: { ancho: 0.95, mejillas: -0.1, mandibula: 0.95, anguloMandibula: 0.3, pomulos: 1.15, labios: { comisuras: 0.3 }, ojos: { tam: 1.0 }, nariz: { puente: 0.5 } },
     piel: { base: "#6F7F95", rubor: ["#6F7F95", 0], labios: "#7886A0" },
     iris: "#7F93A6",
@@ -829,11 +829,11 @@ export const FICHAS: Record<string, Ficha> = {
     cuerpo: { anchoHombros: 0.43, anchoCintura: 0.27 },
     // Sudadera oliva (#4B5A3C como se ve): como albedo, más clara y con menos
     // verde; con el rebote del césped, la de la referencia salía verde esmeralda.
-    ap: { ropa: { color: "#7A7C52" } },
+    ap: { ropa: { color: "#838761" } },
     cara: { mandibula: 1.05, anguloMandibula: 0.7, mentonCuadrado: 0.5, pomulos: 1.15, labios: { comisuras: -0.05, filtrum: -1 }, nariz: { puente: 0.6 } },
     // (labios del tono de la piel y filtrum corto: con la luz de arriba, el labio oscuro se leía como un bigote)
     piel: { base: "#6F7F95", rubor: ["#6F7F95", 0], labios: "#7886A0" },
-    iris: "#C08A45",
+    iris: "#A9824E",
     esclera: "#E2E5E9",
     pelo: { color: "#6F7F95", rapado: 0.001 },
     barba: { densidad: 0 },

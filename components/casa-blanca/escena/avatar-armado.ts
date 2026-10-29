@@ -20,7 +20,7 @@ import { hashTexto } from "./avatar-geo"
 import { conFicha, vestuarioDe } from "./avatar-fichas"
 import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra } from "./avatar-materiales"
 import { texBalon, texPunto, texSombra } from "./avatar-texturas"
-import { esAndroide, matCejasLuz, matRopaAndroide, prepararAndroide } from "./avatar-androide"
+import { esAndroide, matCejasLuz, matRopaAndroide, prepararAndroide, sombraRopaAndroide } from "./avatar-androide"
 
 let matBalon: THREE.MeshStandardMaterial | null = null
 let geoBalon: THREE.SphereGeometry | null = null
@@ -123,7 +123,9 @@ export function crearAvatarReal(original: Personaje): Avatar {
     const gPiel = lPiel.geometria()
     andro?.atributos(gPiel)
     piel(gPiel, andro ? andro.matPiel : matPiel(cu.rasgos.f.piel.base))
-    piel(ropa.lote.geometria(), andro ? matRopaAndroide(p, ropa.tejido) : matRopa(ropa.tejido, ropa.numero))
+    const mRopa = piel(ropa.lote.geometria(), andro ? matRopaAndroide(p, ropa.tejido) : matRopa(ropa.tejido, ropa.numero))
+    // (androide: el parche del nombre no proyecta sombra sobre la tela)
+    if (andro) mRopa.customDepthMaterial = sombraRopaAndroide(mRopa.material as THREE.Material)
     // El pelo no proyecta sombra: con alfa recortado, las hebras dejaban manchas
     // de "tierra" en la frente y en las mejillas (mapa de sombras a 2 mm).
     piel(lPelo.geometria(), andro ? andro.matPestanas : matPelo(cu.rasgos.f.pelo.color, cu.rasgos.f.pelo.rizo >= 0.6), false)

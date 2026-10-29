@@ -1370,7 +1370,7 @@ export function vestir(cu: Cuerpo, p: Personaje): Ropa {
       // escote baja a 0,824, y dibujaba una línea oscura suelta sobre el pecho)
       } else if (tipo === "androide") {
         // Sudadera: cuello de canalé alto y cerrado, más oscuro que la tela.
-        S.cuello({ y0: 0.812 * Hh, y1: (a) => 0.846 * Hh - escote(a), holg0: 0.012, holg1: 0.005, color: escalarRGBA(C1, 0.85), mat: [0.92, 0], filas: 3 })
+        S.cuello({ y0: 0.822 * Hh, y1: (a) => 0.846 * Hh - escote(a), holg0: 0.0105, holg1: 0.005, color: escalarRGBA(C1, 0.85), mat: [0.92, 0], filas: 3 })
       } else S.cuello({ y0: 0.818 * Hh, y1: (a) => 0.84 * Hh - escote(a), holg0: 0.0095, holg1: 0.004, color: escalarRGBA(C1, 0.92), mat: MAT_ALGODON, filas: 1 })
       if (remera) mangas(C1, 0.15 * s, 0.01, { mat: MAT_ALGODON })
       else mangas(C1, 9, 0.011, { mat: [0.92, 0], puno: escalarRGBA(C1, 0.9) })

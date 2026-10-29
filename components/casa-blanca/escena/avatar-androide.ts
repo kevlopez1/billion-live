@@ -170,6 +170,23 @@ vec3 andNormal( vec3 p, vec3 n, float h, float fd ) {
 }
 `
 
+/**
+ * La luz indirecta (cielo y rebote del césped) y su reflejo llegan con menos
+ * color (uDesat): a la sombra, la escena tiñe todo de azul verdoso, y el gris
+ * azulado se veía azul cobalto, el metal azul marino y el oliva verde
+ * esmeralda. El sol y las lámparas, intactos. Solo en los androides.
+ */
+const GLSL_DESAT = [
+  "#if defined( RE_IndirectDiffuse )",
+  "\tirradiance = mix( irradiance, vec3( dot( irradiance, vec3( 0.2126, 0.7152, 0.0722 ) ) ), uDesat );",
+  "\tiblIrradiance = mix( iblIrradiance, vec3( dot( iblIrradiance, vec3( 0.2126, 0.7152, 0.0722 ) ) ), uDesat );",
+  "#endif",
+  "#if defined( RE_IndirectSpecular )",
+  "\tradiance = mix( radiance, vec3( dot( radiance, vec3( 0.2126, 0.7152, 0.0722 ) ) ), uDesat );",
+  "#endif",
+  "#include <lights_fragment_end>",
+].join("\n")
+
 const mats = new Map<string, THREE.MeshPhysicalMaterial>()
 
 /** Piel sintética gris azulada (programa compartido; `lineas` cambia solo un uniforme). */
@@ -182,11 +199,13 @@ export function matPielAndroide(lineas: Estilo["lineas"]): THREE.MeshPhysicalMat
   // sombra, el cielo y el rebote del césped ya tiñen todo de azul verdoso. Con
   // un gris oscuro y reflejos azules (#85868A × 0,56) la piel salía azul cobalto
   // saturado a mediodía (28,59,92), azul marino a la hora dorada y negra de noche.
-  // Con este gris claro, apenas cálido, y reflejos neutros: (99,129,148) a
-  // mediodía (objetivo #6F7F95 = 111,127,149), gris claro a las 17:30 y de noche
-  // tan legible como la cara de Altman. El azul lo pone la luz, no el material.
+  // Ahora: el gris azulado de la referencia en el material, reflejos neutros y
+  // la luz indirecta con menos color (uDesat, GLSL_DESAT). En la escena, mejilla
+  // de ChatGPT ~(100,114,137) a mediodía a la sombra (objetivo #6F7F95 =
+  // 111,127,149; Altman, al lado, 110,100,86), (118,125,137) a las 17:30 y de
+  // noche legible como la cara de Altman. Al sol directo queda más claro.
   m = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(0.5, 0.42, 0.35),
+    color: new THREE.Color(0.33, 0.36, 0.42),
     vertexColors: true,
     roughness: 0.6,
     metalness: 0,
@@ -202,7 +221,7 @@ export function matPielAndroide(lineas: Estilo["lineas"]): THREE.MeshPhysicalMat
     // (algo más neutro que #2A2E35: el cielo ya le pone el azul al metal)
     uMetal: { value: new THREE.Color("#33363C") },
     uSSS: { value: new THREE.Color(0.1, 0.1, 0.1) },
-    uDesat: { value: 0.65 },
+    uDesat: { value: 0.8 },
   }
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms)
@@ -232,20 +251,14 @@ export function matPielAndroide(lineas: Estilo["lineas"]): THREE.MeshPhysicalMat
         "#include <normal_fragment_maps>",
         "#include <normal_fragment_maps>\n\tfloat andH = - ( andM * andRel * ( 1.0 - andMano ) + andJ * 3.0 ) * 0.00022;\n\tvec3 andN = andNormal( - vViewPosition, normal, andH, faceDirection );\n\tif ( andH < -1e-7 ) normal = andN;",
       )
-      // La luz del cielo y del césped (la indirecta) llega a la piel con menos
-      // color: a la sombra, el gris azulado se veía azul cobalto (el cielo le
-      // sumaba su azul al del material). El sol y las lámparas, intactos.
-      .replace(
-        "#include <lights_fragment_end>",
-        "#if defined( RE_IndirectDiffuse )\n\tirradiance = mix( irradiance, vec3( dot( irradiance, vec3( 0.2126, 0.7152, 0.0722 ) ) ), uDesat );\n\tiblIrradiance = mix( iblIrradiance, vec3( dot( iblIrradiance, vec3( 0.2126, 0.7152, 0.0722 ) ) ), uDesat );\n#endif\n#include <lights_fragment_end>",
-      )
+      .replace("#include <lights_fragment_end>", GLSL_DESAT)
       .replace(
         "#include <lights_physical_pars_fragment>",
         THREE.ShaderChunk.lights_physical_pars_fragment.replace(
           "vec3 irradiance = dotNL * directLight.color;",
           [
             "vec3 irradiance = dotNL * directLight.color;",
-            // Un poco de luz envuelta, fría: el material deja pasar algo de luz, como la silicona.
+            // Un poco de luz envuelta: el material deja pasar algo de luz, como la silicona.
             "\tfloat dotNLw = saturate( ( dot( geometryNormal, directLight.direction ) + 0.4 ) / 1.4 );",
             "\treflectedLight.directDiffuse += max( dotNLw * dotNLw - dotNL, 0.0 ) * directLight.color * BRDF_Lambert( material.diffuseContribution ) * uSSS;",
           ].join("\n"),
@@ -301,7 +314,8 @@ function letra(c: string, w: number): Trazo[] {
 }
 
 /** Ancho de cada letra (en altos de letra). */
-const ANCHO: Record<string, number> = { A: 0.78, C: 0.74, D: 0.72, E: 0.6, G: 0.78, H: 0.7, L: 0.56, P: 0.64, T: 0.66, U: 0.7 }
+// (la T, más ancha: con 0,66, de lejos el travesaño se perdía y "CHATGPT" se leía "CHATGP1")
+const ANCHO: Record<string, number> = { A: 0.78, C: 0.74, D: 0.72, E: 0.6, G: 0.78, H: 0.7, L: 0.56, P: 0.64, T: 0.8, U: 0.7 }
 
 const texturas = new Map<string, THREE.CanvasTexture>()
 /**
@@ -326,7 +340,7 @@ function texEstampado(texto: string, e: Estilo): THREE.CanvasTexture {
   // no bajan de 0,115: con menos, a la distancia de juego el nombre desaparecía.
   const alto = gruesas ? 168 : 118
   const grosor = gruesas ? 0.22 : 0.115
-  const sep = gruesas ? 0.14 : 0.62
+  const sep = gruesas ? 0.17 : 0.62
   const lw = grosor * alto
   const anchos = [...texto].map((ch) => (ANCHO[ch] ?? 0.7) * alto)
   const total = anchos.reduce((a, b) => a + b, 0) + sep * alto * (texto.length - 1)
@@ -372,8 +386,6 @@ function texEstampado(texto: string, e: Estilo): THREE.CanvasTexture {
 }
 
 const ropas = new Map<string, THREE.MeshPhysicalMaterial>()
-// AJUSTE-TEMPORAL (calibración en la escena; se quita al terminar)
-if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") (window as unknown as Record<string, unknown>).__androideMats = { mats, ropas }
 /**
  * Sudadera de punto con el nombre estampado en el pecho (un material por androide).
  * La tinta se mezcla con el color de la tela según el alfa de la textura, sin
@@ -403,14 +415,24 @@ export function matRopaAndroide(p: Personaje, tejido: Tejido): THREE.MeshPhysica
   })
   m.shadowSide = THREE.DoubleSide
   // Tinta: el color de las letras como albedo (con el mismo tope de 0,86 que la tela).
-  const uLetra = { value: new THREE.Color(e.colorLetras).multiplyScalar(0.86) }
+  const uniforms = { uLetra: { value: new THREE.Color(e.colorLetras).multiplyScalar(0.86) }, uDesat: { value: 0.8 } }
+  m.userData.uniforms = uniforms
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uLetra = uLetra
+    Object.assign(sh.uniforms, uniforms)
     sh.vertexShader = sh.vertexShader
       .replace("#include <common>", "#include <common>\nattribute vec2 aMat;\nvarying vec2 vMat;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\n\tvMat = aMat;")
+      // El parche del nombre está EN la superficie de la tela (y no proyecta
+      // sombra: sombraRopaAndroide); solo su profundidad en pantalla se adelanta
+      // 1,5 mm hacia la cámara para ganarle a la tela (cuyas caras planas quedan
+      // por dentro de la curva).
+      .replace(
+        "#include <project_vertex>",
+        "#include <project_vertex>\n#ifdef USE_MAP\n\tif ( vMapUv.x > 0.04 ) gl_Position = projectionMatrix * vec4( mvPosition.xyz * ( 1.0 - 0.0015 / max( length( mvPosition.xyz ), 0.01 ) ), 1.0 );\n#endif",
+      )
     sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nvarying vec2 vMat;\nuniform vec3 uLetra;")
+      .replace("#include <common>", "#include <common>\nvarying vec2 vMat;\nuniform vec3 uLetra;\nuniform float uDesat;")
+      .replace("#include <lights_fragment_end>", GLSL_DESAT)
       .replace("#include <map_fragment>", "float andTinta = 0.0;\n#ifdef USE_MAP\n\tandTinta = texture2D( map, vMapUv ).a;\n#endif")
       .replace("#include <color_fragment>", "#include <color_fragment>\n\tdiffuseColor.rgb = mix( diffuseColor.rgb, uLetra, andTinta );")
       .replace("#include <roughnessmap_fragment>", "float roughnessFactor = roughness * vMat.x;")
@@ -420,6 +442,26 @@ export function matRopaAndroide(p: Personaje, tejido: Tejido): THREE.MeshPhysica
   m.name = `androide-ropa-${clave}`
   ropas.set(clave, m)
   return m
+}
+
+const sombras = new Map<THREE.Material, THREE.MeshDepthMaterial>()
+/**
+ * Material de sombra de la ropa del androide: igual al de siempre, pero el parche
+ * del nombre no entra al mapa de sombras. Con él adentro, la tela de alrededor
+ * (cuyas caras planas quedan un poco por dentro del parche) se sombreaba y el
+ * parche se veía como un rectángulo más claro, con una raya oscura debajo.
+ */
+export function sombraRopaAndroide(ropa: THREE.Material): THREE.MeshDepthMaterial {
+  let d = sombras.get(ropa)
+  if (d) return d
+  d = new THREE.MeshDepthMaterial()
+  d.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace("#include <alphatest_fragment>", "#ifdef USE_MAP\n\tif ( vMapUv.x > 0.04 ) discard;\n#endif\n#include <alphatest_fragment>")
+  }
+  d.customProgramCacheKey = () => "cb-androide-sombra"
+  d.name = "androide-sombra-ropa"
+  sombras.set(ropa, d)
+  return d
 }
 
 /**
@@ -436,8 +478,11 @@ export function estampar(lote: Lote, cu: Cuerpo, p: Personaje, punto: (y: number
   const ancho = (e.letras === "gruesas" ? 0.25 : 0.24) * s
   const alto = (ancho * (CAJA.h - CAJA.y0)) / (CAJA.w - CAJA.x0)
   const bultos = 0.4
-  // 1 mm sobre la tela (con 3,5 mm las letras flotaban y hacían sombra propia).
-  const holg = 0.01
+  // En la tela misma (la del pecho: 9 mm de holgura, bultos 0,4). Con 3,5 mm
+  // de más, las letras flotaban, hacían sombra propia y el parche se veía más
+  // claro que la tela; ahora solo se adelanta en profundidad (matRopaAndroide)
+  // y no proyecta sombra (sombraRopaAndroide).
+  const holg = 0.009
   const v = new THREE.Vector3()
   const w = new THREE.Vector3()
   // Ángulo por largo de arco a la altura del pecho, para que las letras no se estiren a los costados.
