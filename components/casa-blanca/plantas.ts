@@ -33,6 +33,8 @@ export interface Planta {
   id: PlantaId
   edificio: EdificioId
   nombre: string
+  /** Para la barra de plantas en el teléfono (donde no entran los cuatro nombres). */
+  corto: string
   /** Altura del piso terminado. */
   y: number
   /** Altura libre hasta el techo. */
@@ -45,15 +47,15 @@ export interface Planta {
 export const CORTE = 2.7
 
 export const PLANTAS: Planta[] = [
-  { id: "res-tercero", edificio: "residencia", nombre: "Tercer piso", y: 13.9, techo: 2.8, lista: true },
-  { id: "res-segundo", edificio: "residencia", nombre: "Segundo piso", y: 8.6, techo: 4.6, lista: true },
-  { id: "res-estado", edificio: "residencia", nombre: "Planta de Estado", y: 3.45, techo: 5.15, lista: true },
-  { id: "res-baja", edificio: "residencia", nombre: "Planta Baja", y: 0, techo: 3.1, lista: true },
-  { id: "oeste-principal", edificio: "ala-oeste", nombre: "Planta principal", y: 0, techo: 3.6, lista: false },
-  { id: "oeste-sotano", edificio: "ala-oeste", nombre: "Sótano", y: -3.4, techo: 3.0, lista: false },
-  { id: "eeob-alta", edificio: "eeob", nombre: "Segundo piso", y: 6, techo: 5, lista: false },
-  { id: "eeob-baja", edificio: "eeob", nombre: "Planta baja", y: 0, techo: 5, lista: false },
-  { id: "tesoro-baja", edificio: "tesoro", nombre: "Planta principal", y: 0, techo: 6, lista: false },
+  { id: "res-tercero", edificio: "residencia", nombre: "Tercer piso", corto: "3.er piso", y: 13.9, techo: 2.8, lista: true },
+  { id: "res-segundo", edificio: "residencia", nombre: "Segundo piso", corto: "2.º piso", y: 8.6, techo: 4.6, lista: true },
+  { id: "res-estado", edificio: "residencia", nombre: "Planta de Estado", corto: "Estado", y: 3.45, techo: 5.15, lista: true },
+  { id: "res-baja", edificio: "residencia", nombre: "Planta Baja", corto: "Baja", y: 0, techo: 3.1, lista: true },
+  { id: "oeste-principal", edificio: "ala-oeste", nombre: "Planta principal", corto: "Principal", y: 0, techo: 3.6, lista: false },
+  { id: "oeste-sotano", edificio: "ala-oeste", nombre: "Sótano", corto: "Sótano", y: -3.4, techo: 3.0, lista: false },
+  { id: "eeob-alta", edificio: "eeob", nombre: "Segundo piso", corto: "2.º piso", y: 6, techo: 5, lista: false },
+  { id: "eeob-baja", edificio: "eeob", nombre: "Planta baja", corto: "Baja", y: 0, techo: 5, lista: false },
+  { id: "tesoro-baja", edificio: "tesoro", nombre: "Planta principal", corto: "Principal", y: 0, techo: 6, lista: false },
 ]
 export const PLANTA = Object.fromEntries(PLANTAS.map((p) => [p.id, p])) as Record<PlantaId, Planta>
 
@@ -1234,6 +1236,22 @@ const TERCERO: Cuarto[] = [
       { t: "silla", x: -2.65, z: 6.6, rumbo: -Math.PI / 2, color: "#c9b48a" },
     ],
   },
+  {
+    // El arco del pórtico sigue hasta la cornisa: en el Tercer piso es el mirador del Solario.
+    id: "mirador-solario",
+    planta: P_3,
+    nombre: "Mirador del Solario",
+    rect: { x0: -OVALO_AZUL.r, x1: OVALO_AZUL.r, z0: 12.3, z1: OVALO_AZUL.sur + OVALO_AZUL.r },
+    ovalo: { norte: 12.3, sur: OVALO_AZUL.sur },
+    nodo: [0, 13.4],
+    piso: "liso",
+    muro: "#eef3ef",
+    muebles: [
+      { t: "palmera", x: -2.2, z: 14.6 },
+      { t: "palmera", x: 2.2, z: 14.6 },
+      { t: "butaca", x: 0, z: 14.9, rumbo: 0, color: "#d9c79a" },
+    ],
+  },
   dormitorio("huespedes-6", P_3, "Habitación de huéspedes", 6.3, 14.0, false, "#ece0d2", "#7d93a8"),
   {
     id: "gimnasio-res",
@@ -1261,6 +1279,7 @@ const PUERTAS_TERCERO: Puerta[] = [
   pu("musica-pasillo", "sala-musica", "pasillo-3", -10.2, S_PUERTA, 1.4, "x"),
   pu("solario-pasillo", "solario", "pasillo-3", 0, S_PUERTA, 2.4, "x"),
   pu("h6-pasillo", "huespedes-6", "pasillo-3", 10.15, S_PUERTA, 1.2, "x"),
+  pu("solario-mirador", "solario", "mirador-solario", 0, 12.3, 6.7, "x", true),
   pu("gim-pasillo", "gimnasio-res", "pasillo-3", 19.5, S_PUERTA, 1.4, "x"),
   ...puertasNucleo("tercero", "pasillo-3"),
 ]
@@ -1382,7 +1401,9 @@ export const VENTANAS: Partial<Record<PlantaId, Ventana[]>> = {
     ...EJES_LADO.flatMap((e) => [-e, e]).map((x): Ventana => ({ x, z: 12.3, ancho: 1.5, eje: "x", alfeizar: 1.0 })),
     ...[-9.6, -4.8, 0, 4.8, 9.6].flatMap((z) => [24.9, -24.9].map((x): Ventana => ({ x, z, ancho: 1.5, eje: "z", alfeizar: 1.0 }))),
   ],
-  // El tercer piso queda detrás de la balaustrada: no tiene ventanas en la fachada.
+  // El tercer piso queda detrás de la balaustrada: no tiene ventanas en la fachada. El único hueco
+  // es el del arco, abierto al mirador del Solario.
+  "res-tercero": [{ x: 0, z: 12.3, ancho: 6.76, eje: "x", alfeizar: 0 }],
 }
 
 // ── Consultas ────────────────────────────────────────────────

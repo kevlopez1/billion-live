@@ -170,6 +170,8 @@ cinta y mapa de pared).
   Truman pasó a ser un cuarto `exterior` del Segundo piso: se sale por la ventana francesa de la Sala
   Oval Amarilla y la cámara lo ve con el corte (desde afuera lo tapaba el techo del pórtico). Se borró el
   nodo oculto `res-int` (y `balcon`); `asc-sup` pasó al pabellón (0, 0, 31), a la vista.
+- **El arco sur sube hasta la cornisa:** en el Tercer piso es el mirador del Solario (cuarto oval abierto
+  al Solario); sin él, desde arriba se veía el pasto a través del arco.
 - **Habitaciones:** donde duermen los residentes son los dormitorios de huéspedes del Tercer piso. Se
   sube a la vista hasta la puerta; adentro, con la puerta cerrada, no se ve (no hay pose de acostado
   todavía) y no se muestra en rayos X.

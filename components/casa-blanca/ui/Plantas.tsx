@@ -14,11 +14,12 @@ export function BarraPlanta({ planta, onPlanta, onSalir }: { planta: PlantaId; o
   const plantas = plantasDe(p.edificio)
   return (
     <nav aria-label={`Plantas de ${NOMBRE_EDIFICIO[p.edificio]}`} className={`pointer-events-auto inline-flex max-w-full items-center gap-1 rounded-full p-1 ${VIDRIO}`}>
-      <span className="cb-cond shrink-0 pl-3 pr-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white/55">{NOMBRE_EDIFICIO[p.edificio]}</span>
+      <span className="cb-cond hidden shrink-0 pl-3 pr-1 sm:inline text-[11px] font-bold uppercase tracking-[0.2em] text-white/55">{NOMBRE_EDIFICIO[p.edificio]}</span>
       <div className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
         {plantas.map((x) => (
           <Boton key={x.id} activo={x.id === planta} onClick={() => onPlanta(x.id)} etiqueta={x.nombre} className="shrink-0 whitespace-nowrap">
-            {x.nombre}
+            <span className="sm:hidden">{x.corto}</span>
+            <span className="hidden sm:inline">{x.nombre}</span>
           </Boton>
         ))}
       </div>

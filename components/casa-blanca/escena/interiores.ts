@@ -838,7 +838,8 @@ function forroArco(K: ConstructorPlanta, c: Cuarto) {
   const r = (c.rect.x1 - c.rect.x0) / 2
   const cx = (c.rect.x0 + c.rect.x1) / 2
   const cz = c.ovalo!.sur
-  const ventanas = [60, 90, 120].map((g) => (g * Math.PI) / 180)
+  // En el Tercer piso el arco no tiene ventanas (la fachada es ciega detrás de la balaustrada).
+  const ventanas = K.planta === "res-tercero" ? [] : [60, 90, 120].map((g) => (g * Math.PI) / 180)
   const medio = 0.66 / r
   const n = 30
   for (let i = 0; i < n; i++) {
@@ -1036,18 +1037,18 @@ function vidrioSolario(K: ConstructorPlanta) {
   const y = K.y
   const r = c.rect
   const vidrio = LUZ(0.55)
-  const n = 6
-  for (let i = 0; i < n; i++) {
-    const x = r.x0 + 0.5 + ((r.x1 - r.x0 - 1) * (i + 0.5)) / n
-    L.quad(x, y + 1.65, r.z1 - 0.07, (r.x1 - r.x0 - 1) / n - 0.14, 1.9, Math.PI, "#cfe3ea", vidrio)
-    L.caja(x + (r.x1 - r.x0 - 1) / n / 2, y + 0.6, r.z1 - 0.1, 0.06, 2.1, 0.06, "#f4f1ea", LACA)
+  // Al sur, a los dos lados del arco del mirador (|x| > 3,4).
+  for (const s of [-1, 1]) {
+    const a = 3.6
+    const b = (r.x1 - r.x0) / 2 - 0.3
+    const x = s * (a + b) / 2
+    L.quad(x, y + 1.65, r.z1 - 0.07, b - a, 1.9, Math.PI, "#cfe3ea", vidrio)
+    L.ext(Math.min(s * a, s * b), Math.max(s * a, s * b), y, y + 0.6, r.z1 - 0.12, r.z1 - 0.04, "#f4f1ea", LACA)
   }
   for (const s of [-1, 1]) {
     const x = s < 0 ? r.x0 + 0.07 : r.x1 - 0.07
     for (let i = 0; i < 3; i++) L.quad(x, y + 1.65, r.z0 + 3.4 + i * 1.6, 1.4, 1.9, s < 0 ? Math.PI / 2 : -Math.PI / 2, "#cfe3ea", vidrio)
   }
-  // Antepecho blanco bajo el vidrio.
-  L.ext(r.x0 + 0.3, r.x1 - 0.3, y, y + 0.6, r.z1 - 0.12, r.z1 - 0.04, "#f4f1ea", LACA)
 }
 
 function extras(K: ConstructorPlanta) {
