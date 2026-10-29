@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { conLlave } from "@/lib/fabrica/auth"
 import { baseReal } from "@/lib/fabrica/base-cola"
 import { ejecutarTick } from "@/lib/fabrica/cola"
-import { adaptadores, ctxReal } from "@/lib/fabrica/registro-redes"
+import { adaptadores, adaptadoresParaBajar, ctxReal } from "@/lib/fabrica/registro-redes"
 import { canalHttp, hacerParte } from "@/lib/fabrica/reporte"
 
 export const runtime = "nodejs"
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
     const r = await ejecutarTick({
       base,
       adaptadores: adaptadores(),
+      bajar: adaptadoresParaBajar(env),
       ctx: ctxReal(env),
       env,
       reloj: Date.now,

@@ -16,8 +16,12 @@ import { FICCION, REDES } from "./textos"
 export { FICCION, REDES }
 export type RedId = Red
 
-/** El buzón de bajas: se baja en menos de 24 h lo que alguien pida bajar. */
-export const CORREO_BAJAS = "bajas@kevproject.world"
+/**
+ * El buzón de bajas: se baja en menos de 24 h lo que alguien pida bajar.
+ * Es el correo de Kev hasta que bajas@kevproject.world exista y se pruebe con
+ * un correo de verdad: un buzón que rebota en la página legal es peor que no tenerlo.
+ */
+export const CORREO_BAJAS = "kev@primebusiness.live"
 
 // ── Banderas de entorno ───────────────────────────────────────
 

@@ -15,6 +15,17 @@ export const metadata: Metadata = {
   description:
     "Las reglas de uso de kevproject.world y de los videos de La Casa Blanca Project: ficción hecha con IA, bajas en menos de 24 horas y contacto.",
   alternates: { canonical: "/terminos" },
+  // Sin esto hereda og:url y og:title de la portada: el enlace compartido se veía como la home.
+  // La imagen se nombra a mano: un openGraph propio reemplaza el de la raíz entero, imagen incluida.
+  openGraph: {
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "KEV PROJECT GTA" }],
+    type: "website",
+    siteName: "KEV PROJECT GTA",
+    url: "/terminos",
+    title: "Términos | KEV PROJECT GTA",
+    description: "Las reglas de uso de kevproject.world y de los videos de La Casa Blanca Project.",
+  },
+  twitter: { card: "summary_large_image", title: "Términos | KEV PROJECT GTA", images: ["/opengraph-image"] },
 }
 
 export default function TerminosPage() {
@@ -44,13 +55,13 @@ export default function TerminosPage() {
       <Seccion titulo="Los videos">
         <ul>
           <li>Se publican en las cuentas de La Casa Blanca Project en YouTube, Facebook, Instagram, TikTok y X.</li>
-          <li>Cada uno lleva la línea de ficción al comienzo del texto y, donde la red lo permite, su etiqueta de contenido hecho con IA.</li>
+          <li>Cada uno lleva la línea de ficción en su texto y, donde la red lo permite, su etiqueta de contenido hecho con IA.</li>
           <li>
             En YouTube rigen los <Fuera href={YOUTUBE_TERMINOS}>Términos del Servicio de YouTube</Fuera> y la{" "}
             <Fuera href={GOOGLE_PRIVACIDAD}>Política de Privacidad de Google</Fuera>; en cada red, sus propias reglas.
           </li>
           <li>
-            Para pedir que se baje un video, escribe a <Correo a={CORREO_BAJAS} /> con el enlace. Lo bajamos en menos de
+            Para pedir que se baje un video, escribe a <Correo a={CORREO_BAJAS} /> con el asunto «Bajar video» y el enlace. Lo bajamos en menos de
             24 horas.
           </li>
         </ul>

@@ -434,6 +434,12 @@ export default function Dashboard() {
           </p>
           <div className="gold-rule my-2" />
           <SocialLinks />
+          {/* Google pide la política enlazada desde la portada para verificar la app de YouTube. */}
+          <nav className="text-xs text-muted-foreground flex gap-3" aria-label="Legal">
+            <Link href="/privacidad" className="underline-offset-4 hover:underline">Privacidad</Link>
+            <span aria-hidden>·</span>
+            <Link href="/terminos" className="underline-offset-4 hover:underline">Términos</Link>
+          </nav>
         </div>
       </footer>
 

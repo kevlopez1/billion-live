@@ -47,7 +47,7 @@ export const CALENDARIO: EntradaCalendario[] = [
             { quien: "leonardo", texto: "Mi disciplina era observar, no terminar." },
           ],
         },
-        { dur: 7, camara: { tipo: "toma", toma: "sala-guerra" }, hora: "15:05", reunir: ["napoleon", "suntzu", "socrates", "claude", "chatgpt"], titulo: "22 líderes. 22 departamentos.", rotulo: "100 puestos de IA en cada uno · Sala de guerra" },
+        { dur: 7, camara: { tipo: "toma", toma: "sala-guerra" }, hora: "15:05", reunir: ["napoleon", "suntzu", "socrates", "claude", "chatgpt"], titulo: "22 departamentos.", rotulo: "100 puestos de IA en cada uno · Sala de guerra" },
         { dur: 6.5, camara: { tipo: "seguir", personaje: "suntzu" }, reunir: ["suntzu", "napoleon", "socrates", "claude", "chatgpt"],
           dialogo: [
             { quien: "napoleon", texto: "¡Un mapa, rápido! Esto es una oportunidad." },
@@ -341,7 +341,7 @@ export const CALENDARIO: EntradaCalendario[] = [
     texto: "Capítulo 2. Cada domingo el consejo de La Casa Blanca Project revisa un número real: lo recaudado en el reto hacia un Mercedes Mansory, solo con ingresos reales de PRIME. Hoy: el ritmo que hace falta. Napoleón lo quiere más rápido. Sócrates pregunta cómo sabemos que es verdad.\n\nLos comprobantes: kevproject.world/comprobantes\nLa casa: kevproject.world/casa-blanca\n\nFicción hecha con IA. El número sale del contador del reto.\n#LaCasaBlancaProject",
     episodio: {
       id: "ep07-capitulo-2-el-mercedes",
-      titulo: "Capítulo 2: 22 líderes trabajan para este número",
+      titulo: "Capítulo 2: el consejo trabaja para este número",
       formato: "16:9",
       visor: "cine",
       planos: [
