@@ -17,6 +17,17 @@ export const metadata: Metadata = {
   description:
     "Qué datos guarda kevproject.world, para qué los usa, con quién los comparte y cómo pedir que se borren. Incluye el uso de los servicios de la API de YouTube.",
   alternates: { canonical: "/privacidad" },
+  // Sin esto hereda og:url y og:title de la portada: el enlace compartido se veía como la home.
+  // La imagen se nombra a mano: un openGraph propio reemplaza el de la raíz entero, imagen incluida.
+  openGraph: {
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "KEV PROJECT GTA" }],
+    type: "website",
+    siteName: "KEV PROJECT GTA",
+    url: "/privacidad",
+    title: "Privacidad | KEV PROJECT GTA",
+    description: "Qué datos guarda kevproject.world, para qué los usa, con quién los comparte y cómo pedir que se borren.",
+  },
+  twitter: { card: "summary_large_image", title: "Privacidad | KEV PROJECT GTA", images: ["/opengraph-image"] },
 }
 
 export default function PrivacidadPage() {
@@ -52,15 +63,17 @@ export default function PrivacidadPage() {
             <strong>La Casa Blanca Project.</strong> Lo que le escribes a un residente lo procesa una IA (Anthropic) para
             responder. Tu mensaje no se guarda: el residente guarda un resumen en primera persona, y antes el servidor le
             borra correos, teléfonos, enlaces y el nombre con el que te presentaste. Para el límite diario de charlas se
-            guarda un código sacado de tu IP y del día, no la IP.
+            guarda un código sacado de tu IP y del día, no la IP. Las noticias y los temas del consejo que escribes se
+            guardan (hasta 140 caracteres, sin correos, teléfonos ni enlaces) en la memoria de los residentes, que ven otros
+            visitantes.
           </li>
           <li>
             <strong>Visitas.</strong> Vercel Web Analytics cuenta páginas vistas y algunos botones tocados, sin cookies. El contador de personas en
             vivo usa un código al azar que desaparece al cerrar la página.
           </li>
           <li>
-            <strong>Tu navegador.</strong> El tema, los avisos que cerraste y la partida de la casa se guardan en tu propio
-            navegador, no en nuestros servidores.
+            <strong>Tu navegador.</strong> El tema, los avisos que cerraste, la partida de la casa y tu sesión si tienes cuenta se
+            guardan en tu propio navegador, no en nuestros servidores.
           </li>
         </ul>
         <p>No vendemos datos ni los usamos para publicidad de terceros.</p>
@@ -78,8 +91,8 @@ export default function PrivacidadPage() {
       <Seccion titulo="Los videos y la API de YouTube">
         <p>
           La Casa Blanca Project publica videos hechos con IA en sus propias cuentas de YouTube, Facebook, Instagram, TikTok
-          y X. Para YouTube, este sitio usa los servicios de la API de YouTube: sube los videos a nuestro canal y lee sus
-          estadísticas. No lee datos de quienes ven los videos ni de otras cuentas.
+          y X. Para YouTube, este sitio usa los servicios de la API de YouTube: sube los videos y sus subtítulos a nuestro canal y
+          consulta su estado. No lee datos de quienes ven los videos ni de otras cuentas.
         </p>
         <p>
           Al usar YouTube aceptas los <Fuera href={YOUTUBE_TERMINOS}>Términos del Servicio de YouTube</Fuera>, y Google
@@ -94,7 +107,7 @@ export default function PrivacidadPage() {
       <Seccion titulo="Bajar un video">
         <p>
           Si un video te nombra, te muestra o crees que no debería estar, escribe a <Correo a={CORREO_BAJAS} /> con el
-          enlace. Lo bajamos en menos de 24 horas.
+          asunto «Bajar video» y el enlace. Lo bajamos en menos de 24 horas.
         </p>
       </Seccion>
 

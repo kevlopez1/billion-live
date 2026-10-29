@@ -505,6 +505,12 @@ export function decidirVerificacion(v: { visibilidad: Visibilidad; como: string 
 export interface PuertosTick {
   base: BaseCola
   adaptadores: Partial<Record<RedId, Adaptador>>
+  /**
+   * Solo para desprogramar: las redes configuradas aunque estén apagadas por
+   * entorno (registro-redes.ts, adaptadoresParaBajar). Apagar FABRICA_ACTIVA
+   * tiene que bajar lo que YouTube ya tiene programado, no dejarlo salir.
+   */
+  bajar?: Partial<Record<RedId, Adaptador>>
   ctx: Ctx
   env: Entorno
   /** Milisegundos (Date.now): solo para el presupuesto de tiempo, nunca para decidir. */
@@ -685,7 +691,7 @@ async function ejecutarAccion(
   envios: Map<string, FilaEnvio>,
 ): Promise<string> {
   const { base } = p
-  const adaptador = "red" in a ? p.adaptadores[a.red] : undefined
+  const adaptador = "red" in a ? (p.adaptadores[a.red] ?? (a.tipo === "desprogramar" ? p.bajar?.[a.red] : undefined)) : undefined
 
   switch (a.tipo) {
     case "cubrir_hueco": {

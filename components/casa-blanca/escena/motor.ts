@@ -755,7 +755,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       }
     }
     if (renderer.shadowMap.enabled) seguirSombra()
-    const letreros = opciones.letreros !== false && camara.modo !== "cine"
+    // En la intro tampoco: el de ASCENSOR va encima de todo y aparecía sobre la puerta del Pórtico Norte.
+    const letreros = opciones.letreros !== false && camara.modo !== "cine" && camara.modo !== "intro"
     if (letreros !== verLetreros) {
       verLetreros = letreros
       for (const o of letrerosFlotantes) o.visible = letreros
@@ -975,7 +976,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       if (!camara.puedeViajar) camara.setModo(n === "superficie" ? "dron" : "nivel")
       const pose = poseEnfoque(destino, distancia, n, undefined, lugarId)
       // "subir": el lugar queda más arriba en la pantalla (en celular, un panel tapa la mitad de abajo).
-      const subir = opciones?.subir ?? 0
+      // En la ciudad no: sus tomas ya encuadran el lugar y es chica y cerrada (74 × 102 m, salas con muros);
+      // correr la cámara 13 a 32 m para atrás la dejaba dentro de un muro o en la roca.
+      const subir = n === "ciudad" ? 0 : (opciones?.subir ?? 0)
       if (subir) {
         const atras = pose.pos.clone().sub(pose.mira).setY(0)
         if (atras.lengthSq() > 1e-6) {

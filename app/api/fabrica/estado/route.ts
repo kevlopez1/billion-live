@@ -3,7 +3,7 @@ import { autorizado, quien, rechazo } from "@/lib/auth-admin"
 import { conLlave } from "@/lib/fabrica/auth"
 import { baseReal } from "@/lib/fabrica/base-cola"
 import { bajarYouTube } from "@/lib/fabrica/cola"
-import { adaptadores, ctxReal } from "@/lib/fabrica/registro-redes"
+import { adaptadores, adaptadoresParaBajar, ctxReal } from "@/lib/fabrica/registro-redes"
 import { porQuien, sinPermiso, validarPedidoEstado, type Quien } from "@/lib/fabrica/estado-pedido"
 import { diaBolivia, sumarDias } from "@/lib/fabrica/tipos"
 
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     if (p.accion === "pausar" && (!p.red || p.red === "youtube")) {
       try {
         const env = process.env
-        youtube = await bajarYouTube({ base, adaptadores: adaptadores(), ctx: ctxReal(env), env, reloj: Date.now })
+        youtube = await bajarYouTube({ base, adaptadores: adaptadores(), bajar: adaptadoresParaBajar(env), ctx: ctxReal(env), env, reloj: Date.now })
       } catch (e) {
         const como = e instanceof Error ? e.message : String(e)
         console.error(`[fabrica/estado] pausado, pero bajar YouTube en el momento falló (lo reintenta el tick): ${como}`)

@@ -6,9 +6,11 @@
 import assert from "node:assert/strict"
 import { randomBytes } from "node:crypto"
 import { prueba, almacenFalso, terminar } from "./redes/falso"
-import { ADAPTADORES, adaptadores, avisosDeConfiguracion, ctxReal, diagnostico, faltanDe } from "./registro-redes"
+import { ADAPTADORES, adaptadores, adaptadoresParaBajar, avisosDeConfiguracion, ctxReal, diagnostico, faltanDe } from "./registro-redes"
+import { baseEnMemoria, memoriaNueva } from "./base-memoria"
+import { bajarYouTube, ejecutarTick } from "./cola"
 import { cifrar, type BaseTokens, type FilaToken } from "./tokens"
-import { REDES, type Entorno } from "./tipos"
+import { REDES, instanteBolivia, type Ctx, type Entorno, type FilaEnvio, type FilaVideo } from "./tipos"
 
 const clave = randomBytes(32).toString("hex")
 
@@ -138,6 +140,57 @@ async function main() {
     assert.ok(errores.some((e) => /token de youtube: sin base de tokens \(falta SUPABASE_SERVICE_ROLE_KEY\)/.test(e)))
     assert.ok(errores.some((e) => /sin almacén: falta SUPABASE_SERVICE_ROLE_KEY/.test(e)))
   })
+
+  // El interruptor del entorno tiene que bajar lo que YouTube ya tiene programado:
+  // apagar FABRICA_ACTIVA o FABRICA_YOUTUBE_ACTIVA saca a YouTube de adaptadores(),
+  // y antes desprogramar daba "sin adaptador" y el video salía igual a su hora.
+  for (const apagado of [{ FABRICA_ACTIVA: "false", FABRICA_YOUTUBE_ACTIVA: "1" }, { FABRICA_ACTIVA: "1", FABRICA_YOUTUBE_ACTIVA: "0" }] as Entorno[]) {
+    await prueba(`apagada por entorno (${JSON.stringify(apagado)}): el tick y la pausa desprograman YouTube con el registro real`, async () => {
+      const env: Entorno = { ...COMPLETO, ...apagado }
+      assert.deepEqual(Object.keys(adaptadores(env, callar)), [], "apagada: nada para publicar")
+      assert.deepEqual(Object.keys(adaptadoresParaBajar(env)), ["youtube"], "configurada: YouTube puede bajar")
+      assert.deepEqual(Object.keys(adaptadoresParaBajar({ ...apagado })), [], "sin configurar: no entra")
+
+      const llamadas: string[] = []
+      const yt = ADAPTADORES.youtube as { desprogramar?: (id: string, c: Ctx) => Promise<{ ok: true }> }
+      const original = yt.desprogramar
+      yt.desprogramar = async (id) => {
+        llamadas.push(`desprogramar:${id}`)
+        return { ok: true }
+      }
+      try {
+        for (const quien of ["tick", "pausa"] as const) {
+          llamadas.length = 0
+          const DIA = "2026-11-25"
+          const SALIDA = instanteBolivia(DIA, "12:00")
+          const antes = new Date(SALIDA.getTime() - 60 * 60_000)
+          const m = memoriaNueva(antes)
+          m.estado.pausada = false
+          m.estado.motivo = null
+          m.videos.push({
+            id: "v1", creado: antes.toISOString(), actualizado: antes.toISOString(), dia: DIA, slot: 1, hora_salida: SALIDA.toISOString(),
+            es_reserva: false, estado: "programado", pilar: "historia", personajes: ["napoleon", "suntzu"], semaforo: "verde",
+            episodio: { titulo: "t", formato: "16:9" }, textos: null, archivo: "a.mp4", duracion_s: 60, aprobado_video_en: antes.toISOString(),
+            motivo_rechazo: null, dueno: null, vence_en: null, intentos: 0,
+          } as unknown as FilaVideo)
+          m.envios.push({
+            id: "v1-youtube", video_id: "v1", red: "youtube", estado: "programado", id_red: "yt-v1", enlace: null, contenedor: null, media_id: null,
+            media_expira_en: null, publish_at: SALIDA.toISOString(), publicado_en: null, dueno: null, reservado_en: null, vence_en: null, intentos: 0,
+            proximo_intento: null, visibilidad: null, verificado_en: null, ultimo_error: null,
+          } as unknown as FilaEnvio)
+          const ctx = ctxReal(env, { baseTokens: null, almacen: null, ahora: () => antes, log: callar })
+          const p = { base: baseEnMemoria(m), adaptadores: adaptadores(env, callar), bajar: adaptadoresParaBajar(env), ctx, env, reloj: () => 0, log: callar }
+          if (quien === "tick") await ejecutarTick(p)
+          else await bajarYouTube(p)
+          assert.deepEqual(llamadas, ["desprogramar:yt-v1"], quien)
+          assert.equal(m.envios[0].publish_at, null, `${quien}: el publishAt se borra`)
+          assert.notEqual(m.envios[0].estado, "programado", quien)
+        }
+      } finally {
+        yt.desprogramar = original
+      }
+    })
+  }
 
   await prueba("todo encendido sin ninguna variable: el registro queda vacío", () => {
     const a = adaptadores({ ...TODAS_ENCENDIDAS }, callar)

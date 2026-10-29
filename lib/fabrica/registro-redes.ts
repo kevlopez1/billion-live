@@ -117,6 +117,19 @@ export function adaptadores(env: Entorno = process.env, log: (m: string) => void
   return r
 }
 
+/**
+ * Los adaptadores que pueden BAJAR lo ya programado (hoy, solo YouTube y su
+ * publishAt): las redes configuradas, estén encendidas o no. Apagar
+ * FABRICA_ACTIVA o FABRICA_YOUTUBE_ACTIVA saca a YouTube de adaptadores(), y
+ * sin esto desprogramar daba "sin adaptador" y el video salía igual a su hora.
+ * Solo se usa para desprogramar, nunca para publicar.
+ */
+export function adaptadoresParaBajar(env: Entorno = process.env): Partial<Record<RedId, Adaptador>> {
+  const r: Partial<Record<RedId, Adaptador>> = {}
+  for (const red of REDES) if (ADAPTADORES[red].desprogramar && faltanDe(red, env).length === 0) r[red] = ADAPTADORES[red]
+  return r
+}
+
 /** Las redes que guardan su token en fabrica_tokens y cómo se renuevan. */
 export const RENOVADORES = { youtube: renovarYouTube, x: renovarX }
 
