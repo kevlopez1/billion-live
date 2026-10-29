@@ -5,11 +5,11 @@
 // ascensor, nivel, pasillo y puerta). Los pasos salen de navegacion.ts.
 // ──────────────────────────────────────────────────────────────
 
-import { ArrowDownUp, Flag, MapPin, MoveRight } from "lucide-react"
+import { ArrowDownUp, ChevronsUp, Flag, MapPin, MoveRight } from "lucide-react"
 import { comoLlegar, type Paso } from "../navegacion"
 import { Rotulo } from "./base"
 
-const ICONO: Record<Paso["tipo"], typeof MapPin> = { inicio: MapPin, ascensor: ArrowDownUp, pasillo: MoveRight, llegada: Flag }
+const ICONO: Record<Paso["tipo"], typeof MapPin> = { inicio: MapPin, ascensor: ArrowDownUp, escalera: ChevronsUp, pasillo: MoveRight, llegada: Flag }
 
 export function ComoLlegar({ lugarId, color = "#e3b866" }: { lugarId: string; color?: string }) {
   const pasos = comoLlegar(lugarId)

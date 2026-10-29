@@ -7,7 +7,9 @@
 // que pasan por la superficie, un interior, el ascensor y el subsuelo.
 // ──────────────────────────────────────────────────────────────
 
-import { LUGAR } from "../lugares"
+import { LUGAR, LUGARES, NODO } from "../lugares"
+import { PERSONAJES as REALES } from "../datos/personajes"
+import { CUARTOS, PLANTA, PLANTAS, transitable } from "../plantas"
 import type { EntradaHorario, Especiales, EstadoCuerpo, NivelId, Personaje } from "../tipos"
 import { Simulacion, escritorioDe, type Conversacion, type EventoSim, type LineaConv } from "./simulacion"
 
@@ -193,7 +195,7 @@ seccion("24 h del mundo en pasos de 0,1 s")
         pasosAscensor++
         if (e.visible) ascensorVisible++
       }
-      if (e.lugarId && LUGAR[e.lugarId].interior && e.visible) interiorVisible++
+      if (e.lugarId && LUGAR[e.lugarId].interior && !LUGAR[e.lugarId].planta && e.visible) interiorVisible++
       if (p.real === "ia" && e.estado === "duerme") iaDuerme++
       if (e.burbuja?.tipo === "piensa") piensa++
       if (e.estado === "corre") corre++
@@ -226,7 +228,7 @@ seccion("24 h del mundo en pasos de 0,1 s")
   ok(teletransportes === 0, `nadie se teletransporta (${teletransportes} saltos de más de 5 m/s)`)
   ok(pasosAscensor > 0, `alguien usó el ascensor (${pasosAscensor} pasos)`)
   ok(ascensorVisible === 0, "en el ascensor no se ve a nadie")
-  ok(interiorVisible === 0, "dentro de un edificio no se ve a nadie")
+  ok(interiorVisible === 0, "dentro de un edificio sin planta no se ve a nadie")
   ok(iaDuerme === 0, "la IA nunca duerme")
   ok(sentadoEnEscritorio.hormozi, "el líder trabaja sentado en su escritorio")
   ok(sentadoEnEscritorio.claude, "la IA trabaja sentada al lado del líder")
@@ -242,7 +244,7 @@ seccion("24 h del mundo en pasos de 0,1 s")
   ok(lineas.length >= 10, `hay conversaciones con líneas (${lineas.length} líneas en ${lineasPorConv.size} conversaciones)`)
   ok([...lineasPorConv.values()].some((n) => n >= 2), "alguna conversación tiene dos o más líneas")
   ok(lineas.every((e) => e.conv.ids.includes(e.linea.id)), "cada línea la dice alguien de la conversación")
-  ok(lineas.every((e) => !LUGAR[e.lugarId].interior), "las charlas de guion son en lugares visibles")
+  ok(lineas.every((e) => !LUGAR[e.lugarId].interior || !!LUGAR[e.lugarId].planta), "las charlas de guion son en lugares visibles")
   const especial = lineas.filter((e) => e.linea.texto === ESPECIAL_1)
   ok(especial.length === 1, `la conversación especial sale una vez en el día (${especial.length})`)
   ok(lineas.some((e) => e.linea.cita), "las citas llegan marcadas")
@@ -415,6 +417,117 @@ seccion("se llega a cada lugar del mapa")
     if (sim.pj.viajero.lugarId !== l.id || saltos || sim.pj.viajero.nivel !== l.nivel) lejos.push(l.id)
   }
   ok(!lejos.length, `se llega a los ${Object.keys(LUGAR).length} lugares, en su nivel y sin saltar de nivel (no: ${lejos.join(", ")}; el más lejano, ${maxS} s)`)
+}
+
+// ── Interiores: las salas con planta se recorren a la vista ─────
+seccion("interiores: se entra y se camina por las salas")
+{
+  const conPlanta = LUGARES.filter((l) => l.planta)
+  ok(conPlanta.length >= 5, `hay salas con planta (${conPlanta.map((l) => l.id).join(", ")})`)
+  // Desde el Jardín Norte, el Jardín Sur y la Columnata (las tres puertas de la Residencia),
+  // a cada sala con planta: sin un solo tramo oculto, por puertas, a paso de persona.
+  const malas: string[] = []
+  const plantasVistas = new Set<string>()
+  for (const origen of ["jardin-norte", "jardin-sur", "columnata"])
+  for (const l of conPlanta) {
+    const p = pj("visita", "hormozi", "vivo", [
+      [0, origen, "Espera"],
+      [0.02, l.id, "Entra"],
+    ])
+    const sim = new Simulacion([p], {}, { minutos: 0, semilla: 3 })
+    let ahora = 0
+    let s = 0
+    let ocultoPasos = 0
+    let muro = 0
+    let rapido = 0
+    let sinPlanta = 0
+    let prevPos = { ...sim.pj.visita.pos }
+    while (sim.pj.visita.lugarId !== l.id && s < 2400) {
+      sim.avanzar(0.25, (ahora += 250))
+      s++
+      const e = sim.pj.visita
+      if (!e.visible) ocultoPasos++
+      if (e.planta && !transitable(e.planta, e.pos.x, e.pos.z)) muro++
+      if (e.planta) plantasVistas.add(e.planta)
+      if (e.visible && Math.hypot(e.pos.x - prevPos.x, e.pos.y - prevPos.y, e.pos.z - prevPos.z) > 5 * 0.25 + 1e-6) rapido++
+      prevPos = { ...e.pos }
+    }
+    const e = sim.pj.visita
+    if (e.lugarId !== l.id || e.planta !== l.planta) sinPlanta++
+    if (ocultoPasos || muro || rapido || sinPlanta) malas.push(`${origen} → ${l.id} (oculto ${ocultoPasos}, muro ${muro}, rápido ${rapido}, planta ${e.planta})`)
+  }
+  ok(!malas.length, `de las tres puertas a cada sala con planta (${conPlanta.length}), siempre a la vista, por puertas y escaleras y a menos de 5 m/s (no: ${malas.join("; ")})`)
+  const residencia = PLANTAS.filter((x) => x.edificio === "residencia")
+  ok(
+    residencia.every((x) => x.lista && plantasVistas.has(x.id)),
+    `las cuatro plantas de la Residencia se recorren (${[...plantasVistas].join(", ")})`,
+  )
+  ok(
+    ["salon-este", "salon-azul", "salon-rojo", "salon-verde", "comedor-estado", "dormitorio-lincoln", "sala-oval-amarilla", "cocina", "recepcion-diplomatica", "sala-mapas", "solario"].every((id) => !!LUGAR[id]?.planta),
+    "todas las salas de la Residencia tienen planta (ninguna es ya «el edificio entero»)",
+  )
+
+  // A dormir: a la vista hasta la puerta del dormitorio; adentro, con la puerta cerrada, no se ve.
+  {
+    const hab = LUGAR.habitaciones
+    const p = pj("visita", "hormozi", "vivo", [
+      [0, "jardin-sur", "Espera"],
+      [0.02, "habitaciones", "Duerme", "duerme"],
+    ])
+    const sim = new Simulacion([p], {}, { minutos: 0, semilla: 3 })
+    const puerta = NODO[hab.acceso]
+    let ahora = 0
+    let ocultos = 0
+    let muro = 0
+    let llego = false
+    for (let s = 0; s < 2400 && !llego; s++) {
+      sim.avanzar(0.25, (ahora += 250))
+      const e = sim.pj.visita
+      // Llega (y entra) al pisar el nodo de la puerta; antes, siempre a la vista.
+      if (e.lugarId === "habitaciones") llego = Math.abs(e.pos.y - puerta.p.y) < 0.01
+      else if (!e.visible) ocultos++
+      if (e.planta && e.visible && !transitable(e.planta, e.pos.x, e.pos.z)) muro++
+    }
+    ok(llego && ocultos === 0 && muro === 0, `a las habitaciones del Tercer piso se sube a la vista hasta la puerta (llegó ${llego}, ocultos ${ocultos}, muro ${muro})`)
+  }
+
+  // Un día entero con los residentes reales: el que está adentro tiene planta, pisa un cuarto o una puerta, y se ve.
+  const sim = new Simulacion(REALES, {}, { minutos: 6 * 60, semilla: 7 })
+  let adentroSinPlanta = 0
+  let fuera = 0
+  let rapidos = 0
+  let invisibles = 0
+  let pasosAdentro = 0
+  let sentadosComedor = 0
+  const quienes = new Set<string>()
+  const prev: Record<string, { x: number; y: number; z: number; v: boolean }> = {}
+  for (const p of REALES) prev[p.id] = { ...sim.pj[p.id].pos, v: sim.pj[p.id].visible }
+  const dt = 0.25
+  for (let i = 0, ahora = 0; i < (18 * 60) / 0.2 / dt; i++) {
+    sim.avanzar(dt, (ahora += dt * 1000))
+    for (const p of REALES) {
+      const e = sim.pj[p.id]
+      const l = e.lugarId ? LUGAR[e.lugarId] : null
+      if (l?.planta) {
+        pasosAdentro++
+        quienes.add(p.id)
+        if (e.planta !== l.planta) adentroSinPlanta++
+        if (!e.visible) invisibles++
+        if (l.id === "comedor-estado" && e.estado === "sentado") sentadosComedor++
+      }
+      if (e.planta && e.visible && !transitable(e.planta, e.pos.x, e.pos.z)) fuera++
+      const a = prev[p.id]
+      if (a.v && e.visible && Math.hypot(e.pos.x - a.x, e.pos.y - a.y, e.pos.z - a.z) > 5 * dt + 1e-6) rapidos++
+      prev[p.id] = { ...e.pos, v: e.visible }
+    }
+  }
+  ok(pasosAdentro > 0 && quienes.size >= 3, `los residentes usan las salas (${quienes.size} personas, ${pasosAdentro} pasos)`)
+  ok(adentroSinPlanta === 0, `el que está en una sala tiene su planta (${adentroSinPlanta} casos)`)
+  ok(invisibles === 0, `en una sala con planta todos se ven (${invisibles} casos)`)
+  ok(fuera === 0, `nadie camina a través de un muro: cada punto cae en un cuarto o una puerta (${fuera} casos)`)
+  ok(rapidos === 0, `nadie a la vista pasa de 5 m/s (${rapidos} casos)`)
+  ok(sentadosComedor > 0, `en el Comedor de Estado se sientan en las sillas (${sentadosComedor} pasos)`)
+  ok(CUARTOS.filter((c) => PLANTA[c.planta].lista && c.lugarId).every((c) => !!LUGAR[c.lugarId!]?.planta), "cada sala de una planta lista es un lugar con planta")
 }
 
 // ── 4. Determinismo, velocidad y pausa ─────────────────────────

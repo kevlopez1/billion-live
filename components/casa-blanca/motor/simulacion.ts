@@ -34,6 +34,7 @@ import {
   type Vec3,
 } from "../tipos"
 import { GRAFO, HUELLAS, LUGAR, NODO } from "../lugares"
+import { CUARTOS, PLANTA, dentroDeCuarto, type PlantaId } from "../plantas"
 
 // ── Tipos públicos ────────────────────────────────────────────
 
@@ -47,6 +48,8 @@ export interface EstadoPj {
   estado: EstadoCuerpo
   visible: boolean
   nivel: NivelId
+  /** La planta del edificio donde está (null = afuera). Cambia a mitad de camino entre dos plantas: en el vano de la puerta. */
+  planta: PlantaId | null
   /** Lugar donde está. null mientras va de un lugar a otro. */
   lugarId: string | null
   /** Lugar al que va (o donde está, si ya llegó). */
@@ -412,7 +415,22 @@ function areaLibre(l: Lugar): Rect {
 
 const usaObstaculos = (l: Lugar) => l.nivel === "superficie" && !l.interior && Math.abs(l.y) < 0.5
 
+/** Un lugar donde no se ve a nadie: dentro de un edificio que todavía no tiene planta. */
+const oculto = (l: Lugar) => !!l.interior && !l.planta
+
+/** El cuarto de una sala con planta (para el óvalo del Salón Azul y los márgenes). */
+const CUARTO_DE_LUGAR = new Map(CUARTOS.filter((c) => c.lugarId && PLANTA[c.planta].lista).map((c) => [c.lugarId!, c]))
+
+const enRect = (r: Rect, p: { x: number; z: number }, m = 0) => p.x > r.x0 - m && p.x < r.x1 + m && p.z > r.z0 - m && p.z < r.z1 + m
+
 function enObstaculo(l: Lugar, p: { x: number; z: number }, margen: number) {
+  if (l.planta) {
+    // Adentro: fuera de la sala (o del óvalo) o encima de un mueble.
+    const c = CUARTO_DE_LUGAR.get(l.id)
+    if (c && !dentroDeCuarto(c, p.x, p.z, Math.max(0.45, margen * 0.6))) return true
+    for (const r of l.obst ?? []) if (enRect(r, p, margen * 0.5)) return true
+    return false
+  }
   if (!usaObstaculos(l)) return false
   for (const c of CIRCULOS) if (Math.hypot(p.x - c.x, p.z - c.z) < c.r + margen) return true
   for (const r of RECTS) if (p.x > r.x0 - margen && p.x < r.x1 + margen && p.z > r.z0 - margen && p.z < r.z1 + margen) return true
@@ -452,6 +470,103 @@ function esquivar(a: Vec3, b: Vec3, obst: Circulo[], y: number, prof = 0): Vec3[
   return [copia(b)]
 }
 
+/** ¿El segmento a→b pasa por dentro del rectángulo? (Liang–Barsky, sin contar el borde.) */
+function cruzaRect(a: { x: number; z: number }, b: { x: number; z: number }, r: Rect): boolean {
+  let t0 = 0
+  let t1 = 1
+  const dx = b.x - a.x
+  const dz = b.z - a.z
+  const lados: Array<[number, number]> = [
+    [-dx, a.x - r.x0],
+    [dx, r.x1 - a.x],
+    [-dz, a.z - r.z0],
+    [dz, r.z1 - a.z],
+  ]
+  for (const [q, d] of lados) {
+    if (Math.abs(q) < 1e-12) {
+      if (d <= 0) return false
+      continue
+    }
+    const t = d / q
+    if (q < 0) t0 = Math.max(t0, t)
+    else t1 = Math.min(t1, t)
+    if (t0 >= t1) return false
+  }
+  return t1 - t0 > 1e-6
+}
+
+/**
+ * Camino dentro de una sala sin atravesar sus muebles: si la recta choca con
+ * uno, va por las esquinas (grafo de visibilidad, Dijkstra). Las esquinas que
+ * caen fuera de la sala no sirven (un mueble contra el muro se rodea por el otro lado).
+ * Si el punto de partida o de llegada está sobre un mueble (una silla de la
+ * mesa), sale primero al borde más cercano.
+ */
+function rodear(a: Vec3, b: Vec3, obst: Rect[], dentro: (x: number, z: number) => boolean, y: number): Vec3[] {
+  const libre = (p: { x: number; z: number }, q: { x: number; z: number }) => obst.every((r) => !cruzaRect(p, q, r))
+  const salida = (p: Vec3): Vec3 | null => {
+    const r = obst.find((o) => enRect(o, p))
+    if (!r) return null
+    const op: Array<[number, number, number]> = [
+      [p.x - r.x0, r.x0 - 0.12, p.z],
+      [r.x1 - p.x, r.x1 + 0.12, p.z],
+      [p.z - r.z0, p.x, r.z0 - 0.12],
+      [r.z1 - p.z, p.x, r.z1 + 0.12],
+    ]
+    op.sort((u, v) => u[0] - v[0])
+    for (const [, x, z] of op) if (dentro(x, z)) return { x, y, z }
+    return null
+  }
+  const sa = salida(a)
+  const sb = salida(b)
+  const ini = sa ?? a
+  const fin = sb ?? b
+  let medio: Vec3[] = [fin]
+  if (!libre(ini, fin)) {
+    const pts: Vec3[] = [ini, fin]
+    for (const r of obst) {
+      for (const [x, z] of [
+        [r.x0 - 0.08, r.z0 - 0.08],
+        [r.x1 + 0.08, r.z0 - 0.08],
+        [r.x0 - 0.08, r.z1 + 0.08],
+        [r.x1 + 0.08, r.z1 + 0.08],
+      ]) {
+        if (dentro(x, z) && !obst.some((o) => enRect(o, { x, z }))) pts.push({ x, y, z })
+      }
+    }
+    const n = pts.length
+    const dist = new Array<number>(n).fill(Infinity)
+    const prev = new Array<number>(n).fill(-1)
+    const hecho = new Array<boolean>(n).fill(false)
+    dist[0] = 0
+    for (let k = 0; k < n; k++) {
+      let u = -1
+      for (let i = 0; i < n; i++) if (!hecho[i] && (u < 0 || dist[i] < dist[u])) u = i
+      if (u < 0 || dist[u] === Infinity) break
+      hecho[u] = true
+      if (u === 1) break
+      for (let v = 0; v < n; v++) {
+        if (hecho[v] || v === u) continue
+        if (!libre(pts[u], pts[v])) continue
+        const nd = dist[u] + distXZ(pts[u], pts[v])
+        if (nd < dist[v]) {
+          dist[v] = nd
+          prev[v] = u
+        }
+      }
+    }
+    if (prev[1] >= 0) {
+      medio = []
+      for (let k = 1; k !== 0 && k >= 0; k = prev[k]) medio.unshift(pts[k])
+    }
+  }
+  const out: Vec3[] = []
+  if (sa) out.push(sa)
+  out.push(...medio)
+  if (sb) out.push(copia(b))
+  return out.map(copia)
+}
+
 /**
  * Dónde se sienta a trabajar: el líder, al frente de su departamento (x = centro
  * de la celda, z = z0 + 3), mirando hacia su equipo (+z). Los demás de ese
@@ -483,6 +598,8 @@ interface Tramo {
   ascensor: boolean
   oculto: boolean
   nivel: NivelId
+  /** La planta del punto de llegada (null = afuera). */
+  planta: PlantaId | null
   entra?: string
 }
 
@@ -496,6 +613,8 @@ interface Interno {
   /** Un irA() a mano: manda hasta el próximo cambio de horario. */
   manual: { lugarId: string; actividad: string } | null
   ruta: Tramo[]
+  /** Donde empezó el tramo en curso (para cambiar de planta a mitad de camino). */
+  inicioTramo: Vec3 | null
   ascT: number
   ascDesde: Vec3 | null
   /** Lugar donde está o por el que se mueve; se suelta al llegar al primer nodo del grafo. */
@@ -597,6 +716,7 @@ export class Simulacion {
         estado: "quieto",
         visible: true,
         nivel: "superficie",
+        planta: null,
         lugarId: null,
         destinoId: null,
         actividad: "",
@@ -611,6 +731,7 @@ export class Simulacion {
         entrada: -1,
         manual: null,
         ruta: [],
+        inicioTramo: null,
         ascT: 0,
         ascDesde: null,
         zona: null,
@@ -967,7 +1088,10 @@ export class Simulacion {
     s.base = estadoBase(s.p, l, actividad, marca)
     s.ritmo = s.base === "corre" ? "corre" : "paso"
     const esc = marca === "trabaja" ? escritorioDe(s.p, this.personajes) : null
-    const escritorio = esc && esc.lugarId === l.id ? esc : null
+    // En una sala con sillas (el Comedor de Estado), el que se sienta toma una silla libre.
+    const escritorio = esc && esc.lugarId === l.id ? esc : s.base === "sentado" && l.asientos?.length ? this.asientoLibre(l, id) : null
+    // Adentro nadie se sienta en el aire: sin silla, de pie.
+    if (s.base === "sentado" && l.planta && !escritorio) s.base = "quieto"
     if (forzar) {
       this.colocar(id, l, escritorio ? copia(escritorio.pos) : this.puntoDeLlegada(l, id), escritorio ? escritorio.rumbo : null)
       return
@@ -1025,7 +1149,9 @@ export class Simulacion {
     e.pos.z = spot.z
     if (rumbo != null) e.rumbo = rumbo
     e.nivel = l.nivel
+    e.planta = l.planta ?? null
     s.ruta = []
+    s.inicioTramo = null
     s.ascDesde = null
     s.ascT = 0
     s.zona = l.id
@@ -1066,12 +1192,13 @@ export class Simulacion {
         fin.nodo = acc.id
         fin.oculto = fin.oculto || !!acc.oculto
         fin.nivel = acc.nivel
+        fin.planta = acc.planta ?? null
         ruta.push(...salida)
         inicio = acc.id
       } else {
         inicio = s.nodo && NODO[s.nodo] ? s.nodo : nodoCercano(e.pos, e.nivel)
         const n = NODO[inicio]
-        ruta.push({ p: copia(n.p), nodo: n.id, ascensor: false, oculto: !!n.oculto, nivel: n.nivel })
+        ruta.push({ p: copia(n.p), nodo: n.id, ascensor: false, oculto: !!n.oculto, nivel: n.nivel, planta: n.planta ?? null })
       }
     }
     const camino = caminoEntre(inicio, l.acceso)
@@ -1091,6 +1218,7 @@ export class Simulacion {
         ascensor: f.ascensor,
         oculto: f.ascensor || f.interior || !!a.oculto || !!b.oculto,
         nivel: b.nivel,
+        planta: b.planta ?? null,
       })
     }
     ruta[ruta.length - 1].entra = l.id
@@ -1100,8 +1228,15 @@ export class Simulacion {
   }
 
   private tramosDentro(desde: Vec3, hasta: Vec3, l: Lugar): Tramo[] {
+    const planta = l.planta ?? null
+    if (l.planta) {
+      // En una sala: por el piso de la sala, rodeando los muebles.
+      const c = CUARTO_DE_LUGAR.get(l.id)
+      const dentro = (x: number, z: number) => (c ? dentroDeCuarto(c, x, z, 0.35) : true)
+      return rodear(desde, hasta, l.obst ?? [], dentro, l.y).map((p) => ({ p, nodo: null, ascensor: false, oculto: false, nivel: l.nivel, planta }))
+    }
     const obst = usaObstaculos(l) ? CIRCULOS : []
-    return esquivar(desde, hasta, obst, l.y).map((p) => ({ p, nodo: null, ascensor: false, oculto: !!l.interior, nivel: l.nivel }))
+    return esquivar(desde, hasta, obst, l.y).map((p) => ({ p, nodo: null, ascensor: false, oculto: oculto(l), nivel: l.nivel, planta }))
   }
 
   private mover(id: string, dtMov: number) {
@@ -1128,10 +1263,13 @@ export class Simulacion {
           s.ascDesde = null
           s.ascT = 0
           s.ruta.shift()
+          s.inicioTramo = null
+          e.planta = w.planta
           this.alcanzar(id, w)
         }
       } else {
         const vel = velTramo(w, s.ritmo)
+        if (!s.inicioTramo) s.inicioTramo = copia(e.pos)
         const dx = w.p.x - e.pos.x
         const dy = w.p.y - e.pos.y
         const dz = w.p.z - e.pos.z
@@ -1144,6 +1282,8 @@ export class Simulacion {
           e.pos.z = w.p.z
           tiempo -= d / vel
           s.ruta.shift()
+          s.inicioTramo = null
+          e.planta = w.planta
           this.alcanzar(id, w)
         } else {
           const k = alcance / d
@@ -1151,6 +1291,8 @@ export class Simulacion {
           e.pos.y += dy * k
           e.pos.z += dz * k
           tiempo = 0
+          // Entre dos plantas (una puerta a la calle), cambia en el vano: a mitad del tramo.
+          if (e.planta !== w.planta && dist3(e.pos, w.p) <= dist3(s.inicioTramo, w.p) / 2) e.planta = w.planta
         }
       }
     }
@@ -1188,7 +1330,7 @@ export class Simulacion {
     const s = this.int[id]
     if (s.ruta.length || s.viaje || !s.zona || e.conversacionId || dtMov <= 0) return
     const l = LUGAR[s.zona]
-    if (!l || l.interior) return
+    if (!l || oculto(l)) return
     if (s.base === "corre") {
       s.ritmo = "corre"
       this.planear(id, l, this.puntoLibre(l, id), null)
@@ -1211,8 +1353,32 @@ export class Simulacion {
   }
 
   /** Un punto libre dentro del lugar: a 1 m o más de los demás y de los escritorios ajenos. */
+  /** Una de las zonas de la sala, con probabilidad según su área. */
+  private zonaAlAzar(zonas: Rect[]): Rect {
+    const area = (r: Rect) => Math.max(0.01, (r.x1 - r.x0) * (r.z1 - r.z0))
+    let t = this.rand() * zonas.reduce((s, r) => s + area(r), 0)
+    for (const r of zonas) {
+      t -= area(r)
+      if (t <= 0) return r
+    }
+    return zonas[zonas.length - 1]
+  }
+
+  /** Una silla libre de la sala: nadie sentado ni yendo a ella. Sin sillas libres, null (se queda de pie). */
+  private asientoLibre(l: Lugar, yo: string): { lugarId: string; pos: Vec3; rumbo: number } | null {
+    const as = l.asientos ?? []
+    if (!as.length) return null
+    const k0 = Math.floor(this.rand() * as.length)
+    for (let i = 0; i < as.length; i++) {
+      const a = as[(k0 + i) % as.length]
+      const p = { x: a.x, y: l.y, z: a.z }
+      if (this.holgura(l, p, yo) >= 0.45) return { lugarId: l.id, pos: p, rumbo: a.rumbo }
+    }
+    return null
+  }
+
   private puntoLibre(l: Lugar, yo: string, cerca?: { p: Vec3; radio: number }): Vec3 {
-    const a = areaLibre(l)
+    const a = l.zonas?.length ? this.zonaAlAzar(l.zonas) : areaLibre(l)
     let mejor: Vec3 | null = null
     let mejorD = -1
     for (let i = 0; i < 24; i++) {
@@ -1275,7 +1441,7 @@ export class Simulacion {
     } else {
       const l = s.zona ? LUGAR[s.zona] : undefined
       const nodo = s.nodo ? NODO[s.nodo] : undefined
-      e.visible = l ? !l.interior : !nodo?.oculto
+      e.visible = l ? !oculto(l) : !nodo?.oculto
       e.velocidad = 0
       const ci = e.conversacionId ? this.convs.get(e.conversacionId) : undefined
       e.estado = ci && !ci.esperando ? "habla" : s.base === "corre" ? "quieto" : s.base
@@ -1542,7 +1708,7 @@ export class Simulacion {
     const s = this.int[id]
     if (!e.visible || e.conversacionId || s.ruta.length || s.viaje || !s.zona) return false
     const l = LUGAR[s.zona]
-    if (!l || l.interior) return false
+    if (!l || oculto(l)) return false
     return s.base !== "duerme" && s.base !== "corre" && !s.fantasma && this.tReal >= s.libreDesde
   }
 

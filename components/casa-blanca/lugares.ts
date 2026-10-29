@@ -11,6 +11,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import { ALTURA_NIVEL, type Arista, type Grafo, type Lugar, type NivelId, type NodoGrafo } from "./tipos"
+import { CUARTO, CUARTOS, ENLACES, ESCALERAS, HABITACIONES, PLANTA, PUERTAS, asientosDe, cuartoDeLugar, dentroDeCuarto, medidasEscalera, obstaculosDe, zonasDe } from "./plantas"
 
 // ── Huellas de los edificios (para la escena y para no caminar a través) ──
 export const HUELLAS = {
@@ -111,20 +112,66 @@ const N = (id: string, x: number, y: number, z: number, nivel: NivelId = "superf
 const E = (a: string, b: string, op?: { ascensor?: boolean; interior?: boolean }) =>
   aristas.push(op ? [a, b, op] : [a, b])
 
-// Residencia
+// Residencia: se entra por cuatro puertas a la vista (ENLACES en plantas.ts).
 N("portico-sur", 0, 0, 25)
-N("puerta-res-sur", 0, 0, 14)
-N("res-int", 0, 0, 4, "superficie", true)
+// Bajo el Pórtico Sur, frente a la puerta del arco de la Recepción Diplomática.
+N("puerta-res-sur", 0, 0, 17.9)
 N("portico-norte", 0, 0, -25)
 N("puerta-res-norte", 0, 0, -14.5)
-N("balcon", 0, 8.6, 19)
-N("asc-sup", 0, 0, 8, "superficie", true)
+// El ascensor a los subsuelos sale del pabellón de vidrio, afuera del Pórtico Sur.
+N("asc-sup", 0, 0, 31)
 E("portico-sur", "puerta-res-sur")
-E("puerta-res-sur", "res-int", { interior: true })
 E("portico-norte", "puerta-res-norte")
-E("puerta-res-norte", "res-int", { interior: true })
-E("res-int", "balcon", { interior: true })
-E("res-int", "asc-sup", { interior: true })
+E("portico-sur", "asc-sup")
+
+// Las plantas que ya tienen interior (plantas.ts): un nodo por cuarto y uno en
+// cada puerta. Entre dos nodos se camina en línea recta por dentro de un cuarto.
+for (const c of CUARTOS) {
+  const pl = PLANTA[c.planta]
+  if (!pl.lista) continue
+  nodos.push({ id: `i-${c.id}`, p: { x: c.nodo[0], y: c.yNodo ?? pl.y, z: c.nodo[1] }, nivel: "superficie", planta: c.planta })
+}
+// Cada puerta se cruza derecho: un nodo a cada lado, a 0,55 m del eje del muro.
+for (const pu of PUERTAS) {
+  const a = CUARTO[pu.a]
+  const b = CUARTO[pu.b]
+  if (!a || !b || !PLANTA[a.planta].lista) continue
+  const y = PLANTA[a.planta].y
+  const lados: Array<[number, number]> = pu.eje === "x" ? [[pu.x, pu.z - 0.55], [pu.x, pu.z + 0.55]] : [[pu.x - 0.55, pu.z], [pu.x + 0.55, pu.z]]
+  const ladoA = dentroDeCuarto(a, lados[0][0], lados[0][1]) ? lados[0] : lados[1]
+  const ladoB = ladoA === lados[0] ? lados[1] : lados[0]
+  nodos.push({ id: `i-p-${pu.id}-a`, p: { x: ladoA[0], y, z: ladoA[1] }, nivel: "superficie", planta: a.planta })
+  nodos.push({ id: `i-p-${pu.id}-b`, p: { x: ladoB[0], y, z: ladoB[1] }, nivel: "superficie", planta: a.planta })
+  E(`i-${pu.a}`, `i-p-${pu.id}-a`)
+  E(`i-p-${pu.id}-a`, `i-p-${pu.id}-b`)
+  E(`i-p-${pu.id}-b`, `i-${pu.b}`)
+}
+for (const en of ENLACES) {
+  const c = CUARTO[en.cuarto]
+  if (c && PLANTA[c.planta].lista) E(en.nodo, `i-${c.id}`, en.oculto ? { interior: true } : undefined)
+}
+// Escaleras: cuatro nodos (arranque, fin del primer tramo, vuelta en el descanso, llegada).
+// Los tres primeros son de la planta de abajo: se cambia de planta a mitad del segundo tramo.
+for (const es of ESCALERAS) {
+  const a = CUARTO[es.abajo]
+  const b = CUARTO[es.arriba]
+  if (!PLANTA[a.planta].lista || !PLANTA[b.planta].lista) continue
+  const { y0, y1, ym, zB } = medidasEscalera(es)
+  const xs = (es.sube[0] + es.sube[1]) / 2
+  const xl = (es.llega[0] + es.llega[1]) / 2
+  const zDesc = zB + es.dir * 0.4
+  const zArr = es.zA + es.dir * 0.05
+  const pts: Array<[number, number, number, string]> = [
+    [xs, y0, zArr, a.planta],
+    [xs, ym, zDesc, a.planta],
+    [xl, ym, zDesc, a.planta],
+    [xl, y1, zArr, b.planta],
+  ]
+  pts.forEach(([x, y, z, pl], i) => nodos.push({ id: `i-e-${es.id}-${i}`, p: { x, y, z }, nivel: "superficie", planta: pl as NodoGrafo["planta"] }))
+  E(`i-${a.id}`, `i-e-${es.id}-0`)
+  for (let i = 1; i < 4; i++) E(`i-e-${es.id}-${i - 1}`, `i-e-${es.id}-${i}`)
+  E(`i-e-${es.id}-3`, `i-${b.id}`)
+}
 
 // Columnata Oeste, Jardín de las Rosas y Ala Oeste
 N("col-e", -28, 0, 5.5)
@@ -133,7 +180,6 @@ N("rosas", -38, 0, 16)
 N("puerta-oeste", -62, 0, 20)
 N("oeste-int", -65, 0, 3, "superficie", true)
 N("oeste-s", -62, 0, 28)
-E("col-e", "res-int", { interior: true })
 E("col-o", "oeste-int", { interior: true })
 E("col-e", "col-o")
 E("col-e", "rosas")
@@ -417,6 +463,32 @@ const CIUDAD: Lugar[] = [
   lc("ciudad-arena", "Cámara de Pruebas", "deporte", [-13, 13, 98, 111], "c-arena", "Ficción: la sala donde se prueban robots y drones."),
 ]
 
-export const LUGARES: Lugar[] = [...SUPERFICIE, ...SUBSUELO, ...CIUDAD]
+/** Una sala con planta lista deja de ser "el edificio entero": su rectángulo, su altura, sus zonas y su acceso salen de plantas.ts. */
+function conPlanta(l: Lugar): Lugar {
+  const c = cuartoDeLugar(l.id)
+  if (!c) return l
+  return {
+    ...l,
+    x0: c.rect.x0,
+    x1: c.rect.x1,
+    z0: c.rect.z0,
+    z1: c.rect.z1,
+    y: PLANTA[c.planta].y,
+    acceso: `i-${c.id}`,
+    planta: c.planta,
+    zonas: zonasDe(c),
+    obst: obstaculosDe(c),
+    asientos: asientosDe(c),
+  }
+}
+
+/** Las habitaciones: se llega a la vista hasta la puerta de un dormitorio del Tercer piso; adentro no se ve. */
+function habitaciones(l: Lugar): Lugar {
+  if (l.id !== "habitaciones") return l
+  const r = HABITACIONES.rect
+  return { ...l, x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, y: PLANTA[HABITACIONES.planta].y, acceso: `i-p-${HABITACIONES.puerta}-a` }
+}
+
+export const LUGARES: Lugar[] = [...SUPERFICIE.map(conPlanta).map(habitaciones), ...SUBSUELO, ...CIUDAD]
 export const LUGAR: Record<string, Lugar> = Object.fromEntries(LUGARES.map((l) => [l.id, l]))
 export const NODO: Record<string, NodoGrafo> = Object.fromEntries(nodos.map((n) => [n.id, n]))

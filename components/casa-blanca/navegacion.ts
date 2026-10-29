@@ -11,7 +11,8 @@
 // salvo el pabellón de la superficie, que solo existe en la escena.
 // ──────────────────────────────────────────────────────────────
 
-import { CELDAS, DEPARTAMENTOS_BASE, HUELLAS, LUGAR, LUGARES, NODO, SUB_COLUMNAS, SUB_FILAS } from "./lugares"
+import { CELDAS, DEPARTAMENTOS_BASE, GRAFO, HUELLAS, LUGAR, LUGARES, NODO, SUB_COLUMNAS, SUB_FILAS } from "./lugares"
+import { CUARTO, ENLACES, ESCALERAS, NOMBRE_EDIFICIO, PLANTA, type PlantaId } from "./plantas"
 import { ALTURA_NIVEL, NOMBRE_NIVEL, type EstadoCuerpo, type Lugar, type NivelId, type Vec3 } from "./tipos"
 
 /** De arriba hacia abajo: el corte de la casa. */
@@ -120,22 +121,130 @@ const metros = (a: { x: number; z: number }, b: { x: number; z: number }) => Mat
 
 /** El edificio que contiene un lugar interior (por su acceso en el grafo). */
 const EDIFICIO_DE_ACCESO: Record<string, string> = {
-  "res-int": "la Residencia",
   "oeste-int": "el Ala Oeste",
   "eeob-int": "el Edificio Eisenhower",
   "tesoro-int": "el Departamento del Tesoro",
 }
+const EDIFICIO_CON_ARTICULO: Record<string, string> = {
+  residencia: "la Residencia",
+  "ala-oeste": "el Ala Oeste",
+  eeob: "el Edificio Eisenhower",
+  tesoro: "el Departamento del Tesoro",
+}
 export function edificioDe(l: Lugar): string | null {
-  return l.interior ? EDIFICIO_DE_ACCESO[l.acceso] ?? "un edificio" : null
+  if (!l.interior) return null
+  // Una sala con planta entra por su propio nodo: el edificio sale de la planta.
+  if (l.planta) return EDIFICIO_CON_ARTICULO[PLANTA[l.planta].edificio] ?? "un edificio"
+  // Las habitaciones: su acceso es la puerta de un dormitorio, que sí es de una planta.
+  const pl = NODO[l.acceso]?.planta
+  if (pl) return EDIFICIO_CON_ARTICULO[PLANTA[pl].edificio] ?? "un edificio"
+  return EDIFICIO_DE_ACCESO[l.acceso] ?? "un edificio"
 }
 /** "Dentro de la Residencia", "Dentro del Ala Oeste". */
 export const dentroDe = (edificio: string) => `Dentro de ${edificio}`.replace("de el ", "del ")
 
 // ── Cómo llegar ────────────────────────────────────────────────
 export interface Paso {
-  /** Para el ícono: dónde empieza, el ascensor, un pasillo o la llegada. */
-  tipo: "inicio" | "ascensor" | "pasillo" | "llegada"
+  /** Para el ícono: dónde empieza, el ascensor, una escalera, un pasillo o la llegada. */
+  tipo: "inicio" | "ascensor" | "escalera" | "pasillo" | "llegada"
   texto: string
+}
+
+/** "la Sala Central", "el Gran Corredor": el artículo de cada cuarto. */
+const FEMENINOS = /^(Sala|Galería|Despensa|Antesala|Escalinata|Gran Escalera|Escalera|Biblioteca|Cocina|Recepción|Habitación)/
+const conArticulo = (n: string) => `${FEMENINOS.test(n) ? "la" : "el"} ${n}`
+/** "a la Planta de Estado", "al Segundo piso". */
+const aPlanta = (p: PlantaId) => (/^Planta/.test(PLANTA[p].nombre) ? `a la ${PLANTA[p].nombre}` : `al ${PLANTA[p].nombre}`)
+/** Los cuartos que son una caja de escalera (no se nombran como pasillo). */
+const DE_ESCALERA = new Set(ESCALERAS.flatMap((e) => [e.abajo, e.arriba]))
+
+/**
+ * El camino por dentro, sacado del grafo: desde la puerta del edificio que
+ * queda más cerca (por dentro) hasta el nodo de llegada. Devuelve la puerta
+ * y los nodos en orden.
+ */
+function caminoDentro(destino: string): { entrada: (typeof ENLACES)[number]; nodos: string[] } | null {
+  const vecinos = new Map<string, string[]>()
+  for (const [a, b, op] of GRAFO.aristas.map((x) => [x[0], x[1], x[2]] as const)) {
+    if (op?.interior || op?.ascensor) continue
+    vecinos.set(a, [...(vecinos.get(a) ?? []), b])
+    vecinos.set(b, [...(vecinos.get(b) ?? []), a])
+  }
+  const largo = (ns: string[]) => ns.reduce((s, n, i) => (i ? s + Math.hypot(NODO[n].p.x - NODO[ns[i - 1]].p.x, NODO[n].p.y - NODO[ns[i - 1]].p.y, NODO[n].p.z - NODO[ns[i - 1]].p.z) : 0), 0)
+  let mejor: { entrada: (typeof ENLACES)[number]; nodos: string[]; m: number } | null = null
+  // Se entra desde el suelo (el balcón solo se alcanza desde adentro).
+  for (const entrada of ENLACES.filter((e) => !e.oculto && (NODO[e.nodo]?.p.y ?? 1) < 0.5)) {
+    const previo = new Map<string, string>()
+    const cola = [entrada.nodo]
+    const vistos = new Set(cola)
+    while (cola.length) {
+      const n = cola.shift()!
+      if (n === destino) break
+      for (const v of vecinos.get(n) ?? []) {
+        if (vistos.has(v) || !NODO[v]?.planta) continue
+        vistos.add(v)
+        previo.set(v, n)
+        cola.push(v)
+      }
+    }
+    if (!previo.has(destino)) continue
+    const nodos: string[] = []
+    for (let n: string | undefined = destino; n; n = previo.get(n)) nodos.unshift(n)
+    const m = largo(nodos)
+    if (!mejor || m < mejor.m) mejor = { entrada, nodos, m }
+  }
+  return mejor
+}
+
+/** "Al sur de la Sala Central": por dónde se entra, las escaleras y dónde queda la sala respecto del último pasillo. */
+function pasosHasta(destino: string, nombre: string, donde: { x: number; z: number }): Paso[] {
+  const c = caminoDentro(destino)
+  if (!c) return []
+  const pasos: Paso[] = [{ tipo: "inicio", texto: c.entrada.texto }]
+  // Escaleras en orden; las seguidas de la misma escalera se dicen juntas ("hasta el Tercer piso").
+  let pasillos: string[] = []
+  for (const n of c.nodos) {
+    const esc = /^i-e-(.+)-3$/.exec(n)
+    if (esc) {
+      const e = ESCALERAS.find((x) => x.id === esc[1])!
+      const llega = NODO[n].planta!
+      const prev = pasos[pasos.length - 1]
+      const texto = `${e.nombre} ${aPlanta(llega)}`
+      if (prev.tipo === "escalera" && prev.texto.startsWith(e.nombre)) prev.texto = texto
+      else pasos.push({ tipo: "escalera", texto })
+      pasillos = []
+      continue
+    }
+    const id = n.startsWith("i-") && !n.startsWith("i-p-") && !n.startsWith("i-e-") ? n.slice(2) : null
+    const cu = id ? CUARTO[id] : null
+    if (!cu) continue
+    if (cu.yNodo !== undefined) {
+      pasos.push({ tipo: "escalera", texto: `${cu.nombre.replace(" norte", " de mármol")} ${aPlanta(cu.planta)}` })
+      continue
+    }
+    // Los pasillos y las salas por las que se pasa (no la de llegada).
+    if (n !== destino && !DE_ESCALERA.has(cu.id) && pasillos[pasillos.length - 1] !== cu.id) pasillos.push(cu.id)
+  }
+  if (pasillos.length) {
+    const nombres = pasillos.map((p) => conArticulo(CUARTO[p].nombre))
+    pasos.push({ tipo: "pasillo", texto: nombres.length > 1 ? `Por ${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}` : `Por ${nombres[0]}` })
+    const ult = CUARTO[pasillos[pasillos.length - 1]]
+    const cu = { x: (ult.rect.x0 + ult.rect.x1) / 2, z: (ult.rect.z0 + ult.rect.z1) / 2 }
+    pasos.push({ tipo: "llegada", texto: `${nombre}: la puerta al ${rumbo(cu, donde)} de ${conArticulo(ult.nombre)}` })
+  } else pasos.push({ tipo: "llegada", texto: nombre })
+  return pasos.map((p) => ({ ...p, texto: p.texto.replace(/ de el /g, " del ").replace(/ a el /g, " al ") }))
+}
+
+/** Los pasos dentro de un edificio hasta una sala con planta (o hasta la puerta de las habitaciones). */
+function pasosDentro(lugarId: string): Paso[] {
+  const l = LUGAR[lugarId]
+  if (!l) return []
+  if (l.planta) return pasosHasta(l.acceso, l.nombre, centro(l))
+  if (NODO[l.acceso]?.planta) {
+    const n = NODO[l.acceso]
+    return pasosHasta(l.acceso, `${l.nombre} del ${PLANTA[n.planta!].nombre}`, { x: n.p.x, z: n.p.z - 1 })
+  }
+  return []
 }
 
 const DESDE_SUPERFICIE: Paso = { tipo: "inicio", texto: "Pabellón del ascensor, junto al Pórtico Sur" }
@@ -145,6 +254,7 @@ const ascensorA = (n: NivelId): Paso => ({ tipo: "ascensor", texto: `Ascensor al
 export function comoLlegar(lugarId: string): Paso[] {
   const l = LUGAR[lugarId]
   if (!l) return []
+  if (l.planta || NODO[l.acceso]?.planta) return pasosDentro(lugarId)
   if (l.nivel === "superficie") {
     const c = centro(l)
     const edificio = edificioDe(l)
@@ -207,6 +317,7 @@ export function nombreCorto(lugarId: string): string {
 export function dondeEsta(e: EstadoUbicacion): { texto: string; dentro: boolean } {
   if (e.estado === "ascensor") return { texto: "En el ascensor", dentro: true }
   const l = e.lugarId ? LUGAR[e.lugarId] : undefined
+  if (l?.planta) return { texto: `${NOMBRE_EDIFICIO[PLANTA[l.planta].edificio]} · ${PLANTA[l.planta].nombre} · ${l.nombre}`, dentro: false }
   if (l) {
     const edificio = edificioDe(l)
     if (edificio) return { texto: `${dentroDe(edificio)} · ${l.nombre}`, dentro: true }

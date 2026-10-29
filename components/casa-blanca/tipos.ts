@@ -9,6 +9,8 @@
 // Monumento a Washington), -z = norte (Pennsylvania Avenue), +y = arriba.
 // ──────────────────────────────────────────────────────────────
 
+import type { Asiento, PlantaId, Rect } from "./plantas"
+
 export type Vec3 = { x: number; y: number; z: number }
 
 /** La superficie, los tres pisos subterráneos y la ciudad subterránea, la más profunda. */
@@ -29,9 +31,9 @@ export type TipoLugar = "edificio" | "jardin" | "deporte" | "departamento" | "oc
  * la altura `y`. Los personajes entran por `acceso` (un nodo del grafo) y
  * después se mueven libres dentro del rectángulo.
  *
- * `interior: true` = dentro de un edificio de la superficie: desde afuera no
- * se ve, así que el personaje se oculta mientras está ahí (como en GTA, al
- * entrar a un edificio).
+ * `interior: true` = dentro de un edificio de la superficie. Si además tiene
+ * `planta`, la sala existe en la escena (se entra y se ve a la gente); sin
+ * `planta`, el personaje se oculta mientras está ahí (la regla vieja).
  */
 export interface Lugar {
   id: string
@@ -49,6 +51,14 @@ export interface Lugar {
   dato: string
   /** Para lugares de ficción: true. Se muestra con la etiqueta "ficción". */
   ficcion?: boolean
+  /** La planta del edificio donde está la sala (plantas.ts). */
+  planta?: PlantaId
+  /** Donde se para la gente (sin muebles); sin zonas, el rectángulo entero. */
+  zonas?: Rect[]
+  /** Muebles que no se atraviesan: se rodean. */
+  obst?: Rect[]
+  /** Donde se sienta la gente (comer, trabajar). */
+  asientos?: Asiento[]
 }
 
 export interface NodoGrafo {
@@ -57,8 +67,13 @@ export interface NodoGrafo {
   nivel: NivelId
   /** El personaje no se ve mientras está en este nodo (dentro de un edificio, en el ascensor). */
   oculto?: boolean
+  /** Dentro de una planta de un edificio (se ve solo con esa planta abierta). */
+  planta?: PlantaId
 }
-/** Arista no dirigida. `ascensor: true` = el tramo se hace en ascensor (vertical). */
+/**
+ * Arista no dirigida. `ascensor: true` = el tramo se hace en ascensor (vertical).
+ * `interior: true` = por dentro de un edificio que todavía no tiene planta (no se ve).
+ */
 export type Arista = [string, string] | [string, string, { ascensor?: boolean; interior?: boolean }]
 export interface Grafo {
   nodos: NodoGrafo[]

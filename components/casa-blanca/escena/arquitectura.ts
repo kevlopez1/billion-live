@@ -1260,6 +1260,8 @@ function construirResidencia(K: Constructor): void {
   const esquinas = [0, 1, 2, 3, camino.length - 5, camino.length - 4, camino.length - 3, camino.length - 2]
   K.balaustrada(res, camino, { alto: 1.42, esquinas, pedestal: 3.9 })
 
+  // Las piezas de la Residencia: interiores.ts las corta a la altura de la planta que se mira.
+  for (const p of [res, pn, bal]) p.grupo.userData.edificio = "residencia"
   res.cerrar(K)
   pn.cerrar(K)
   bal.cerrar(K)
@@ -1531,7 +1533,10 @@ function fachadaSur(K: Constructor, P: Pieza): void {
       huecos.push(K.ventana(P, f, s * e, { w: 1.5, h: Y.segundoAlto, v0: Y.segundoAlfeizar, noche: 0.4 }))
     }
   })
-  P.lote.add(M.fachada, geoMuro(RES.x0, RES.x1, 0, Y.cornisa, 0.7, huecos), f.base)
+  // El muro se corta donde abre el arco del Salón Azul: por dentro, la sala oval sigue hasta el arco.
+  const abre = R_BOW - 0.62
+  P.lote.add(M.fachada, geoMuro(RES.x0, -abre, 0, Y.cornisa, 0.7, huecos.filter((h) => h.u1 < -abre)), f.base)
+  P.lote.add(M.fachada, geoMuro(abre, RES.x1, 0, Y.cornisa, 0.7, huecos.filter((h) => h.u0 > abre)), f.base)
   K.rustico(P, f, RES.x0, -R_BOW, 0, Y.principalSur - 0.05, bajas, 8)
   K.rustico(P, f, R_BOW, RES.x1, 0, Y.principalSur - 0.05, bajas, 8)
   // Pilastras donde termina el pórtico.
@@ -1607,13 +1612,14 @@ function fachadasLaterales(K: Constructor, P: Pieza): void {
     for (const u of [-2.4, 2.4]) K.pilastra(P, f, u, Y.principalSur, Y.arquitrabe, 0.95, 0.18)
   }
   // Remate de la planta baja (este, sur y oeste).
+  // Cada tramo termina donde empieza el arco del Salón Azul (antes cruzaban el arco y, por dentro, el piso del salón).
   const camino: P2[] = [
     [RES.x1, RES.z0],
     [RES.x1, RES.z1],
-    [-R_BOW, RES.z1],
+    [R_BOW, RES.z1],
   ]
   const camino2: P2[] = [
-    [R_BOW, RES.z1],
+    [-R_BOW, RES.z1],
     [RES.x0, RES.z1],
     [RES.x0, RES.z0],
   ]

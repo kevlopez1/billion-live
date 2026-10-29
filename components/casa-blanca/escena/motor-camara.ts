@@ -22,6 +22,7 @@ import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { ALTURA_NIVEL, type NivelId } from "../tipos"
 import { CELDAS, HUELLAS, LUGAR } from "../lugares"
+import { CORTE, INTERIOR_RESIDENCIA, vistaTapada, type PlantaId } from "../plantas"
 import { ORDEN_NIVELES, PABELLON_ASCENSOR, ejeAscensor } from "../navegacion"
 import { VISTAS_CIUDAD, techoCiudad, tomaDescensoCiudad } from "./ciudad"
 import type { ModoCamara } from "./contrato"
@@ -100,6 +101,8 @@ export interface InfoPersonaje {
   rumbo: number
   visible: boolean
   nivel: NivelId
+  /** La planta de un edificio donde está (null = afuera). */
+  planta?: string | null
 }
 
 /** Lo que la cámara necesita del motor. */
@@ -111,6 +114,10 @@ export interface DepsCamara {
    */
   fundir(accion: () => void, corte?: boolean): void
   aplicarNivel(n: NivelId): void
+  /** Abre una planta de un edificio (o, con null, vuelve afuera). Sin fundido: para usar dentro de `fundir`. */
+  aplicarPlanta?(p: string | null): void
+  /** La planta abierta (null = afuera). */
+  planta?(): string | null
   setMaqueta(on: boolean): void
   personaje(id: string): InfoPersonaje | null
   /** Un personaje a la vista para las tomas que siguen a alguien. */
@@ -604,6 +611,9 @@ export class ControlCamara {
   private viaje: Viaje | null = null
   /** Negro extra que pide la cámara (0..1): el motor lo suma al fundido. Lo usan el viaje y las tomas por el ascensor. */
   velo = 0
+  /** La planta abierta: dentro de su edificio la cámara puede bajar hasta el corte de los muros. */
+  private plantaInfo: { id: string; y: number } | null = null
+  private cambiandoPlanta = false
 
   constructor(canvas: HTMLCanvasElement, deps: DepsCamara) {
     this.deps = deps
@@ -862,6 +872,25 @@ export class ControlCamara {
     }
   }
 
+  /** La planta abierta (la fija el motor). */
+  setPlanta(info: { id: string; y: number } | null) {
+    this.plantaInfo = info
+  }
+
+  /**
+   * Coloca la cámara en una pose de la superficie en el acto, en la vista libre
+   * (para usar con la pantalla en negro, dentro de un fundido del motor).
+   */
+  saltarA(destino: Pose) {
+    if (this.intro) this.terminarIntro()
+    this.salirDeCine()
+    this.cortarViaje()
+    this.enfoque = null
+    this.controles.autoRotate = false
+    this.ponerPose(destino)
+    this.entrarDron()
+  }
+
   /** Termina un viaje en curso de golpe (otro modo lo interrumpe). */
   private cortarViaje() {
     const v = this.viaje
@@ -1116,8 +1145,22 @@ export class ControlCamara {
       })
       return
     }
+    // Cruzó una puerta a otra planta (o salió a la calle): la vista cambia de planta con un fundido.
+    const suya = info.planta ?? null
+    if (info.visible && info.nivel === S && this.deps.planta && this.deps.aplicarPlanta && suya !== this.deps.planta() && !this.cambiandoPlanta) {
+      this.cambiandoPlanta = true
+      this.deps.fundir(() => {
+        this.deps.aplicarPlanta?.(suya)
+        this.seguirListo = false
+        this.cambiandoPlanta = false
+      })
+    }
     const deseado = _v.copy(info.pos)
     deseado.y += 1.5
+    if (this.plantaInfo && suya === this.plantaInfo.id && info.visible) {
+      this.seguirAdentro(dt, info, deseado)
+      return
+    }
     // Dentro de un edificio los interiores no se dibujan: el motor lo muestra en
     // rayos X y la cámara se queda afuera, mirándolo a través de la pared.
     const caja = !info.visible && info.nivel === S ? edificioEn(info.pos.x, info.pos.z) : null
@@ -1190,6 +1233,62 @@ export class ControlCamara {
   }
 
   /**
+   * Seguir por dentro de una planta: la cámara se queda por encima de los muros
+   * cortados (al menos piso + corte + 0,8 m), a 5–8 m y mirando hacia abajo
+   * con 40° o más, y vuelve sola a ponerse detrás.
+   */
+  private seguirAdentro(dt: number, info: InfoPersonaje, deseado: THREE.Vector3) {
+    const t = this.controles.target
+    const pl = this.plantaInfo!
+    this.controles.maxDistance = 14
+    if (!this.seguirListo) {
+      const atras = _v2.set(-Math.sin(info.rumbo), 0, -Math.cos(info.rumbo))
+      this.camara.position.copy(deseado).addScaledVector(atras, 3.6).add(_v3.set(0, 5.6, 0))
+      t.copy(deseado)
+      this.seguirListo = true
+      this.phiAdentro = 40 * THREE.MathUtils.DEG2RAD
+    } else {
+      const delta = _v2.copy(deseado).sub(t).multiplyScalar(1 - Math.exp(-6 * dt))
+      t.add(delta)
+      this.camara.position.add(delta)
+    }
+    const off = _v3.copy(this.camara.position).sub(t)
+    const esf = _esf.setFromVector3(off)
+    esf.radius = Math.min(8.5, Math.max(5, esf.radius))
+    if (!this.interactuando && this.reloj - this.ultimaInteraccion > 1.5) {
+      let d = info.rumbo + Math.PI - esf.theta
+      d = Math.atan2(Math.sin(d), Math.cos(d))
+      esf.theta += d * (1 - Math.exp(-1.2 * dt))
+    }
+    // La inclinación más baja (hasta 50° desde la vertical) que deje ver la cabeza por encima de los muros cortados.
+    const r = INTERIOR_RESIDENCIA
+    const ojo = _v4.copy(info.pos).setY(info.pos.y + 1.6)
+    let phiOk = 6 * THREE.MathUtils.DEG2RAD
+    for (const g of [50, 40, 31, 22, 14, 6]) {
+      const phi = g * THREE.MathUtils.DEG2RAD
+      _esf2.set(esf.radius, phi, esf.theta)
+      const c = _v5.setFromSpherical(_esf2).add(t)
+      c.x = Math.min(r.x1 - 0.4, Math.max(r.x0 + 0.4, c.x))
+      c.z = Math.min(r.z1 + 3.5, Math.max(r.z0 + 0.4, c.z))
+      c.y = Math.max(c.y, pl.y + CORTE + 0.8)
+      if (!vistaTapada(pl.id as PlantaId, ojo, c)) {
+        phiOk = phi
+        break
+      }
+    }
+    this.phiAdentro += (phiOk - this.phiAdentro) * (1 - Math.exp(-4 * dt))
+    esf.phi = Math.min(esf.phi, this.phiAdentro)
+    off.setFromSpherical(esf)
+    this.camara.position.copy(t).add(off)
+    // Siempre sobre el edificio cortado: dentro de su huella y por encima del corte.
+    const p = this.camara.position
+    p.x = Math.min(r.x1 - 0.4, Math.max(r.x0 + 0.4, p.x))
+    p.z = Math.min(r.z1 + 3.5, Math.max(r.z0 + 0.4, p.z))
+    if (p.y < pl.y + CORTE + 0.8) p.y = pl.y + CORTE + 0.8
+  }
+  private phiAdentro = 40 * THREE.MathUtils.DEG2RAD
+
+  /**
    * Dónde poner la cámara de seguir para ver a quien se sigue (`ojo` = su cabeza):
    * detrás a 8,2 m y 3,8 m arriba si está libre; si no, de costado, después más
    * cerca y más baja. Sin ningún lugar libre, lo más lejos que deje la pared.
@@ -1230,9 +1329,12 @@ export class ControlCamara {
       }
       if (this.camara.position.y < 1.2) this.camara.position.y = 1.2
       // La cámara nunca entra a un edificio: si queda dentro, sube por encima del techo.
+      // Con una planta abierta, la Residencia está cortada: basta con quedar sobre los muros cortados.
       const p = this.camara.position
       const dentro = edificioEn(p.x, p.z, 1.5)
-      if (dentro && p.y < dentro.alto + 2) p.y = dentro.alto + 2
+      const cortada = this.plantaInfo && Math.abs(p.x) < HUELLAS.residencia.x1 + 1.5 && p.z > HUELLAS.porticoNorte.z0 - 1.5 && p.z < HUELLAS.porticoSur.cz + HUELLAS.porticoSur.radio + 1.5
+      const techo = dentro ? (cortada ? this.plantaInfo!.y + CORTE - 1.2 : dentro.alto) : 0
+      if (dentro && p.y < techo + 2) p.y = techo + 2
     } else if (this.modo === "nivel" && n === "ciudad") {
       // Dentro de la ciudad: el pivote cerca del piso, la cámara bajo el techo y lejos de las paredes.
       const C = HUELLAS.ciudad
@@ -1294,4 +1396,7 @@ const _v = new THREE.Vector3()
 const _v2 = new THREE.Vector3()
 const _v3 = new THREE.Vector3()
 const _esf = new THREE.Spherical()
+const _esf2 = new THREE.Spherical()
+const _v4 = new THREE.Vector3()
+const _v5 = new THREE.Vector3()
 const _pt = nuevaPose()

@@ -5,10 +5,12 @@
 // quién está ahí ahora mismo según la simulación.
 // ──────────────────────────────────────────────────────────────
 
+import { DoorOpen } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
 import { NOMBRE_NIVEL, type Lugar, type Personaje } from "../tipos"
 import type { Simulacion } from "../motor/simulacion"
-import { FOCO, Hoja, Retrato, Rotulo } from "./base"
+import { NOMBRE_EDIFICIO, PLANTA } from "../plantas"
+import { BotonFuerte, FOCO, Hoja, Retrato, Rotulo } from "./base"
 import { ComoLlegar } from "./ComoLlegar"
 import { useLatido } from "./latido"
 
@@ -19,6 +21,7 @@ export function PanelLugar({
   retratos,
   onPersonaje,
   onCerrar,
+  entrar,
 }: {
   lugar: Lugar
   sim: Simulacion
@@ -26,12 +29,16 @@ export function PanelLugar({
   retratos: Record<string, string>
   onPersonaje: (id: string) => void
   onCerrar: () => void
+  /** Si se puede entrar (una sala con planta o el edificio): el texto del botón y qué hace. */
+  entrar?: { texto: string; onEntrar: () => void }
 }) {
   useLatido(1000)
   const presentes = sim.presentes(lugar.id).filter((id) => personajes[id])
   const cabecera = (
     <div>
-      <div className="cb-cond text-[11px] font-bold uppercase tracking-[0.24em] text-white/50">{NOMBRE_NIVEL[lugar.nivel]}</div>
+      <div className="cb-cond text-[11px] font-bold uppercase tracking-[0.24em] text-white/50">
+        {lugar.planta ? `${NOMBRE_EDIFICIO[PLANTA[lugar.planta].edificio]} · ${PLANTA[lugar.planta].nombre}` : NOMBRE_NIVEL[lugar.nivel]}
+      </div>
       <h2 className="cb-cond mt-1 text-[26px] font-bold uppercase leading-none tracking-[0.02em] text-white">{lugar.nombre}</h2>
     </div>
   )
@@ -41,6 +48,12 @@ export function PanelLugar({
         <span className="mb-3 inline-flex rounded-full border border-white/15 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-white/60">Ficción</span>
       )}
       <p className="text-[13px] leading-relaxed text-white/80">{conPrime(lugar.dato)}</p>
+      {entrar && (
+        <BotonFuerte onClick={entrar.onEntrar} className="mt-4">
+          <DoorOpen className="h-4 w-4" />
+          {entrar.texto}
+        </BotonFuerte>
+      )}
       <ComoLlegar lugarId={lugar.id} />
       <Rotulo className="mb-2 mt-5">Aquí ahora</Rotulo>
       {presentes.length === 0 ? (
