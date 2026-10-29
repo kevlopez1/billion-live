@@ -24,15 +24,19 @@
 //   avatar-anim.ts        caminar y correr con los pies plantados, sentarse y
 //                         teclear, hablar con gestos, dormir, deporte, parpadeo.
 //   avatar-armado.ts      arma todo y cumple el contrato Avatar.
+//   avatar-cara-mh*.ts    la cara MakeHuman (datos CC0 horneados en
+//                         public/casa-blanca/caras/), que reemplaza a la
+//                         cabeza esculpida cuando llega (?caras=mh|hoy).
 //
 // Mira hacia +z (el motor gira la raíz con el rumbo) y mide `altura` metros
 // con los pies en y = 0.
 // ──────────────────────────────────────────────────────────────
 
 import type { Avatar } from "./contrato"
-import type { Personaje } from "../tipos"
+import type { Calidad, Personaje } from "../tipos"
 import { crearAvatarReal } from "./avatar-armado"
 
-export function crearAvatar(p: Personaje): Avatar {
-  return crearAvatarReal(p)
+/** `calidad`: decide si lleva la cara MakeHuman (avatar-cara-mh.ts) y con qué atlas. */
+export function crearAvatar(p: Personaje, op: { calidad?: Calidad } = {}): Avatar {
+  return crearAvatarReal(p, op)
 }

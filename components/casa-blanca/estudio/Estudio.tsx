@@ -291,6 +291,9 @@ export default function Estudio() {
       motorRef.current = motor
       // Que el ResizeObserver del motor mida el canvas ANTES del primer cuadro (no en medio del video).
       await espera(120)
+      // Las caras MakeHuman de los residentes del episodio, todas montadas antes del cuadro 0 (dos renders = mismos cuadros).
+      await motor.carasListas()
+      if (!vivo) return
       // En vivo se ve el primer cuadro enseguida; en render=1 lo pide el script.
       if (!render) motor.cuadro(0)
       if (!vivo) return

@@ -86,6 +86,8 @@ export interface Estudio {
   vivo(i: number): void
   /** Último cuadro compuesto (-1 = ninguno). */
   actual(): number
+  /** Se cumple cuando las caras de todos los residentes del episodio están montadas: antes del cuadro 0 (mismo episodio = mismos cuadros). */
+  carasListas(): Promise<void>
   setVisor(v: Visor | null): void
   destruir(): void
 }
@@ -113,7 +115,9 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
   lienzo.style.height = `${H}px`
   lienzo.style.display = "block"
   contenedor.appendChild(lienzo)
-  const escena: EscenaMotor = crearEscena(lienzo, { personajes: PERSONAJES, calidad: op.calidad, pixelRatio: 1, letreros: false, ahora })
+  // caras: "pedidas": las caras MakeHuman de los residentes del episodio se montan TODAS antes del cuadro 0
+  // (carasListas) y ninguna a mitad del video (dos renders = mismos cuadros).
+  const escena: EscenaMotor = crearEscena(lienzo, { personajes: PERSONAJES, calidad: op.calidad, pixelRatio: 1, letreros: false, ahora, caras: "pedidas" })
   escena.redimensionar()
 
   const primera = ep.planos[0]?.hora
@@ -284,6 +288,8 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
       paso(i, Math.min(0.25, (i - Math.max(0, actual)) / fps))
     },
     actual: () => actual,
+    // los residentes que pueden salir en el episodio: todos menos las personas reales que el guion no pone
+    carasListas: () => escena.carasListas(IDS.filter((id) => !ocultos.has(id))),
     setVisor(v) {
       visorForzado = v
     },

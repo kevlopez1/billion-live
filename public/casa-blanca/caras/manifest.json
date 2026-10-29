@@ -1,0 +1,932 @@
+{
+ "v": 1,
+ "que": "Caras MakeHuman horneadas de los 24 residentes (datos CC0, código propio: scripts/caras-mh/). Las lee components/casa-blanca/escena/avatar-cara-mh.ts.",
+ "repo": {
+  "tomado": "2026-10-29 09:30 UTC",
+  "head": "be1e11c786a7b0ba79c71afc52c7d16de7c3a5ba (+ cambios sin commit al hornear)",
+  "nota": "pelo-hoy depende de la geometría del pelo de HOY de este repo (huella por residente); si cambia avatar-pelo.ts o el pelo/barba de una ficha, re-hornear ese pelo-hoy",
+  "sha256": {
+   "avatar-pelo.ts": "efad97b65ebda55a",
+   "avatar-cabeza.ts": "9d370f3e350001d5",
+   "avatar-fichas.ts": "732618773c9955a8",
+   "avatar-cuerpo.ts": "e5cc74fd3b250335",
+   "avatar-armado.ts": "df67943b8269181d",
+   "avatar-materiales.ts": "f8c101b555933213",
+   "avatar-androide.ts": "075092afd413e3f9"
+  }
+ },
+ "fuente": {
+  "config": "scripts/caras-mh/personajes-final.json (24, congelada)",
+  "sha256": "0476b2e13016647f"
+ },
+ "residentes": {
+  "trump": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206188,
+     "gzip": 90293,
+     "sha256": "869b9e2726c638ff"
+    },
+    "cab.json": {
+     "bytes": 4805,
+     "gzip": 1862,
+     "sha256": "fb3c09d855d3d8f5"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 50857,
+     "gzip": 26165,
+     "sha256": "2536ee3a4da056f9"
+    },
+    "pelo-hoy.json": {
+     "bytes": 341,
+     "gzip": 269,
+     "sha256": "0b34b0b9159a286b"
+    }
+   },
+   "bytes": 262191,
+   "gzip": 118589,
+   "iris": "#6f8aa0",
+   "piel": "old_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3206,
+    "indices": 7152,
+    "huella": "3f2c1eeeb1c602f1"
+   },
+   "tris": 7392
+  },
+  "musk": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 92272,
+     "sha256": "ed4e7b7ed4cd6481"
+    },
+    "cab.json": {
+     "bytes": 4833,
+     "gzip": 1892,
+     "sha256": "b4a957e74c6fe995"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 47469,
+     "gzip": 25321,
+     "sha256": "ca84d5d8f640fafa"
+    },
+    "pelo-hoy.json": {
+     "bytes": 341,
+     "gzip": 266,
+     "sha256": "ce08bcbad88648c7"
+    }
+   },
+   "bytes": 258855,
+   "gzip": 119751,
+   "iris": "#5f7a80",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3197,
+    "indices": 6318,
+    "huella": "162241d5433adebe"
+   },
+   "tris": 7392
+  },
+  "altman": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 90947,
+     "sha256": "b700dd4e5119eb74"
+    },
+    "cab.json": {
+     "bytes": 4803,
+     "gzip": 1869,
+     "sha256": "ee1aaed2dbd43c4b"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 47085,
+     "gzip": 25074,
+     "sha256": "1464a84c7ac207d1"
+    },
+    "pelo-hoy.json": {
+     "bytes": 340,
+     "gzip": 269,
+     "sha256": "696d3fbc88cb4dd6"
+    }
+   },
+   "bytes": 258440,
+   "gzip": 118159,
+   "iris": "#6E7C5A",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3135,
+    "indices": 6315,
+    "huella": "dcf017745b00b73e"
+   },
+   "tris": 7392
+  },
+  "thiel": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 90316,
+     "sha256": "fd7826bc07d3f5db"
+    },
+    "cab.json": {
+     "bytes": 4799,
+     "gzip": 1871,
+     "sha256": "9dc69a807d81c56d"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 49293,
+     "gzip": 25856,
+     "sha256": "17db8af5761b71fe"
+    },
+    "pelo-hoy.json": {
+     "bytes": 341,
+     "gzip": 268,
+     "sha256": "aeef2909716444f7"
+    }
+   },
+   "bytes": 260645,
+   "gzip": 118311,
+   "iris": "#7C8C9A",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3271,
+    "indices": 6663,
+    "huella": "eeccf95c5fac95c0"
+   },
+   "tris": 7392
+  },
+  "karp": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 90116,
+     "sha256": "e4e7eed2b17a39a4"
+    },
+    "cab.json": {
+     "bytes": 4824,
+     "gzip": 1879,
+     "sha256": "87729a99f012d97f"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 57193,
+     "gzip": 28184,
+     "sha256": "ee167d93ae93cbd9"
+    },
+    "pelo-hoy.json": {
+     "bytes": 340,
+     "gzip": 269,
+     "sha256": "f0ef954469ea39c5"
+    }
+   },
+   "bytes": 268569,
+   "gzip": 120448,
+   "iris": "#4A3E36",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3226,
+    "indices": 8706,
+    "huella": "56f6ca366c5ac146"
+   },
+   "tris": 7392
+  },
+  "pichai": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91039,
+     "sha256": "61a368b5d8c0b69a"
+    },
+    "cab.json": {
+     "bytes": 4848,
+     "gzip": 1889,
+     "sha256": "fabafe95a64347f2"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 49341,
+     "gzip": 25941,
+     "sha256": "19700d2ce82544bd"
+    },
+    "pelo-hoy.json": {
+     "bytes": 342,
+     "gzip": 269,
+     "sha256": "44d7ee2b44e4cb32"
+    }
+   },
+   "bytes": 260743,
+   "gzip": 119138,
+   "iris": "#3A2A20",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3297,
+    "indices": 6636,
+    "huella": "b46202face538ec7"
+   },
+   "tris": 7392
+  },
+  "amodei": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 92089,
+     "sha256": "d1557fc725eee669"
+    },
+    "cab.json": {
+     "bytes": 4838,
+     "gzip": 1886,
+     "sha256": "fe6b91977554d68f"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 56457,
+     "gzip": 27701,
+     "sha256": "fb9298d14f3b1777"
+    },
+    "pelo-hoy.json": {
+     "bytes": 340,
+     "gzip": 266,
+     "sha256": "9bd3da2954177604"
+    }
+   },
+   "bytes": 267847,
+   "gzip": 121942,
+   "iris": "#4A3828",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3153,
+    "indices": 8631,
+    "huella": "7f38b1ce959db470"
+   },
+   "tris": 7392
+  },
+  "hormozi": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91182,
+     "sha256": "c57ceedcb88cd1c3"
+    },
+    "cab.json": {
+     "bytes": 4838,
+     "gzip": 1894,
+     "sha256": "2f99b55b94673162"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 25069,
+     "gzip": 13944,
+     "sha256": "5572bcfdef3bea15"
+    },
+    "pelo-hoy.json": {
+     "bytes": 342,
+     "gzip": 269,
+     "sha256": "c938a86ee3c901e6"
+    }
+   },
+   "bytes": 236461,
+   "gzip": 107289,
+   "iris": "#2E2018",
+   "piel": "young_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 1884,
+    "indices": 2688,
+    "huella": "c7b9d9a383c9d713"
+   },
+   "tris": 7392
+  },
+  "tate": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 92617,
+     "sha256": "d44ed60173a7e5dc"
+    },
+    "cab.json": {
+     "bytes": 4858,
+     "gzip": 1904,
+     "sha256": "8f3fdf13af8216ae"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 23677,
+     "gzip": 13551,
+     "sha256": "7c36885e24626c60"
+    },
+    "pelo-hoy.json": {
+     "bytes": 340,
+     "gzip": 268,
+     "sha256": "00b36f7ed4cfdb7a"
+    }
+   },
+   "bytes": 235087,
+   "gzip": 108340,
+   "iris": "#3A2416",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {
+    "barbaEspesor": 0.4
+   },
+   "peloHoy": {
+    "vertices": 1884,
+    "indices": 2340,
+    "huella": "d025763edff0e476"
+   },
+   "tris": 7392
+  },
+  "gadzhi": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91327,
+     "sha256": "ad78be3d9660c8f0"
+    },
+    "cab.json": {
+     "bytes": 4821,
+     "gzip": 1873,
+     "sha256": "5e1d2e443396c662"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 50121,
+     "gzip": 25895,
+     "sha256": "210dda8924d4781f"
+    },
+    "pelo-hoy.json": {
+     "bytes": 338,
+     "gzip": 267,
+     "sha256": "9998a4e7957665d0"
+    }
+   },
+   "bytes": 261492,
+   "gzip": 119362,
+   "iris": "#3B2A1E",
+   "piel": "young_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3153,
+    "indices": 7047,
+    "huella": "3c4af20f805e89b0"
+   },
+   "tris": 7392
+  },
+  "jobs": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91197,
+     "sha256": "97adb4d1b40336a7"
+    },
+    "cab.json": {
+     "bytes": 4824,
+     "gzip": 1885,
+     "sha256": "968c3a9ef3316764"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 57229,
+     "gzip": 30282,
+     "sha256": "f2473cf25abe77f7"
+    },
+    "pelo-hoy.json": {
+     "bytes": 339,
+     "gzip": 265,
+     "sha256": "5c7f0e9cac07eec7"
+    }
+   },
+   "bytes": 268604,
+   "gzip": 123629,
+   "iris": "#3A2A20",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {
+    "barbaEspesor": 0.35
+   },
+   "peloHoy": {
+    "vertices": 3792,
+    "indices": 7866,
+    "huella": "11764218c2d6c847"
+   },
+   "tris": 7392
+  },
+  "kobe": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91083,
+     "sha256": "a52cf0cc92d2e22f"
+    },
+    "cab.json": {
+     "bytes": 4807,
+     "gzip": 1884,
+     "sha256": "bf87d354aa4a6f09"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 14365,
+     "gzip": 10660,
+     "sha256": "a21e68594a67c2d4"
+    },
+    "pelo-hoy.json": {
+     "bytes": 337,
+     "gzip": 266,
+     "sha256": "3f03c93a5c4ba9ee"
+    }
+   },
+   "bytes": 225721,
+   "gzip": 103893,
+   "iris": "#2A1A12",
+   "piel": "young_darkskinned_male",
+   "montaje": {
+    "sinBarbaHoy": true
+   },
+   "peloHoy": {
+    "vertices": 1884,
+    "indices": 12,
+    "huella": "9df1f6297c143103"
+   },
+   "tris": 7392
+  },
+  "lincoln": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91110,
+     "sha256": "ac1e382ea0ac4440"
+    },
+    "cab.json": {
+     "bytes": 4817,
+     "gzip": 1867,
+     "sha256": "30a1a000fff2c02b"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 66681,
+     "gzip": 37514,
+     "sha256": "93fec6fcfc57a032"
+    },
+    "pelo-hoy.json": {
+     "bytes": 340,
+     "gzip": 268,
+     "sha256": "b26bed1d297dd8d7"
+    }
+   },
+   "bytes": 278050,
+   "gzip": 130759,
+   "iris": "#4a4a48",
+   "piel": "old_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 4861,
+    "indices": 8625,
+    "huella": "191f0dba0fcbc08f"
+   },
+   "tris": 7392
+  },
+  "napoleon": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 90303,
+     "sha256": "983a6e7412874f9c"
+    },
+    "cab.json": {
+     "bytes": 4824,
+     "gzip": 1885,
+     "sha256": "5cd7fbbd24cea9af"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 45261,
+     "gzip": 24898,
+     "sha256": "13d511785953931f"
+    },
+    "pelo-hoy.json": {
+     "bytes": 342,
+     "gzip": 268,
+     "sha256": "a45d1d69324891e8"
+    }
+   },
+   "bytes": 256639,
+   "gzip": 117354,
+   "iris": "#6E7E8C",
+   "piel": "young_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3231,
+    "indices": 5715,
+    "huella": "835f6638f186ac1d"
+   },
+   "tris": 7392
+  },
+  "leonardo": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91313,
+     "sha256": "d0b24ce87ef37d61"
+    },
+    "cab.json": {
+     "bytes": 4820,
+     "gzip": 1866,
+     "sha256": "2838753cb3163a31"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 82417,
+     "gzip": 41865,
+     "sha256": "50f866154cff0a43"
+    },
+    "pelo-hoy.json": {
+     "bytes": 341,
+     "gzip": 266,
+     "sha256": "987eb867def96e38"
+    }
+   },
+   "bytes": 293790,
+   "gzip": 135310,
+   "iris": "#5a5040",
+   "piel": "old_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 4910,
+    "indices": 12486,
+    "huella": "8cddaac1b7bd8d4a"
+   },
+   "tris": 7392
+  },
+  "cleopatra": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 211160,
+     "gzip": 90777,
+     "sha256": "97094fd58006aa42"
+    },
+    "cab.json": {
+     "bytes": 4686,
+     "gzip": 1810,
+     "sha256": "a1370724536d1ce7"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 67429,
+     "gzip": 32756,
+     "sha256": "d24976171c532809"
+    },
+    "pelo-hoy.json": {
+     "bytes": 343,
+     "gzip": 271,
+     "sha256": "748b8cd10e1b74ca"
+    }
+   },
+   "bytes": 283618,
+   "gzip": 125614,
+   "iris": "#2E1E14",
+   "piel": "young_lightskinned_female",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 3708,
+    "indices": 10542,
+    "huella": "33a9bf2be02a19db"
+   },
+   "tris": 7392
+  },
+  "suntzu": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 90785,
+     "sha256": "a3f6714ffbf5ca8d"
+    },
+    "cab.json": {
+     "bytes": 4869,
+     "gzip": 1909,
+     "sha256": "bb52b012ef47cf31"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 53701,
+     "gzip": 30100,
+     "sha256": "df4611a9968638a8"
+    },
+    "pelo-hoy.json": {
+     "bytes": 340,
+     "gzip": 267,
+     "sha256": "02f07898a97a59c8"
+    }
+   },
+   "bytes": 265122,
+   "gzip": 123061,
+   "iris": "#2a1d15",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {
+    "sinBigoteHoy": true,
+    "cueroSuave": 3
+   },
+   "peloHoy": {
+    "vertices": 4024,
+    "indices": 6636,
+    "huella": "2417e284fc502f79"
+   },
+   "tris": 7392
+  },
+  "marco": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91369,
+     "sha256": "1076412820a0327c"
+    },
+    "cab.json": {
+     "bytes": 4850,
+     "gzip": 1910,
+     "sha256": "af434f9802c16b0c"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 84253,
+     "gzip": 42882,
+     "sha256": "c51fcf5e60a705bd"
+    },
+    "pelo-hoy.json": {
+     "bytes": 341,
+     "gzip": 269,
+     "sha256": "381f5b9a8b32fca6"
+    }
+   },
+   "bytes": 295656,
+   "gzip": 136430,
+   "iris": "#4a3828",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {
+    "barbaEspesor": 0.5,
+    "cueroSuave": 3,
+    "rizoFino": 2.2
+   },
+   "peloHoy": {
+    "vertices": 5040,
+    "indices": 12750,
+    "huella": "7c518753d4028186"
+   },
+   "tris": 7392
+  },
+  "socrates": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206208,
+     "gzip": 92271,
+     "sha256": "8f40956804ce558b"
+    },
+    "cab.json": {
+     "bytes": 4850,
+     "gzip": 1892,
+     "sha256": "a7b50a46b9758130"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 70761,
+     "gzip": 39899,
+     "sha256": "e37d9e3069b9f7d4"
+    },
+    "pelo-hoy.json": {
+     "bytes": 338,
+     "gzip": 265,
+     "sha256": "20ae7f32b7f92a6b"
+    }
+   },
+   "bytes": 282157,
+   "gzip": 134327,
+   "iris": "#4a3828",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {
+    "bigoteBaja": 0.006
+   },
+   "peloHoy": {
+    "vertices": 5103,
+    "indices": 9282,
+    "huella": "2b52165aa77bb431"
+   },
+   "tris": 7392
+  },
+  "jesus": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91171,
+     "sha256": "11a272b393867f1f"
+    },
+    "cab.json": {
+     "bytes": 4812,
+     "gzip": 1873,
+     "sha256": "078072a1a5720870"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 83545,
+     "gzip": 44822,
+     "sha256": "11625f178f98037d"
+    },
+    "pelo-hoy.json": {
+     "bytes": 339,
+     "gzip": 267,
+     "sha256": "d6ec341c00ebb378"
+    }
+   },
+   "bytes": 294908,
+   "gzip": 138133,
+   "iris": "#3B2618",
+   "piel": "young_lightskinned_male",
+   "montaje": {
+    "cueroSuave": 3
+   },
+   "peloHoy": {
+    "vertices": 5706,
+    "indices": 11574,
+    "huella": "ce642471bd67db00"
+   },
+   "tris": 7392
+  },
+  "mason": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91032,
+     "sha256": "6eeee4cb386d586d"
+    },
+    "cab.json": {
+     "bytes": 4840,
+     "gzip": 1877,
+     "sha256": "eef9886fe5c52a40"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 78573,
+     "gzip": 42010,
+     "sha256": "0186940a4b8ab8da"
+    },
+    "pelo-hoy.json": {
+     "bytes": 343,
+     "gzip": 270,
+     "sha256": "b1ad88b0b59585c2"
+    }
+   },
+   "bytes": 289968,
+   "gzip": 135189,
+   "iris": "#5f6f7a",
+   "piel": "old_lightskinned_male",
+   "montaje": {
+    "cueroSuave": 3
+   },
+   "peloHoy": {
+    "vertices": 5175,
+    "indices": 11127,
+    "huella": "8dd27bdfcf51bb9c"
+   },
+   "tris": 7392
+  },
+  "iluminado": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 90280,
+     "sha256": "db308076ca95b8cd"
+    },
+    "cab.json": {
+     "bytes": 4808,
+     "gzip": 1872,
+     "sha256": "5bccf15495217ffe"
+    },
+    "pelo-hoy.bin": {
+     "bytes": 4237,
+     "gzip": 1303,
+     "sha256": "613bf78e1eefb697"
+    },
+    "pelo-hoy.json": {
+     "bytes": 330,
+     "gzip": 264,
+     "sha256": "4628e2256a8ad373"
+    }
+   },
+   "bytes": 215587,
+   "gzip": 93719,
+   "iris": "#2f1f15",
+   "piel": "middleage_lightskinned_male",
+   "montaje": {},
+   "peloHoy": {
+    "vertices": 204,
+    "indices": 0,
+    "huella": "03a927a211208e88"
+   },
+   "tris": 7392
+  },
+  "claude": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 91091,
+     "sha256": "6f5de1926a7157f0"
+    },
+    "cab.json": {
+     "bytes": 4799,
+     "gzip": 1873,
+     "sha256": "9961d6018f502619"
+    }
+   },
+   "bytes": 211011,
+   "gzip": 92964,
+   "iris": "#7F93A6",
+   "piel": "young_lightskinned_male",
+   "montaje": {},
+   "peloHoy": null,
+   "tris": 7392
+  },
+  "chatgpt": {
+   "archivos": {
+    "cab.bin": {
+     "bytes": 206212,
+     "gzip": 90419,
+     "sha256": "8aa5ebc04bac5367"
+    },
+    "cab.json": {
+     "bytes": 4798,
+     "gzip": 1858,
+     "sha256": "0f50e4be3fa9cb13"
+    }
+   },
+   "bytes": 211010,
+   "gzip": 92277,
+   "iris": "#A9824E",
+   "piel": "young_lightskinned_male",
+   "montaje": {},
+   "peloHoy": null,
+   "tris": 7392
+  }
+ },
+ "comun": {
+  "cejas-pestanas.png": {
+   "bytes": 124747,
+   "gzip": 122019,
+   "sha256": "0142b45759270815"
+  },
+  "ojo.png": {
+   "bytes": 95816,
+   "gzip": 95140,
+   "sha256": "ac1ddaf093128f97"
+  },
+  "piel-middleage_lightskinned_male-512.jpg": {
+   "bytes": 32606,
+   "gzip": 32312,
+   "sha256": "9c97def8f3fc94e1"
+  },
+  "piel-middleage_lightskinned_male.jpg": {
+   "bytes": 145443,
+   "gzip": 144402,
+   "sha256": "ed6dec5f07077c09"
+  },
+  "piel-old_lightskinned_male-512.jpg": {
+   "bytes": 49017,
+   "gzip": 48764,
+   "sha256": "bcbd3e7399090499"
+  },
+  "piel-old_lightskinned_male.jpg": {
+   "bytes": 210699,
+   "gzip": 209979,
+   "sha256": "92b6db5dd2aa4b2c"
+  },
+  "piel-young_darkskinned_male-512.jpg": {
+   "bytes": 25532,
+   "gzip": 25110,
+   "sha256": "4d82e78428daaff7"
+  },
+  "piel-young_darkskinned_male.jpg": {
+   "bytes": 105061,
+   "gzip": 103513,
+   "sha256": "55dee64085032647"
+  },
+  "piel-young_lightskinned_female-512.jpg": {
+   "bytes": 34262,
+   "gzip": 33970,
+   "sha256": "e30138287748ee3e"
+  },
+  "piel-young_lightskinned_female.jpg": {
+   "bytes": 150542,
+   "gzip": 149391,
+   "sha256": "c053402f03f2af49"
+  },
+  "piel-young_lightskinned_male-512.jpg": {
+   "bytes": 29527,
+   "gzip": 29075,
+   "sha256": "5f6da498a59319fb"
+  },
+  "piel-young_lightskinned_male.jpg": {
+   "bytes": 133083,
+   "gzip": 131436,
+   "sha256": "049e7edaeed0c4df"
+  },
+  "poros.png": {
+   "bytes": 105053,
+   "gzip": 105106,
+   "sha256": "1e1cc8ea9bbcfcd3"
+  }
+ },
+ "totales": {
+  "residentes_bytes": 6242171,
+  "residentes_gzip": 2853988,
+  "comun_bytes": 1241388,
+  "comun_gzip": 1230217,
+  "comun_solo1024_gzip": 1060986,
+  "comun_solo512_gzip": 491496,
+  "total_bytes": 7483559,
+  "total_gzip": 4084205
+ }
+}

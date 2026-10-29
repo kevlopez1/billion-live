@@ -92,9 +92,18 @@ export interface OpcionesEscena {
    * en que sale, no el día en que se filmó, y dos filmaciones dan lo mismo.
    */
   ahora?: number
+  /**
+   * Caras MakeHuman (avatar-cara-mh.ts). "cerca" (por defecto): el motor pide la cara de cada residente cuando
+   * está en el nivel que se ve y a menos de CARA_DISTANCIA de la cámara (o se lo sigue). "pedidas": solo las de
+   * carasListas(ids): el estudio, así nada se monta a mitad de un video.
+   */
+  caras?: "cerca" | "pedidas"
 }
 
-/** Lo que el motor ofrece además del contrato Escena. */
+/** A qué distancia de la cámara (m) se pide la cara MakeHuman de un residente (los datos llegan de a uno). */
+export const CARA_DISTANCIA = 30
+/** Desde cuántos píxeles de alto de la cabeza (en el búfer) va el detalle de cerca: pestañas, dientes, borde del pelo. */
+export const CARA_PX_CERCA = 64
 export interface EscenaMotor extends Escena {
   /** Modo maqueta: tilt-shift, más saturación y contraste (una toma del modo grabación y un botón). */
   /** Si el modo maqueta está prendido. */
@@ -121,16 +130,28 @@ export interface EscenaMotor extends Escena {
   encuadrar(centro: Vec3, distancia: number, lugarId?: string, opciones?: { subir?: number; corte?: boolean }): void
   /** true mientras la cámara baja o sube por el ascensor. */
   viajando(): boolean
+  /**
+   * Pide la cara MakeHuman de `ids` (por defecto, todos) y se cumple cuando cada uno terminó con la suya: la
+   * MakeHuman montada o la de hoy (avatar-cara-mh.ts). El estudio lo espera antes del cuadro 0 con los
+   * residentes del episodio.
+   */
+  carasListas(ids?: string[]): Promise<void>
   /** Solo para pruebas y depuración. */
   depurar: {
     /** Fija el avance de la intro (segundos) y quita el fundido. */
     fijarIntro(segundos: number): void
     /** Dibuja un cuadro ya (sin esperar al bucle). */
     cuadro(dt?: number): void
+    /** Clava la cámara en `pos` mirando a `mira` (primeros planos de prueba); null la suelta. */
+    fijarCamara(pos: Vec3 | null, mira?: Vec3, fov?: number): void
     /** El mismo cuadro sin dibujarlo (sin postproceso ni render): avanza cámara, hora, avatares y fundidos `dt` segundos. */
     avanzar(dt: number): void
     /** `fundido`: el negro del fundido en curso (0 = ninguno). `velo`: el negro total (fundido y cámara). */
     info(): { calidad: Calidad; hora: number; noche: number; drawCalls: number; triangulos: number; fps: number; fundido: number; velo: number }
+    /** Lo que vive en la GPU (renderer.info.memory y programas compilados): para ver que no crece. */
+    memoria(): { geometrias: number; texturas: number; programas: number }
+    /** La raíz del avatar de `id` (para contar sus mallas). */
+    raiz(id: string): THREE.Object3D | null
   }
 }
 
@@ -318,7 +339,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
   const rumbos = new Map<string, number>()
   const avataresRotos = new Set<string>()
   for (const p of opciones.personajes) {
-    const a = intentar(`crearAvatar(${p.id})`, () => crearAvatar(p))
+    const a = intentar(`crearAvatar(${p.id})`, () => crearAvatar(p, { calidad }))
     if (!a) continue
     a.raiz.visible = false
     a.raiz.userData.personajeId = p.id
@@ -591,8 +612,20 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
   }
 
   // ── Personajes ──
+  // Caras MakeHuman: se piden de a una a medida que alguien queda cerca de la cámara (opciones.caras).
+  const carasCerca = opciones.caras !== "pedidas"
+  const carasPedidas = new Set<string>()
+  // los materiales de cada cara se compilan antes de montarla (en paralelo si el navegador puede): sin tirón
+  // (sin KHR_parallel_shader_compile se compila igual, en su propia tarea, antes de la del montaje)
+  const enParalelo = renderer.extensions.has("KHR_parallel_shader_compile")
+  const opCara = { compilar: (o: THREE.Object3D): Promise<unknown> => (enParalelo ? renderer.compileAsync(o, cam, scene) : Promise.resolve(renderer.compile(o, cam, scene))) }
+  type PedirCara = (c: Calidad, extra: typeof opCara) => Promise<void>
+  const _buf = new THREE.Vector2()
   const aplicarPersonajes = (dt: number) => {
     const seguido = camara.seguido()
+    // alto en píxeles del búfer de una cabeza (0,24 m) a 1 m: con la distancia sale el de cada uno
+    renderer.getDrawingBufferSize(_buf)
+    const pxPorMetro = 0.24 * cam.projectionMatrix.elements[5] * _buf.y * 0.5
     for (const [id, e] of estados) {
       const a = avatares.get(id)
       if (!a) continue
@@ -607,6 +640,14 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       const adentro = id === seguido && !e.visible && nivelDeY(e.pos.y) === nivelActual
       a.raiz.visible = (e.visible && nivelDeY(e.pos.y) === nivelActual) || adentro
       a.rayosX?.(adentro)
+      if (a.raiz.visible) {
+        const d = Math.max(0.1, a.raiz.position.distanceTo(cam.position))
+        if (carasCerca && !carasPedidas.has(id) && (d < CARA_DISTANCIA || id === seguido)) {
+          carasPedidas.add(id)
+          ;(a.raiz.userData.pedirCara as PedirCara | undefined)?.(calidad, opCara)
+        }
+        ;(a.raiz.userData.caraDetalle as ((cerca: boolean) => void) | undefined)?.(calidad !== "baja" && pxPorMetro / d >= CARA_PX_CERCA)
+      }
       if (!a.raiz.visible && e.estado !== "camina" && e.estado !== "corre") continue
       if (avataresRotos.has(id)) continue
       try {
@@ -726,10 +767,19 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
   const fallidos = new Set<(t: TickEscena) => void>()
 
   let verLetreros: boolean | null = null
+  let camFija: { pos: THREE.Vector3; mira: THREE.Vector3; fov: number } | null = null
   const cuadro = (dt: number, dtReal: number, dibujar = true) => {
     tiempo += dt
     renderer.info.reset()
     camara.actualizar(dt)
+    if (camFija) {
+      cam.position.copy(camFija.pos)
+      cam.lookAt(camFija.mira)
+      if (cam.fov !== camFija.fov) {
+        cam.fov = camFija.fov
+        cam.updateProjectionMatrix()
+      }
+    }
     if (horaSucia) {
       aplicarHora(tiempo)
       horaSucia = false
@@ -815,6 +865,23 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     }
   }
   document.addEventListener("visibilitychange", alCambiarVisibilidad)
+
+  // Las caras MakeHuman se montan después de crear cada avatar, cuando se piden (avatar-cara-mh.ts).
+  const carasListas = async (ids?: string[]) => {
+    const lista = ids ?? [...avatares.keys()]
+    await Promise.all(
+      lista.map((id) => {
+        const a = avatares.get(id)
+        if (!a) return undefined
+        carasPedidas.add(id)
+        return (a.raiz.userData.pedirCara as PedirCara | undefined)?.(calidad, opCara)
+      }),
+    )
+  }
+  /** Las caras ya pedidas (sin pedir otras): los retratos esperan a esas. */
+  const carasPedidasListas = async () => {
+    await Promise.all([...avatares.values()].map((a) => (a.raiz.userData.caraPedida as (() => Promise<void> | null) | undefined)?.() ?? undefined))
+  }
 
   // ── Retratos ──
   let retratosPromesa: Promise<Record<string, string>> | null = null
@@ -1025,16 +1092,23 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     },
     retratos() {
       if (!retratosPromesa) {
-        retratosPromesa = new Promise((resolver) => {
-          // En el próximo cuadro libre: no bloquear el arranque.
-          const hacer = () => resolver(destruida ? {} : hacerRetratos())
-          if (typeof requestAnimationFrame !== "undefined") requestAnimationFrame(hacer)
-          else hacer()
-        })
+        // Con las caras nuevas que ya se pidieron montadas (como mucho 8 s: si tardan, con las que haya). Las que
+        // nadie pidió (lejos de la cámara) no se bajan para un retrato de 44 px: va la cabeza de hoy.
+        const caras = Promise.race([carasPedidasListas(), new Promise<void>((ok) => setTimeout(ok, 8000))])
+        retratosPromesa = caras.then(
+          () =>
+            new Promise((resolver) => {
+              // En el próximo cuadro libre: no bloquear el arranque.
+              const hacer = () => resolver(destruida ? {} : hacerRetratos())
+              if (typeof requestAnimationFrame !== "undefined") requestAnimationFrame(hacer)
+              else hacer()
+            }),
+        )
       }
       return retratosPromesa
     },
     calidad: () => calidad,
+    carasListas,
     setCalidad(c) {
       setCalidadInterna(c)
     },
@@ -1094,6 +1168,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       cuadro(dt = 1 / 60) {
         cuadro(dt, dt)
       },
+      fijarCamara(pos, mira, fov) {
+        camFija = pos && mira ? { pos: new THREE.Vector3(pos.x, pos.y, pos.z), mira: new THREE.Vector3(mira.x, mira.y, mira.z), fov: fov ?? cam.fov } : null
+      },
       avanzar(dt) {
         cuadro(dt, dt, false)
       },
@@ -1107,6 +1184,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
         fundido,
         velo: Math.max(fundido, camara.velo),
       }),
+      memoria: () => ({ geometrias: renderer.info.memory.geometries, texturas: renderer.info.memory.textures, programas: renderer.info.programs?.length ?? 0 }),
+      raiz: (id) => avatares.get(id)?.raiz ?? null,
     },
   }
   if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {

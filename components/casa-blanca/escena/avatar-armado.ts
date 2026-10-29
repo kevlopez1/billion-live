@@ -6,12 +6,17 @@
 // piel, ropa, pelo, ojos y, si hace falta, cristales de gafas, lo que lleva
 // en la mano y el balón; más la sombra de contacto y el anillo de selección.
 // Las IA (holograma) son una sola malla de luz con prepaso de profundidad.
+//
+// Cara MakeHuman (avatar-cara-mh.ts): el avatar nace con la cabeza de hoy y la
+// cara nueva se carga aparte cuando alguien la pide (raiz.userData.pedirCara:
+// el motor, para los que están cerca de la cámara; el estudio, para todos los
+// de un episodio) y se monta cuando llega.
 // ──────────────────────────────────────────────────────────────
 
 import * as THREE from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 import type { Avatar } from "./contrato"
-import type { EstadoCuerpo, Personaje } from "../tipos"
+import type { Calidad, EstadoCuerpo, Personaje } from "../tipos"
 import { Cuerpo, mallaPiel } from "./avatar-cuerpo"
 import { vestir, holguraDe } from "./avatar-ropa"
 import { armarPelo } from "./avatar-pelo"
@@ -21,12 +26,14 @@ import { conFicha, vestuarioDe } from "./avatar-fichas"
 import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra, msaaPelo } from "./avatar-materiales"
 import { texBalon, texPunto, texSombra } from "./avatar-texturas"
 import { esAndroide, matCejasLuz, matRopaAndroide, prepararAndroide, sombraRopaAndroide } from "./avatar-androide"
+import { caraMH, CARAS_MH, usaCarasMH } from "./avatar-cara-mh"
+import type { Montada } from "./avatar-cara-mh-montaje"
 
 let matBalon: THREE.MeshStandardMaterial | null = null
 let geoBalon: THREE.SphereGeometry | null = null
 const sinRayos = () => {}
 
-export function crearAvatarReal(original: Personaje): Avatar {
+export function crearAvatarReal(original: Personaje, op: { calidad?: Calidad } = {}): Avatar {
   // La ficha puede corregir la Apariencia (ropa, colores, peinado base).
   const p = conFicha(original)
   const ap = p.apariencia
@@ -190,9 +197,12 @@ export function crearAvatarReal(original: Personaje): Avatar {
   raiz.userData.dibujos = mallas.length + (balon ? 1 : 0) + 1 + (particulas ? 1 : 0)
 
   let tiempo = 0
+  let caraMh: Montada | null = null
   function animar(estado: EstadoCuerpo, dt: number, velocidad: number) {
     tiempo += Math.max(0, dt)
     anim.actualizar(estado, dt, velocidad)
+    // boca y parpadeo de la cara MakeHuman siguen a los huesos que acaba de mover el animador
+    caraMh?.actualizar()
     cabeza.position.y = anim.coronilla + sobre
     if (holoMats) holoMats.color.uniforms.uTiempo.value = tiempo
     if (particulas) {
@@ -246,11 +256,66 @@ export function crearAvatarReal(original: Personaje): Avatar {
     if (particulas) particulas.visible = !on
   }
 
+  let vivo = true
   function dispose() {
+    vivo = false
     raiz.removeFromParent()
     for (const x of propias) x.dispose()
   }
 
   animar("quieto", 0, 0)
-  return { raiz, altura: cu.H, cabeza, animar, resaltar, rayosX, dispose }
+  const av: Avatar = { raiz, altura: cu.H, cabeza, animar, resaltar, rayosX, dispose }
+
+  // Cara MakeHuman: se pide aparte (el motor la pide cuando el residente está cerca de la cámara en el nivel
+  // que se ve, o el estudio para todos los de un episodio); hasta que se monta (o si falla) queda la de hoy.
+  let estabaEnRayos = false
+  let pedida: Promise<void> | null = null
+  const llevaMH = !holo && CARAS_MH.has(p.id)
+  /** Pide la cara MakeHuman (una vez). Se cumple al quedar montada, o al quedar la de hoy. */
+  raiz.userData.pedirCara = (calidad: Calidad = op.calidad ?? "alta", extra: { compilar?: (o: THREE.Object3D) => Promise<unknown> } = {}): Promise<void> => {
+    if (pedida) return pedida
+    if (!llevaMH || !usaCarasMH(calidad) || !vivo) return Promise.resolve()
+    pedida = caraMH(av, original, {
+      calidad,
+      compilar: extra.compilar,
+      vigente: () => vivo,
+      // el montaje cambia materiales: con los rayos X puestos, `originales` quedaría con los viejos
+      antes: () => {
+        estabaEnRayos = enRayos
+        if (enRayos) rayosX(false)
+      },
+    }).then((r) => {
+      if (r.ok && r.m) {
+        if (!vivo) {
+          for (const x of r.recursos ?? []) x.dispose()
+        } else {
+          caraMh = r.m
+          for (const m of r.m.mallas) {
+            m.boundingSphere = esfera
+            m.frustumCulled = true
+            m.raycast = sinRayos
+            mallas.push(m)
+            // con balón, `todas` es una copia de `mallas`
+            if (todas !== mallas) todas.push(m)
+          }
+          raiz.userData.triangulos += r.triangulos ?? 0
+          raiz.userData.dibujos += r.dibujos ?? 0
+          raiz.userData.caraMH = { ms: r.ms, info: r.info }
+          const recursos = r.recursos ?? []
+          propias.push({ dispose: () => { for (const x of recursos) x.dispose() } })
+          caraMh.actualizar()
+        }
+      } else if (r.error && r.error !== "avatar desechado") {
+        console.warn(`[casa-blanca] cara MakeHuman de ${p.id}: queda la de hoy (${r.error})`)
+      }
+      if (estabaEnRayos && vivo) rayosX(true)
+      estabaEnRayos = false
+    })
+    return pedida
+  }
+  /** La cara pedida (o null si nadie la pidió todavía). */
+  raiz.userData.caraPedida = () => pedida
+  /** Nivel de detalle de la cara MakeHuman (el motor, cada cuadro): de lejos, sin pestañas, dientes ni borde del pelo. */
+  raiz.userData.caraDetalle = (cerca: boolean) => caraMh?.detalle(cerca)
+  return av
 }
