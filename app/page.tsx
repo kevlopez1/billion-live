@@ -157,7 +157,7 @@ export default function Dashboard() {
           vive aquí — el botón del hero lleva a /comprobantes, que es su página. */}
       <section id="el-auto" className="scroll-mt-24">
         <Reveal>
-          <SectionLabel index="03" eyebrow="El auto es de todos" title="El auto por partes" accent="azul" />
+          <SectionLabel index="03" eyebrow="El auto es de todos" title="Firma el auto" accent="azul" />
         </Reveal>
         <Reveal delay={60}>
           <FirmaCta />

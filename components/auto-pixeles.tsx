@@ -151,7 +151,7 @@ export function AutoPixeles() {
           compra siguen funcionando igual. */}
       <div className="rounded-3xl border border-border bg-card/40 p-3 md:p-7">
         <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full h-auto" role="img"
-          aria-label="El Mercedes del reto, con las partes que se pueden comprar">
+          aria-label="El Mercedes del reto, con las firmas">
           <defs>
             <clipPath id="carroceria">
               <path d={BODY_PATH} />
@@ -261,7 +261,7 @@ export function AutoPixeles() {
         <div className="mt-5 rounded-3xl border border-border bg-card/40 px-5 py-6 text-center">
           <div className="font-display text-lg font-bold tracking-tight">Muy pronto</div>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Las partes del auto se abren en unos días. Mira cómo se va armando.
+            Las firmas se abren en unos días. Mira cómo se va armando.
           </p>
         </div>
       )}
@@ -270,7 +270,7 @@ export function AutoPixeles() {
         <div className="mt-5 space-y-5">
           {/* Las partes, de la más cara a la más barata: el precio sale de
               cuánto se VE, como el patrocinio de un auto de carrera. */}
-          <div className="rounded-3xl border border-border bg-card/40 px-4 py-5 md:px-7 md:py-6">
+          {SLOTS.length > 0 && <div className="rounded-3xl border border-border bg-card/40 px-4 py-5 md:px-7 md:py-6">
             <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">Elige tu parte del auto</h4>
             <p className="mt-1.5 text-sm text-muted-foreground">
               Cada parte vale según cuánto se ve. Una sola de cada una: cuando se toma, se toma.
@@ -304,12 +304,12 @@ export function AutoPixeles() {
                 )
               })}
             </div>
-          </div>
+          </div>}
 
           {/* La firma de $10: el producto masivo, el que sostiene la promesa. */}
           <div className="rounded-3xl border border-border bg-card/40 px-4 py-5 md:px-7 md:py-6">
             <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">
-              O firma la carrocería por ${est?.pixel_price ?? 10}
+              Firma la carrocería por ${est?.pixel_price ?? 10}
             </h4>
             <p className="mt-1.5 text-sm text-muted-foreground">
               No eliges el lugar: tu firma se enciende sola, de la trompa hacia atrás, con cada persona que entra.
