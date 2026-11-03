@@ -17,7 +17,7 @@ export const CHALLENGE_DEADLINE = "2027-06-30" // límite: 12 meses
  * Lo recaudado hasta hoy. Es LA fuente del número: lo usan el contador de la
  * home, /profile y la vista previa al compartir el link.
  */
-export const RECAUDADO = 7346 // 6915 + 431 (Bs 5.100 el 9 oct ÷ 11,83) — edita aquí o desde /control
+export const RECAUDADO = 8635 // 7346 + 1289 (Bs 15.245 del 17 al 29 oct ÷ 11,83) — edita aquí o desde /control
 
 /**
  * El valor guardado en la base (`global_metrics`), SOLO si es del reto.
