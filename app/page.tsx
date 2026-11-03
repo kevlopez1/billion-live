@@ -22,9 +22,6 @@ import { ScrollProgress } from "@/components/scroll-progress"
 import { WhatsAppPopup } from "@/components/whatsapp-popup"
 import { MemoriaScroll } from "@/components/memoria-scroll"
 import { Eventos } from "@/components/eventos"
-import { MuroFirmas } from "@/components/muro-firmas"
-import { FirmaCta } from "@/components/firma-cta"
-import { AutoPixeles } from "@/components/auto-pixeles"
 import { useRouter } from "next/navigation"
 import { EV, track } from "@/lib/track"
 import { PrimeMark } from "@/components/prime-mark"
@@ -153,29 +150,10 @@ export default function Dashboard() {
         <Roadmap />
       </section>
 
-      {/* El auto por partes: la monetización directa del reto. La prueba ya no
-          vive aquí — el botón del hero lleva a /comprobantes, que es su página. */}
-      <section id="el-auto" className="scroll-mt-24">
-        <Reveal>
-          <SectionLabel index="03" eyebrow="El auto es de todos" title="El auto por partes" accent="azul" />
-        </Reveal>
-        <Reveal delay={60}>
-          <FirmaCta />
-        </Reveal>
-        {/* El auto y quiénes ya firmaron van JUNTOS, en un mismo Reveal.
-            Separados se leían como dos secciones sin relación: arriba el
-            contador, abajo unos comprobantes sueltos. Es una sola historia —
-            este es el auto, estas son las firmas que ya tiene. */}
-        <Reveal delay={80}>
-          <AutoPixeles />
-          <MuroFirmas />
-        </Reveal>
-      </section>
-
       {/* Eventos: presencia real de PRIME en el ecosistema */}
       <section>
         <Reveal>
-          <SectionLabel index="04" eyebrow="En la cancha" title="Los eventos" accent="azul" />
+          <SectionLabel index="03" eyebrow="En la cancha" title="Los eventos" accent="azul" />
         </Reveal>
         <Reveal delay={80}>
           <Eventos />
@@ -185,7 +163,7 @@ export default function Dashboard() {
       {/* Súmate: comunidad de WhatsApp + crear cuenta */}
       <section>
         <Reveal>
-          <SectionLabel index="05" eyebrow="Súmate" title="No te lo pierdas" accent="rojo" />
+          <SectionLabel index="04" eyebrow="Súmate" title="No te lo pierdas" accent="rojo" />
         </Reveal>
         <Reveal delay={60}>
           <a
