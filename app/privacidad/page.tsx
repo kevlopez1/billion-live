@@ -51,11 +51,6 @@ export default function PrivacidadPage() {
             guarda Supabase cifrada: nosotros no la vemos.
           </li>
           <li>
-            <strong>Firmas en el auto y en el muro.</strong> Nombre, mensaje, enlace si lo pones y, si los dejas, correo y
-            WhatsApp para confirmar el pago o contactarte. El nombre y el mensaje se ven en la web; el correo y el WhatsApp,
-            no.
-          </li>
-          <li>
             <strong>Avisos y patrocinios.</strong> El correo o WhatsApp que dejas para que te avisemos, y los datos de
             empresa que escribes si quieres patrocinar.
           </li>

@@ -69,8 +69,6 @@ export default function TerminosPage() {
 
       <Seccion titulo="Lo que publicas tú">
         <ul>
-          <li>El nombre y el mensaje de una firma en el auto o en el muro se ven en público.</li>
-          <li>Una firma en el auto vale cuando se confirma el pago, y el precio lo calcula el servidor.</li>
           <li>Podemos quitar lo que sea ofensivo, engañoso o ajeno al reto.</li>
           <li>No escribas datos personales tuyos ni de otros en las charlas con los residentes.</li>
         </ul>
