@@ -87,78 +87,10 @@ export type Slot = {
 
 // El precio sale de cuánto se VE la parte, igual que el patrocinio real de un
 // auto de carrera: el capó y las ruedas salen en cada foto; el faldón casi no.
-export const SLOTS: Slot[] = [
-  {
-    id: "capo",
-    n: 1,
-    label: "El capó",
-    price: 500,
-    nota: "La parte más fotografiada del auto",
-    mx: 352,
-    my: 268,
-    forma: { tipo: "zona", x: 78, y: 232, w: 312, h: 66 },
-  },
-  {
-    id: "rueda-del",
-    n: 2,
-    label: "Rueda delantera",
-    price: 500,
-    nota: "Gira en cada video que grabo",
-    mx: 248,
-    my: 298,
-    forma: { tipo: "circulo", cx: 248, cy: 298, r: 62 },
-  },
-  {
-    id: "rueda-tras",
-    n: 3,
-    label: "Rueda trasera",
-    price: 500,
-    nota: "Gira en cada video que grabo",
-    mx: 758,
-    my: 298,
-    forma: { tipo: "circulo", cx: 758, cy: 298, r: 62 },
-  },
-  {
-    id: "puerta",
-    n: 4,
-    label: "La puerta",
-    price: 250,
-    nota: "El lugar clásico del patrocinio",
-    mx: 560,
-    my: 262,
-    forma: { tipo: "zona", x: 440, y: 222, w: 240, h: 78 },
-  },
-  {
-    id: "techo",
-    n: 5,
-    label: "El techo",
-    price: 200,
-    nota: "Se ve entero en las tomas con drone",
-    mx: 600,
-    my: 136,
-    forma: { tipo: "zona", x: 540, y: 120, w: 130, h: 32 },
-  },
-  {
-    id: "cola",
-    n: 6,
-    label: "La cola",
-    price: 150,
-    nota: "Lo último que ve el que te quiere pasar",
-    mx: 890,
-    my: 250,
-    forma: { tipo: "zona", x: 846, y: 202, w: 98, h: 90 },
-  },
-  {
-    id: "faldon",
-    n: 7,
-    label: "El faldón",
-    price: 60,
-    nota: "De rueda a rueda, todo el costado",
-    mx: 500,
-    my: 311,
-    forma: { tipo: "zona", x: 322, y: 300, w: 364, h: 22 },
-  },
-]
+// Kev (3 nov 2026): "solo el precio de $10 por firma". Las partes con
+// nombre ($60–$500) se sacaron: todo el auto es firma de $10. No había
+// ninguna vendida, así que el orden de las celdas pudo cambiar sin pisar a nadie.
+export const SLOTS: Slot[] = []
 
 export const PIXEL_PRICE = 10
 
