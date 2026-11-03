@@ -31,7 +31,7 @@ const steps = [
   {
     phase: "Mes 4–8",
     title: "Escalar + el mundo",
-    desc: "Más clientes PRIME, viajes (Token2049…) y prensa. Apalancamiento total.",
+    desc: "Más clientes PRIME, viajes (GITEX Dubái…) y prensa. Apalancamiento total.",
     icon: Globe,
   },
   {
