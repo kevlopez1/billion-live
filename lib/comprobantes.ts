@@ -19,6 +19,11 @@ export type Comprobante = {
 }
 
 export const COMPROBANTES: Comprobante[] = [
+  // El extracto no dice desde qué banco llegó: se pone solo lo que sí dice.
+  { src: "/images/comprobantes/interbanc-2000.jpg", bs: 2000, bank: "Transferencia interbancaria", date: "29 oct 2026" },
+  { src: "/images/comprobantes/ganadero-interbanc-3265.jpg", bs: 3265, bank: "Banco Ganadero · interbancaria", date: "23 oct 2026" },
+  { src: "/images/comprobantes/tigo-interbanc-1900.jpg", bs: 1900, bank: "Tigo Money · interbancaria", date: "22 oct 2026" },
+  { src: "/images/comprobantes/economico-qr-8080.jpg", bs: 8080, bank: "Banco Económico · QR", date: "17 oct 2026" },
   // El comprobante no nombra el banco de quien paga, solo el de destino
   // (ACH Banco Nacional de Bolivia). Se etiqueta con lo que sí está escrito.
   { src: "/images/comprobantes/ach-bnb-5100.jpg", bs: 5100, bank: "BNB · transferencia QR", date: "9 oct 2026" },
