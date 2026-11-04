@@ -134,3 +134,16 @@ textarea.campo { resize: vertical; min-height: 44px; }
   .escenaSeg { grid-column: 2; padding-top: 3px; }
   .escenaPantalla, .escenaDice { grid-column: 2; }
 }
+
+/* Pestañas de secciones */
+.pestanas { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0; margin-bottom: -24px; background: var(--negro); }
+@media (max-width: 640px) { .pestanas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } }
+.pestanas::-webkit-scrollbar { display: none; }
+.pestanasFijas { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; }
+.pestana, .pestanaActiva {
+  font: inherit; font-size: 14px; white-space: nowrap; cursor: pointer; padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--linea); background: var(--negro); color: var(--gris);
+}
+.pestana:hover { color: var(--tinta); border-color: var(--tinta); }
+.pestanaActiva { background: var(--tinta); color: var(--negro); border-color: var(--tinta); font-weight: 600; }
+.pestana:focus-visible, .pestanaActiva:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }

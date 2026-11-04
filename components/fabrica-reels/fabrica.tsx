@@ -24,6 +24,9 @@ const mover = <T,>(arr: T[], desde: number, hasta: number) => {
   return c
 }
 
+// Nombre de la pestaña: la etiqueta sin lo que va después de «·» ni paréntesis.
+const nombreCorto = (etiqueta: string) => etiqueta.split(" · ")[0].replace(/\s*\(.*\)\s*/, "").trim() || etiqueta
+
 export function Fabrica() {
   const [doc, setDoc] = useState<ContenidoFabrica>(FABRICA_BASE)
   const [editando, setEditando] = useState(false)
@@ -33,6 +36,8 @@ export function Fabrica() {
   const [estado, setEstado] = useState("")
   const [guardando, setGuardando] = useState(false)
   const [avisoSalir, setAvisoSalir] = useState(false)
+  // Pestaña abierta: se recuerda en la dirección (#guiones) para poder compartirla.
+  const [activa, setActiva] = useState("")
 
   const cargar = () =>
     fetch("/api/fabrica-reels", { cache: "no-store" })
@@ -43,7 +48,19 @@ export function Fabrica() {
   useEffect(() => {
     setClave(leerClave() ?? "")
     cargar()
+    const leer = () => setActiva(decodeURIComponent(window.location.hash.slice(1)))
+    leer()
+    window.addEventListener("hashchange", leer)
+    return () => window.removeEventListener("hashchange", leer)
   }, [])
+
+  const abierta = doc.secciones.find((x) => x.id === activa) ?? doc.secciones[0]
+  const abrir = (id: string) => {
+    setActiva(id)
+    history.replaceState(null, "", `#${id}`)
+    if (editando) document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    else window.scrollTo({ top: 0 })
+  }
 
   // Sin guardar, avisar antes de cerrar la pestaña.
   useEffect(() => {
@@ -132,12 +149,20 @@ export function Fabrica() {
           </div>
         )}
 
+        <nav className={`${s.pestanas} ${editando ? "" : s.pestanasFijas}`} aria-label="Secciones">
+          {doc.secciones.map((x) => (
+            <button key={x.id} ref={x.id === abierta?.id ? (el) => el?.scrollIntoView({ block: "nearest", inline: "nearest" }) : undefined} className={x.id === abierta?.id ? s.pestanaActiva : s.pestana} aria-current={x.id === abierta?.id ? "page" : undefined} onClick={() => abrir(x.id)}>
+              {nombreCorto(x.etiqueta)}
+            </button>
+          ))}
+        </nav>
+
         {editando ? (
           <Ordenable items={doc.secciones} clave={(x) => x.id} mover={(a, b) => cambiar((d) => ({ ...d, secciones: mover(d.secciones, a, b) }))} nombre="sección">
             {(sec, i) => <SeccionVista sec={sec} i={i} doc={doc} editando cambiar={cambiar} cambiarSeccion={cambiarSeccion} />}
           </Ordenable>
         ) : (
-          doc.secciones.map((sec, i) => <SeccionVista key={sec.id} sec={sec} i={i} doc={doc} editando={false} cambiar={cambiar} cambiarSeccion={cambiarSeccion} />)
+          abierta && <SeccionVista key={abierta.id} sec={abierta} i={doc.secciones.indexOf(abierta)} doc={doc} editando={false} cambiar={cambiar} cambiarSeccion={cambiarSeccion} />
         )}
       </div>
     </main>
