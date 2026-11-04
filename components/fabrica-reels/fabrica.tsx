@@ -7,6 +7,7 @@ import { guardarClave, leerClave } from "@/lib/clave"
 import { FABRICA_BASE, type ContenidoFabrica, type Referente, type Seccion } from "@/lib/fabrica-reels"
 import { Diagrama } from "./diagrama"
 import { Metricas } from "./metricas"
+import { Guiones } from "./guiones"
 import s from "./fabrica.module.css"
 
 // ──────────────────────────────────────────────────────────────
@@ -175,6 +176,13 @@ function SeccionVista({ sec, i, doc, editando, cambiar, cambiarSeccion }: PropsS
       {sec.tipo === "tabla" && <Tabla columnas={sec.columnas} filas={sec.filas} editando={editando} poner={(filas) => cambiarSeccion(i, (x) => ({ ...x, filas } as Seccion))} />}
       {sec.tipo === "notas" && <Notas doc={doc} editando={editando} cambiar={cambiar} />}
       {sec.tipo === "metricas" && <Metricas />}
+      {sec.tipo === "guiones" && (
+        <Guiones
+          guiones={sec.guiones}
+          editando={editando}
+          poner={(guiones) => cambiarSeccion(i, (x) => ({ ...x, guiones } as Seccion))}
+        />
+      )}
     </section>
   )
 }

@@ -9,6 +9,13 @@
 // Todo cuelga de un objeto: lo que se guarda es exactamente esta forma.
 // ──────────────────────────────────────────────────────────────
 
+export type Guion = {
+  titulo: string
+  estado: string
+  datos: string
+  escenas: string[][] // [segundos "0–2", en pantalla, Kev dice]
+  notas: string[]
+}
 export type Paso = { titulo: string; detalle: string; kev?: boolean }
 export type Retorno = { desde: number; hasta: number; etiqueta: string; punteado?: boolean }
 export type Referente = {
@@ -30,6 +37,7 @@ export type Seccion =
   | { id: string; tipo: "tabla"; etiqueta: string; titulo: string; columnas: string[]; filas: string[][] }
   | { id: string; tipo: "notas"; etiqueta: string; titulo: string }
   | { id: string; tipo: "metricas"; etiqueta: string; titulo: string }
+  | { id: string; tipo: "guiones"; etiqueta: string; titulo: string; guiones: Guion[] }
 
 export type ContenidoFabrica = {
   titulo: string
@@ -269,6 +277,34 @@ export const FABRICA_BASE: ContenidoFabrica = {
         "«Si llego a la meta, tu nombre va grabado en este auto.»",
       ],
     },
+    {
+      id: "guiones",
+      tipo: "guiones",
+      etiqueta: "Guiones",
+      titulo: "Listos para grabar",
+      guiones: [
+        {
+          titulo: "Serie personajes #1 · «Señor Mansory»",
+          estado: "Listo para grabar",
+          datos: "45 s · etiquetar a @mansory · música SICKO MODE desde 0:55",
+          escenas: [
+            ["0–2", "Kev a cámara con el billete de $10. Etiqueta: Mercedes Mansory · $450,000", "Señor Mansory: con estos 10 dólares me voy a comprar su auto."],
+            ["2–6", "Toma propia del Mansory. Marcador: Día N · monto del día / $450K", "Sí, el de 450 mil dólares."],
+            ["6–14", "Kev caminando por Santa Cruz", "Desde Bolivia, un país quebrado. Sin herencia, sin préstamo."],
+            ["14–24", "Comprobantes reales y el contador subiendo", "Cada dólar sale de mi empresa, PRIME. Ya vamos [monto del día]."],
+            ["24–34", "Kev a cámara, más cerca", "Y cuando lo tenga, señor Mansory, quiero que usted me lo entregue en persona."],
+            ["34–40", "Pausa de 1 s con la música baja, luego el golpe", "Le quedan 8 meses para preparar las llaves."],
+            ["40–45", "Cierre fijo", "Firma el Mercedes por 10 dólares en kevproject.world. ¿Crees que lo logro?"],
+          ],
+          notas: [
+            "Texto del post: «@mansory, nos vemos en Dubái 🇧🇴».",
+            "El plazo se cuenta hasta el límite de junio de 2027: recalcular el día que se grabe.",
+            "El monto es el real del día, el de la web.",
+            "Si Mansory responde o da like: parte 2 «Mansory me respondió» el mismo día.",
+          ],
+        },
+      ],
+    },
     { id: "metricas", tipo: "metricas", etiqueta: "Métricas", titulo: "Cómo le va a cada video" },
     { id: "notas", tipo: "notas", etiqueta: "Notas", titulo: "Notas de Kev" },
   ],
@@ -293,6 +329,8 @@ function seccionValida(s: unknown): boolean {
     case "notas":
     case "metricas":
       return true
+    case "guiones":
+      return Array.isArray(x.guiones) && x.guiones.every((g) => { const q = g as Record<string, unknown>; return q && txt(q.titulo) && txt(q.estado) && txt(q.datos) && Array.isArray(q.escenas) && q.escenas.every(txts) && txts(q.notas) })
     case "lista":
       return txts(x.items)
     case "referentes":
