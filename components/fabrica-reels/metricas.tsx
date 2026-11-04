@@ -22,7 +22,7 @@ type Video = {
   compartidos?: number | null
   fijado?: boolean
 }
-type Cuenta = { red: string; cuenta: string; seguidores: number | null; likesTotales?: number | null; videos: Video[] }
+type Cuenta = { red: string; cuenta: string; seguidores: number | null; publicaciones?: number | null; likesTotales?: number | null; videos: Video[] }
 type Datos = { canal: string; actualizado: string; cuentas: Cuenta[] }
 
 const num = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("es-BO"))
@@ -58,6 +58,7 @@ export function Metricas() {
             <span className={s.cifraNumero}>{num(c.seguidores)}</span>
             <span className={s.cifraCuenta}>seguidores · {c.cuenta}</span>
             {c.likesTotales != null && <span className={s.cifraCuenta}>{num(c.likesTotales)} likes en total</span>}
+            {c.publicaciones != null && <span className={s.cifraCuenta}>{num(c.publicaciones)} publicaciones</span>}
           </button>
         ))}
       </div>
