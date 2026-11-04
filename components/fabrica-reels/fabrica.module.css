@@ -153,3 +153,16 @@ textarea.campo { resize: vertical; min-height: 44px; }
 .subPestana:focus-visible, .subPestanaActiva:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
 .subCuenta { font-size: 12px; color: var(--gris); margin-left: 4px; font-variant-numeric: tabular-nums; }
 .escenaSinVoz { margin: 0; font-size: 14px; color: var(--gris); font-style: italic; }
+
+/* Selector de canal (arriba del título), como el de portafolios en Meta. */
+.selectorCanal { display: inline-flex; align-items: center; gap: 10px; align-self: flex-start; }
+.selectorCanalCampo {
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--tinta); background: var(--caja);
+  border: 1px solid var(--linea); border-radius: 8px; padding: 6px 30px 6px 12px; cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--gris) 50%), linear-gradient(135deg, var(--gris) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%;
+  background-size: 5px 5px; background-repeat: no-repeat;
+}
+.selectorCanalCampo:hover { border-color: var(--tinta); }
+.selectorCanalCampo:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }

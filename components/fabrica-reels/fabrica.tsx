@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import { Ordenable } from "@/components/branding/ordenable"
 import { conPrime } from "@/components/prime-mark"
 import { guardarClave, leerClave } from "@/lib/clave"
-import { FABRICA_BASE, type ContenidoFabrica, type Referente, type Seccion } from "@/lib/fabrica-reels"
+import { type ContenidoFabrica, type Referente, type Seccion } from "@/lib/fabrica-reels"
+import { CANALES, CANAL_PRINCIPAL, canalPorId } from "@/lib/fabrica-canales"
 import { Diagrama } from "./diagrama"
 import { Metricas } from "./metricas"
 import { Guiones } from "./guiones"
@@ -27,8 +28,11 @@ const mover = <T,>(arr: T[], desde: number, hasta: number) => {
 // Nombre de la pestaña: la etiqueta sin lo que va después de «·» ni paréntesis.
 const nombreCorto = (etiqueta: string) => etiqueta.split(" · ")[0].replace(/\s*\(.*\)\s*/, "").trim() || etiqueta
 
-export function Fabrica() {
-  const [doc, setDoc] = useState<ContenidoFabrica>(FABRICA_BASE)
+export function Fabrica({ canalId }: { canalId?: string }) {
+  const canal = canalPorId(canalId)
+  // Kev Project GTA sigue en /api/fabrica-reels y /fabrica, sin parámetro.
+  const sufijo = canal.id === CANAL_PRINCIPAL.id ? "" : `?canal=${canal.id}`
+  const [doc, setDoc] = useState<ContenidoFabrica>(canal.base)
   const [editando, setEditando] = useState(false)
   const [clave, setClave] = useState("")
   const [pidiendoClave, setPidiendoClave] = useState(false)
@@ -40,7 +44,7 @@ export function Fabrica() {
   const [activa, setActiva] = useState("")
 
   const cargar = () =>
-    fetch("/api/fabrica-reels", { cache: "no-store" })
+    fetch(`/api/fabrica-reels${sufijo}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => d?.contenido && setDoc(d.contenido))
       .catch(() => {})
@@ -87,7 +91,7 @@ export function Fabrica() {
     setGuardando(true)
     setEstado("Guardando…")
     try {
-      const r = await fetch("/api/fabrica-reels", {
+      const r = await fetch(`/api/fabrica-reels${sufijo}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", authorization: `Bearer ${clave}` },
         body: JSON.stringify({ contenido: doc }),
@@ -107,8 +111,22 @@ export function Fabrica() {
     <main className={s.pagina}>
       <div className={s.contenedor}>
         <header className={s.cabecera}>
+          <label className={s.selectorCanal}>
+            <span className={s.etiqueta}>Canal</span>
+            <select
+              className={s.selectorCanalCampo}
+              value={canal.id}
+              onChange={(e) => {
+                const id = e.target.value
+                // Navegación completa: si hay cambios sin guardar, el navegador avisa.
+                window.location.assign(id === CANAL_PRINCIPAL.id ? "/fabrica" : `/fabrica?canal=${id}`)
+              }}
+            >
+              {CANALES.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </label>
           <div className={s.fila}>
-            <span className={s.etiqueta}>Kev Project GTA · de $10 a un Mercedes Mansory</span>
+            <span className={s.etiqueta}>{canal.etiqueta}</span>
             {!editando && <button className={s.botonChico} onClick={entrar}>Editar</button>}
           </div>
           {editando ? (
@@ -159,26 +177,33 @@ export function Fabrica() {
 
         {editando ? (
           <Ordenable items={doc.secciones} clave={(x) => x.id} mover={(a, b) => cambiar((d) => ({ ...d, secciones: mover(d.secciones, a, b) }))} nombre="sección">
-            {(sec, i) => <SeccionVista sec={sec} i={i} doc={doc} editando cambiar={cambiar} cambiarSeccion={cambiarSeccion} />}
+            {(sec, i) => <SeccionVista sec={sec} i={i} doc={doc} metricas={canal.metricas} editando cambiar={cambiar} cambiarSeccion={cambiarSeccion} />}
           </Ordenable>
         ) : (
-          abierta && <SeccionVista key={abierta.id} sec={abierta} i={doc.secciones.indexOf(abierta)} doc={doc} editando={false} cambiar={cambiar} cambiarSeccion={cambiarSeccion} />
+          abierta && <SeccionVista key={abierta.id} sec={abierta} i={doc.secciones.indexOf(abierta)} doc={doc} metricas={canal.metricas} editando={false} cambiar={cambiar} cambiarSeccion={cambiarSeccion} />
         )}
       </div>
     </main>
   )
 }
 
+const seccionVacia = (x: Seccion) =>
+  (x.tipo === "lista" && x.items.length === 0) ||
+  (x.tipo === "referentes" && x.refs.length === 0) ||
+  (x.tipo === "tabla" && x.filas.length === 0) ||
+  (x.tipo === "guiones" && x.guiones.length === 0)
+
 type PropsSeccion = {
   sec: Seccion
   i: number
   doc: ContenidoFabrica
+  metricas: string
   editando: boolean
   cambiar: (f: (d: ContenidoFabrica) => ContenidoFabrica) => void
   cambiarSeccion: (i: number, f: (x: Seccion) => Seccion) => void
 }
 
-function SeccionVista({ sec, i, doc, editando, cambiar, cambiarSeccion }: PropsSeccion) {
+function SeccionVista({ sec, i, doc, metricas, editando, cambiar, cambiarSeccion }: PropsSeccion) {
   return (
     <section className={s.seccion} aria-labelledby={`s-${sec.id}`}>
       {editando ? (
@@ -195,12 +220,13 @@ function SeccionVista({ sec, i, doc, editando, cambiar, cambiarSeccion }: PropsS
         </>
       )}
 
+      {!editando && seccionVacia(sec) && <p className={s.estado}>Todavía no hay nada en esta sección.</p>}
       {sec.tipo === "flujo" && <Flujo doc={doc} editando={editando} cambiar={cambiar} />}
       {sec.tipo === "lista" && <Lista items={sec.items} editando={editando} poner={(items) => cambiarSeccion(i, (x) => ({ ...x, items } as Seccion))} />}
       {sec.tipo === "referentes" && <Referentes refs={sec.refs} editando={editando} poner={(refs) => cambiarSeccion(i, (x) => ({ ...x, refs } as Seccion))} />}
       {sec.tipo === "tabla" && <Tabla columnas={sec.columnas} filas={sec.filas} editando={editando} poner={(filas) => cambiarSeccion(i, (x) => ({ ...x, filas } as Seccion))} />}
       {sec.tipo === "notas" && <Notas doc={doc} editando={editando} cambiar={cambiar} />}
-      {sec.tipo === "metricas" && <Metricas />}
+      {sec.tipo === "metricas" && <Metricas url={metricas} />}
       {sec.tipo === "guiones" && (
         <Guiones
           guiones={sec.guiones}

@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server"
 import { getAdminClient } from "@/lib/supabase-admin"
 import { autorizado } from "@/lib/auth-admin"
-import { FABRICA_BASE, FABRICA_ID, fabricaValida } from "@/lib/fabrica-reels"
+import { fabricaValida } from "@/lib/fabrica-reels"
+import { canalPorId } from "@/lib/fabrica-canales"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+// Una fila por canal: ?canal=prime-al-billon. Sin parámetro, Kev Project GTA.
+const canalDe = (req: Request) => canalPorId(new URL(req.url).searchParams.get("canal"))
+
 // Lectura pública. Si no hay base o tabla, devuelve la semilla: /fabrica nunca
 // queda en blanco.
-export async function GET() {
+export async function GET(req: Request) {
+  const { id: FABRICA_ID, base: FABRICA_BASE } = canalDe(req)
   const admin = getAdminClient()
   if (!admin) return NextResponse.json({ configurado: false, contenido: FABRICA_BASE })
 
@@ -31,6 +36,7 @@ export async function GET() {
 // Escritura: solo Kev (ADMIN_SECRET). El documento se valida entero antes de
 // tocar la base; el trigger guarda la versión anterior en el historial.
 export async function PUT(req: Request) {
+  const { id: FABRICA_ID } = canalDe(req)
   const a = autorizado(req)
   if (a === "sin-clave") return NextResponse.json({ error: "Falta ADMIN_SECRET en el servidor." }, { status: 500 })
   if (!a) return NextResponse.json({ error: "Clave incorrecta." }, { status: 401 })

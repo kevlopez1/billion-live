@@ -27,17 +27,17 @@ type Datos = { canal: string; actualizado: string; cuentas: Cuenta[] }
 
 const num = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("es-BO"))
 
-export function Metricas() {
+export function Metricas({ url = "/fabrica/metricas.json" }: { url?: string }) {
   const [datos, setDatos] = useState<Datos | null>(null)
   const [error, setError] = useState(false)
   const [abierta, setAbierta] = useState(0)
 
   useEffect(() => {
-    fetch("/fabrica/metricas.json", { cache: "no-store" })
+    fetch(url, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setDatos)
       .catch(() => setError(true))
-  }, [])
+  }, [url])
 
   if (error) return <p className={s.estado}>Todavía no hay métricas cargadas.</p>
   if (!datos) return <p className={s.estado}>Cargando…</p>
