@@ -266,69 +266,6 @@ export function AutoPixeles() {
         </div>
       )}
 
-      {!compra && est?.configured === true && (
-        <div className="mt-5 space-y-5">
-          {/* Las partes, de la más cara a la más barata: el precio sale de
-              cuánto se VE, como el patrocinio de un auto de carrera. */}
-          {SLOTS.length > 0 && <div className="rounded-3xl border border-border bg-card/40 px-4 py-5 md:px-7 md:py-6">
-            <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">Elige tu parte del auto</h4>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Cada parte vale según cuánto se ve. Una sola de cada una: cuando se toma, se toma.
-            </p>
-
-            <div className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-              {SLOTS.map((s) => {
-                const dueño = est?.slots?.[s.id]
-                return (
-                  <button key={s.id} disabled={!!dueño}
-                    onClick={() => setCompra({ kind: "slot", slot: s })}
-                    onMouseEnter={() => setMirando(s.id)}
-                    onMouseLeave={() => setMirando(null)}
-                    onFocus={() => setMirando(s.id)}
-                    className={`rounded-2xl border px-3.5 py-3 text-left transition-colors ${
-                      dueño
-                        ? "cursor-not-allowed border-border bg-muted/40 opacity-70"
-                        : "lift border-gold/40 bg-gold/[0.06] hover:border-gold"
-                    }`}>
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gold">
-                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[10px] text-background">
-                        {s.n}
-                      </span>
-                      {s.label}
-                    </div>
-                    <div className="mt-1 font-display text-xl font-extrabold tracking-tight">${s.price}</div>
-                    <div className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-                      {dueño ? `Tomado · ${dueño.name}` : s.nota}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>}
-
-          {/* La firma de $10: el producto masivo, el que sostiene la promesa. */}
-          <div className="rounded-3xl border border-border bg-card/40 px-4 py-5 md:px-7 md:py-6">
-            <h4 className="font-display text-lg font-bold tracking-tight md:text-xl">
-              Firma la carrocería por ${est?.pixel_price ?? 10}
-            </h4>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              No eliges el lugar: tu firma se enciende sola, de la trompa hacia atrás, con cada persona que entra.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2.5">
-              {PACKS.map((q) => (
-                <button key={q} onClick={() => setCompra({ kind: "pixel", qty: q })}
-                  className="lift rounded-2xl border border-border bg-background/60 px-4 py-3 text-left hover:border-gold/50">
-                  <div className="font-display text-base font-bold">
-                    {q} {q === 1 ? "firma" : "firmas"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">${q * (est?.pixel_price ?? 10)}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Formulario / código ── */}
       {compra && (
