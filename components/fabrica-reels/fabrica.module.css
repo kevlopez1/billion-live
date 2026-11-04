@@ -1,0 +1,95 @@
+/* Fábrica de reels: blanco y negro sobre fondo negro, letra del sistema (pedido de Kev). */
+.pagina {
+  --negro: #000;
+  --caja: #141414;
+  --linea: #333;
+  --tinta: #fff;
+  --gris: #a3a3a3;
+  min-height: 100vh;
+  background: var(--negro);
+  color: var(--tinta);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 80px;
+}
+.contenedor { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+.cabecera { display: flex; flex-direction: column; gap: 12px; }
+.fila { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.titulo { font-size: clamp(28px, 5vw, 40px); font-weight: 700; margin: 0; line-height: 1.1; }
+.bajada { color: var(--gris); max-width: 65ch; margin: 0; }
+.etiqueta { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--gris); }
+.h2 { font-size: clamp(22px, 3.6vw, 28px); font-weight: 600; margin: 0; }
+.seccion { display: flex; flex-direction: column; gap: 18px; padding-top: 32px; border-top: 1px solid var(--linea); }
+
+.boton, .botonClaro {
+  font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--tinta); background: var(--negro); color: var(--tinta);
+}
+.botonClaro { background: var(--tinta); color: var(--negro); }
+.boton:disabled, .botonClaro:disabled { opacity: .5; cursor: default; }
+.botonChico { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px; cursor: pointer; border: 1px solid var(--linea); background: transparent; color: var(--gris); }
+.botonChico:hover { color: var(--tinta); border-color: var(--tinta); }
+.boton:focus-visible, .botonClaro:focus-visible, .botonChico:focus-visible, .campo:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+.estado { font-size: 13px; color: var(--gris); }
+.barra {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--negro);
+  border-bottom: 1px solid var(--linea); padding: 10px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+
+.campo {
+  font: inherit; width: 100%; background: var(--caja); color: var(--tinta);
+  border: 1px solid var(--linea); border-radius: 6px; padding: 8px 10px; box-sizing: border-box;
+}
+textarea.campo { resize: vertical; min-height: 44px; }
+
+/* Lista numerada simple, una línea por punto */
+.lista { list-style: decimal; margin: 0; padding-left: 26px; display: flex; flex-direction: column; gap: 10px; font-size: 17px; max-width: 70ch; }
+.lista li::marker { color: var(--gris); font-variant-numeric: tabular-nums; }
+.editable { display: flex; gap: 8px; align-items: flex-start; }
+.editable > :first-child { flex: 1; min-width: 0; }
+
+/* Referentes: capturas a la izquierda, qué funciona a la derecha */
+.refs { display: flex; flex-direction: column; gap: 36px; }
+.ref { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.ref.ancho { grid-template-columns: 1fr; }
+.ancho .capturas { grid-template-columns: 1fr; }
+.capturas { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; }
+.capturas img { width: 100%; display: block; border: 1px solid var(--linea); background: #111; }
+.notasRef { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.notasRef h3 { font-size: 19px; font-weight: 600; margin: 0; }
+.notasRef h3 a { color: var(--tinta); text-decoration: none; border-bottom: 1px solid var(--linea); }
+.datos { font-size: 13px; color: var(--gris); font-variant-numeric: tabular-nums; }
+.puntos { list-style: disc; margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.paraKev { border-left: 2px solid var(--tinta); padding-left: 12px; margin: 0; }
+.paraKev b { display: block; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--gris); font-weight: 500; }
+@media (max-width: 640px) { .ref { grid-template-columns: 1fr; gap: 14px; } }
+
+/* Tabla */
+.tablaCont { overflow-x: auto; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 520px; }
+.tabla th { text-align: left; font-weight: 500; color: var(--gris); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--linea); }
+.tabla td { padding: 10px; border-bottom: 1px solid #1f1f1f; vertical-align: top; }
+.tabla td:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Notas */
+.notas { display: flex; flex-direction: column; gap: 12px; }
+.nota { border: 1px solid var(--linea); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; white-space: pre-wrap; }
+.notaFecha { font-size: 12px; color: var(--gris); }
+
+/* Diagrama */
+.diagrama { overflow-x: auto; }
+.diagrama svg { display: block; width: 100%; min-width: 620px; max-width: 900px; margin: 0 auto; height: auto; }
+.caja { fill: var(--caja); stroke: var(--tinta); stroke-width: 1.5; }
+.cajaTitulo { fill: var(--tinta); font-size: 18px; font-weight: 600; text-anchor: middle; font-family: inherit; }
+.cajaTexto { fill: #bdbdbd; font-size: 14.5px; text-anchor: middle; font-family: inherit; }
+.flecha { fill: none; stroke: #d4d4d4; stroke-width: 1.5; }
+.fondoEtiqueta { fill: var(--negro); }
+.etiquetaSvg { fill: var(--tinta); font-size: 14px; text-anchor: middle; font-family: inherit; }
+
+.pasosEdit { display: flex; flex-direction: column; gap: 8px; }
+.pasoEdit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto auto; gap: 8px; align-items: center; }
+.retornoEdit { display: grid; grid-template-columns: 70px 70px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+@media (max-width: 640px) { .pasoEdit, .retornoEdit { grid-template-columns: 1fr; } }

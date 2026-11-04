@@ -1,11 +1,11 @@
 -- ══════════════════════════════════════════════════════════════
--- TODO EN UNO — las once partes que necesita kevproject.world
+-- TODO EN UNO — las doce partes que necesita kevproject.world
 --
 -- CÓMO SE CORRE
 --   1. Abre https://supabase.com/dashboard/project/llhvnzlbnmoufilxgshv/sql/new
 --   2. Copia este archivo COMPLETO y pégalo ahí.
 --   3. Botón Run (o Ctrl+Enter).
---   4. Al final te devuelve una tabla de 19 filas. Todas tienen que decir
+--   4. Al final te devuelve una tabla de 21 filas. Todas tienen que decir
 --      "protegida". Si alguna dice "ABIERTA", algo falló: avísame.
 --
 -- Se puede correr las veces que quieras: no borra nada ni duplica nada.
@@ -17,7 +17,7 @@
 
 
 -- ──────────────────────────────────────────────────────────────
--- 1 de 11 · CUENTAS  (para que "Crear tu cuenta" funcione)
+-- 1 de 12 · CUENTAS  (para que "Crear tu cuenta" funcione)
 --
 -- La autenticación la maneja Supabase Auth (tabla auth.users): el hash de la
 -- contraseña, la verificación del correo y el reseteo los hace Supabase.
@@ -160,7 +160,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 2 de 11 · EL AUTO DE PÍXELES  (las firmas en el auto)
+-- 2 de 12 · EL AUTO DE PÍXELES  (las firmas en el auto)
 -- ──────────────────────────────────────────────────────────────
 
 create table if not exists public.car_pixels (
@@ -208,7 +208,7 @@ alter table public.car_pixels enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 3 de 11 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
+-- 3 de 12 · EL MANUAL DE MARCA  (/branding deja de ser solo lectura)
 --
 -- Una sola fila con todo el contenido en jsonb. Es a propósito: el manual se
 -- edita entero de una vez desde el panel, no campo por campo, así que una
@@ -261,7 +261,7 @@ alter table public.branding_historial enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 4 de 11 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
+-- 4 de 12 · LOS NÚMEROS DE CADA VIDEO  ("Los números" en /branding)
 --
 -- Tabla aparte del manual a propósito. El manual es un documento que se
 -- guarda entero de una vez; esto son cientos de filas que crecen solas. Si
@@ -320,7 +320,7 @@ alter table public.publicaciones enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 5 de 11 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
+-- 5 de 12 · PROYECTOS DE KEV  (/kevlopez_proyectos: notas + mapa mental)
 --
 -- Una sola fila con el árbol entero en jsonb, igual que el manual de marca.
 -- Se guarda solo (autoguardado), así que el historial NO archiva cada
@@ -376,7 +376,7 @@ alter table public.proyectos_kev_historial enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 6 de 11 · PREGUNTAS ABIERTAS  (/preguntas: una pregunta, 20 respuestas)
+-- 6 de 12 · PREGUNTAS ABIERTAS  (/preguntas: una pregunta, 20 respuestas)
 --
 -- Una sola fila con el tablero entero en jsonb, igual que el manual de marca
 -- y los proyectos. Sin historial: aquí no se reescribe un documento largo,
@@ -397,7 +397,7 @@ alter table public.preguntas enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 7 de 11 · LA CASA BLANCA PROJECT · ENTREGABLES  (/casa-blanca)
+-- 7 de 12 · LA CASA BLANCA PROJECT · ENTREGABLES  (/casa-blanca)
 --
 -- Lo que entregan de verdad los departamentos de agentes cuando Kev aprieta
 -- "Trabajar". El progreso de cada departamento se cuenta con estas filas: sin
@@ -435,7 +435,7 @@ alter table public.casa_blanca_entregables enable row level security;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 8 de 11 · LA CASA BLANCA PROJECT · EL LÍMITE DIARIO DE LA IA
+-- 8 de 12 · LA CASA BLANCA PROJECT · EL LÍMITE DIARIO DE LA IA
 --
 -- Cada charla con un personaje la paga la cuenta de Anthropic de Kev. Una
 -- fila por persona y por día, y una fila '*' con el total del día (el techo
@@ -515,7 +515,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 9 de 11 · LA CASA BLANCA PROJECT · LA MEMORIA COMPARTIDA
+-- 9 de 12 · LA CASA BLANCA PROJECT · LA MEMORIA COMPARTIDA
 --
 -- Lo que vivió cada residente con todos los visitantes: las charlas, las
 -- conversaciones entre ellos, los consejos, las noticias, lo que entregó su
@@ -607,7 +607,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 10 de 11 · LA CASA BLANCA PROJECT · LA CONCIENCIA
+-- 10 de 12 · LA CASA BLANCA PROJECT · LA CONCIENCIA
 --
 -- El estado interior de cada residente: cómo amaneció, qué quiere lograr
 -- hoy, qué piensa, su diario y lo que opina de los demás. Cambia una vez por
@@ -698,7 +698,7 @@ end $$;
 
 
 -- ──────────────────────────────────────────────────────────────
--- 11 de 11 · LA FÁBRICA DE VIDEOS  (La Casa Blanca Project en las redes)
+-- 11 de 12 · LA FÁBRICA DE VIDEOS  (La Casa Blanca Project en las redes)
 --
 -- Lo que pasa en la casa se convierte en 3 a 6 videos por día que se publican
 -- solos. Plan: kev-project-gta/estrategia-reto/11-FABRICA-DE-VIDEOS.md.
@@ -1694,13 +1694,60 @@ create unique index if not exists publicaciones_fabrica_corte_uq
 -- end $$;
 
 
+-- ──────────────────────────────────────────────────────────────
+-- 12 de 12 · LA FÁBRICA DE REELS  (/fabrica)
+--
+-- Igual que el manual: una fila con todo en jsonb y una copia por cada
+-- guardado. La página se lee sin clave; escribir exige ADMIN_SECRET.
+-- ──────────────────────────────────────────────────────────────
+
+create table if not exists public.fabrica_reels (
+  id text primary key,
+  contenido jsonb not null,
+  actualizado_en timestamptz not null default now()
+);
+
+comment on table public.fabrica_reels is 'La Fábrica de Reels de /fabrica. Una fila por canal.';
+
+create table if not exists public.fabrica_reels_historial (
+  id bigserial primary key,
+  fabrica_id text not null,
+  contenido jsonb not null,
+  guardado_en timestamptz not null default now()
+);
+
+create index if not exists fabrica_reels_historial_idx
+  on public.fabrica_reels_historial (fabrica_id, guardado_en desc);
+
+create or replace function public.guardar_historial_fabrica_reels()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.fabrica_reels_historial (fabrica_id, contenido)
+  values (old.id, old.contenido);
+  return new;
+end;
+$$;
+
+drop trigger if exists fabrica_reels_al_actualizar on public.fabrica_reels;
+create trigger fabrica_reels_al_actualizar
+  before update on public.fabrica_reels
+  for each row execute function public.guardar_historial_fabrica_reels();
+
+alter table public.fabrica_reels enable row level security;
+alter table public.fabrica_reels_historial enable row level security;
+
+
 -- ══════════════════════════════════════════════════════════════
--- COMPROBACIÓN · tienen que salir 19 filas, todas "protegida"
+-- COMPROBACIÓN · tienen que salir 21 filas, todas "protegida"
 -- ══════════════════════════════════════════════════════════════
 
 select relname as tabla,
        case when relrowsecurity then 'protegida' else 'ABIERTA — avísame' end as estado
 from pg_class
 where relnamespace = 'public'::regnamespace
-  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial', 'preguntas', 'casa_blanca_entregables', 'casa_blanca_uso', 'casa_blanca_memoria', 'casa_blanca_conciencia', 'casa_blanca_reflexion', 'fabrica_videos', 'fabrica_envios', 'fabrica_estado', 'fabrica_tokens', 'fabrica_candados', 'fabrica_reporte')
+  and relname in ('perfiles', 'car_pixels', 'branding', 'branding_historial', 'publicaciones', 'proyectos_kev', 'proyectos_kev_historial', 'preguntas', 'casa_blanca_entregables', 'casa_blanca_uso', 'casa_blanca_memoria', 'casa_blanca_conciencia', 'casa_blanca_reflexion', 'fabrica_videos', 'fabrica_envios', 'fabrica_estado', 'fabrica_tokens', 'fabrica_candados', 'fabrica_reporte', 'fabrica_reels', 'fabrica_reels_historial')
 order by relname;
