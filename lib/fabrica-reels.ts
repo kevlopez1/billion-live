@@ -138,7 +138,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
             "Pantallas completas de color plano con títulos, íconos y recortes de su foto.",
             "«Comenta MAP»: 8.2K comentarios.",
           ],
-          paraKev: "Formato «explicador» para PRIME y el reto. Cierre: «Comenta FIRMA y te mando el link».",
+          paraKev: "Formato «explicador» para PRIME y el reto, con nuestros colores: fondo negro, cajas azul #0a8cfa, acento celeste #18b8fc, letra Archivo 900 + Comfortaa 300. Cierre: «Comenta FIRMA y te mando el link».",
         },
         {
           nombre: "Iman Gadzhi",
