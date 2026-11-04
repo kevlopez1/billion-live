@@ -123,7 +123,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
     {
       id: "edicion",
       tipo: "referentes",
-      etiqueta: "Referentes de edición",
+      etiqueta: "Referentes",
       titulo: "Cómo se ve",
       refs: [
         {
@@ -157,8 +157,8 @@ export const FABRICA_BASE: ContenidoFabrica = {
     {
       id: "guion",
       tipo: "referentes",
-      etiqueta: "Referentes de guion y retos",
-      titulo: "Qué les funciona a otros",
+      etiqueta: "Creadores (no son referentes)",
+      titulo: "Qué les funciona a otros creadores",
       refs: [
         {
           nombre: "@herlan.mita",
