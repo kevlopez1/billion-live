@@ -228,6 +228,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         ["Flashing Lights", "Kanye West", "Autos de noche", "1:18", "0:28"],
         ["Superhero", "Metro Boomin, Future, Chris Brown", "Robots, lanzamientos", "0:42", "1:14"],
         ["HIGHEST IN THE ROOM", "Travis Scott", "Noches de trabajo", "0:11", "1:11"],
+        ["SICKO MODE", "Travis Scott, Drake", "Cambios de ritmo, revelaciones, el Mansory", "0:55", "3:11"],
       ],
     },
     {
