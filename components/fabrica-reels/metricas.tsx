@@ -9,7 +9,7 @@ import s from "./fabrica.module.css"
 // Lee /fabrica/metricas.json, que arma el script herramientas/metricas.js del
 // repo de edición (Instagram y Facebook por la Graph API, TikTok desde el
 // perfil público). Solo se muestra lo que trajo el script: nada se calcula
-// ni se inventa acá.
+// ni se inventa aquí.
 // ──────────────────────────────────────────────────────────────
 
 type Video = {

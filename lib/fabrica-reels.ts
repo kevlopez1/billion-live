@@ -445,7 +445,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
           datos: "30 s · Last Breath 0:21 · serio",
           escenas: [
             ["0–2", "Kev a cámara, primer plano, sin música", "Si pierdo este reto, lo pierdo en público."],
-            ["2–8", "Entra la música. La web kevproject.world con el contador en vivo", "Todo lo que gano está acá, en vivo, con comprobantes."],
+            ["2–8", "Entra la música. La web kevproject.world con el contador en vivo", "Todo lo que gano está aquí, en vivo, con comprobantes."],
             ["8–16", "Tomas de días malos: Kev cansado, de noche, trabajando", "Hay días que no entra nada. También los muestro."],
             ["16–24", "Marcador: [monto] / $450K. Faltan $[lo que falta]", "Me faltan [lo que falta]. Y quedan 8 meses."],
             ["24–30", "Kev a cámara", "Si quieres ver si lo logro, quédate. Y si quieres ser parte, firma el Mercedes por 10 dólares."],
@@ -461,7 +461,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
           datos: "35 s · Niagara Falls 0:15 · Bolivia",
           escenas: [
             ["0–2", "Kev en una calle de Santa Cruz. Texto: Desde un país quebrado 🇧🇴", "Desde un país quebrado voy a comprar el auto más caro de Bolivia."],
-            ["2–8", "Tomas de Santa Cruz: mercado, tráfico, filas", "Acá muchos dicen que no se puede emprender."],
+            ["2–8", "Tomas de Santa Cruz: mercado, tráfico, filas", "Aquí muchos dicen que no se puede emprender."],
             ["8–18", "Kev en reunión con un cliente; comprobante en pantalla", "Yo vendo empleados de inteligencia artificial a negocios. Con eso pago el reto."],
             ["18–28", "Mansory + marcador del día", "450 mil dólares. Voy [monto]."],
             ["28–35", "Cierre fijo", "Firma el Mercedes por 10 dólares en kevproject.world."],
