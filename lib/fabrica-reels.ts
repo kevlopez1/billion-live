@@ -29,6 +29,7 @@ export type Seccion =
   | { id: string; tipo: "referentes"; etiqueta: string; titulo: string; refs: Referente[] }
   | { id: string; tipo: "tabla"; etiqueta: string; titulo: string; columnas: string[]; filas: string[][] }
   | { id: string; tipo: "notas"; etiqueta: string; titulo: string }
+  | { id: string; tipo: "metricas"; etiqueta: string; titulo: string }
 
 export type ContenidoFabrica = {
   titulo: string
@@ -79,9 +80,16 @@ export const FABRICA_BASE: ContenidoFabrica = {
         "PRIME aparece como lo que paga el Mercedes, no como anuncio.",
         "Historias de famosos (Elon, MrBeast) conectadas con el reto.",
         "Cierre fijo: «Firma el Mercedes por $10 · kevproject.world».",
-        "Una vez por semana, alguien conocido de Bolivia en cámara y etiquetado. El video con Pampeño tiene 937K vistas.",
+        "Una vez por semana, alguien conocido en cámara y etiquetado, de Bolivia o de cualquier país. El video con Pampeño tiene 937K vistas.",
         "3 videos por día: mañana, tarde y noche. Se graba en lote cada 2 días.",
         "Se exporta siempre con la música incluida, desde su momento de más hype.",
+        "Gancho en los primeros 2 segundos, que se entienda sin sonido.",
+        "Subtítulos siempre, con los títulos de dos líneas de Kev.",
+        "Etiqueta de precio en el primer cuadro: «Mercedes Mansory · $450,000».",
+        "Menos de 60 segundos. El de Pampeño dura 53.",
+        "Lo que gana se repite como serie: parte 2, parte 3.",
+        "Al publicar se elige la misma canción en la biblioteca de la app.",
+        "Nada se publica sin el «sí» de Kev.",
       ],
     },
     {
@@ -102,7 +110,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
             "«450 mil dólares» grande en pantalla.",
             "Falla: sin subtítulos y títulos con estilos distintos.",
           ],
-          paraKev: "Una vez por semana, alguien conocido de Bolivia en cámara.",
+          paraKev: "Una vez por semana, alguien conocido en cámara, de Bolivia o del mundo.",
         },
         {
           nombre: "Los 3 anclados (Mansory 33K · Robots 27.5K · Firma 27.2K)",
@@ -260,6 +268,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         "«Si llego a la meta, tu nombre va grabado en este auto.»",
       ],
     },
+    { id: "metricas", tipo: "metricas", etiqueta: "Métricas", titulo: "Cómo le va a cada video" },
     { id: "notas", tipo: "notas", etiqueta: "Notas", titulo: "Notas de Kev" },
   ],
   notas: [],
@@ -281,6 +290,7 @@ function seccionValida(s: unknown): boolean {
   switch (x.tipo) {
     case "flujo":
     case "notas":
+    case "metricas":
       return true
     case "lista":
       return txts(x.items)

@@ -6,6 +6,7 @@ import { conPrime } from "@/components/prime-mark"
 import { guardarClave, leerClave } from "@/lib/clave"
 import { FABRICA_BASE, type ContenidoFabrica, type Referente, type Seccion } from "@/lib/fabrica-reels"
 import { Diagrama } from "./diagrama"
+import { Metricas } from "./metricas"
 import s from "./fabrica.module.css"
 
 // ──────────────────────────────────────────────────────────────
@@ -173,6 +174,7 @@ function SeccionVista({ sec, i, doc, editando, cambiar, cambiarSeccion }: PropsS
       {sec.tipo === "referentes" && <Referentes refs={sec.refs} editando={editando} poner={(refs) => cambiarSeccion(i, (x) => ({ ...x, refs } as Seccion))} />}
       {sec.tipo === "tabla" && <Tabla columnas={sec.columnas} filas={sec.filas} editando={editando} poner={(filas) => cambiarSeccion(i, (x) => ({ ...x, filas } as Seccion))} />}
       {sec.tipo === "notas" && <Notas doc={doc} editando={editando} cambiar={cambiar} />}
+      {sec.tipo === "metricas" && <Metricas />}
     </section>
   )
 }
