@@ -222,7 +222,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         ["Life Is Good", "Future, Drake", "Hitos, antes y después", "1:36"],
         ["Last Breath", "Future", "Días difíciles", "0:41"],
         ["Niagara Falls", "Metro Boomin, Travis Scott, 21 Savage", "Resumen, cuenta regresiva", "0:15"],
-        ["Mask Off", "Future", "Contador subiendo, comprobantes", "1:30 (verificar)"],
+        ["Mask Off", "Future", "Contador subiendo, comprobantes", "1:56"],
         ["Money In The Grave", "Drake, Rick Ross", "Ventas cerradas", "0:23"],
         ["All The Stars", "Kendrick Lamar, SZA", "La meta: EE.UU., Dubái", "0:35"],
         ["Flashing Lights", "Kanye West", "Autos de noche", "0:19"],
