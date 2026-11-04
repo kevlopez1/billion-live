@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import type { Guion } from "@/lib/fabrica-reels"
 import { conPrime } from "@/components/prime-mark"
 import s from "./fabrica.module.css"
@@ -35,13 +36,28 @@ function Barra({ escenas }: { escenas: string[][] }) {
 
 export function Guiones({ guiones, editando, poner }: { guiones: Guion[]; editando: boolean; poner: (g: Guion[]) => void }) {
   const cambiar = (i: number, c: Partial<Guion>) => poner(guiones.map((g, j) => (j === i ? { ...g, ...c } : g)))
+  // Grupos (series) en el orden en que aparecen; los guiones sin serie van en «Otros».
+  const serieDe = (g: Guion) => g.serie?.trim() || "Otros"
+  const series = [...new Set(guiones.map(serieDe))]
+  const [serie, setSerie] = useState("")
+  const abierta = series.includes(serie) ? serie : series[0]
 
   return (
     <div className={s.guiones}>
-      {guiones.map((g, i) => (
+      {series.length > 1 && (
+        <div className={s.subPestanas} role="tablist" aria-label="Series de guiones">
+          {series.map((x) => (
+            <button key={x} role="tab" aria-selected={x === abierta} className={x === abierta ? s.subPestanaActiva : s.subPestana} onClick={() => setSerie(x)}>
+              {x} <span className={s.subCuenta}>{guiones.filter((g) => serieDe(g) === x).length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {guiones.map((g, i) => serieDe(g) !== abierta ? null : (
         <article key={i} className={s.guion}>
           {editando ? (
             <div className={s.guionEdit}>
+              <input className={s.campo} value={g.serie ?? ""} placeholder="Serie (ej.: Personajes, Con música)" onChange={(e) => cambiar(i, { serie: e.target.value })} aria-label="Serie" />
               <input className={s.campo} value={g.titulo} onChange={(e) => cambiar(i, { titulo: e.target.value })} aria-label="Título del guion" />
               <input className={s.campo} value={g.estado} onChange={(e) => cambiar(i, { estado: e.target.value })} aria-label="Estado" />
               <input className={s.campo} value={g.datos} onChange={(e) => cambiar(i, { datos: e.target.value })} aria-label="Datos" />
@@ -72,7 +88,9 @@ export function Guiones({ guiones, editando, poner }: { guiones: Guion[]; editan
                   <>
                     <span className={s.escenaSeg}>{e[0]} s</span>
                     <div className={s.escenaPantalla}>{e[1]}</div>
-                    <p className={s.escenaDice}>«{conPrime(e[2] ?? "", false)}»</p>
+                    {/^\(.*\)$/.test((e[2] ?? "").trim()) || !(e[2] ?? "").trim()
+                      ? <p className={s.escenaSinVoz}>{e[2] || "(sin voz)"}</p>
+                      : <p className={s.escenaDice}>«{conPrime(e[2] ?? "", false)}»</p>}
                   </>
                 )}
               </li>
@@ -90,7 +108,7 @@ export function Guiones({ guiones, editando, poner }: { guiones: Guion[]; editan
       ))}
       {editando && (
         <div>
-          <button className={s.botonChico} onClick={() => poner([...guiones, { titulo: "Nuevo guion", estado: "Borrador", datos: "", escenas: [["0–2", "", ""]], notas: [] }])}>+ Guion</button>
+          <button className={s.botonChico} onClick={() => poner([...guiones, { serie: abierta === "Otros" ? undefined : abierta, titulo: "Nuevo guion", estado: "Borrador", datos: "", escenas: [["0–2", "", ""]], notas: [] }])}>+ Guion</button>
         </div>
       )}
     </div>

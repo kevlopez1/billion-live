@@ -10,6 +10,7 @@
 // ──────────────────────────────────────────────────────────────
 
 export type Guion = {
+  serie?: string // grupo dentro de Guiones: «Personajes», «Con música»…
   titulo: string
   estado: string
   datos: string
@@ -316,9 +317,10 @@ export const FABRICA_BASE: ContenidoFabrica = {
       id: "guiones",
       tipo: "guiones",
       etiqueta: "Guiones",
-      titulo: "Listos para grabar",
+      titulo: "Guiones para grabar",
       guiones: [
         {
+          serie: "Personajes",
           titulo: "Serie personajes #1 · «Señor Mansory»",
           estado: "Listo para grabar",
           datos: "45 s · etiquetar a @mansory · música SICKO MODE desde 0:55",
@@ -336,6 +338,87 @@ export const FABRICA_BASE: ContenidoFabrica = {
             "El plazo se cuenta hasta el límite de junio de 2027: recalcular el día que se grabe.",
             "El monto es el real del día, el de la web.",
             "Si Mansory responde o da like: parte 2 «Mansory me respondió» el mismo día.",
+          ],
+        },
+        {
+          serie: "Con música",
+          titulo: "Comprobantes · «Mask Off»",
+          estado: "Idea",
+          datos: "15 s · Mask Off 0:12–0:27 · fuerte · casi sin voz",
+          escenas: [
+            ["0–2", "Billete de $10 a cámara. Texto: De $10 a un Mercedes Mansory", "(sin voz)"],
+            ["2–5", "Un comprobante real por golpe del beat, con su monto grande", "(sin voz)"],
+            ["5–9", "Más comprobantes, cada vez más rápido. El contador sube en una esquina", "(sin voz)"],
+            ["9–12", "Kev mirando a cámara, serio. Marcador: Día N · [monto] / $450K", "Todo real."],
+            ["12–15", "Cierre fijo en pantalla", "Firma el Mercedes por 10 dólares en kevproject.world."],
+          ],
+          notas: [
+            "Un corte en cada golpe del beat.",
+            "Los comprobantes son los de la web; tapar datos de clientes si hace falta.",
+          ],
+        },
+        {
+          serie: "Con música",
+          titulo: "Por qué lo hago · «Last Breath»",
+          estado: "Idea",
+          datos: "12 s · Last Breath 0:21–0:33 · inspiracional",
+          escenas: [
+            ["0–3", "Santa Cruz de noche, Kev caminando de espaldas", "(voz en off) Me dijeron que desde Bolivia no se podía."],
+            ["3–6", "Kev trabajando tarde, la pantalla ilumina su cara", "Así que lo hago en público."],
+            ["6–9", "Foto del Mansory; la cámara se acerca despacio", "Cada dólar, con comprobante."],
+            ["9–12", "Texto grande: Faltan $[lo que falta]", "(sin voz)"],
+          ],
+          notas: [
+            "Pocas palabras, voz baja. La música hace el resto.",
+            "Color frío y oscuro.",
+          ],
+        },
+        {
+          serie: "Con música",
+          titulo: "Un día del reto · «Money In The Grave»",
+          estado: "Idea",
+          datos: "33 s · Money In The Grave 0:05–0:38 · vlog",
+          escenas: [
+            ["0–3", "Alarma a las 6 a. m. Texto: Día N del reto", "(sin voz)"],
+            ["3–10", "Cortes en el beat: café, auto, reunión con un cliente, apretón de manos", "(sin voz)"],
+            ["10–18", "El empleado AI de PRIME trabajando en pantalla; un pago que entra", "Esto es lo que paga el Mercedes."],
+            ["18–26", "Robot, oficina, Kev contando el día a cámara", "Hoy entraron [monto]."],
+            ["26–33", "Marcador del día y cierre fijo", "Firma el Mercedes por 10 dólares en kevproject.world."],
+          ],
+          notas: [
+            "Sirve como formato diario: se repite cada semana cambiando las tomas.",
+            "Un corte cada 1–2 s.",
+          ],
+        },
+        {
+          serie: "Con música",
+          titulo: "La meta · «All The Stars»",
+          estado: "Idea",
+          datos: "15 s · All The Stars 0:35–0:50 · inspiracional",
+          escenas: [
+            ["0–3", "Kev mirando el cielo o la ciudad desde arriba", "(sin voz)"],
+            ["3–12", "Los hitos aparecen uno por uno con un ✓ en los logrados: $10K · GITEX Dubái · $100K · Silicon Valley · $450K", "(sin voz)"],
+            ["12–15", "Texto: Hoy: [monto]. Mira hasta dónde llego", "(sin voz)"],
+          ],
+          notas: [
+            "Solo texto y música: funciona sin sonido.",
+            "Los hitos son los de la web.",
+          ],
+        },
+        {
+          serie: "Con música",
+          titulo: "El cambio · «SICKO MODE»",
+          estado: "Idea",
+          datos: "15 s · SICKO MODE 0:55–1:10 · fuerte, cambio de ritmo",
+          escenas: [
+            ["0–5", "Antes: Kev con el billete de $10, imagen apagada", "(sin voz)"],
+            ["5–6", "Corte negro justo en el cambio del beat", "(sin voz)"],
+            ["6–12", "Después: tomas rápidas del Mansory, del contador y de Kev con traje", "(sin voz)"],
+            ["12–15", "Texto: Día N. Esto recién empieza", "(sin voz)"],
+          ],
+          notas: [
+            "El golpe va exacto en el cambio de ritmo de la canción.",
+            "Se puede repetir en cada hito: el antes y el después.",
           ],
         },
       ],
@@ -365,7 +448,7 @@ function seccionValida(s: unknown): boolean {
     case "metricas":
       return true
     case "guiones":
-      return Array.isArray(x.guiones) && x.guiones.every((g) => { const q = g as Record<string, unknown>; return q && txt(q.titulo) && txt(q.estado) && txt(q.datos) && Array.isArray(q.escenas) && q.escenas.every(txts) && txts(q.notas) })
+      return Array.isArray(x.guiones) && x.guiones.every((g) => { const q = g as Record<string, unknown>; return q && (q.serie === undefined || txt(q.serie)) && txt(q.titulo) && txt(q.estado) && txt(q.datos) && Array.isArray(q.escenas) && q.escenas.every(txts) && txts(q.notas) })
     case "lista":
       return txts(x.items)
     case "referentes":
