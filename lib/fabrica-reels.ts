@@ -476,7 +476,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
           nombre: "20 · Nuestra versión: el mismo estilo con la marca de Kev",
           url: "https://www.kevproject.world/fabrica#edicion-ia",
           datos: "Prueba 4 · 10 s · clip de Kev «¿Por qué no me cambio de polera?»",
-          imagenes: ["/fabrica/ia/ia-21-v1.jpg"],
+          imagenes: ["/fabrica/ia/ia-21-v2.jpg"],
           ancho: true,
           puntos: [
             "Colores: negro, azul #0a8cfa, celeste #18b8fc y hielo #8ee0fa en vez de café y dorado.",
