@@ -595,7 +595,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
             "Letras: Archivo 900 para lo grande y Comfortaa para lo demás.",
             "Efectos: $10 que cuenta de 0 a 10 detrás de Kev, «publicitaria» tachada, el fondo desaparece en «sin oficina», «vendedores» se hace polvo, silueta negra sobre azul en «sin contratar a nadie», «INVERSOR» en letras celestes que caen, contorno punteado con la frase siguiendo su silueta.",
           ],
-          paraKev: "Archivo: renders/pruebas/04-estilo-claude-marca-explicador/video.mp4. Plantilla: plantillas/estilo-claude/versiones-anteriores/v4-marca-explicador.html. Falta grabar un clip sin música para ponerle una canción desde su momento hype.",
+          paraKev: "Archivo: renders/pruebas/02-edicion-especial/edicion-especial.mp4 (versión actual, con la paleta de la web). Plantilla: plantillas/estilo-claude/escena.html. Falta grabar un clip sin música para ponerle una canción desde su momento hype.",
         },
       ],
     },
