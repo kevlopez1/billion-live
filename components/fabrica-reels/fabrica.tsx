@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { Ordenable } from "@/components/branding/ordenable"
 import { conPrime } from "@/components/prime-mark"
 import { guardarClave, leerClave } from "@/lib/clave"
@@ -320,13 +320,35 @@ function Referentes({ refs, editando, poner }: { refs: Referente[]; editando: bo
       </div>
     </article>
   )
-  if (!editando) return <div className={s.refs}>{refs.map(vista)}</div>
+  if (!editando) {
+    // Áreas con botones: si las fichas tienen «grupo», se ven por área en vez de una lista larga.
+    const orden = ["Cómo se hace", "Referencia", "Nuestra versión", "Efectos de texto", "Capas y fondos", "Interfaz y detalles", "Reglas y estilo", "Descartados"]
+    const grupos = ([...new Set(refs.map((r) => r.grupo).filter(Boolean))] as string[]).sort((a, b) => (orden.indexOf(a) + 99) % 99 - (orden.indexOf(b) + 99) % 99)
+    if (grupos.length < 2) return <div className={s.refs}>{refs.map(vista)}</div>
+    return <RefsPorArea refs={refs} grupos={grupos} vista={vista} />
+  }
   return (
     <>
       <Ordenable items={refs} clave={(_, i) => String(i)} mover={(a, b) => poner(mover(refs, a, b))} nombre="referente">
         {(r, i) => vista(r, i)}
       </Ordenable>
       <div><button className={s.botonChico} onClick={() => poner([...refs, { nombre: "Nuevo referente", url: "", datos: "", imagenes: [], puntos: [], paraKev: "" }])}>+ Referente</button></div>
+    </>
+  )
+}
+
+function RefsPorArea({ refs, grupos, vista }: { refs: Referente[]; grupos: string[]; vista: (r: Referente, i: number) => ReactNode }) {
+  const [area, setArea] = useState(grupos[0])
+  return (
+    <>
+      <div className={s.subPestanas} role="tablist" aria-label="Áreas">
+        {grupos.map((g) => (
+          <button key={g} role="tab" aria-selected={g === area} className={g === area ? s.subPestanaActiva : s.subPestana} onClick={() => setArea(g)}>
+            {g} <span className={s.subCuenta}>{refs.filter((r) => r.grupo === g).length}</span>
+          </button>
+        ))}
+      </div>
+      <div className={s.refs}>{refs.map((r, i) => (r.grupo === area ? vista(r, i) : null))}</div>
     </>
   )
 }

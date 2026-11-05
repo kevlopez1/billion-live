@@ -28,6 +28,8 @@ export type Referente = {
   paraKev: string
   /** Capturas en tira (hoja de cuadros): van a lo ancho, una debajo de otra. */
   ancho?: boolean
+  /** Área a la que pertenece (botones arriba de la sección). */
+  grupo?: string
 }
 export type Nota = { id: string; texto: string; fecha: string }
 
@@ -214,6 +216,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
       refs: [
         {
           nombre: "Cómo se edita, paso a paso",
+          grupo: "Cómo se hace",
           url: "https://www.kevproject.world/fabrica",
           datos: "Roadmap fijo de 7 pasos · paso 6: Edición estándar",
           imagenes: ["/fabrica/ia/est-d0-v1.png"],
@@ -227,6 +230,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "1 · Cómo es la edición estándar",
+          grupo: "Reglas y estilo",
           url: "https://www.kevproject.world/fabrica#edicion-estandar",
           datos: "Prueba 01 · gancho 17 «Robots humanoides a Bolivia» · 15 s",
           imagenes: ["/fabrica/ia/est-01-v1.jpg"],
@@ -243,6 +247,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "2 · Subtítulos: estilo aprobado y 16 formas de entrar",
+          grupo: "Reglas y estilo",
           url: "https://www.kevproject.world/fabrica#edicion-estandar",
           datos: "Frase chica + una palabra grande · elegir la entrada A–P",
           imagenes: ["/fabrica/ia/est-02-v1.jpg"],
@@ -257,6 +262,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "3 · Títulos de dos líneas",
+          grupo: "Reglas y estilo",
           url: "https://www.kevproject.world/fabrica#edicion-estandar",
           datos: "Plantilla plantillas/titulo-dos-lineas",
           imagenes: ["/fabrica/ia/est-03-v1.jpg"],
@@ -278,6 +284,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
       refs: [
         {
           nombre: "Cómo se edita, paso a paso",
+          grupo: "Cómo se hace",
           url: "https://www.kevproject.world/fabrica",
           datos: "Roadmap fijo de 7 pasos · paso 6: Edición especial con IA",
           imagenes: ["/fabrica/ia/ia-d0-v1.png"],
@@ -291,6 +298,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "Cada cuadro son 4 capas",
+          grupo: "Cómo se hace",
           url: "https://www.kevproject.world/fabrica#edicion-ia",
           datos: "Por qué el texto puede ir detrás de Kev",
           imagenes: ["/fabrica/ia/ia-d1-v1.png"],
@@ -303,6 +311,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "Del video crudo al final",
+          grupo: "Cómo se hace",
           url: "https://www.kevproject.world/fabrica#edicion-ia",
           datos: "7 pasos · tiempos medidos con un clip de 10 s",
           imagenes: ["/fabrica/ia/ia-d2-v1.png"],
@@ -315,6 +324,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "El reel de 33 s, efecto por efecto",
+          grupo: "Cómo se hace",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "16 efectos en 33 s",
           imagenes: ["/fabrica/ia/ia-d3-v1.png"],
@@ -327,6 +337,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "Cómo entra y sale un texto",
+          grupo: "Cómo se hace",
           url: "https://www.kevproject.world/fabrica#edicion-ia",
           datos: "Curvas de opacidad, desenfoque y escala",
           imagenes: ["/fabrica/ia/ia-d4-v1.png"],
@@ -340,6 +351,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "Su estilo, nuestra marca",
+          grupo: "Cómo se hace",
           url: "https://www.kevproject.world/fabrica#edicion-ia",
           datos: "Paleta y letras: referencia → Kev Project GTA",
           imagenes: ["/fabrica/ia/ia-d5-v1.png"],
@@ -352,6 +364,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "0 · Antes y después: lo que cambia la edición",
+          grupo: "Referencia",
           url: "https://www.instagram.com/reel/DfSrDF-Riau/",
           datos: "Reel de 9 s · izquierda el video crudo, derecha el editado",
           imagenes: ["/fabrica/ia/ia-17-v1.jpg"],
@@ -365,6 +378,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "1 · Palabras en 3D que giran alrededor de la cabeza y se alejan",
+          grupo: "Efectos de texto",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 0–1 · «Wait, how are these words going…»",
           imagenes: ["/fabrica/ia/ia-01-v1.jpg"],
@@ -378,6 +392,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "2 · Cinta que pasa por delante y por detrás de él",
+          grupo: "Capas y fondos",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 1.25–2.5 · «behind my head?»",
           imagenes: ["/fabrica/ia/ia-02-v1.jpg"],
@@ -391,6 +406,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "3 · Texto 3D con explosión de partículas",
+          grupo: "Capas y fondos",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 2.5–4 · «OH SH*T»",
           imagenes: ["/fabrica/ia/ia-03-v1.jpg"],
@@ -404,6 +420,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "4 · Un texto se transforma en otro",
+          grupo: "Efectos de texto",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 4.5–6.5 · «every time I MOVE it SWITCHES UP»",
           imagenes: ["/fabrica/ia/ia-04-v1.jpg"],
@@ -417,6 +434,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "5 · Neón que cambia de color",
+          grupo: "Efectos de texto",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 6.75–8 · «glowing letters»",
           imagenes: ["/fabrica/ia/ia-05-v1.jpg"],
@@ -430,6 +448,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "6 · Líneas que caen una por una",
+          grupo: "Efectos de texto",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 8.25–9.5 · «BIG WHITE CAPITALS»",
           imagenes: ["/fabrica/ia/ia-06-v1.jpg"],
@@ -443,6 +462,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "7 · Texto que se deshace en polvo",
+          grupo: "Efectos de texto",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 9.75–11 · «chunky italics.»",
           imagenes: ["/fabrica/ia/ia-07-v1.jpg"],
@@ -456,6 +476,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "8 · Letras que se arman solas + logo",
+          grupo: "Efectos de texto",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 11–12.5 · «i've set Claude Code»",
           imagenes: ["/fabrica/ia/ia-08-v1.jpg"],
@@ -469,6 +490,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "9 · Anotaciones de tipografía",
+          grupo: "Efectos de texto",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 12.5–13.5 · «up to design all my captions,»",
           imagenes: ["/fabrica/ia/ia-09-v1.jpg"],
@@ -482,6 +504,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "10 · Palabras detrás de la cabeza, en capas",
+          grupo: "Capas y fondos",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 13.75–15 · «even the words behind my head.»",
           imagenes: ["/fabrica/ia/ia-10-v1.jpg"],
@@ -495,6 +518,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "11 · Seguimiento de cara con datos",
+          grupo: "Interfaz y detalles",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 16–18 · «tracking my FACE · 10x a second»",
           imagenes: ["/fabrica/ia/ia-11-v1.jpg"],
@@ -508,6 +532,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "12 · Flechas a mano y corchetes punteados",
+          grupo: "Interfaz y detalles",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 19.5–22.25 · «so my captions never end up underneath them.»",
           imagenes: ["/fabrica/ia/ia-12-v1.jpg"],
@@ -521,6 +546,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "13 · Contorno punteado + texto que sigue la silueta",
+          grupo: "Capas y fondos",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 22.5–26 · «normally you have to cut yourself out frame by frame»",
           imagenes: ["/fabrica/ia/ia-13-v1.jpg"],
@@ -534,6 +560,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "14 · Transición orgánica y fondo nuevo",
+          grupo: "Capas y fondos",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 25.75–27.75 · «but i'm just lying here.»",
           imagenes: ["/fabrica/ia/ia-14-v1.jpg"],
@@ -547,6 +574,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "15 · Cuarto en líneas y «no existe»",
+          grupo: "Capas y fondos",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 28–30 · «and this ROOM doesn't actually exist.»",
           imagenes: ["/fabrica/ia/ia-15-v1.jpg"],
@@ -560,6 +588,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "16 · Cierre dorado para comentarios",
+          grupo: "Efectos de texto",
           url: "https://www.instagram.com/reel/DfMiYjYRbMI/",
           datos: "Segundo 30–32 · «comment CAPTIONS and i'll send you a breakdown.»",
           imagenes: ["/fabrica/ia/ia-16-v1.jpg"],
@@ -573,6 +602,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "17 · Mismo rodaje, otro cuarto (antes y después) · no se usa en el reto",
+          grupo: "Descartados",
           url: "https://www.instagram.com/reel/DfVq1BSCPhc/",
           datos: "Reel de 5 s · el mismo plano crudo y editado, lado a lado",
           imagenes: ["/fabrica/ia/ia-18-v1.jpg"],
@@ -586,6 +616,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "18 · Palabras que llegan desde los costados y un objeto que cruza · no se usa en el reto",
+          grupo: "Descartados",
           url: "https://www.instagram.com/reel/DfVq1BSCPhc/",
           datos: "Segundo 0–1 · «aren't made in RIGHT NOW»",
           imagenes: ["/fabrica/ia/ia-19-v1.jpg"],
@@ -599,6 +630,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "19 · Logo que cae sobre la cara y se tacha · no se usa en el reto",
+          grupo: "Descartados",
           url: "https://www.instagram.com/reel/DfVq1BSCPhc/",
           datos: "Segundo 2–3.5 · «…without after effects»",
           imagenes: ["/fabrica/ia/ia-20-v1.jpg"],
@@ -612,6 +644,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
         },
         {
           nombre: "20 · Nuestra versión: el mismo estilo con la marca de Kev",
+          grupo: "Nuestra versión",
           url: "https://www.kevproject.world/fabrica#edicion-ia",
           datos: "Prueba 4 · 10 s · clip de Kev «¿Por qué no me cambio de polera?»",
           imagenes: ["/fabrica/ia/ia-21-v2.jpg"],
