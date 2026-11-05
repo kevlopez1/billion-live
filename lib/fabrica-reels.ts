@@ -245,7 +245,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
             "Nunca una toma completa en el gancho ni en el golpe: ahí la cara es la emoción. En entrevistas, máximo un cuarto del video.",
             "Si el material es de otro, va con rótulo de la fuente.",
           ],
-          paraKev: "Solo material propio, con licencia o con permiso. Un fragmento de una entrevista de terceros (p. ej. Musk) se usa solo con el «sí» de Kev.",
+          paraKev: "Fuentes: 1º Pexels, 2º Pinterest (decisión de Kev). Herramientas: tomas-pexels.js, tomas-pinterest.js y toma-cuadros.sh.",
         },
         {
           nombre: "Simulación de retención (pasos 8 y 9)",
@@ -361,7 +361,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
             "Nunca una toma completa en el gancho ni en el golpe: ahí la cara es la emoción. En entrevistas, máximo un cuarto del video.",
             "Si el material es de otro, va con rótulo de la fuente.",
           ],
-          paraKev: "Solo material propio, con licencia o con permiso. Un fragmento de una entrevista de terceros (p. ej. Musk) se usa solo con el «sí» de Kev.",
+          paraKev: "Fuentes: 1º Pexels, 2º Pinterest (decisión de Kev). Herramientas: tomas-pexels.js, tomas-pinterest.js y toma-cuadros.sh.",
         },
         {
           nombre: "Simulación de retención (pasos 8 y 9)",
