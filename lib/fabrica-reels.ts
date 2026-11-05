@@ -213,6 +213,19 @@ export const FABRICA_BASE: ContenidoFabrica = {
       titulo: "La edición de todos los días",
       refs: [
         {
+          nombre: "Cómo se edita, paso a paso",
+          url: "https://www.kevproject.world/fabrica",
+          datos: "Roadmap fijo de 7 pasos · paso 6: Edición estándar",
+          imagenes: ["/fabrica/ia/est-d0-v1.png"],
+          ancho: true,
+          puntos: [
+            "1 Reconocer el video · 2 Entender la lógica · 3 Cortes limpios · 4 Elegir la música · 5 Ajustar al ritmo · 6 Estilo · 7 Revisar como espectador.",
+            "Si en la revisión algo baja la energía, se vuelve a los cortes.",
+            "La edición tiene que sentirse como una canción: entra, sube, respira y remata.",
+          ],
+          paraKev: "Definido por Kev el 2026-11-05. Detalle en procesos/04-edicion.md.",
+        },
+        {
           nombre: "1 · Cómo es la edición estándar",
           url: "https://www.kevproject.world/fabrica#edicion-estandar",
           datos: "Prueba 01 · gancho 17 «Robots humanoides a Bolivia» · 15 s",
@@ -263,6 +276,19 @@ export const FABRICA_BASE: ContenidoFabrica = {
       etiqueta: "Edición especial con IA",
       titulo: "Cómo se hace cada efecto",
       refs: [
+        {
+          nombre: "Cómo se edita, paso a paso",
+          url: "https://www.kevproject.world/fabrica",
+          datos: "Roadmap fijo de 7 pasos · paso 6: Edición especial con IA",
+          imagenes: ["/fabrica/ia/ia-d0-v1.png"],
+          ancho: true,
+          puntos: [
+            "1 Reconocer el video · 2 Entender la lógica · 3 Cortes limpios · 4 Elegir la música · 5 Ajustar al ritmo · 6 Estilo · 7 Revisar como espectador.",
+            "Si en la revisión algo baja la energía, se vuelve a los cortes.",
+            "La edición tiene que sentirse como una canción: entra, sube, respira y remata.",
+          ],
+          paraKev: "Definido por Kev el 2026-11-05. Detalle en procesos/04-edicion.md.",
+        },
         {
           nombre: "Cada cuadro son 4 capas",
           url: "https://www.kevproject.world/fabrica#edicion-ia",
