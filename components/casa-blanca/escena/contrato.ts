@@ -109,7 +109,7 @@ export interface Escena {
   enfocar(p: Vec3, distancia?: number): void
   /** Estado de los personajes de este cuadro (lo produce la simulación). */
   actualizarPersonajes(
-    estados: Array<{ id: string; pos: Vec3; rumbo: number; estado: EstadoCuerpo; visible: boolean; velocidad: number }>,
+    estados: Array<{ id: string; pos: Vec3; rumbo: number; estado: EstadoCuerpo; visible: boolean; velocidad: number; planta?: string | null }>,
   ): void
   marcarPuestos(depId: string, estados: EstadoPuesto[]): void
   /** Posición en pantalla (px, relativa al canvas) del punto sobre la cabeza de un personaje. */

@@ -7,7 +7,7 @@
 // cara, edad, piel, pelo, barba y cejas, para que se reconozca a cada uno):
 //
 //   avatar-fichas.ts      las fichas por id y el motor que las resuelve en números.
-//   avatar-cuerpo.ts      proporciones reales, esqueleto de 32 huesos y piel:
+//   avatar-cuerpo.ts      proporciones reales, esqueleto de 36 huesos y piel:
 //                         tronco, cuello y cabeza en UNA malla continua;
 //                         brazos con manos de cinco dedos; piernas y pies.
 //   avatar-cabeza.ts      la cabeza esculpida con un campo de distancia

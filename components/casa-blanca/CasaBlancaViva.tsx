@@ -22,6 +22,7 @@ import { Simulacion, type EventoSim } from "./motor/simulacion"
 import { ESPECIALES, PERSONAJES } from "./datos/personajes"
 import { DEPARTAMENTOS, OBJETIVOS, agentesDe, progresoObjetivo } from "./datos/empresa"
 import { LUGAR } from "./lugares"
+import { NOMBRE_EDIFICIO, PLANTA, cuartoDeLugar, plantaDeLugar, type PlantaId } from "./plantas"
 import { dondeEsta, encuadreDe } from "./navegacion"
 import type { Departamento, Entregable, EstadoPuesto, NivelId, Objetivo, Personaje } from "./tipos"
 import { leerEstado, motivoSinIa, pedir, type EstadoServidor } from "./ui/api"
@@ -40,6 +41,7 @@ import { DarNoticia } from "./ui/Noticia"
 import { ColumnaObjetivos, ListaEnMarcha, ListaObjetivos, type EnMarcha } from "./ui/Objetivos"
 import { PanelDepartamento, type ResultadoTrabajo } from "./ui/PanelDepartamento"
 import { PanelLugar } from "./ui/PanelLugar"
+import { BarraPlanta } from "./ui/Plantas"
 import { Mapa } from "./ui/Mapa"
 import { Radar, type DatosRadar } from "./ui/Radar"
 import { Selector } from "./ui/Selector"
@@ -67,8 +69,12 @@ type EscenaPlus = Escena & {
   camara?: () => ModoCamara
   /** Hover sobre la escena (personaje, puesto o lugar bajo el cursor), si el motor lo ofrece. */
   alPasar?: (fn: (t: Toque | null, x: number, y: number) => void) => void
-  /** Muestra un lugar entero (por el ascensor si está en otro nivel). */
+  /** Muestra un lugar entero (por el ascensor si está en otro nivel; una sala con planta, por dentro). */
   encuadrar?: (centro: { x: number; y: number; z: number }, distancia: number, lugarId?: string, opciones?: { subir?: number }) => void
+  /** Entra a una planta de un edificio o, con null, sale. */
+  mostrarPlanta?: (p: PlantaId | null) => void
+  /** La planta abierta (null = afuera). */
+  planta?: () => PlantaId | null
 }
 
 type ModoCam = ModoCamara
@@ -179,6 +185,8 @@ export default function CasaBlancaViva() {
   const [fase, setFase] = useState<"cargando" | "intro" | "juego" | "error">("cargando")
   const [saliendoIntro, setSaliendoIntro] = useState(false)
   const [nivel, setNivel] = useState<NivelId>("superficie")
+  const [planta, setPlanta] = useState<PlantaId | null>(null)
+  const adentro = planta ? `${NOMBRE_EDIFICIO[PLANTA[planta].edificio]} · ${PLANTA[planta].nombre}` : null
   const [camara, setCamara] = useState<ModoCam>("dron")
   const [maqueta, setMaqueta] = useState(false)
   const [velocidad, setVelocidad] = useState(1)
@@ -366,6 +374,8 @@ export default function CasaBlancaViva() {
     const reel = crearEtiquetaPuesto(capa)
     const quitar = sim.on((e) => alEvento.current(e))
     escena.alTocar((t) => alToque.current(t))
+    // Solo en desarrollo: la simulación a mano, para pruebas (como __casaBlancaEscena en el motor).
+    if (process.env.NODE_ENV !== "production") (window as unknown as Record<string, unknown>).__casaBlancaSim = sim
     escena.iniciar()
     setMundo({ escena, sim })
     setFase("intro")
@@ -413,7 +423,7 @@ export default function CasaBlancaViva() {
       const lista: Parameters<Escena["actualizarPersonajes"]>[0] = []
       for (const id of IDS) {
         const e = sim.pj[id]
-        if (e) lista.push({ id, pos: e.pos, rumbo: e.rumbo, estado: e.estado, visible: e.visible, velocidad: e.velocidad })
+        if (e) lista.push({ id, pos: e.pos, rumbo: e.rumbo, estado: e.estado, visible: e.visible, velocidad: e.velocidad, planta: e.planta })
       }
       escena.actualizarPersonajes(lista)
 
@@ -448,6 +458,8 @@ export default function CasaBlancaViva() {
         // El motor puede cambiar nivel y cámara por su cuenta (intro, tomas, fundidos): la botonera lo refleja.
         ultNivel = ahora
         setNivel((n) => (n === nv ? n : nv))
+        const pl = escena.planta?.() ?? null
+        setPlanta((x) => (x === pl ? x : pl))
         const modo = escena.camara?.()
         if (modo && modo !== "intro") setCamara((c) => (c === modo ? c : modo))
       }
@@ -660,11 +672,27 @@ export default function CasaBlancaViva() {
       if (m.escena.encuadrar) m.escena.encuadrar(e.centro, e.distancia, lugarId, compactoRef.current ? { subir: 0.42 } : undefined)
       else m.escena.enfocar(e.centro, e.distancia)
       setNivel(e.nivel)
+      // La barra de plantas cambia en el acto (si no, marca la anterior hasta el próximo tick).
+      const sala = cuartoDeLugar(lugarId)
+      if (sala && m.escena.encuadrar) {
+        setPlanta(sala.planta)
+        setCamara("dron")
+      }
       const d = DEP_POR_LUGAR[lugarId]
       setPanel(d ? { tipo: "dep", id: d.id } : LUGAR[lugarId] ? { tipo: "lugar", id: lugarId } : null)
     },
     [apagarMaqueta],
   )
+
+  /** Entrar a una planta (o, con null, salir del edificio). */
+  const irAPlanta = useCallback((p: PlantaId | null) => {
+    const m = mundoRef.current
+    if (!m?.escena.mostrarPlanta) return
+    apagarMaqueta()
+    m.escena.mostrarPlanta(p)
+    setCamara("dron")
+    setPlanta(p)
+  }, [apagarMaqueta])
 
   /** "Ir" de un residente: la cámara lo sigue; si está dentro de un edificio, se avisa (desde afuera no se ve). */
   const irConPersonaje = useCallback(
@@ -955,9 +983,15 @@ export default function CasaBlancaViva() {
       {enJuego && !grabando && (
         <div className="pointer-events-none absolute inset-0 z-20">
           <div className="cb-hud-arriba absolute inset-x-0 top-0 flex items-start justify-between gap-3 px-4 pt-[max(14px,env(safe-area-inset-top))] md:px-7 md:pt-6">
-            <Marca nivel={nivel} compacto={compacto} />
+            <Marca nivel={nivel} compacto={compacto} adentro={adentro} />
             <Reloj sim={mundo.sim} compacto={compacto} />
           </div>
+
+          {planta && nivel === "superficie" && (
+            <div className="absolute inset-x-0 top-[calc(max(14px,env(safe-area-inset-top))+96px)] flex justify-center px-3 md:top-6">
+              <BarraPlanta planta={planta} onPlanta={(p) => irAPlanta(p)} onSalir={() => irAPlanta(null)} />
+            </div>
+          )}
 
           {aviso && (
             <div key={aviso.clave} className="absolute inset-x-0 top-[96px] px-4 md:top-7">
@@ -987,6 +1021,7 @@ export default function CasaBlancaViva() {
           <div className="cb-hud-abajo absolute inset-x-2 bottom-[max(10px,env(safe-area-inset-bottom))] flex justify-center md:bottom-7 md:left-[220px] md:right-7">
             <Dock
               nivel={nivel}
+              adentro={adentro}
               onNivel={irANivel}
               camara={camara}
               maqueta={maqueta}
@@ -1047,7 +1082,22 @@ export default function CasaBlancaViva() {
               onCerrar={cerrarPanel}
             />
           )}
-          {lugar && <PanelLugar lugar={lugar} sim={mundo.sim} personajes={PJ} retratos={retratos} onPersonaje={abrirFicha} onCerrar={cerrarPanel} />}
+          {lugar && (
+            <PanelLugar
+              lugar={lugar}
+              sim={mundo.sim}
+              personajes={PJ}
+              retratos={retratos}
+              onPersonaje={abrirFicha}
+              onCerrar={cerrarPanel}
+              entrar={(() => {
+                const pl = plantaDeLugar(lugar.id)
+                if (!pl) return undefined
+                if (cuartoDeLugar(lugar.id)) return { texto: planta === pl ? "Ver la sala" : "Entrar", onEntrar: () => irALugar(lugar.id) }
+                return planta === pl ? undefined : { texto: "Entrar a la Residencia", onEntrar: () => irAPlanta(pl) }
+              })()}
+            />
+          )}
           {panel?.tipo === "mapa" && (
             <Mapa
               nivel={nivel}

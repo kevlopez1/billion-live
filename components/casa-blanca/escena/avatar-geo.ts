@@ -80,6 +80,7 @@ export class Lote {
   usaUv1 = false
   /** Atributo extra por vértice (aArr: coordenadas del mapa de arrugas, edad, hoyuelo). */
   usaEx = false
+  private readonly exDef: [number, number, number, number] = [0, 0, 0, 0]
   private piezas: Array<[number, number, number, number]> = []
   private v0 = 0
   private i0 = 0
@@ -111,14 +112,29 @@ export class Lote {
     return this.bCol.a
   }
 
+  private activarEx() {
+    if (this.usaEx) return
+    this.usaEx = true
+    this.bEx.reservar(this.nv * 4)
+    this.bEx.a.fill(0, 0, this.nv * 4)
+    this.bEx.n = this.nv * 4
+  }
+
+  /**
+   * Valor por defecto del atributo extra para los vértices que siguen (en la
+   * ropa: la tela y el pliegue de la prenda que se está armando).
+   */
+  exPorDefecto(a: number, b = 0, c = 0, d = 0) {
+    this.activarEx()
+    this.exDef[0] = a
+    this.exDef[1] = b
+    this.exDef[2] = c
+    this.exDef[3] = d
+  }
+
   /** Atributo extra del último vértice agregado (4 valores). */
   ex(a: number, b: number, c: number, d: number) {
-    if (!this.usaEx) {
-      this.usaEx = true
-      this.bEx.reservar(this.nv * 4)
-      this.bEx.a.fill(0, 0, this.nv * 4)
-      this.bEx.n = this.nv * 4
-    }
+    this.activarEx()
     const i = (this.nv - 1) * 4
     this.bEx.reservar(4)
     if (this.bEx.n < i + 4) this.bEx.n = i + 4
@@ -147,7 +163,7 @@ export class Lote {
     const e0 = p[0], e1 = p[1], e2 = p[2], e3 = p[3]
     this.bSi.push4(e0 ? e0[0] : 0, e1 ? e1[0] : 0, e2 ? e2[0] : 0, e3 ? e3[0] : 0)
     this.bSw.push4(e0 ? e0[1] * s : 0, e1 ? e1[1] * s : 0, e2 ? e2[1] * s : 0, e3 ? e3[1] * s : 0)
-    if (this.usaEx) this.bEx.push4(0, 0, 0, 0)
+    if (this.usaEx) this.bEx.push4(this.exDef[0], this.exDef[1], this.exDef[2], this.exDef[3])
     return this.nv - 1
   }
 
@@ -346,6 +362,31 @@ export class Lote {
     const idx = this.bIdx.vista()
     g.setIndex(n > 65535 ? new THREE.BufferAttribute(idx.slice(), 1) : new THREE.BufferAttribute(Uint16Array.from(idx), 1))
     return g
+  }
+
+  /**
+   * Piso de albedo (lineal) para los colores de vértice: un negro puro no muestra
+   * pliegues ni volumen; una remera negra de algodón refleja ~3 %. `piso(tela)` da el
+   * mínimo según la tela (aArr.x) del vértice. Mantiene el tono.
+   */
+  pisoColor(piso: (tela: number) => number) {
+    const C = this.bCol.a
+    const E = this.bEx.a
+    for (let v = 0; v < this.nv; v++) {
+      const f = piso(this.usaEx ? Math.round(E[v * 4]) : 0)
+      const r = C[v * 4], g = C[v * 4 + 1], b = C[v * 4 + 2]
+      const m = Math.max(r, g, b)
+      if (m >= f) continue
+      if (m < 1e-4) {
+        C[v * 4] = C[v * 4 + 1] = C[v * 4 + 2] = f
+        continue
+      }
+      // Sube hacia el piso sin saturar: la mitad escala (tono) y la mitad suma gris.
+      const k = f / m
+      C[v * 4] = 0.5 * r * k + 0.5 * (r + f - m)
+      C[v * 4 + 1] = 0.5 * g * k + 0.5 * (g + f - m)
+      C[v * 4 + 2] = 0.5 * b * k + 0.5 * (b + f - m)
+    }
   }
 
   get triangulos(): number {

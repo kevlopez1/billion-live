@@ -17,7 +17,7 @@ import { franja, relojTexto, usd } from "./formato"
 export const AVISO_FICCION =
   "Ficción interactiva. Los diálogos los escribe una IA o un guion a partir de lo que se sabe de cada personaje; no son declaraciones reales. Las frases marcadas «cita» sí son citas o paráfrasis de textos conocidos."
 
-export function Marca({ nivel, compacto }: { nivel: NivelId; compacto: boolean }) {
+export function Marca({ nivel, compacto, adentro }: { nivel: NivelId; compacto: boolean; /** "Ala Oeste · Sótano" si se está dentro de un edificio. */ adentro?: string | null }) {
   const [info, setInfo] = useState(false)
   return (
     <div className="pointer-events-auto relative max-w-[60vw]">
@@ -35,7 +35,7 @@ export function Marca({ nivel, compacto }: { nivel: NivelId; compacto: boolean }
           <Info className="h-3.5 w-3.5" />
         </button>
       </div>
-      <p className="cb-sombra mt-1 text-[11px] font-semibold text-white/70 md:text-[12px]">{NOMBRE_NIVEL[nivel]}</p>
+      <p className="cb-sombra mt-1 text-[11px] font-semibold text-white/70 md:text-[12px]">{adentro ?? NOMBRE_NIVEL[nivel]}</p>
       {info && (
         <div role="note" className={`cb-entra absolute left-0 top-full z-50 mt-2 w-[min(340px,86vw)] rounded-[16px] p-4 text-[12.5px] leading-relaxed text-white/85 ${VIDRIO} bg-[rgba(9,11,15,0.86)]`}>
           {AVISO_FICCION}
@@ -121,6 +121,8 @@ const Separador = () => <span className="mx-1 h-6 w-px shrink-0 bg-white/12" ari
 
 export interface PropsDock {
   nivel: NivelId
+  /** "Ala Oeste · Sótano" si se está dentro de un edificio (reemplaza a "Jardines y edificios"). */
+  adentro?: string | null
   onNivel: (n: NivelId) => void
   /** El modo del motor ("dron", "seguir", "cine", "nivel"…); se marca el botón que coincida. */
   camara: string
@@ -209,7 +211,7 @@ function MenuNiveles({ actual, onElegir }: { actual: NivelId; onElegir: (n: Nive
  * El selector de nivel: flecha arriba, el nombre del nivel actual (abre la
  * lista) y flecha abajo. `ancho`: en celular ocupa toda la fila.
  */
-function SelectorNivel({ nivel, onNivel, ancho = false }: { nivel: NivelId; onNivel: (n: NivelId) => void; ancho?: boolean }) {
+function SelectorNivel({ nivel, onNivel, ancho = false, adentro }: { nivel: NivelId; onNivel: (n: NivelId) => void; ancho?: boolean; adentro?: string | null }) {
   const [abierto, setAbierto] = useState(false)
   const ref = useCerrarAfuera(abierto, () => setAbierto(false))
   const arriba = nivelVecino(nivel, -1)
@@ -243,7 +245,7 @@ function SelectorNivel({ nivel, onNivel, ancho = false }: { nivel: NivelId; onNi
         <span className="cb-cond shrink-0 rounded-full bg-white/[0.12] px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-white/75">{profundidad(nivel)}</span>
         <span className="min-w-0 leading-none">
           <span className="block truncate text-[13px] font-extrabold text-white">{NIVEL_CORTO[nivel]}</span>
-          <span className="mt-0.5 block truncate text-[10.5px] font-semibold text-white/55">{NIVEL_CONTENIDO[nivel]}</span>
+          <span className="mt-0.5 block truncate text-[10.5px] font-semibold text-white/55">{adentro ?? NIVEL_CONTENIDO[nivel]}</span>
         </span>
       </button>
       <button type="button" onClick={() => abajo && onNivel(abajo)} disabled={!abajo} aria-label={abajo ? `Bajar a ${NOMBRE_NIVEL[abajo]}` : "Ya estás en el nivel más profundo"} title={abajo ? `Bajar: ${NIVEL_CORTO[abajo]}` : undefined} className={`${flecha} ${FOCO}`}>
@@ -294,7 +296,7 @@ export function Dock(props: PropsDock) {
   const nombre = "hidden min-[1360px]:inline"
   return (
     <nav aria-label="Controles" className={`pointer-events-auto flex max-w-full items-center rounded-full px-1.5 py-1.5 ${VIDRIO}`}>
-      <SelectorNivel nivel={props.nivel} onNivel={props.onNivel} />
+      <SelectorNivel nivel={props.nivel} onNivel={props.onNivel} adentro={props.adentro} />
       <Separador />
       <BotonMapa onClick={props.onMapa} abierto={props.mapaAbierto} />
       <Separador />
@@ -421,7 +423,7 @@ function DockCompacto(props: PropsDock) {
         </div>
       )}
       <div className={`${fila} ${VIDRIO}`}>
-        <SelectorNivel nivel={props.nivel} onNivel={props.onNivel} ancho />
+        <SelectorNivel nivel={props.nivel} onNivel={props.onNivel} adentro={props.adentro} ancho />
       </div>
       <nav aria-label="Controles" className={`${fila} justify-between gap-1 ${VIDRIO}`}>
         <BotonMapa onClick={props.onMapa} abierto={props.mapaAbierto} />

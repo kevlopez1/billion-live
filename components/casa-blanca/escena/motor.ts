@@ -25,6 +25,8 @@ import { ambienteCiudad, construirCiudad, type AmbienteCiudad } from "./ciudad"
 import { construirNavegacion } from "./navegacion"
 import { crearAvatar } from "./avatares"
 import { HUELLAS } from "../lugares"
+import { CORTE, CUARTOS, PLANTA, cuartoDeLugar, type EdificioId, type PlantaId } from "../plantas"
+import { crearInteriores } from "./interiores"
 import type { Ambiente } from "./motor-cielo"
 
 /**
@@ -38,8 +40,18 @@ const CAJAS_OCLUSION: Array<[number, number, number, number, number]> = [
   [HUELLAS.eeob.x0, HUELLAS.eeob.x1, HUELLAS.eeob.z0, HUELLAS.eeob.z1, HUELLAS.eeob.alto],
   [HUELLAS.tesoro.x0, HUELLAS.tesoro.x1, HUELLAS.tesoro.z0, HUELLAS.tesoro.z1, HUELLAS.tesoro.alto],
 ]
-function tapado(a: THREE.Vector3, b: THREE.Vector3): boolean {
-  for (const [x0, x1, z0, z1, alto] of CAJAS_OCLUSION) {
+/** La huella de cada edificio con plantas (para saber cuál está cortado). */
+const HUELLA_EDIFICIO: Record<EdificioId, { x0: number; x1: number; z0: number; z1: number }> = {
+  residencia: HUELLAS.residencia,
+  "ala-oeste": HUELLAS.alaOeste,
+  eeob: HUELLAS.eeob,
+  tesoro: HUELLAS.tesoro,
+}
+const enEdificio = (x: number, z: number) => Object.values(HUELLA_EDIFICIO).some((h) => x > h.x0 && x < h.x1 && z > h.z0 && z < h.z1)
+function tapado(a: THREE.Vector3, b: THREE.Vector3, corte?: { x0: number; alto: number }): boolean {
+  for (const [x0, x1, z0, z1, altoCaja] of CAJAS_OCLUSION) {
+    // Con una planta abierta, su edificio está cortado: tapa solo hasta el corte.
+    const alto = corte && x0 === corte.x0 ? corte.alto : altoCaja
     // Intersección segmento–caja (método de las franjas)
     let t0 = 0
     let t1 = 1
@@ -109,6 +121,13 @@ export interface EscenaMotor extends Escena {
   modoCamara(modo: ModoCamara, objetivoId?: string, opciones?: OpcionesCamara): void
   /** Con `corte`, la mezcla del tilt-shift salta al valor final (sin los ~0,8 s de entrada). */
   modoMaqueta(on: boolean, opciones?: { corte?: boolean }): void
+  /**
+   * Entra a una planta de un edificio (la fachada se corta y se ve por dentro)
+   * o, con null, vuelve afuera. Con fundido; con `corte`, en el acto.
+   */
+  mostrarPlanta(p: PlantaId | null, opciones?: { corte?: boolean }): void
+  /** La planta abierta (null = afuera). */
+  planta(): PlantaId | null
   /** La toma que está corriendo en modo cine (null fuera de cine). */
   tomaActual(): string | null
   /** El modo de cámara actual. */
@@ -127,6 +146,8 @@ export interface EscenaMotor extends Escena {
     fijarIntro(segundos: number): void
     /** Dibuja un cuadro ya (sin esperar al bucle). */
     cuadro(dt?: number): void
+    /** Abre o cierra una planta en el acto, sin mover la cámara (para comparar con y sin corte). */
+    planta(p: PlantaId | null): void
     /** El mismo cuadro sin dibujarlo (sin postproceso ni render): avanza cámara, hora, avatares y fundidos `dt` segundos. */
     avanzar(dt: number): void
     /** `fundido`: el negro del fundido en curso (0 = ninguno). `velo`: el negro total (fundido y cámara). */
@@ -221,6 +242,8 @@ interface EstadoAvatar {
   estado: EstadoCuerpo
   visible: boolean
   velocidad: number
+  /** La planta donde está (null o sin dato = afuera). */
+  planta?: PlantaId | null
 }
 
 export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena): EscenaMotor {
@@ -306,6 +329,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
   intentar("construirCiudad", () => construirCiudad(ctx))
   // Letreros, pasillos marcados y el pabellón del ascensor: después de todo lo demás, encima.
   intentar("construirNavegacion", () => construirNavegacion(ctx))
+  // Los interiores no se construyen aquí: cada planta se arma la primera vez que se abre.
+  const interiores = intentar("crearInteriores", () => crearInteriores(ctx, renderer))
   // Los letreros flotantes (navegacion.ts los marca): se ocultan en las tomas de cine y en el estudio.
   const letrerosFlotantes: THREE.Object3D[] = []
   scene.traverse((o) => {
@@ -400,7 +425,20 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     trans = { fase: "sale", t: trans ? 1 - trans.t : 0, accion, durSale: 0.22, durEntra: 0.35 }
   }
 
+  let plantaActual: PlantaId | null = null
+  const aplicarPlanta = (p: PlantaId | null) => {
+    if (!interiores || p === plantaActual) return
+    if (p && nivelActual !== "superficie") return
+    intentar("interiores.mostrar", () => interiores.mostrar(p))
+    plantaActual = interiores.planta()
+    camara.setPlanta(plantaActual ? { id: plantaActual, y: PLANTA[plantaActual].y } : null)
+    // El relleno de las salas (rellenoInterior) depende de la planta abierta.
+    horaSucia = true
+  }
+
   const aplicarNivel = (n: NivelId) => {
+    // Bajar a un subsuelo es salir del edificio.
+    if (n !== "superficie" && plantaActual) aplicarPlanta(null)
     const desde = nivelActual
     nivelActual = n
     for (const k of NIVELES) niveles[k].visible = k === n
@@ -417,7 +455,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     const a = avatares.get(id)
     const e = estados.get(id)
     if (!a || !e) return null
-    return { pos: a.raiz.position, rumbo: rumbos.get(id) ?? e.rumbo, visible: e.visible, nivel: nivelDeY(e.pos.y) }
+    return { pos: a.raiz.position, rumbo: rumbos.get(id) ?? e.rumbo, visible: e.visible, nivel: nivelDeY(e.pos.y), planta: e.planta ?? null }
   }
 
   // Para la cámara de seguir con choques (estudio): lo sólido del nivel visible.
@@ -445,6 +483,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     libre: libreEnNivel,
     fundir,
     aplicarNivel,
+    aplicarPlanta: (p) => aplicarPlanta((p as PlantaId | null) ?? null),
+    planta: () => plantaActual,
     setMaqueta: (on) => {
       maquetaOn = on
     },
@@ -452,7 +492,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     elegirPersonaje: () => {
       let respaldo: string | null = null
       for (const [id, e] of estados) {
-        if (!e.visible || !avatares.has(id)) continue
+        // Las tomas son de afuera: nadie que esté dentro de una planta.
+        if (!e.visible || e.planta || !avatares.has(id)) continue
         if (nivelDeY(e.pos.y) === "superficie" && (e.estado === "camina" || e.estado === "corre" || e.estado === "deporte")) return id
         respaldo ??= id
       }
@@ -475,6 +516,20 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     renderer.toneMappingExposure = 0.9
   }
 
+  // Dentro de un edificio de noche la luz es la de las lámparas, no la de la luna:
+  // sin luces nuevas, la hemisférica que ya existe se vuelve cálida y sube. Sin
+  // esto los residentes eran siluetas negras. El sótano no tiene ventanas: su
+  // relleno no depende de la hora.
+  const _calidoCielo = new THREE.Color("#ffdcb4")
+  const _calidoSuelo = new THREE.Color("#5e4632")
+  const rellenoInterior = (p: PlantaId) => {
+    const k = p === "oeste-sotano" ? Math.max(nocheActual, 0.6) : nocheActual
+    if (k <= 0) return
+    cielo.hemi.color.lerp(_calidoCielo, 0.75 * k)
+    cielo.hemi.groundColor.lerp(_calidoSuelo, 0.85 * k)
+    cielo.hemi.intensity += 1.5 * k
+  }
+
   /** La ciudad: sol del cielo artificial, hemisferio, niebla y exposición de ambienteCiudad. */
   const aplicarCiudad = (h: number) => {
     const a = (ambCiudad = ambienteCiudad(h, ambCiudad ?? undefined))
@@ -495,6 +550,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     for (const n of nocturnos) n.mat.emissiveIntensity = n.dia + (n.noche - n.dia) * nocheActual
     for (const l of luces) l.luz.intensity = l.intensidad * nocheActual
     const sup = nivelActual === "superficie"
+    if (sup && plantaActual) rellenoInterior(plantaActual)
     let env: THREE.Texture | null
     let intensidadEnv: number
     if (sup) {
@@ -603,9 +659,12 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       const nuevo = actual + dif * (1 - Math.exp(-10 * dt))
       rumbos.set(id, nuevo)
       a.raiz.rotation.y = nuevo
-      // A quien se sigue y está adentro se lo ve a través de las paredes.
-      const adentro = id === seguido && !e.visible && nivelDeY(e.pos.y) === nivelActual
-      a.raiz.visible = (e.visible && nivelDeY(e.pos.y) === nivelActual) || adentro
+      // Rayos X solo para el que se sigue dentro del ascensor: todos los edificios ya se recorren a la
+      // vista, y el único oculto dentro de uno es el que duerme con la puerta cerrada (ese no se muestra).
+      const adentro = id === seguido && !e.visible && !enEdificio(e.pos.x, e.pos.z) && nivelDeY(e.pos.y) === nivelActual
+      // El que está en una planta se ve solo con esa planta abierta (desde afuera, la fachada lo tapa).
+      const enVista = !e.planta || e.planta === plantaActual
+      a.raiz.visible = (e.visible && enVista && nivelDeY(e.pos.y) === nivelActual) || adentro
       a.rayosX?.(adentro)
       if (!a.raiz.visible && e.estado !== "camina" && e.estado !== "corre") continue
       if (avataresRotos.has(id)) continue
@@ -631,6 +690,10 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     for (let p: THREE.Object3D | null = hit.object; p; p = p.parent) {
       const id = porRaiz.get(p)
       if (id) return { tipo: "personaje", id }
+    }
+    if (hit.object.userData.plantaId && interiores) {
+      const sala = interiores.lugarEn(hit.point.x, hit.point.z)
+      if (sala) return { tipo: "lugar", id: sala }
     }
     if (subsuelo) {
       const r = intentar("subsuelo.identificar", () => subsuelo.identificar(hit.object, hit.instanceId))
@@ -920,6 +983,74 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
     }
   }
 
+  // ── Plantas: entrar a un edificio ──
+  /**
+   * La pose para mirar una sala desde el sur, a 55° y a max(14, lado × 1,4 + 6) m.
+   * Sin sala, la planta entera; con `null` y sin planta, la vista de afuera de la Residencia.
+   */
+  const poseSala = (p: PlantaId | null, lugarId: string | null, subir = 0) => {
+    const c = lugarId ? cuartoDeLugar(lugarId) : null
+    let cx: number
+    let cz: number
+    let d: number
+    let y: number
+    if (c) {
+      cx = (c.rect.x0 + c.rect.x1) / 2
+      cz = (c.rect.z0 + c.rect.z1) / 2
+      d = Math.max(14, Math.max(c.rect.x1 - c.rect.x0, c.rect.z1 - c.rect.z0) * 1.4 + 6)
+      y = PLANTA[c.planta].y
+    } else if (p) {
+      const cs = CUARTOS.filter((x) => x.planta === p)
+      if (!cs.length) return null
+      const x0 = Math.min(...cs.map((x) => x.rect.x0))
+      const x1 = Math.max(...cs.map((x) => x.rect.x1))
+      const z0 = Math.min(...cs.map((x) => x.rect.z0))
+      const z1 = Math.max(...cs.map((x) => x.rect.z1))
+      cx = (x0 + x1) / 2
+      cz = (z0 + z1) / 2
+      d = Math.max(x1 - x0, z1 - z0) * 1.05 + 6
+      y = PLANTA[p].y
+    } else {
+      return poseEnfoque(new THREE.Vector3(0, 0, 0), 90, "superficie")
+    }
+    const elev = 55 * THREE.MathUtils.DEG2RAD
+    // Desde el sur; en el Ala Oeste, desde el sureste (por encima del Jardín de las Rosas: al sur del Despacho Oval hay árboles).
+    const enAla = (c ? PLANTA[c.planta].edificio : p ? PLANTA[p].edificio : null) === "ala-oeste"
+    // El Despacho Oval, desde el norte (desde adentro del Ala): el escritorio Resolute de frente, las ventanas detrás y ningún árbol en medio.
+    const oval = lugarId === "despacho-oval"
+    const dir = oval ? new THREE.Vector3(0.3, 0, -1).normalize() : new THREE.Vector3(enAla ? 1.5 : 0.18, 0, 1).normalize()
+    const mira = new THREE.Vector3(cx, y + 0.6, cz)
+    const pos = mira.clone().add(new THREE.Vector3(dir.x * Math.cos(elev) * d, Math.sin(elev) * d, dir.z * Math.cos(elev) * d))
+    if (subir) {
+      const atras = pos.clone().sub(mira).setY(0).setLength(d * subir * 0.6)
+      pos.add(atras)
+      mira.add(atras)
+    }
+    return { pos, mira, fov: 45 }
+  }
+
+  const entrarA = (p: PlantaId, lugarId: string | null, op?: { subir?: number; corte?: boolean }) => {
+    const pose = poseSala(p, lugarId, op?.subir ?? 0)
+    if (!pose) return
+    if (op?.corte) {
+      fundir(() => {}, true)
+      if (nivelActual !== "superficie") aplicarNivel("superficie")
+      aplicarPlanta(p)
+      camara.saltarA(pose)
+      maquetaMezcla = maquetaOn ? 1 : 0
+      return
+    }
+    if (plantaActual === p && nivelActual === "superficie" && camara.modo !== "seguir" && camara.modo !== "cine" && !camara.viajando) {
+      camara.irAPose(pose)
+      return
+    }
+    fundir(() => {
+      if (nivelActual !== "superficie") aplicarNivel("superficie")
+      aplicarPlanta(p)
+      camara.saltarA(pose)
+    })
+  }
+
   const escena: EscenaMotor = {
     iniciar() {
       if (corriendo || destruida) return
@@ -954,6 +1085,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       camara.saltarIntro()
     },
     modoCamara(modo, objetivoId, op) {
+      // Las tomas de cine son de afuera.
+      if (modo === "cine" && plantaActual) aplicarPlanta(null)
       camara.setModo(modo, objetivoId, op)
       if (modo !== "cine") maquetaOn = maquetaManual
       if (op?.corte) maquetaMezcla = maquetaOn ? 1 : 0
@@ -970,6 +1103,25 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       } else camara.enfocar(destino, distancia)
     },
     encuadrar(p, distancia, lugarId, opciones) {
+      // Una sala de un edificio con planta: se entra a esa planta y se la mira desde el sur, en alto.
+      const pl = lugarId ? (cuartoDeLugar(lugarId)?.planta ?? null) : null
+      if (pl && interiores) {
+        entrarA(pl, lugarId ?? null, opciones)
+        return
+      }
+      if (plantaActual) {
+        // Un lugar de afuera: primero se sale del edificio (con fundido) y la cámara aparece allí.
+        const n0 = nivelDeY(p.y)
+        if (n0 === "superficie" && !opciones?.corte) {
+          const pose0 = poseEnfoque(new THREE.Vector3(p.x, p.y, p.z), distancia, n0, undefined, lugarId)
+          fundir(() => {
+            aplicarPlanta(null)
+            camara.saltarA(pose0)
+          })
+          return
+        }
+        aplicarPlanta(null)
+      }
       const n = nivelDeY(p.y)
       const destino = new THREE.Vector3(p.x, p.y, p.z)
       // Salir de cine o de seguir: encuadrar un lugar es mirar el lugar, no seguir a alguien.
@@ -1003,7 +1155,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
           previo.estado = e.estado
           previo.visible = e.visible
           previo.velocidad = e.velocidad
-        } else estados.set(e.id, { pos: e.pos, rumbo: e.rumbo, estado: e.estado, visible: e.visible, velocidad: e.velocidad })
+          previo.planta = (e.planta as PlantaId | null | undefined) ?? null
+        } else estados.set(e.id, { pos: e.pos, rumbo: e.rumbo, estado: e.estado, visible: e.visible, velocidad: e.velocidad, planta: (e.planta as PlantaId | null | undefined) ?? null })
       }
     },
     marcarPuestos(depId, est: EstadoPuesto[]) {
@@ -1015,7 +1168,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       a.cabeza.getWorldPosition(_p)
       const r = proyectar(_p)
       // La etiqueta de quien se sigue no la tapa un edificio: se lo ve en rayos X.
-      const detras = nivelActual === "superficie" && id !== camara.seguido() && tapado(cam.position, _p)
+      const detras = nivelActual === "superficie" && id !== camara.seguido() && tapado(cam.position, _p, plantaActual ? { x0: HUELLA_EDIFICIO[PLANTA[plantaActual].edificio].x0, alto: PLANTA[plantaActual].y + CORTE } : undefined)
       return { ...r, visible: r.visible && !detras && visibleEnCadena(a.raiz) }
     },
     proyectar,
@@ -1050,6 +1203,7 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       observador?.disconnect()
       camara?.dispose()
       for (const a of avatares.values()) intentar("avatar.dispose", () => a.dispose())
+      if (interiores) intentar("interiores.dispose", () => interiores?.dispose())
       const texturas = new Set<THREE.Texture>()
       const mats = new Set<THREE.Material>()
       scene.traverse((o) => {
@@ -1082,6 +1236,29 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       if (op?.corte) maquetaMezcla = on ? 1 : 0
     },
     maqueta: () => maquetaOn,
+    mostrarPlanta(p, op) {
+      if (!interiores) return
+      // Lo pidió la persona (Salir, otra planta): gana sobre "seguir", que si no
+      // volvería a abrir la planta del seguido en el cuadro siguiente.
+      if (camara.modo === "seguir") camara.setModo("dron")
+      if (p && p === plantaActual) {
+        // La planta que ya está abierta: se la vuelve a encuadrar entera.
+        const pose = poseSala(p, null)
+        if (pose) camara.irAPose(pose)
+        return
+      }
+      if (p === plantaActual) return
+      if (p === null) {
+        fundir(() => {
+          aplicarPlanta(null)
+          const pose = poseSala(null, null)
+          if (pose && camara.modo !== "seguir") camara.saltarA(pose)
+        }, !!op?.corte)
+        return
+      }
+      entrarA(p, null, op)
+    },
+    planta: () => plantaActual,
     tomas: () => TOMAS_CINE,
     tomaActual: () => camara.tomaActual,
     camara: () => camara.modo,
@@ -1097,6 +1274,9 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
       avanzar(dt) {
         cuadro(dt, dt, false)
       },
+      planta(p) {
+        aplicarPlanta(p)
+      },
       info: () => ({
         calidad,
         hora,
@@ -1104,6 +1284,8 @@ export function crearEscena(canvas: HTMLCanvasElement, opciones: OpcionesEscena)
         drawCalls: renderer.info.render.calls,
         triangulos: renderer.info.render.triangles,
         fps: Math.round(fps.medio),
+        planta: plantaActual,
+        interiores: interiores?.info() ?? null,
         fundido,
         velo: Math.max(fundido, camara.velo),
       }),

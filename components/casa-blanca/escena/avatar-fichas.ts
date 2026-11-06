@@ -457,7 +457,9 @@ export const FICHAS: Record<string, Ficha> = {
     piel: { base: "#D6A47E", brillo: 0.6 },
     iris: "#2E2018",
     pelo: { rapado: 0.18, color: "#3A2E26", linea: { entradas: 0.3 } },
-    barba: { color: "#1A1310", densidad: 1, largo: 0.014, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.6, cuello: 0.55, borde: 0.05, liso: 0.8 },
+    // (borde de la mejilla en degradé y un castaño muy oscuro, no negro: con borde 0,05
+    // la barba se leía como una máscara negra pegada; el color, apenas más cálido)
+    barba: { color: "#1c130f", densidad: 1, largo: 0.014, bigote: 1, perilla: 1, mandibula: 1, mejillas: 0.6, cuello: 0.55, borde: 0.32, liso: 0.8 },
     cejas: { color: "#1E1612", grosor: 1.3, arco: 0.1, densidad: 1 },
   },
 

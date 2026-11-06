@@ -1260,6 +1260,8 @@ function construirResidencia(K: Constructor): void {
   const esquinas = [0, 1, 2, 3, camino.length - 5, camino.length - 4, camino.length - 3, camino.length - 2]
   K.balaustrada(res, camino, { alto: 1.42, esquinas, pedestal: 3.9 })
 
+  // Las piezas de la Residencia: interiores.ts las corta a la altura de la planta que se mira.
+  for (const p of [res, pn, bal]) p.grupo.userData.edificio = "residencia"
   res.cerrar(K)
   pn.cerrar(K)
   bal.cerrar(K)
@@ -1531,7 +1533,10 @@ function fachadaSur(K: Constructor, P: Pieza): void {
       huecos.push(K.ventana(P, f, s * e, { w: 1.5, h: Y.segundoAlto, v0: Y.segundoAlfeizar, noche: 0.4 }))
     }
   })
-  P.lote.add(M.fachada, geoMuro(RES.x0, RES.x1, 0, Y.cornisa, 0.7, huecos), f.base)
+  // El muro se corta donde abre el arco del Salón Azul: por dentro, la sala oval sigue hasta el arco.
+  const abre = R_BOW - 0.62
+  P.lote.add(M.fachada, geoMuro(RES.x0, -abre, 0, Y.cornisa, 0.7, huecos.filter((h) => h.u1 < -abre)), f.base)
+  P.lote.add(M.fachada, geoMuro(abre, RES.x1, 0, Y.cornisa, 0.7, huecos.filter((h) => h.u0 > abre)), f.base)
   K.rustico(P, f, RES.x0, -R_BOW, 0, Y.principalSur - 0.05, bajas, 8)
   K.rustico(P, f, R_BOW, RES.x1, 0, Y.principalSur - 0.05, bajas, 8)
   // Pilastras donde termina el pórtico.
@@ -1607,13 +1612,14 @@ function fachadasLaterales(K: Constructor, P: Pieza): void {
     for (const u of [-2.4, 2.4]) K.pilastra(P, f, u, Y.principalSur, Y.arquitrabe, 0.95, 0.18)
   }
   // Remate de la planta baja (este, sur y oeste).
+  // Cada tramo termina donde empieza el arco del Salón Azul (antes cruzaban el arco y, por dentro, el piso del salón).
   const camino: P2[] = [
     [RES.x1, RES.z0],
     [RES.x1, RES.z1],
-    [-R_BOW, RES.z1],
+    [R_BOW, RES.z1],
   ]
   const camino2: P2[] = [
-    [R_BOW, RES.z1],
+    [-R_BOW, RES.z1],
     [RES.x0, RES.z1],
     [RES.x0, RES.z0],
   ]
@@ -1828,6 +1834,7 @@ function construirAlaOeste(K: Constructor): void {
   const M = K.M
   const W = HUELLAS.alaOeste
   const P = new Pieza("sala-gabinete", "ala-oeste")
+  P.grupo.userData.edificio = "ala-oeste"
   const yP = 4.6
   const yC = 8.4
   const yCor = 9.2
@@ -1858,8 +1865,27 @@ function construirAlaOeste(K: Constructor): void {
       } else huecos.push(K.ventana(P, f, u, { w: 1.35, h: 2.7, v0: 1.0, noche: 0.55, cornisa: true }))
       huecos.push(K.ventana(P, f, u, { w: 1.3, h: 2.3, v0: yP + 0.95, noche: 0.5 }))
     }
-    P.lote.add(M.fachada, geoMuro(-L, L, 0, yCor, 0.6, huecos), f.base)
-    P.lote.add(M.fachada, cajaE(-L, L, 0, 0.8, 0, 0.1), f.base)
+    // Donde el Despacho Oval se mete en el Ala (sus muros sur y este), el muro del Ala se abre
+    // hasta el techo del óvalo: por dentro es el Despacho. Desde afuera no cambia nada (lo tapa el óvalo).
+    let corte: [number, number] | null = null
+    if (idx === 1 || idx === 2) {
+      let a = Infinity
+      let b = -Infinity
+      for (let u = -L; u <= L + 1e-6; u += 0.05) {
+        const pm = f.p(u, 0, 0)
+        if (((pm.x - ov.cx) / (ov.rx + 0.65)) ** 2 + ((pm.z - ov.cz) / (ov.rz + 0.65)) ** 2 < 1) {
+          a = Math.min(a, u)
+          b = Math.max(b, u)
+        }
+      }
+      if (a <= b) corte = [Math.max(-L, a), Math.min(L, b + 0.05)]
+    }
+    const tramos: Array<[number, number]> = corte ? [[-L, corte[0]], [corte[1], L]].filter(([a, b]) => b - a > 0.05) as Array<[number, number]> : [[-L, L]]
+    for (const [a, b] of tramos) {
+      P.lote.add(M.fachada, geoMuro(a, b, 0, yCor, 0.6, huecos.filter((h) => h.u0 > a && h.u1 < b)), f.base)
+      P.lote.add(M.fachada, cajaE(a, b, 0, 0.8, 0, 0.1), f.base)
+    }
+    if (corte) P.lote.add(M.fachada, geoMuro(corte[0], corte[1], 6.5, yCor, 0.6, []), f.base)
   })
   const rect: P2[] = [
     [W.x1, W.z0],
@@ -1944,6 +1970,7 @@ function despachoOval(K: Constructor): void {
   const M = K.M
   const O = HUELLAS.despachoOval
   const P = new Pieza("despacho-oval", "despacho-oval")
+  P.grupo.userData.edificio = "ala-oeste"
   const rx = O.rx + 0.4
   const rz = O.rz + 0.4
   const yTop = 6.8
@@ -1966,6 +1993,14 @@ function despachoOval(K: Constructor): void {
     if ([68, 90, 113].includes(centroGrados)) {
       huecos.push(K.ventana(P, f, 0, { w: 1.35, h: 4.3, v0: 0.35, hoja: "francesa", noche: 0.9, cornisa: true, sinAlfeizar: true }))
     }
+    // Las dos puertas: al oeste, a la antesala (dentro del Ala); al este, al Jardín de las Rosas.
+    const puerta = centroGrados === 180 || centroGrados === 0
+    if (puerta) {
+      const a = centroGrados === 0 ? 0.6 : 0.55
+      huecos.push({ u0: -a, u1: a, v0: 0.002, v1: 2.5 })
+      P.lote.add(M.moldura, cajaE(-a - 0.12, a + 0.12, 2.5, 2.72, -0.04, 0.08), f.base)
+      for (const s of [-1, 1]) P.lote.add(M.moldura, cajaE(s * a - 0.06 * (1 - s), s * a + 0.06 * (1 + s), 0, 2.5, -0.04, 0.08), f.base)
+    }
     const g = geoMuro(-L / 2 - 0.02, L / 2 + 0.02, 0, yTop, 0.5, huecos)
     const pos = g.getAttribute("position")
     const nor = g.getAttribute("normal")
@@ -1980,7 +2015,7 @@ function despachoOval(K: Constructor): void {
       }
     }
     P.lote.add(M.fachada, g, f.base)
-    P.lote.add(M.fachada, cajaE(-L / 2, L / 2, 0, 0.6, 0, 0.08), f.base)
+    if (!puerta) P.lote.add(M.fachada, cajaE(-L / 2, L / 2, 0, 0.6, 0, 0.08), f.base)
     // Pilastras entre los ventanales.
     if ([45, 68, 90, 113].includes(centroGrados)) K.pilastra(P, f, L / 2, 0.6, yTop - 0.3, 0.42, 0.12, false)
   }
@@ -2482,6 +2517,7 @@ function construirEEOB(K: Constructor): void {
   const M = K.M
   const E = HUELLAS.eeob
   const P = new Pieza("eeob", "edificio-eisenhower")
+  P.grupo.userData.edificio = "eeob"
   const g = M.granito
   const yCor = 18.4
   const pisos = [1.9, 6.0, 10.0, 14.0]
@@ -2640,6 +2676,7 @@ function construirTesoro(K: Constructor): void {
   const M = K.M
   const T = HUELLAS.tesoro
   const P = new Pieza("tesoro", "tesoro")
+  P.grupo.userData.edificio = "tesoro"
   const g = M.granito
   const yPod = 3.2
   const yArq = 14.4
@@ -2760,6 +2797,11 @@ function construirTesoro(K: Constructor): void {
       poligono([new V3(cx, yAt - 0.4 + alto + 0.6, zP + 0.4), new V3(cx + s * ext, yAt + 0.2, zP + 0.4), new V3(cx + s * ext, yAt + 0.2, T.z1 - 1), new V3(cx, yAt - 0.4 + alto + 0.6, T.z1 - 1)], new V3(s, 1, 0)),
     )
   }
+  // La puerta del pabellón norte (entre dos ventanas, en z = −55): marco de granito y la hoja.
+  P.lote.add(g, cajaE(T.x0 - 0.16, T.x0, 2.9, 3.3, -55.7, -54.3))
+  for (const z of [-55.7, -54.42]) P.lote.add(g, cajaE(T.x0 - 0.16, T.x0, 0, 2.9, z, z + 0.12))
+  // La hoja, del mismo metal oscuro del techo (un material que la pieza ya dibuja: no suma llamadas).
+  P.lote.add(M.techoMetal, cajaE(T.x0 - 0.05, T.x0 + 0.01, 0, 2.9, -55.58, -54.42))
   // Techo bajo.
   mansarda(P, M.techoMetal, T.x0 + 1, T.x1 - 1, T.z0 + 1, T.z1 - 1, yTop, yTop + 2.2, 6)
   P.cerrar(K)

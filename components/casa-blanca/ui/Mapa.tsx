@@ -15,7 +15,8 @@ import { useMemo, useState } from "react"
 import { ArrowDownUp, ChevronRight, MapPin, Search, Users } from "lucide-react"
 import { conPrime } from "@/components/prime-mark"
 import type { Simulacion } from "../motor/simulacion"
-import { CELDAS, LUGAR } from "../lugares"
+import { CELDAS, LUGAR, NODO } from "../lugares"
+import { PLANTAS } from "../plantas"
 import {
   NIVEL_CONTENIDO,
   NIVEL_CORTO,
@@ -158,6 +159,19 @@ function BotonLugar({ l, cuantos, onIr, sub, color }: { l: Lugar | { id: string;
   )
 }
 
+/** Las salas de un edificio por planta, de arriba hacia abajo (como el corte); las que no tienen planta, al final. */
+function porPlanta(ls: Lugar[]): Array<[string | null, Lugar[]]> {
+  const plantaDe = (l: Lugar) => l.planta ?? NODO[l.acceso]?.planta ?? null
+  const out: Array<[string | null, Lugar[]]> = []
+  for (const p of PLANTAS) {
+    const salas = ls.filter((l) => plantaDe(l) === p.id)
+    if (salas.length) out.push([p.nombre, salas])
+  }
+  const sin = ls.filter((l) => !plantaDe(l))
+  if (sin.length) out.push([null, sin])
+  return out
+}
+
 function Superficie({ onIr, enLugar }: { onIr: (id: string) => void; enLugar: Record<string, number> }) {
   const lugares = lugaresDe("superficie")
   const afuera = lugares.filter((l) => !l.interior)
@@ -196,11 +210,16 @@ function Superficie({ onIr, enLugar }: { onIr: (id: string) => void; enLugar: Re
               {ls.length} {ls.length === 1 ? "sala" : "salas"}
             </span>
           </summary>
-          <div className="flex flex-wrap gap-1.5 px-3 pb-3 pt-1">
-            {ls.map((l) => (
-              <BotonLugar key={l.id} l={l} cuantos={enLugar[l.id]} onIr={onIr} />
-            ))}
-          </div>
+          {porPlanta(ls).map(([planta, salas]) => (
+            <div key={planta ?? "-"} className="px-3 pb-2.5 pt-1 last:pb-3">
+              {planta && <p className="cb-cond mb-1 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#e3b866]/80">{planta}</p>}
+              <div className="flex flex-wrap gap-1.5">
+                {salas.map((l) => (
+                  <BotonLugar key={l.id} l={l} cuantos={enLugar[l.id]} onIr={onIr} />
+                ))}
+              </div>
+            </div>
+          ))}
         </details>
       ))}
     </div>

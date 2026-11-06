@@ -17,7 +17,9 @@
 // - Cejas: tres tiras con volumen y hebras a lo largo (no pintadas): base,
 //   capa de arriba más gruesa y, en los mayores, pelos largos que se levantan.
 //
-// Todo va en un lote: el color de cada parte va en el vértice.
+// Todo va en un lote: el color de cada parte va en el vértice, y la fuerza del
+// brillo anisotrópico en aMat.x (pelo 1, barba 0,6, cejas 0,22, pestañas 0);
+// aMat.y = 1 en las capas de abajo (opacas: la textura no les abre huecos).
 // ──────────────────────────────────────────────────────────────
 
 import * as THREE from "three"
@@ -121,24 +123,32 @@ function pelo(lote: Lote, cu: Cuerpo, ph: PeloR, filas: FilaCabeza[], sem: numbe
   const centros = filas.map((f) => (f.radial ? cab.c : new THREE.Vector3(0, f.P[0].y, cab.c.z - 0.03)))
   // El pelo es una masa suave: basta una columna de cada dos (al frente, donde la
   // grilla es más densa, también) y una fila de cada dos debajo de la coronilla.
-  const cols = Array.from({ length: M }, (_, j) => j).filter((j) => j % 2 === 0)
-  const MS = cols.length
-  const filasP = Array.from({ length: nF }, (_, i) => i).filter((i) => i === nF - 1 || i % 2 === 0 || (filas[i].radial && filas[i].l[M >> 1].y > 0.075))
+  const cols2 = Array.from({ length: M }, (_, j) => j).filter((j) => j % 2 === 0)
+  // La capa de adentro (oscura, lisa, tapada por las otras): una columna de cada tres.
+  const cols3 = Array.from({ length: M }, (_, j) => j).filter((j) => j % 3 === 0)
+  // (arriba, alrededor de la coronilla, todas las filas: ahí se abren las hebras)
+  const filasP = Array.from({ length: nF }, (_, i) => i).filter((i) => i === nF - 1 || i % 2 === 0 || (filas[i].radial && filas[i].l[M >> 1].y > 0.095))
   for (let c = 0; c < nc; c++) {
     const fr = capas[c]
     const interior = c === 0
     const exterior = c === nc - 1
+    const medio = !interior && !exterior
+    const cols = interior ? cols3 : cols2
+    const MS = cols.length
     const ids: number[][] = []
     const mk: number[][] = []
+    const gk: number[][] = []
     const i0 = lote.nIdx
     for (const i of filasP) {
       const f = filas[i]
       const fila: number[] = []
       const fm: number[] = []
+      const fg: number[] = []
       for (const j of cols) {
         const l = f.l[j]
         const m = masc[i][j]
         const g = gros[i][j]
+        fg.push(g)
         const n = f.n[j]
         const d = g * fr + 0.0011 + 0.0007 * c
         let x = l.x + n.x * d
@@ -163,6 +173,8 @@ function pelo(lote: Lote, cu: Cuerpo, ph: PeloR, filas: FilaCabeza[], sem: numbe
         const th = Math.atan2(_l.dot(eB), _l.dot(eA))
         const u = (th / (Math.PI * 2)) * VUELTA + 0.37 * c
         const v = dist * 9 + 0.21 * c
+        // En el remolino las hebras salen para todos lados (y la UV se comprime): sin brillo.
+        const remol = suave(0.012, 0.045, dist)
         // Color: raíz y capa de abajo más oscuras, puntas más claras; canas por mechón.
         const ruido = 0.5 + 0.5 * Math.sin(ANG[j] * 13 + sem + l.y * 90)
         let col = interior ? cBajo : exterior ? mezclarRGBA(cPelo, cPuntas, 0.55) : cPelo
@@ -173,21 +185,32 @@ function pelo(lote: Lote, cu: Cuerpo, ph: PeloR, filas: FilaCabeza[], sem: numbe
         // (las de afuera, casi opacas: con alfa 1,3 la silueta se deshilachaba en
         // tiras sueltas; la hebra se lee en el color de la textura, no en huecos.
         // En el borde —la línea del pelo— siguen sueltas.)
-        let a = interior ? suave(0.04, 0.55, m) * (rizado ? 8 : 2.4) : suave(0.0, 0.45, m) * (exterior ? 2.05 : 2.3) * lerp(0.62, 1, suave(0.45, 0.9, m))
+        // Borde: el alfa sube despacio (de m = 0,02 a 0,8) y las hebras de la
+        // textura, cada una con su alfa, terminan a distinta altura: la línea del
+        // pelo queda deshilachada, no recortada en la escalera de la grilla. La capa
+        // oscura de adentro empieza más adentro (si no, dibujaba ella el borde duro).
+        let a = interior ? suave(0.2, 0.7, m) * (rizado ? 8 : 2.4) : suave(0.02, 0.8, m) * (exterior ? 2.05 : 2.3) * lerp(0.7, 1, suave(0.5, 0.95, m))
         // Pelo liso peinado (laca, gel): las capas de afuera tapan como una masa;
         // solo el borde con la piel sigue en hebras.
         if (!interior && ph.liso > 0) a *= 1 + 1.6 * ph.liso * suave(0.35, 0.8, m)
-        fila.push(lote.v(_v.x, _v.y, _v.z, u, v, [col[0] * kk, col[1] * kk, col[2] * kk, a], cu.pesosCabeza(l), [interior ? 0.6 : 0.5, 0]))
+        fila.push(lote.v(_v.x, _v.y, _v.z, u, v, [col[0] * kk, col[1] * kk, col[2] * kk, a], cu.pesosCabeza(l), [(interior ? 0.55 : 1) * remol, interior ? 1 : 0]))
         fm.push(m)
       }
       ids.push(fila)
       mk.push(fm)
+      gk.push(fg)
     }
     lote.tiras(ids, true, {
       centros: filasP.map((i) => centros[i]),
       emitir: (i, j) => {
         const j2 = (j + 1) % MS
-        return Math.max(mk[i][j], mk[i][j2], mk[i + 1][j], mk[i + 1][j2]) > 0.03
+        // (la capa de adentro es transparente con m < 0,2: ahí no se emite)
+        if (Math.max(mk[i][j], mk[i][j2], mk[i + 1][j], mk[i + 1][j2]) <= (interior ? 0.2 : 0.03)) return false
+        // La capa del medio solo donde el pelo tiene grosor (> 11 mm): en lo fino
+        // quedaba a 2–3 mm de las otras dos y no se veía (los mechones de la
+        // textura ya dan la profundidad). Ahorra ~1.000 triángulos en los de pelo corto.
+        if (medio) return Math.max(gk[i][j], gk[i][j2], gk[i + 1][j], gk[i + 1][j2]) > 0.011
+        return true
       },
     })
     lote.costuraU(i0, VUELTA)
@@ -307,20 +330,22 @@ function mechones(lote: Lote, cu: Cuerpo, ph: PeloR, sem: number, op: { holguraE
         }
       }
       // Ondas a lo largo.
-      const onda = ph.ondas * 0.007 * Math.sin(t * Math.PI * 3.2 + fase) * suave(0.0, 0.25, t)
+      // (onda de ~1 cm: con 7 mm los mechones caían como tiras paralelas)
+      const onda = ph.ondas * 0.013 * Math.sin(t * Math.PI * 3.2 + fase) * suave(0.0, 0.25, t)
       px += -sa * onda
       pz += ca * onda
       const fila: number[] = []
       const w = ancho * (1 - 0.25 * t) * 0.5
       const pw: Pesos = t < 0.25 ? [[H.cabeza, 1 - t * 2], [H.cuello, t * 2]] : [[H.cabeza, Math.max(0, 0.4 - t * 0.5)], [H.cuello, 0.35], [H.pecho, 0.25 + t * 0.6]]
-      const alfa = (1 - 0.75 * suave(0.7, 1, t)) * suave(0, 0.14, t) * (capa ? 1.35 : 1.8)
+      // Nace de a poco bajo la capa de la nuca (con 0,14 se veía el escalón donde empieza).
+      const alfa = (1 - 0.75 * suave(0.7, 1, t)) * suave(0, 0.24, t) * (capa ? 1.35 : 1.8)
       const col = mezclarRGBA(capa ? cPelo : cBajo, cPuntas, t * 0.6)
       const kk = 0.85 + 0.15 * rnd(r, 4)
       for (let k = -1; k <= 1; k++) {
         // A lo ancho: tangente horizontal a la dirección; los bordes se curvan hacia el cuerpo.
         const bx = -sa * w * k - ca * Math.abs(k) * 0.004
         const bz = ca * w * k - sa * Math.abs(k) * 0.004
-        fila.push(lote.v(px + bx, y, pz + bz, (k + 1) * 0.16 + r * 0.37, t * largo * 9, [col[0] * kk, col[1] * kk, col[2] * kk, alfa], pw, [0.5, 0]))
+        fila.push(lote.v(px + bx, y, pz + bz, (k + 1) * 0.16 + r * 0.37, t * largo * 9, [col[0] * kk, col[1] * kk, col[2] * kk, alfa], pw, [1, 0]))
       }
       ids.push(fila)
       centros.push(new THREE.Vector3(px - ca, y, pz - sa))
@@ -346,7 +371,7 @@ function mono(lote: Lote, cu: Cuerpo, ph: PeloR) {
     for (let k = 0; k < n; k++) {
       const g = (k / n) * Math.PI * 2
       cab.aAvatar(base.x + Math.cos(g) * m.radio * rr, base.y + h * m.alto, base.z + Math.sin(g) * m.radio * rr, _v)
-      fila.push(lote.v(_v.x, _v.y, _v.z, (k / n) * 2, h * 2, [c[0] * 0.9, c[1] * 0.9, c[2] * 0.9, 2.4], [[H.cabeza, 1]], [0.5, 0]))
+      fila.push(lote.v(_v.x, _v.y, _v.z, (k / n) * 2, h * 2, [c[0] * 0.9, c[1] * 0.9, c[2] * 0.9, 2.4], [[H.cabeza, 1]], [0.9, 1]))
     }
     ids.push(fila)
     centros.push(cab.aAvatar(base.x, base.y + h * m.alto, base.z, new THREE.Vector3()))
@@ -385,11 +410,14 @@ function barba(lote: Lote, cu: Cuerpo, b: BarbaR, filas: FilaCabeza[], sem: numb
   const centros = filas.map((f) => (f.radial ? cab.c : new THREE.Vector3(0, f.P[0].y, cab.c.z - 0.03)))
   // Una fila y una columna de cada dos (unos 7 mm): la barba es una masa suave.
   const filasB = Array.from({ length: nF }, (_, i) => i).filter((i) => i % 2 === 0 || i === nF - 1)
-  const colsB = Array.from({ length: M }, (_, j) => j).filter((j) => j % 2 === 0)
-  const MB = colsB.length
+  const colsB2 = Array.from({ length: M }, (_, j) => j).filter((j) => j % 2 === 0)
+  // La capa de adentro, tapada por la de afuera: una columna de cada tres.
+  const colsB3 = Array.from({ length: M }, (_, j) => j).filter((j) => j % 3 === 0)
   const capas = [0.45, 1]
   for (let c = 0; c < capas.length; c++) {
     const interior = c === 0
+    const colsB = interior ? colsB3 : colsB2
+    const MB = colsB.length
     const ids: number[][] = []
     const mk: number[][] = []
     for (const i of filasB) {
@@ -413,7 +441,10 @@ function barba(lote: Lote, cu: Cuerpo, b: BarbaR, filas: FilaCabeza[], sem: numb
         let a = interior ? suave(0.15, 0.6, m) * (rizado ? 8 : 2) * b.densidad : suave(0.02, 0.55, m) * lerp(0.95, 1.7, suave(0.5, 0.95, m)) * b.densidad
         // Barba recortada y tupida: la capa de afuera es una masa (el borde sigue en hebras).
         if (!interior && b.liso) a *= 1 + 1.4 * b.liso * suave(0.5, 0.9, m)
-        fila.push(lote.v(_v.x, _v.y, _v.z, ANG[j] * (rizado ? 1.4 : 4) + c * 0.31, l.y * (rizado ? 18 : 12), [col[0], col[1], col[2], a], cu.pesosCabeza(l), [0.62, 0]))
+        // Hebras que ondulan (la barba no es un peine): la u se corre con la altura.
+        // (onda larga, de varias filas: con una más corta que la grilla salían espigas en zigzag)
+        const ondaB = rizado ? 0 : (0.08 + 0.14 * b.rizo) * Math.sin(l.y * 70 + ANG[j] * 2 + sem)
+        fila.push(lote.v(_v.x, _v.y, _v.z, ANG[j] * (rizado ? 1.4 : 2.2) + c * 0.31 + ondaB, l.y * (rizado ? 18 : 9), [col[0], col[1], col[2], a], cu.pesosCabeza(l), [interior ? 0.35 : 0.6, interior ? 1 : 0]))
       }
       ids.push(fila)
       mk.push(fm)
@@ -422,7 +453,8 @@ function barba(lote: Lote, cu: Cuerpo, b: BarbaR, filas: FilaCabeza[], sem: numb
       centros: filasB.map((i) => centros[i]),
       emitir: (i, j) => {
         const j2 = (j + 1) % MB
-        return Math.max(mk[i][j], mk[i][j2], mk[i + 1][j], mk[i + 1][j2]) > 0.04
+        // (la de adentro es transparente con m < 0,15)
+        return Math.max(mk[i][j], mk[i][j2], mk[i + 1][j], mk[i + 1][j2]) > (interior ? 0.15 : 0.04)
       },
     })
     lote.pieza()
@@ -434,8 +466,8 @@ function barba(lote: Lote, cu: Cuerpo, b: BarbaR, filas: FilaCabeza[], sem: numb
 /** Barba que cuelga del mentón: se angosta hacia la punta; partida, se abre en dos. */
 function mechonBarba(lote: Lote, cu: Cuerpo, b: BarbaR, c: RGBA, sem: number) {
   const cab = cu.cab
-  const filas = 10
-  const cols = 18
+  const filas = 8
+  const cols = 12
   const ids: number[][] = []
   const centros: THREE.Vector3[] = []
   const y0 = cab.yMenton + 0.014
@@ -463,7 +495,7 @@ function mechonBarba(lote: Lote, cu: Cuerpo, b: BarbaR, c: RGBA, sem: number) {
       const pw: Pesos = t < 0.25 ? [[H.mandibula, 0.65], [H.cabeza, 0.35]] : [[H.mandibula, 0.4 * (1 - t)], [H.cuello, 0.35], [H.pecho, 0.25 + 0.4 * t]]
       const k2 = 0.85 + 0.15 * Math.sin(g * 9 + t * 11)
       const col = conCanas(c, b.canas, 0.5 + 0.5 * Math.sin(g * 7 + sem))
-      fila.push(lote.v(_v.x, _v.y, _v.z, g * 0.8, t * 2.4, [col[0] * k2, col[1] * k2, col[2] * k2, (t > 0.85 ? 1 - (t - 0.85) * 5 : 1) * 1.3], pw, [0.62, 0]))
+      fila.push(lote.v(_v.x, _v.y, _v.z, g * 0.8, t * 2.4, [col[0] * k2, col[1] * k2, col[2] * k2, (t > 0.85 ? 1 - (t - 0.85) * 5 : 1) * 1.3], pw, [0.6, 0]))
     }
     ids.push(fila)
     centros.push(cab.aAvatar(0, cy / cols, cz / cols, new THREE.Vector3()))
@@ -546,7 +578,7 @@ function cejas(lote: Lote, cu: Cuerpo) {
           cab.aAvatar(px + _n.x * g, py + _n.y * g + cp.levanta * 0.3 * (w + 1), pz + _n.z * g, _v)
           const a = (1.05 - Math.abs(w) * 0.55) * suave(1.04, 0.74, t) * suave(-0.1, 0.14, t) * cp.alfa * (0.35 + 0.8 * ce.densidad)
           // Hebras a lo largo de la ceja, inclinadas hacia afuera y arriba.
-          fila.push(lote.v(_v.x, _v.y, _v.z, w * 0.22 + t * 0.35 + c * 0.41, t * 1.4 + w * 0.12, [cC[0], cC[1], cC[2], a], [[H.cabeza, 1]], [0.62, 0]))
+          fila.push(lote.v(_v.x, _v.y, _v.z, w * 0.22 + t * 0.35 + c * 0.41, t * 1.4 + w * 0.12, [cC[0], cC[1], cC[2], a * 1.4], [[H.cabeza, 1]], [0.22, 0]))
         }
         ids.push(fila)
       }
@@ -579,7 +611,7 @@ function pestanas(lote: Lote, cu: Cuerpo) {
         const vv = v + r * 0.32 * (0.6 + 0.4 * sp)
         const ux = lado * u
         cab.aAvatar(lado * o.x + Math.sin(ux) * Math.cos(vv) * R, o.y + Math.sin(vv) * R, o.z + Math.cos(ux) * Math.cos(vv) * R, _v)
-        fila.push(lote.v(_v.x, _v.y, _v.z, k / cols, r, [cP[0], cP[1], cP[2], r ? 0.55 : 1], [[H[`parpado${L}`], 1]], [0.5, 0]))
+        fila.push(lote.v(_v.x, _v.y, _v.z, k / cols, r, [cP[0], cP[1], cP[2], r ? 0.8 : 1.5], [[H[`parpado${L}`], 1]], [0, 0]))
       }
       idsP.push(fila)
     }

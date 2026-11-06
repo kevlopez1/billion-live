@@ -130,94 +130,394 @@ export function texTela(tipo: Tejido): THREE.Texture {
 }
 
 /**
- * Hebras de pelo: gris (el color lo da el material) y alfa por hebra. Las
- * hebras corren a lo largo de v. El alfa de cada hebra es distinto, así el
- * borde que se desvanece con el color del vértice queda deshilachado.
+ * Telas por capa (una sola textura de 16 capas, compartida por toda la ropa).
+ * Cada vértice de la ropa dice su tela (atributo aArr.x) y el shader elige la
+ * capa: así un traje, su camisa, la corbata de seda y los zapatos de cuero
+ * van en UNA malla y UN material, cada uno con su trama. Por texel: R, G =
+ * normal (espacio tangente); B = albedo (×2: 0,5 = sin cambio); A = rugosidad (×2).
+ * Cada capa cubre su tamaño físico (TELA_REPETIR, por metro) para que la trama
+ * tenga el paso real del tejido: sarga de lana 1,8 mm, mezclilla 2,6 mm, punto 4,5 mm.
  */
-export function texPelo(): THREE.Texture {
-  return una("pelo", () => {
-    const n = 256
-    const rnd = azar(97)
-    const brillo = new Float32Array(n)
-    const alfa = new Float32Array(n)
-    const fase = new Float32Array(n)
-    for (let x = 0; x < n; x++) {
-      // Fase propia de cada hebra: sin el patrón en zigzag de una fase lineal.
-      fase[x] = rnd() * Math.PI * 2
-      brillo[x] = 0.72 + rnd() * 0.28
-      // Alfa por hebra repartido: con alfa del vértice 1 quedan huecos entre hebras
-      // (las capas de afuera se ven sueltas); con alfa > 2 la capa es opaca.
-      alfa[x] = 0.22 + rnd() * 0.78
-    }
-    const largo = fbm(n, 64, 3, 3, 101)
-    const px = new Uint8ClampedArray(n * n * 4)
-    for (let y = 0; y < n; y++) {
-      for (let x = 0; x < n; x++) {
-        const i = y * n + x
-        // Hebra que ondula un poco a lo largo.
-        const xo = (x + Math.round(Math.sin((y / n) * Math.PI * 4 + fase[x]) * 1.2) + n) % n
-        const b = brillo[xo] * (0.75 + 0.25 * largo[i])
-        const a = alfa[xo] * (0.72 + 0.28 * largo[i])
-        const o = i * 4
-        px[o] = px[o + 1] = px[o + 2] = Math.min(255, b * 255)
-        px[o + 3] = Math.min(255, a * 255)
+export const TELA = {
+  lana: 0,
+  popelina: 1,
+  jersey: 2,
+  punto: 3,
+  mezclilla: 4,
+  lino: 5,
+  fieltro: 6,
+  seda: 7,
+  cuero: 8,
+  malla: 9,
+  acanalado: 10,
+  suela: 11,
+  liso: 12,
+  macro: 13,
+  charol: 14,
+  gamuza: 15,
+} as const
+export type TelaId = (typeof TELA)[keyof typeof TELA]
+/** Repeticiones por metro de cada capa (las UV de la ropa van en metros). */
+export const TELA_REPETIR = [34.7, 50, 45, 27.8, 24, 24, 16.7, 60, 25, 38, 39, 33, 1, 2, 1, 33]
+
+export function texTelas(): THREE.DataArrayTexture {
+  return una("telas", () => {
+    // 128 px por capa: alcanza para el paso de cada trama (4 a 16 px por hilo) y se
+    // arma en ~1/4 del tiempo que a 256.
+    const n = 128
+    const capas = 16
+    const datos = new Uint8Array(n * n * 4 * capas)
+    const h = new Float32Array(n * n)
+    const alb = new Float32Array(n * n)
+    const rug = new Float32Array(n * n)
+    const ruido = fbm(n, 16, 16, 4, 171)
+    const fibra = fbm(n, 64, 8, 2, 173)
+    const fibraV = fbm(n, 8, 64, 2, 177)
+    const grueso = fbm(n, 4, 4, 4, 181)
+    const slubH = fbm(n, 6, 64, 2, 179)
+    const slubV = fbm(n, 64, 6, 2, 183)
+    const TAU = Math.PI * 2
+    const fr = (x: number) => x - Math.floor(x)
+    for (let c = 0; c < capas; c++) {
+      let fuerza = 1.6
+      for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+          const i = y * n + x
+          const u = x / n
+          const v = y / n
+          let hv = 0.5
+          let a = 1
+          let r = 1
+          switch (c) {
+            case TELA.lana: {
+              // Sarga 2/2: diagonales de 45° (16 por capa = 1,8 mm), hilo con fibra y un leve jaspeado.
+              const d = fr((u + v) * 16)
+              const cresta = 0.5 - 0.5 * Math.cos(d * TAU)
+              hv = 0.5 + 0.3 * (cresta - 0.5) + 0.2 * (fibra[i] - 0.5) + 0.15 * (ruido[i] - 0.5)
+              a = 1 + 0.05 * (cresta - 0.5) + 0.06 * (ruido[i] - 0.5) + 0.04 * (fibra[i] - 0.5)
+              r = 1 - 0.08 * (cresta - 0.5)
+              fuerza = 1.4
+              break
+            }
+            case TELA.popelina: {
+              // Popelina: trama invisible; quedan el arrugado fino y el brillo parejo del algodón.
+              hv = 0.5 + 0.35 * (ruido[i] - 0.5) + 0.15 * (fibra[i] - 0.5) 
+              a = 1 + 0.03 * (ruido[i] - 0.5)
+              r = 1 + 0.06 * (ruido[i] - 0.5)
+              fuerza = 0.9
+              break
+            }
+            case TELA.jersey: {
+              // Punto jersey: columnas de "V" de 1,1 mm (20 por capa), filas de 0,8 mm.
+              const cx = u * 20
+              const cy = v * 28
+              const fx = fr(cx) - 0.5
+              const fy = fr(cy + Math.abs(fx) * 0.8)
+              hv = 0.5 + 0.35 * Math.cos(fx * TAU) * (0.6 + 0.4 * Math.sin(fy * TAU)) + 0.2 * (ruido[i] - 0.5)
+              a = 1 + 0.04 * (ruido[i] - 0.5) - 0.05 * (0.5 - 0.5 * Math.cos(fx * TAU))
+              r = 1 + 0.05 * (ruido[i] - 0.5)
+              fuerza = 1.2
+              break
+            }
+            case TELA.punto: {
+              // Suéter: columnas de lazadas en V de 4,5 mm (8 por capa), 10 vueltas.
+              const cx = u * 8
+              const cy = v * 10
+              const k = Math.floor(cx)
+              const fx = fr(cx) - 0.5
+              // Cada lazada es una "V": dos hojas inclinadas que bajan hacia el centro de la columna.
+              const fy = fr(cy + Math.abs(fx) * 0.9)
+              const hoja = Math.sin(Math.PI * Math.min(1, Math.abs(fx) * 2.2)) // 0 en el centro y el borde
+              const lazo = Math.pow(Math.sin(Math.PI * fy), 0.7)
+              hv = 0.25 + 0.55 * hoja * lazo + 0.12 * (fibra[i] - 0.5) + 0.1 * ((k * 0.37) % 1 - 0.5) * 0
+              a = 0.86 + 0.18 * hoja * lazo + 0.06 * (grueso[i] - 0.5)
+              r = 1
+              fuerza = 2.6
+              break
+            }
+            case TELA.mezclilla: {
+              // Sarga 3/1 a 62°: el hilo índigo hace la diagonal; la trama blanca asoma en el surco.
+              const d = fr(u * 16 + v * 16 * 0.53 + 0.15 * (slubV[i] - 0.5))
+              const cresta = Math.pow(0.5 - 0.5 * Math.cos(d * TAU), 0.8)
+              hv = 0.5 + 0.4 * (cresta - 0.5) + 0.1 * (slubV[i] - 0.5) + 0.12 * (fibra[i] - 0.5) + 0.15 * (ruido[i] - 0.5)
+              // Surco = trama clara (+25 %), cresta = índigo; hilos de urdimbre irregulares (slub vertical).
+              a = 1 + 0.26 * (0.5 - cresta) + 0.12 * (slubV[i] - 0.5) + 0.1 * (ruido[i] - 0.5)
+              r = 1 + 0.06 * (0.5 - cresta)
+              fuerza = 1.8
+              break
+            }
+            case TELA.lino: {
+              // Tafetán irregular de 1,3 mm con hilos gruesos (slub) en las dos direcciones.
+              const ta = Math.sin(u * 32 * TAU + 2 * (slubH[i] - 0.5))
+              const tb = Math.sin(v * 32 * TAU + 2 * (slubV[i] - 0.5))
+              const gr = Math.max(0, slubH[i] - 0.62) * 3 + Math.max(0, slubV[i] - 0.62) * 3
+              hv = 0.5 + 0.2 * ta * tb + 0.35 * gr + 0.18 * (ruido[i] - 0.5)
+              a = 1 + 0.08 * gr - 0.04 * (1 - gr) * 0 + 0.05 * (grueso[i] - 0.5) + 0.03 * ta * tb
+              r = 1 + 0.05 * (ruido[i] - 0.5)
+              fuerza = 1.5
+              break
+            }
+            case TELA.fieltro: {
+              // Paño de lana grueso (mantos, capas, levita, fieltro del sombrero): borra difusa.
+              hv = 0.5 + 0.45 * (fibra[i] - 0.5) + 0.45 * (fibraV[i] - 0.5) + 0.3 * (ruido[i] - 0.5)
+              a = 1 + 0.07 * (grueso[i] - 0.5) + 0.04 * (fibra[i] - 0.5)
+              r = 1 + 0.06 * (ruido[i] - 0.5)
+              fuerza = 1.1
+              break
+            }
+            case TELA.seda: {
+              // Seda de corbata: sarga fina de 0,7 mm con hilos de brillo distinto.
+              const d = fr((u - v) * 24)
+              hv = 0.5 + 0.25 * Math.cos(d * TAU) + 0.08 * (fibra[i] - 0.5)
+              a = 1 + 0.05 * Math.cos(d * TAU)
+              r = 1 - 0.18 * (0.5 + 0.5 * Math.cos(d * TAU)) + 0.1
+              fuerza = 1.2
+              break
+            }
+            case TELA.cuero:
+            case TELA.gamuza: {
+              hv = ruido[i]
+              a = 1 + 0.05 * (ruido[i] - 0.5)
+              r = 1 + 0.25 * (ruido[i] - 0.5)
+              fuerza = 1.1
+              break
+            }
+            case TELA.malla: {
+              // Malla de camiseta deportiva: agujeros hexagonales de 2,2 mm (12 por capa).
+              const qx = u * 12
+              const qy = v * 12 * 1.1547
+              const fy0 = fr(qy) - 0.5
+              const fx0 = fr(qx + (Math.floor(qy) % 2) * 0.5) - 0.5
+              const dd = Math.hypot(fx0, fy0 * 0.9)
+              const agujero = 1 - Math.min(1, Math.max(0, (dd - 0.22) / 0.12))
+              hv = 0.6 - 0.45 * agujero + 0.1 * (fibra[i] - 0.5)
+              a = 1 - 0.22 * agujero
+              r = 1 + 0.1 * agujero
+              fuerza = 1.8
+              break
+            }
+            case TELA.acanalado: {
+              // Canalé 2x2: costillas verticales de 3,2 mm (8 por capa).
+              const fx = fr(u * 8)
+              const cost = Math.pow(Math.sin(Math.PI * fx), 0.6)
+              hv = 0.2 + 0.65 * cost + 0.1 * (fibraV[i] - 0.5) + 0.06 * Math.sin(v * 40 * TAU) * cost
+              a = 0.86 + 0.18 * cost
+              fuerza = 2.4
+              break
+            }
+            case TELA.suela: {
+              hv = 0.5 + 0.5 * (fibra[i] - 0.5) + 0.3 * (ruido[i] - 0.5)
+              a = 1 + 0.04 * (ruido[i] - 0.5)
+              fuerza = 0.8
+              break
+            }
+            case TELA.macro: {
+              // Variación grande (50 cm): la tela no es un degradado perfecto.
+              hv = grueso[i]
+              a = 1 + 0.08 * (grueso[i] - 0.5) + 0.04 * (ruido[i] - 0.5)
+              r = 1 + 0.12 * (ruido[i] - 0.5)
+              fuerza = 2.5
+              break
+            }
+            default:
+              hv = 0.5
+          }
+          h[i] = hv
+          alb[i] = a
+          rug[i] = r
+        }
+      }
+      if (c === TELA.cuero || c === TELA.gamuza) {
+        // Grano del cuero: celdas de ~1,5 mm con surcos; la gamuza, un pelo corto parejo.
+        const { borde } = celdas(n, c === TELA.cuero ? 26 : 64, 83 + c)
+        for (let i = 0; i < h.length; i++) h[i] = c === TELA.cuero ? h[i] * 0.35 + Math.min(1, borde[i] * 4) * 0.65 : 0.5 + 0.5 * (fibra[i] - 0.5) + 0.3 * (fibraV[i] - 0.5)
+        if (c === TELA.gamuza) for (let i = 0; i < h.length; i++) rug[i] = 1 + 0.08 * (ruido[i] - 0.5)
+      }
+      const nor = normalDesdeAltura(n, h, c === TELA.liso || c === TELA.charol ? 0 : fuerza)
+      const o0 = c * n * n * 4
+      for (let i = 0; i < n * n; i++) {
+        datos[o0 + i * 4] = nor[i * 4]
+        // (sin flipY: la fila crece con v, al revés que en el lienzo)
+        datos[o0 + i * 4 + 1] = 255 - nor[i * 4 + 1]
+        datos[o0 + i * 4 + 2] = Math.max(0, Math.min(255, Math.round((alb[i] / 2) * 255)))
+        datos[o0 + i * 4 + 3] = Math.max(0, Math.min(255, Math.round((rug[i] / 2) * 255)))
       }
     }
-    const t = textura(n, px, { color: true, anisotropia: ANISO })
+    const t = new THREE.DataArrayTexture(datos, n, n, capas)
+    t.format = THREE.RGBAFormat
+    t.type = THREE.UnsignedByteType
+    t.wrapS = THREE.RepeatWrapping
+    t.wrapT = THREE.RepeatWrapping
+    t.minFilter = THREE.LinearMipmapLinearFilter
+    t.magFilter = THREE.LinearFilter
+    t.generateMipmaps = true
+    t.anisotropy = ANISO
+    t.colorSpace = THREE.NoColorSpace
+    t.needsUpdate = true
     return t
   })
 }
 
 /**
- * Pelo rizado: bucles apretados (discos con su brillo y una espiral oscura)
- * sobre un fondo casi transparente. Con las capas de afuera casi opacas, la
- * silueta queda hecha de bucles —no de hebras sueltas— y el interior de la
- * mata se lee como rizos (Marco Aurelio, Sócrates, Karp, Amodei).
- * Se repite en u y v (sin costuras).
+ * Hebras de pelo: gris (el color lo da el material) y alfa por hebra, agrupadas
+ * en MECHONES de 3–8 mm (12–30 hebras de la textura): cada mechón tiene su
+ * brillo, su onda y un perfil (el centro más claro y tupido, los bordes más
+ * oscuros y ralos), así entre mechón y mechón queda una sombra y el pelo se lee
+ * con volumen y no como un cepillado parejo. Las hebras corren a lo largo de v.
+ * El brillo de cada mechón también corre la banda del reflejo anisotrópico
+ * (matPelo), como en el pelo real, donde cada mechón brilla a otra altura.
  */
-export function texRizos(): THREE.Texture {
-  return una("rizos", () => {
+export function texPelo(): THREE.Texture {
+  return una("pelo", () => {
     const n = 256
-    const rnd = azar(211)
-    const L = new Float32Array(n * n).fill(0.45)
-    const A = new Float32Array(n * n).fill(0.14)
-    const hondo = new Float32Array(n * n).fill(-1)
-    for (let c = 0; c < 240; c++) {
-      const cx = rnd() * n
-      const cy = rnd() * n
-      const r = 8 + rnd() * 6
-      const fase = rnd() * 6.28
-      const z0 = rnd()
-      for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
-        for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {
-          const d = Math.hypot(dx, dy) / r
-          if (d > 1) continue
-          const x = (Math.floor(cx + dx) % n + n) % n
-          const y = (Math.floor(cy + dy) % n + n) % n
-          const i = y * n + x
-          // Cada bucle tapa a los de abajo (el de "z" mayor queda arriba).
-          const zz = z0 + (1 - d) * 0.6
-          if (zz < hondo[i]) continue
-          hondo[i] = zz
-          // Bola iluminada desde arriba a la izquierda, con una espiral más oscura.
-          const nz = Math.sqrt(Math.max(0, 1 - d * d))
-          const luz = Math.max(0, (-dx / r) * 0.45 + (-dy / r) * 0.55 + nz * 0.7)
-          const espiral = 0.86 + 0.14 * Math.cos(Math.atan2(dy, dx) * 2 + d * 9 + fase)
-          L[i] = (0.66 + 0.34 * luz) * espiral * (0.85 + 0.15 * (1 - d))
-          A[i] = d < 0.82 ? 1 : 1 - (d - 0.82) / 0.18
-        }
+    const rnd = azar(97)
+    const mech = new Int16Array(n)
+    const pos = new Float32Array(n)
+    const mb: number[] = []
+    const mf: number[] = []
+    const ma: number[] = []
+    let x = 0
+    while (x < n) {
+      let w = 12 + Math.floor(rnd() * 19)
+      if (n - x - w < 12) w = n - x
+      for (let k = 0; k < w; k++) {
+        mech[x + k] = mb.length
+        pos[x + k] = (k + 0.5) / w
+      }
+      mb.push(0.86 + rnd() * 0.14)
+      mf.push(rnd() * Math.PI * 2)
+      ma.push(0.6 + rnd() * 2.2)
+      x += w
+    }
+    const brillo = new Float32Array(n)
+    const alfa = new Float32Array(n)
+    const fase = new Float32Array(n)
+    for (let i = 0; i < n; i++) {
+      fase[i] = rnd() * Math.PI * 2
+      brillo[i] = 0.8 + rnd() * 0.2
+      alfa[i] = 0.3 + rnd() * 0.7
+    }
+    const largo = fbm(n, 64, 3, 3, 101)
+    const px = new Uint8ClampedArray(n * n * 4)
+    for (let y = 0; y < n; y++) {
+      const fy = (y / n) * Math.PI * 2
+      for (let x = 0; x < n; x++) {
+        const i = y * n + x
+        // El mechón ondula entero (periodo entero: sin costura en v) y cada hebra un poco más.
+        const m0 = mech[x]
+        const xm = (x + Math.round(Math.sin(fy * 2 + mf[m0]) * ma[m0]) + n) % n
+        const xo = (xm + Math.round(Math.sin(fy * 2 + fase[xm]) * 0.8) + n) % n
+        const m = mech[xo]
+        const perfil = Math.pow(Math.sin(Math.PI * pos[xo]), 0.6)
+        const b = mb[m] * (0.76 + 0.24 * perfil) * brillo[xo] * (0.84 + 0.16 * largo[i])
+        const a = alfa[xo] * (0.35 + 0.65 * perfil) * (0.78 + 0.3 * largo[i])
+        const o = i * 4
+        px[o] = px[o + 1] = px[o + 2] = Math.min(255, b * 255)
+        px[o + 3] = Math.min(255, a * 255)
       }
     }
-    const px = new Uint8ClampedArray(n * n * 4)
-    for (let i = 0; i < n * n; i++) {
-      px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = Math.min(255, L[i] * 255)
-      px[i * 4 + 3] = Math.min(255, A[i] * 255)
-    }
-    const t = textura(n, px, { color: true, anisotropia: ANISO })
-    // Las UV del pelo dan ~7 x 11 cm por vuelta de textura: así cada bucle mide ~1,5–2 cm.
-    t.repeat.set(0.4, 0.55)
-    return t
+    return textura(n, px, { color: true, anisotropia: ANISO })
   })
+}
+
+/**
+ * Pelo rizado: rizos en forma de C y de O (tubos de hebras que giran), uno
+ * encima de otro, sobre un fondo casi transparente. Cada rizo tiene volumen
+ * (el centro del tubo más claro), hebras que corren a lo largo del giro y un
+ * hueco por el que se ve la capa oscura de abajo. Con las capas de afuera casi
+ * opacas, la silueta queda hecha de rizos (Amodei).
+ * La dirección de la hebra en cada píxel va en una segunda textura
+ * (texRizosDir: rg = dirección en u, v): con ella el reflejo anisotrópico sigue
+ * el giro de cada rizo. Se repite en u y v (sin costuras).
+ */
+function rizosDatos(): { col: THREE.Texture; dir: THREE.Texture } {
+  const n = 256
+  const rnd = azar(211)
+  const L = new Float32Array(n * n).fill(0.4)
+  const A = new Float32Array(n * n).fill(0.1)
+  const DX = new Float32Array(n * n).fill(0)
+  const DY = new Float32Array(n * n).fill(1)
+  const hondo = new Float32Array(n * n).fill(-1)
+  for (let c = 0; c < 900; c++) {
+    const cx = rnd() * n
+    const cy = rnd() * n
+    const r = 5.5 + rnd() * 5
+    const a0 = rnd() * Math.PI * 2
+    // Arco: de una C abierta a una O casi cerrada; elipse girada (ningún rizo es un círculo).
+    const tramo = 3.6 + rnd() * 2.6
+    const fase = rnd() * 6.28
+    const z0 = rnd()
+    const giro = rnd() < 0.5 ? 1 : -1
+    const rot = rnd() * Math.PI
+    const cr = Math.cos(rot)
+    const sr = Math.sin(rot)
+    const asp = 0.65 + rnd() * 0.5
+    const tono = 0.78 + rnd() * 0.22
+    const R = Math.ceil(r * 1.2)
+    for (let dy = -R; dy <= R; dy++) {
+      for (let dx = -R; dx <= R; dx++) {
+        // Coordenadas del rizo (girado y achatado).
+        const lx = dx * cr + dy * sr
+        const ly = (-dx * sr + dy * cr) / asp
+        const d = Math.hypot(lx, ly) / r
+        if (d > 1 || d < 0.3) continue
+        let ang = Math.atan2(ly, lx) - a0
+        ang = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)
+        if (ang > tramo) continue
+        // Puntas del arco afinadas.
+        const punta = Math.min(1, ang / 0.7, (tramo - ang) / 0.5)
+        const w = (d - 0.3) / 0.7
+        const tubo = Math.sin(Math.PI * w)
+        if (tubo < 1 - punta) continue
+        const x = (Math.floor(cx + dx) % n + n) % n
+        const y = (Math.floor(cy + dy) % n + n) % n
+        const i = y * n + x
+        // El tubo más alto tapa a los de abajo.
+        const zz = z0 + tubo * 0.35
+        if (zz < hondo[i]) continue
+        hondo[i] = zz
+        // Luz de arriba sobre el tubo, hebras a lo largo del giro.
+        const k = Math.cos(Math.PI * w) / (d * r + 1e-6)
+        const luz = 0.5 + 0.5 * Math.max(-1, Math.min(1, -dy * k * 0.6 - dx * k * 0.25 + tubo * 0.6))
+        const hebra = 0.86 + 0.14 * Math.sin(d * r * 2.6 + fase)
+        L[i] = (0.62 + 0.38 * luz) * (0.72 + 0.28 * tubo) * hebra * tono
+        A[i] = Math.min(1, tubo * 2.2) * Math.min(1, punta * 1.5)
+        // Tangente al giro (de vuelta al lienzo) en u y v (la fila 0 del lienzo es v = 1: la y se invierte).
+        const tx = -ly
+        const ty = lx * asp
+        const gx = tx * cr - ty * sr
+        const gy = tx * sr + ty * cr
+        const t = Math.hypot(gx, gy) + 1e-6
+        DX[i] = (gx / t) * giro
+        DY[i] = (-gy / t) * giro
+      }
+    }
+  }
+  const px = new Uint8ClampedArray(n * n * 4)
+  const pd = new Uint8ClampedArray(n * n * 4)
+  for (let i = 0; i < n * n; i++) {
+    px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = Math.min(255, L[i] * 255)
+    px[i * 4 + 3] = Math.min(255, A[i] * 255)
+    pd[i * 4] = Math.round((DX[i] * 0.5 + 0.5) * 255)
+    pd[i * 4 + 1] = Math.round((DY[i] * 0.5 + 0.5) * 255)
+    pd[i * 4 + 2] = 128
+    pd[i * 4 + 3] = 255
+  }
+  const col = textura(n, px, { color: true, anisotropia: ANISO })
+  const dir = textura(n, pd, { color: false, anisotropia: ANISO })
+  // Las UV del pelo dan ~7 x 11 cm por vuelta de textura: así cada rizo mide ~1,5–2 cm.
+  col.repeat.set(0.4, 0.55)
+  dir.repeat.set(0.4, 0.55)
+  return { col, dir }
+}
+
+let rizosHechos: { col: THREE.Texture; dir: THREE.Texture } | null = null
+export function texRizos(): THREE.Texture {
+  return una("rizos", () => (rizosHechos ??= rizosDatos()).col)
+}
+/** Dirección de la hebra en cada rizo (rg en 0..1 = -1..1 en u y v), alineada con texRizos. */
+export function texRizosDir(): THREE.Texture {
+  return una("rizos-dir", () => (rizosHechos ??= rizosDatos()).dir)
 }
 
 /** Ojo: iris y esclerótica en coordenadas polares (fila = ángulo desde el frente). */

@@ -136,7 +136,7 @@ export function crearEstudio(contenedor: HTMLElement, salida: HTMLCanvasElement,
     const lista: Parameters<EscenaMotor["actualizarPersonajes"]>[0] = []
     for (const id of IDS) {
       const e = sim.pj[id]
-      if (e) lista.push({ id, pos: e.pos, rumbo: e.rumbo, estado: e.estado, visible: e.visible && !ocultos.has(id), velocidad: e.velocidad })
+      if (e) lista.push({ id, pos: e.pos, rumbo: e.rumbo, estado: e.estado, visible: e.visible && !ocultos.has(id), velocidad: e.velocidad, planta: e.planta })
     }
     escena.actualizarPersonajes(lista)
   }
