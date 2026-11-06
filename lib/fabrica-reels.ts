@@ -327,6 +327,43 @@ export const FABRICA_BASE: ContenidoFabrica = {
       ],
     },
     {
+      id: "edicion-estandar-2",
+      tipo: "referentes",
+      etiqueta: "Edición estándar nº2",
+      titulo: "Minimalista: subtítulos chicos, tachado rojo, pantalla negra que se escribe y botón",
+      refs: [
+        {
+          nombre: "Qué tomamos del reel",
+          grupo: "Cómo se hace",
+          url: "https://www.instagram.com/p/DfDhGKuMnrD/",
+          datos: "Reel de 41,8 s estudiado cuadro a cuadro (cada 0,25 s) · solo análisis interno",
+          imagenes: ["/fabrica/ia/std2-cuadros-v1.jpg"],
+          ancho: true,
+          puntos: [
+            "Subtítulos chicos y limpios: la frase entera (2–3 palabras) en blanco, letra sans seminegrita, a la altura del pecho; sin colores ni animaciones.",
+            "Gancho: frase chica arriba que va cambiando + 1–2 palabras grandes blancas; debajo una palabra tachada con una línea roja que se dibuja.",
+            "Pausa antes de la idea clave: pantalla negra y la frase se escribe sola, letra por letra, al ritmo de la voz.",
+            "Llamada a la acción: botón blanco en forma de píldora con texto negro que se abre desde el centro.",
+            "Color frío y apagado, cámara quieta y cortes secos a tomas de apoyo; cierre en negro con la frase escrita a máquina.",
+          ],
+          paraKev: "Herramienta: escena-guion.html?estilo=estandar2; efectos «gancho» (con tachar), «maquina» y «boton».",
+        },
+        {
+          nombre: "Prueba: video del dinero 2036",
+          grupo: "Cómo se ve",
+          url: "https://www.kevproject.world/fabrica",
+          datos: "Primera versión (v1)",
+          imagenes: ["/fabrica/ia/std2-cuadros-v1.jpg"],
+          ancho: true,
+          puntos: [
+            "«el dinero» grande con «sentido» tachado en rojo, pantalla negra «probablemente el dinero…», botón «comenta qué opinas» y cierre «y tú, ¿qué opinas?».",
+            "Revisión en las apps: nada tapado, margen y contraste bien, música 14 dB bajo la voz en el parlante del celular.",
+          ],
+          paraKev: "Archivo en el Drive «Pruebas edicion 100% Ai»: 1-dinero-2036-estandar2-v1.mp4.",
+        },
+      ],
+    },
+    {
       id: "edicion-ia",
       tipo: "referentes",
       etiqueta: "Edición especial con IA",
