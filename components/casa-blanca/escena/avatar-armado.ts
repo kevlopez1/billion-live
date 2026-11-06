@@ -21,6 +21,7 @@ import { conFicha, vestuarioDe } from "./avatar-fichas"
 import { matHolograma, matLente, matOjo, matPelo, matPiel, matRopa, matSombra } from "./avatar-materiales"
 import { texBalon, texPunto, texSombra } from "./avatar-texturas"
 import { esAndroide, matCejasLuz, matRopaAndroide, prepararAndroide, sombraRopaAndroide } from "./avatar-androide"
+import { cargarModelo3D, usarModelo } from "./avatar-modelo3d"
 
 let matBalon: THREE.MeshStandardMaterial | null = null
 let geoBalon: THREE.SphereGeometry | null = null
@@ -239,7 +240,33 @@ export function crearAvatarReal(original: Personaje): Avatar {
     if (particulas) particulas.visible = !on
   }
 
+  // Modelo 3D (TRELLIS): cuando llega, reemplaza a las mallas armadas y usa el mismo esqueleto.
+  let vivo = true
+  if (!holo && usarModelo(p.id)) {
+    cargarModelo3D(
+      p.id,
+      { alto: cu.H, esqueleto, huesos, cabezaY: cu.j.cabeza.y, chistera: ap.sombrero === "chistera", vivo: () => vivo },
+      ({ malla, extras, triangulos: t }) => {
+        for (const m of mallas) m.visible = false
+        if (balon) raiz.remove(balon) // el balón ya viene en la mano del modelo
+        raiz.add(malla)
+        propias.push(malla.geometry)
+        mallas.push(malla)
+        if (todas !== mallas) todas.push(malla)
+        for (const e of extras) e.traverse((o) => { if ((o as THREE.Mesh).isMesh) { const m = o as THREE.Mesh; propias.push(m.geometry); todas.push(m) } })
+        if (enRayos) {
+          enRayos = false
+          rayosX(true)
+        }
+        raiz.userData.triangulos = t
+        raiz.userData.dibujos = 1 + extras.length * 2 + 1
+        raiz.userData.modelo3d = true
+      },
+    )
+  }
+
   function dispose() {
+    vivo = false
     raiz.removeFromParent()
     for (const x of propias) x.dispose()
   }
