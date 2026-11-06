@@ -51,12 +51,13 @@ export type Centro = {
 
 const diasEntre = (a: number, b: number) => Math.max(0, Math.ceil((b - a) / DIA))
 
-export async function centro(ahora = Date.now()): Promise<Centro> {
+/**
+ * El estado del reto: lo recaudado (la base si la fila es confiable, si no
+ * RECAUDADO), el día y los ritmos. Son los números que ya muestra la home, así
+ * que es lo único de /centro que se puede leer sin clave (/api/reto).
+ */
+export async function reto(ahora = Date.now()): Promise<Centro["reto"]> {
   const admin = getAdminClient()
-  const avisos: string[] = []
-  if (!admin) avisos.push("Sin conexión a la base (falta SUPABASE_SERVICE_ROLE_KEY): trabajo y contenido salen sin datos guardados.")
-
-  // ── El reto ──
   let recaudado = RECAUDADO
   if (admin) {
     const { data } = await admin.from("global_metrics").select("net_worth, updated_at").limit(1).maybeSingle()
@@ -67,7 +68,7 @@ export async function centro(ahora = Date.now()): Promise<Centro> {
   const diasAlRecord = diasEntre(ahora, Date.parse(CHALLENGE_RECORD_DEADLINE + "T23:59:59"))
   const diasAlLimite = diasEntre(ahora, Date.parse(CHALLENGE_DEADLINE + "T23:59:59"))
   const falta = Math.max(0, CHALLENGE_TARGET - recaudado)
-  const reto: Centro["reto"] = {
+  return {
     recaudado,
     meta: CHALLENGE_TARGET,
     porcentaje: Math.min(100, (recaudado / CHALLENGE_TARGET) * 100),
@@ -78,6 +79,15 @@ export async function centro(ahora = Date.now()): Promise<Centro> {
     ritmoRecord: diasAlRecord ? falta / diasAlRecord : falta,
     ritmoLimite: diasAlLimite ? falta / diasAlLimite : falta,
   }
+}
+
+export async function centro(ahora = Date.now()): Promise<Centro> {
+  const admin = getAdminClient()
+  const avisos: string[] = []
+  if (!admin) avisos.push("Sin conexión a la base (falta SUPABASE_SERVICE_ROLE_KEY): trabajo y contenido salen sin datos guardados.")
+
+  // ── El reto ──
+  const retoHoy = await reto(ahora)
 
   const dinero = { comprobantes: CANTIDAD, totalBs: TOTAL_BS, entidades: ENTIDADES, desde: DESDE, hasta: HASTA }
 
@@ -154,7 +164,7 @@ export async function centro(ahora = Date.now()): Promise<Centro> {
   else avisos.push(`Instagram y Facebook sin conectar: falta ${m.falta} en Vercel.`)
 
   return {
-    reto,
+    reto: retoHoy,
     dinero,
     trabajo: { tareas, preguntas, manualPorDefinir },
     contenido,
