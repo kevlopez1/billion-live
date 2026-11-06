@@ -1041,7 +1041,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
           grupo: "Cómo se hace",
           url: "https://youtu.be/xLQFiIeP5Ys",
           datos: "Explicador: cámara + gráficos minimalistas a pantalla completa · solo cambia el color",
-          imagenes: ["/fabrica/ia/ia4-suyo-v1.jpg"],
+          imagenes: ["/fabrica/ia/ia4-cuadros-v1.jpg"],
           ancho: true,
           puntos: [
             "Mitad cámara, mitad gráfico: cada 2–4 frases corta a un gráfico a pantalla completa que muestra lo que se dice.",
