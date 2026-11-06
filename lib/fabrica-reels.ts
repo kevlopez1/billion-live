@@ -222,7 +222,8 @@ export const FABRICA_BASE: ContenidoFabrica = {
           imagenes: ["/fabrica/ia/est-d0-v3.png"],
           ancho: true,
           puntos: [
-            "1 Reconocer el video · 2 Lógica y mapa de emoción · 3 Mapa de tomas de apoyo · 4 Cortes limpios · 5 Elegir la música · 6 Ajustar al ritmo · 7 Estilo · 8 Revisar como espectador · 9 Simulación de retención · 10 Corregir zonas de riesgo · 11 Revisión final y a limpio · 12 Paquete de publicación · 13 Aprender de las métricas.",
+            "1 Reconocer el video · 2 Lógica y mapa de emoción · 3 Mapa de tomas de apoyo · 4 Cortes limpios · 5 Mapa de música · 6 Ajustar al ritmo · 7 Estilo · 8 Revisar como espectador · 9 Simulación de retención · 10 Corregir zonas de riesgo · 11 Revisión final y a limpio · 12 Paquete de publicación · 13 Aprender de las métricas.",
+            "Paso 5, mapa de música: una o dos canciones instrumentales (sin la voz del cantante, separada con Demucs); la segunda entra en el golpe principal. La música se mide y queda sola 12 dB por debajo de la voz.",
             "Cada video es distinto: en el paso 2 se decide qué va dónde en ESE video (gancho, subida, golpe, respiro, cierre) para que todo esté en armonía y genere emoción y retención.",
             "Paso 8, automático: ningún texto detrás de la persona puede quedar tapado más de un 30 % (si pasa, va adelante) y la voz se verifica sola, sin música, contra lo que tiene que decir.",
             "Paso 12: portada, texto, permiso de las personas que salen y la fuente de cada cita. Paso 13: a las 48 h se compara la retención real con la simulada y se ajusta el simulador para el próximo video.",
@@ -338,7 +339,8 @@ export const FABRICA_BASE: ContenidoFabrica = {
           imagenes: ["/fabrica/ia/ia-d0-v3.png"],
           ancho: true,
           puntos: [
-            "1 Reconocer el video · 2 Lógica y mapa de emoción · 3 Mapa de tomas de apoyo · 4 Cortes limpios · 5 Elegir la música · 6 Ajustar al ritmo · 7 Estilo · 8 Revisar como espectador · 9 Simulación de retención · 10 Corregir zonas de riesgo · 11 Revisión final y a limpio · 12 Paquete de publicación · 13 Aprender de las métricas.",
+            "1 Reconocer el video · 2 Lógica y mapa de emoción · 3 Mapa de tomas de apoyo · 4 Cortes limpios · 5 Mapa de música · 6 Ajustar al ritmo · 7 Estilo · 8 Revisar como espectador · 9 Simulación de retención · 10 Corregir zonas de riesgo · 11 Revisión final y a limpio · 12 Paquete de publicación · 13 Aprender de las métricas.",
+            "Paso 5, mapa de música: una o dos canciones instrumentales (sin la voz del cantante, separada con Demucs); la segunda entra en el golpe principal. La música se mide y queda sola 12 dB por debajo de la voz.",
             "Cada video es distinto: en el paso 2 se decide qué va dónde en ESE video (gancho, subida, golpe, respiro, cierre) para que todo esté en armonía y genere emoción y retención.",
             "Paso 8, automático: ningún texto detrás de la persona puede quedar tapado más de un 30 % (si pasa, va adelante) y la voz se verifica sola, sin música, contra lo que tiene que decir.",
             "Paso 12: portada, texto, permiso de las personas que salen y la fuente de cada cita. Paso 13: a las 48 h se compara la retención real con la simulada y se ajusta el simulador para el próximo video.",
