@@ -2,6 +2,7 @@ import { FABRICA_BASE, FABRICA_ID, type ContenidoFabrica } from "@/lib/fabrica-r
 import { FABRICA_PRIME_BASE, FABRICA_PRIME_ID } from "@/lib/fabrica-prime-al-billon"
 import { FABRICA_CASA_BLANCA_BASE, FABRICA_CASA_BLANCA_ID } from "@/lib/fabrica-casa-blanca"
 import { FABRICA_MICRODUCK_BASE, FABRICA_MICRODUCK_ID } from "@/lib/fabrica-microduck"
+import { FABRICA_MICRODUCK_LIVE_BASE, FABRICA_MICRODUCK_LIVE_ID } from "@/lib/fabrica-microduck-live"
 
 // ──────────────────────────────────────────────────────────────
 // CANALES DE LA FÁBRICA — el selector de /fabrica.
@@ -53,6 +54,15 @@ export const CANALES: Canal[] = [
     base: FABRICA_MICRODUCK_BASE,
     // Sin archivo todavía: la sección dice «Todavía no hay métricas cargadas».
     metricas: "/fabrica/microduck/metricas.json",
+  },
+  {
+    id: FABRICA_MICRODUCK_LIVE_ID,
+    nombre: "MicroDuck Live",
+    etiqueta: "MicroDuck Live",
+    descripcion: "Cómo se produce cada vivo de MicroDuck Live y sus clips: el show, las reglas, el pato que habla en vivo y lo que se mide.",
+    base: FABRICA_MICRODUCK_LIVE_BASE,
+    // Sin archivo todavía: la sección dice «Todavía no hay métricas cargadas».
+    metricas: "/fabrica/microduck-live/metricas.json",
   },
 ]
 
