@@ -14,7 +14,7 @@ import type { ContenidoFabrica } from "@/lib/fabrica-reels"
 export const FABRICA_MICRODUCK_ID = "microduck"
 
 export const FABRICA_MICRODUCK_BASE: ContenidoFabrica = {
-  titulo: "Fábrica de videos",
+  titulo: "Fábrica de reels",
   bajada:
     "Cómo se produce cada video de MicroDuck busca trabajo, de la idea a las métricas. Todo se hace con código en la Mac de Kev: el pato 3D real, la edición y el render. Si algo falla en la revisión, vuelve a edición. Lo que gana se repite como reto.",
   pasos: [
