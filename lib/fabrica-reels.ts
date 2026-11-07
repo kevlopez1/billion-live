@@ -401,7 +401,7 @@ export const FABRICA_BASE: ContenidoFabrica = {
             "Los 16 pasos son los mismos de la edición estándar; cambia solo el paso 10 (el estilo).",
             "Todas las reglas siguen: un solo texto a la vez, máx. 2 palabras por renglón, nada bajo los botones de las apps, música instrumental medida en el parlante del celular y bucle al final.",
           ],
-          paraKev: "Los mismos 15 pasos de todos los estilos (Kev 2026-11-07); en el paso 9 va el estilo minimalista de la estándar nº2.",
+          paraKev: "Los mismos 16 pasos de todos los estilos (Kev 2026-11-07); en el paso 10 va el estilo minimalista de la estándar nº2.",
         },
         {
           nombre: "Qué tomamos del reel",
