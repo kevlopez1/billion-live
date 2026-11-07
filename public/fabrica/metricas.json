@@ -1,6 +1,6 @@
 {
   "canal": "Kev López — De $10 a un Mercedes Mansory",
-  "actualizado": "2026-11-06T01:22:01.969Z",
+  "actualizado": "2026-11-07T01:53:23.487Z",
   "cuentas": [
     {
       "red": "TikTok",
@@ -146,7 +146,8 @@
           "vistas": 3374,
           "fijado": false
         }
-      ]
+      ],
+      "sinActualizar": true
     },
     {
       "red": "Instagram",
@@ -274,12 +275,13 @@
           "compartidos": 0,
           "guardados": 0
         }
-      ]
+      ],
+      "sinActualizar": true
     },
     {
       "red": "YouTube",
       "cuenta": "@KevProjectGTA",
-      "seguidores": 150,
+      "seguidores": 149,
       "videos": [
         {
           "titulo": "Estoy pasando de $10 a Mercedes Mansory en país quebrado 🇧🇴",
@@ -544,29 +546,69 @@
       "cuenta": "Kev López",
       "seguidores": null,
       "publicaciones": 0,
-      "videos": [],
-      "sinActualizar": true
+      "videos": []
     },
     {
       "red": "Threads",
       "cuenta": "@1kev_lopez",
       "seguidores": 33,
-      "videos": [],
-      "sinActualizar": true
+      "videos": []
     },
     {
       "red": "X",
       "cuenta": "@kev_lopez1",
       "seguidores": 21,
-      "videos": []
+      "videos": [
+        {
+          "titulo": "La Inteligencia Artificial que puede manipular elecciones 🤖",
+          "url": "https://x.com/kev_lopez1/status/2006433848343613497",
+          "vistas": 11,
+          "likes": 0
+        },
+        {
+          "titulo": "🤖 Nvidia presentó un Robot con un cerebro Real #ai #inteligenciaartifi",
+          "url": "https://x.com/kev_lopez1/status/2005998266203468285",
+          "vistas": 21,
+          "likes": 0
+        },
+        {
+          "titulo": "Elon musk dice que Trabajar en 20 años será Opcional #inteligenciaarti",
+          "url": "https://x.com/kev_lopez1/status/2005771361101439164",
+          "vistas": 11,
+          "likes": 0
+        },
+        {
+          "titulo": "Crisis Energética por la Inteligencia Artificial",
+          "url": "https://x.com/kev_lopez1/status/2005692030664704387",
+          "vistas": 20,
+          "likes": 0
+        },
+        {
+          "titulo": "Empresas que funcionan sin personas, autónomas DAO #inteligenciaartifi",
+          "url": "https://x.com/kev_lopez1/status/2005417405531770917",
+          "vistas": 15,
+          "likes": 0
+        },
+        {
+          "titulo": "El nacimiento del ecosistema Crypto en Bolivia 🇧🇴 #bolivia #blockchain",
+          "url": "https://x.com/kev_lopez1/status/2005077392436724050",
+          "vistas": 14,
+          "likes": 1000000
+        },
+        {
+          "titulo": "📡⏳STARLINK en Bolivia, ¿Que harán las empresas en Bolivia ahora para s",
+          "url": "https://x.com/kev_lopez1/status/2005005146271666449",
+          "vistas": 29,
+          "likes": 0
+        }
+      ]
     },
     {
       "red": "Binance Square",
       "cuenta": "@Square-Creator-df616c79b9bd",
       "seguidores": 8,
       "likesTotales": 8,
-      "videos": [],
-      "sinActualizar": true
+      "videos": []
     },
     {
       "red": "Instagram",
@@ -694,8 +736,7 @@
           "compartidos": 0,
           "guardados": 0
         }
-      ],
-      "sinActualizar": true
+      ]
     }
   ]
 }
