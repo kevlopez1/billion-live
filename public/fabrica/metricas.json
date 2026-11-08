@@ -1,6 +1,6 @@
 {
   "canal": "Kev López — De $10 a un Mercedes Mansory",
-  "actualizado": "2026-11-07T01:53:23.487Z",
+  "actualizado": "2026-11-08T01:20:03.282Z",
   "cuentas": [
     {
       "red": "TikTok",
@@ -159,7 +159,7 @@
           "titulo": "Una Inteligencia Artificial que cobra por ti? Si lo quieres en tu nego",
           "url": "https://www.instagram.com/reel/DeXys0USmJz/",
           "fecha": "2026-10-11",
-          "vistas": 331,
+          "vistas": 332,
           "likes": 6,
           "comentarios": 0,
           "compartidos": 0,
@@ -169,7 +169,7 @@
           "titulo": "Es recomendable pagar 2400 bolivianos por la rueda de negocios?",
           "url": "https://www.instagram.com/reel/Dd2jhr7yt0u/",
           "fecha": "2026-09-29",
-          "vistas": 238,
+          "vistas": 239,
           "likes": 3,
           "comentarios": 0,
           "compartidos": 0,
@@ -275,8 +275,7 @@
           "compartidos": 0,
           "guardados": 0
         }
-      ],
-      "sinActualizar": true
+      ]
     },
     {
       "red": "YouTube",
@@ -533,7 +532,8 @@
           "url": "https://www.youtube.com/shorts/F1DczWXQngo",
           "vistas": 3100
         }
-      ]
+      ],
+      "sinActualizar": true
     },
     {
       "red": "Facebook",
@@ -546,13 +546,15 @@
       "cuenta": "Kev López",
       "seguidores": null,
       "publicaciones": 0,
-      "videos": []
+      "videos": [],
+      "sinActualizar": true
     },
     {
       "red": "Threads",
       "cuenta": "@1kev_lopez",
       "seguidores": 33,
-      "videos": []
+      "videos": [],
+      "sinActualizar": true
     },
     {
       "red": "X",
@@ -601,14 +603,16 @@
           "vistas": 29,
           "likes": 0
         }
-      ]
+      ],
+      "sinActualizar": true
     },
     {
       "red": "Binance Square",
       "cuenta": "@Square-Creator-df616c79b9bd",
       "seguidores": 8,
       "likesTotales": 8,
-      "videos": []
+      "videos": [],
+      "sinActualizar": true
     },
     {
       "red": "Instagram",
