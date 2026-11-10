@@ -1,6 +1,6 @@
 {
   "canal": "Kev López — De $10 a un Mercedes Mansory",
-  "actualizado": "2026-11-09T01:18:10.412Z",
+  "actualizado": "2026-11-10T01:24:25.912Z",
   "cuentas": [
     {
       "red": "TikTok",
@@ -275,7 +275,8 @@
           "compartidos": 0,
           "guardados": 0
         }
-      ]
+      ],
+      "sinActualizar": true
     },
     {
       "red": "YouTube",
@@ -539,7 +540,8 @@
       "red": "Facebook",
       "cuenta": "Kev Singularity",
       "seguidores": 14,
-      "videos": []
+      "videos": [],
+      "sinActualizar": true
     },
     {
       "red": "RedNote",
@@ -617,7 +619,7 @@
     {
       "red": "Instagram",
       "cuenta": "@kev_project_gta",
-      "seguidores": 68,
+      "seguidores": 67,
       "publicaciones": 119,
       "videos": [
         {
