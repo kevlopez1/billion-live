@@ -34,26 +34,20 @@ function Barra({ escenas }: { escenas: string[][] }) {
   )
 }
 
-export function Guiones({ guiones, editando, poner }: { guiones: Guion[]; editando: boolean; poner: (g: Guion[]) => void }) {
+// `indice`: en vista, un guion a la vez con un índice al costado (Prime al Billón).
+// Sin él, todos los guiones de la serie uno debajo del otro (como siempre).
+export function Guiones({ guiones, editando, poner, indice = false }: { guiones: Guion[]; editando: boolean; poner: (g: Guion[]) => void; indice?: boolean }) {
   const cambiar = (i: number, c: Partial<Guion>) => poner(guiones.map((g, j) => (j === i ? { ...g, ...c } : g)))
   // Grupos (series) en el orden en que aparecen; los guiones sin serie van en «Otros».
   const serieDe = (g: Guion) => g.serie?.trim() || "Otros"
   const series = [...new Set(guiones.map(serieDe))]
   const [serie, setSerie] = useState("")
   const abierta = series.includes(serie) ? serie : series[0]
-
-  return (
-    <div className={s.guiones}>
-      {series.length > 1 && (
-        <div className={s.subPestanas} role="tablist" aria-label="Series de guiones">
-          {series.map((x) => (
-            <button key={x} role="tab" aria-selected={x === abierta} className={x === abierta ? s.subPestanaActiva : s.subPestana} onClick={() => setSerie(x)}>
-              {x} <span className={s.subCuenta}>{guiones.filter((g) => serieDe(g) === x).length}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {guiones.map((g, i) => serieDe(g) !== abierta ? null : (
+  const enSerie = guiones.map((g, i) => ({ g, i })).filter((x) => serieDe(x.g) === abierta)
+  const [elegido, setElegido] = useState(0)
+  const pos = Math.min(elegido, Math.max(0, enSerie.length - 1))
+  const compacto = indice && !editando && enSerie.length > 0
+  const articulo = (g: Guion, i: number) => (
         <article key={i} className={s.guion}>
           {editando ? (
             <div className={s.guionEdit}>
@@ -105,7 +99,44 @@ export function Guiones({ guiones, editando, poner }: { guiones: Guion[]; editan
           )}
           {editando && <div><button className={s.botonChico} onClick={() => poner(guiones.filter((_, j) => j !== i))}>Borrar guion</button></div>}
         </article>
-      ))}
+  )
+  const duracion = (g: Guion) => (g.datos.match(/^[^·]*?\d+\s*s\b/) || [""])[0].trim()
+
+  return (
+    <div className={s.guiones}>
+      {series.length > 1 && (
+        <div className={s.subPestanas} role="tablist" aria-label="Series de guiones">
+          {series.map((x) => (
+            <button key={x} role="tab" aria-selected={x === abierta} className={x === abierta ? s.subPestanaActiva : s.subPestana} onClick={() => { setSerie(x); setElegido(0) }}>
+              {x} <span className={s.subCuenta}>{guiones.filter((g) => serieDe(g) === x).length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {compacto && (
+        <div className={s.guionLibro}>
+          <nav className={s.guionIndice} aria-label="Guiones de la serie">
+            {enSerie.map((x, k) => (
+              <button key={x.i} className={k === pos ? s.guionItemActivo : s.guionItem} aria-current={k === pos ? "true" : undefined} onClick={() => setElegido(k)}>
+                <span className={s.guionItemNum}>{k + 1}</span>
+                <span className={s.guionItemTexto}>
+                  <span className={s.guionItemTitulo}>{x.g.titulo.split(" · ").pop()}</span>
+                  <span className={s.guionItemDatos}>{[(x.g.titulo.match(/\(([^)]*)\)/) || ["", ""])[1], duracion(x.g), x.g.estado].filter(Boolean).join(" · ")}</span>
+                </span>
+              </button>
+            ))}
+          </nav>
+          <div className={s.guionVista}>
+            <div className={s.guionNav}>
+              <button className={s.botonChico} disabled={pos === 0} onClick={() => setElegido(pos - 1)}>← Anterior</button>
+              <span className={s.estado}>{pos + 1} de {enSerie.length}</span>
+              <button className={s.botonChico} disabled={pos >= enSerie.length - 1} onClick={() => setElegido(pos + 1)}>Siguiente →</button>
+            </div>
+            {articulo(enSerie[pos].g, enSerie[pos].i)}
+          </div>
+        </div>
+      )}
+      {!compacto && guiones.map((g, i) => serieDe(g) !== abierta ? null : articulo(g, i))}
       {editando && (
         <div>
           <button className={s.botonChico} onClick={() => poner([...guiones, { serie: abierta === "Otros" ? undefined : abierta, titulo: "Nuevo guion", estado: "Borrador", datos: "", escenas: [["0–2", "", ""]], notas: [] }])}>+ Guion</button>

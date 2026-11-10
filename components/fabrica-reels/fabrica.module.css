@@ -166,3 +166,18 @@ textarea.campo { resize: vertical; min-height: 44px; }
 }
 .selectorCanalCampo:hover { border-color: var(--tinta); }
 .selectorCanalCampo:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+
+/* Guiones con índice (un guion a la vez): Prime al Billón. */
+.guionLibro { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+@media (min-width: 900px) { .guionLibro { grid-template-columns: 280px minmax(0, 1fr); align-items: start; } .guionIndice { position: sticky; top: 72px; max-height: calc(100vh - 96px); overflow-y: auto; } }
+.guionIndice { display: flex; flex-direction: column; gap: 6px; }
+.guionItem, .guionItemActivo { font: inherit; text-align: left; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--linea); background: transparent; color: var(--gris); cursor: pointer; }
+.guionItem:hover { color: var(--tinta); border-color: var(--tinta); }
+.guionItemActivo { color: var(--tinta); border-color: var(--tinta); background: var(--caja); }
+.guionItem:focus-visible, .guionItemActivo:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+.guionItemNum { font-variant-numeric: tabular-nums; font-size: 13px; min-width: 18px; padding-top: 2px; }
+.guionItemTexto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.guionItemTitulo { font-size: 14px; line-height: 1.35; }
+.guionItemDatos { font-size: 12px; color: var(--gris); }
+.guionVista { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.guionNav { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

@@ -230,6 +230,7 @@ function SeccionVista({ sec, i, doc, metricas, editando, cambiar, cambiarSeccion
       {sec.tipo === "guiones" && (
         <Guiones
           guiones={sec.guiones}
+          indice={metricas !== CANAL_PRINCIPAL.metricas}
           editando={editando}
           poner={(guiones) => cambiarSeccion(i, (x) => ({ ...x, guiones } as Seccion))}
         />
