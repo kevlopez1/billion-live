@@ -205,7 +205,7 @@ function Escucha() {
   const [alto, setAlto] = useState(2400)
   return (
     <section className={s.seccion} aria-labelledby="s-escucha">
-      <span className={s.etiqueta}>{ESCUCHA.etiqueta} · 13 nov 2026</span>
+      <span className={s.etiqueta}>{ESCUCHA.etiqueta} · mundo · 13 nov 2026</span>
       <h2 id="s-escucha" className={s.h2}>{ESCUCHA.titulo}</h2>
       <p className={s.estado}>
         <a href="/fabrica/escucha-social.html" target="_blank" rel="noopener">Abrir en página completa</a>
