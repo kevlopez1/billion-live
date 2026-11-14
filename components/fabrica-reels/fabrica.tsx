@@ -26,6 +26,11 @@ const mover = <T,>(arr: T[], desde: number, hasta: number) => {
 }
 
 // Nombre de la pestaña: la etiqueta sin lo que va después de «·» ni paréntesis.
+// Escucha social: informe fijo (public/fabrica/escucha-social.html) que no vive en la base,
+// así la versión guardada de cada canal no lo tapa. Sale en Kev Project GTA y en Prime al Billón.
+const ESCUCHA = { id: "escucha", etiqueta: "Escucha social", titulo: "Qué dice y qué hace la gente en redes" }
+const CANALES_CON_ESCUCHA = ["kev-project-gta", "prime-al-billon"]
+
 const nombreCorto = (etiqueta: string) => etiqueta.split(" · ")[0].replace(/\s*\(.*\)\s*/, "").trim() || etiqueta
 
 export function Fabrica({ canalId }: { canalId?: string }) {
@@ -58,6 +63,8 @@ export function Fabrica({ canalId }: { canalId?: string }) {
     return () => window.removeEventListener("hashchange", leer)
   }, [])
 
+  const conEscucha = CANALES_CON_ESCUCHA.includes(canal.id)
+  const enEscucha = conEscucha && activa === ESCUCHA.id && !editando
   const abierta = doc.secciones.find((x) => x.id === activa) ?? doc.secciones[0]
   const abrir = (id: string) => {
     setActiva(id)
@@ -173,17 +180,46 @@ export function Fabrica({ canalId }: { canalId?: string }) {
               {nombreCorto(x.etiqueta)}
             </button>
           ))}
+          {conEscucha && !editando && (
+            <button className={enEscucha ? s.pestanaActiva : s.pestana} aria-current={enEscucha ? "page" : undefined} onClick={() => abrir(ESCUCHA.id)}>
+              {ESCUCHA.etiqueta}
+            </button>
+          )}
         </nav>
 
         {editando ? (
           <Ordenable items={doc.secciones} clave={(x) => x.id} mover={(a, b) => cambiar((d) => ({ ...d, secciones: mover(d.secciones, a, b) }))} nombre="sección">
             {(sec, i) => <SeccionVista sec={sec} i={i} doc={doc} metricas={canal.metricas} editando cambiar={cambiar} cambiarSeccion={cambiarSeccion} />}
           </Ordenable>
+        ) : enEscucha ? (
+          <Escucha />
         ) : (
           abierta && <SeccionVista key={abierta.id} sec={abierta} i={doc.secciones.indexOf(abierta)} doc={doc} metricas={canal.metricas} editando={false} cambiar={cambiar} cambiarSeccion={cambiarSeccion} />
         )}
       </div>
     </main>
+  )
+}
+
+function Escucha() {
+  const [alto, setAlto] = useState(2400)
+  return (
+    <section className={s.seccion} aria-labelledby="s-escucha">
+      <span className={s.etiqueta}>{ESCUCHA.etiqueta} · 13 nov 2026</span>
+      <h2 id="s-escucha" className={s.h2}>{ESCUCHA.titulo}</h2>
+      <p className={s.estado}>
+        <a href="/fabrica/escucha-social.html" target="_blank" rel="noopener">Abrir en página completa</a>
+      </p>
+      <iframe
+        src="/fabrica/escucha-social.html"
+        title="Escucha social"
+        style={{ width: "100%", height: alto, border: 0, borderRadius: 12, background: "#0b0b0c" }}
+        onLoad={(e) => {
+          const d = e.currentTarget.contentDocument
+          if (d) setAlto(d.documentElement.scrollHeight + 24)
+        }}
+      />
+    </section>
   )
 }
 

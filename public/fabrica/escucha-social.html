@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Escucha social · noviembre 2026</title>
+<style>
+/* Layout: una columna de lectura, negro con blanco y grises (estilo de Kev para informes), tablas con scroll propio. */
+:root{
+  --bg:#0b0b0c; --panel:#141416; --fg:#f2f2f0; --muted:#9a9a9e; --line:#2a2a2e; --mark:#e30613;
+  --text:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--text);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 72px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+header{display:flex;flex-direction:column;gap:10px}
+.k{font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-size:clamp(1.8rem,5vw,2.5rem);line-height:1.08;margin:0;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:1.4rem;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h3{font-size:1.02rem;margin:0}
+p{margin:0;max-width:68ch}
+.sub{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:16px}
+nav{display:flex;flex-wrap:wrap;gap:8px}
+nav a{color:var(--fg);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.88rem}
+nav a:focus-visible,a:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+ol,ul{margin:0;padding-left:1.25em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+li b{color:var(--fg)}
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr));gap:10px}
+.cifra{background:var(--panel);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.cifra b{font-size:1.7rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cifra span{color:var(--muted);font-size:.86rem}
+.tabla{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:620px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:.74rem;letter-spacing:.05em;text-transform:uppercase;padding:9px 12px;border-bottom:1px solid var(--line)}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+a{color:var(--fg)}
+.cita{border-left:2px solid var(--line);padding:2px 0 2px 14px;color:var(--fg);font-style:italic}
+.grupo{display:flex;flex-direction:column;gap:8px}
+.grupo .sub{font-size:.9rem}
+.aviso{background:var(--panel);border-radius:12px;padding:14px 16px;color:var(--muted);font-size:.92rem}
+.aviso b{color:var(--fg)}
+.idea{display:grid;grid-template-columns:2rem 1fr;gap:4px 10px}
+.idea i{font-style:normal;color:var(--mark);font-weight:700;font-variant-numeric:tabular-nums}
+.idea div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.lista-ideas{display:flex;flex-direction:column;gap:16px}
+hr{border:0;border-top:1px solid var(--line);margin:0}
+</style>
+</head>
+<body>
+
+<main>
+<header>
+  <p class="k">Inteligencia de mercado · 13 de noviembre de 2026</p>
+  <h1>Escucha social: qué dice y qué hace la gente</h1>
+  <p class="sub">Para Kev Project GTA ($10 → Mercedes-AMG Mansory) y Prime. Complementa el mapa de competidores del 8 de noviembre. Cada cifra tiene su fuente y fecha; lo no comprobado va marcado.</p>
+  <nav aria-label="Secciones">
+    <a href="#resumen">Resumen</a><a href="#kev">Kev Project GTA</a><a href="#prime">Prime</a><a href="#tendencias">Tendencias</a><a href="#limites">Límites</a>
+  </nav>
+</header>
+
+<section id="resumen">
+  <p class="k">Resumen</p>
+  <h2>Las 8 cosas que cambian lo que hacemos</h2>
+  <ol>
+    <li><b>TikTok es la red de Bolivia.</b> 9,43 M de usuarios adultos y +36,6 % en un año; casi nadie publica con constancia. Poca competencia local. <a target="_blank" rel="noopener" href="https://datareportal.com/reports/digital-2026-bolivia">DataReportal</a></li>
+    <li><b>La primera reacción a una cifra es «¿pruebas?».</b> Cada video del reto tiene que mostrar el saldo real con fecha, no solo el contador.</li>
+    <li><b>Las series pierden casi la mitad de las vistas del día 1 al final.</b> Cada video tiene que funcionar como «episodio 1» para quien llega nuevo; JD Montclair recuperó vistas al sacar el número del título.</li>
+    <li><b>Lo que más engancha es que la gente toque el reto</b> (el auto de un seguidor: 16 M de vistas). «Firma el Mercedes» va en esa dirección, pero sin rifas pagas: en Chile y Colombia las están investigando.</li>
+    <li><b>«IA para negocios en Bolivia» está vacío en YouTube</b> (videos de 3 a 10 vistas). Kev puede ser quien la explique a la pyme boliviana.</li>
+    <li><b>Al cliente de una pyme le importa la rapidez más que la amabilidad</b>, y quiere pasar a una persona sin repetir datos.</li>
+    <li><b>La competencia de Prime se odia por los cobros, no por la IA</b> (ManyChat 2,0, Kommo 2,6, Wati 2,9 en Trustpilot). «Sin contrato y se cancela con un mensaje» es un diferencial que nadie comunica.</li>
+    <li><b>Lo que rinde en 2026 es lo real</b>: contenido propio y crudo, series por capítulos, envíos por DM y «comenta PALABRA».</li>
+  </ol>
+  <div class="cifras">
+    <div class="cifra"><b>9,43 M</b><span>usuarios adultos de TikTok en Bolivia</span></div>
+    <div class="cifra"><b>−45 %</b><span>vistas del día 1 al día 5 en la serie de Anas</span></div>
+    <div class="cifra"><b>16 %</b><span>de latinoamericanos tuvo un paso a humano sin repetir datos</span></div>
+    <div class="cifra"><b>2–5</b><span>videos por semana: la frecuencia más eficiente en TikTok</span></div>
+  </div>
+</section>
+
+<hr>
+
+<section id="kev">
+  <p class="k">Kev Project GTA</p>
+  <h2>Retos de dinero, autos y la audiencia</h2>
+
+  <h3>Hallazgos</h3>
+  <ol>
+    <li><b>La serie pierde vistas, pero los que se quedan dan más «me gusta».</b> «De un limón a 10.000 €» de Anas Andaloussi: día 1, 658 mil vistas (3,5 % de «me gusta»); día 7, 359 mil (9,7 %). <a target="_blank" rel="noopener" href="https://youtu.be/W_S2B5yE3zc">día 1</a> · <a target="_blank" rel="noopener" href="https://youtu.be/gvgllYvGo58">día 7</a></li>
+    <li><b>El número de episodio en el título resta.</b> JD Montclair bajó a ~126 mil vistas por episodio con «(N)» y volvió a ~215 mil sin número. Es correlación, no prueba. Su reto es «de $0,01 a un superauto», no un Mansory: hay que corregir ese dato en el mapa de competidores.</li>
+    <li><b>Los finales con premio claro explotan.</b> La entrega del centavo a MrBeast: 22 M de vistas, 1 M de «me gusta», 81 mil comentarios. Hasta el reto fallido de Ryan Trahan tiene 13 M: fallar en público no espanta. <a target="_blank" rel="noopener" href="https://youtu.be/uImFHteQd_8">video</a></li>
+    <li><b>Contador en vivo y participación.</b> «50 States in 50 Days»: 177 M de vistas con rastreador del total y una ruleta activada por donaciones. <a target="_blank" rel="noopener" href="https://thinklikeacreator.beehiiv.com/p/11-5-million-177-million-views-1-iphone">análisis</a></li>
+    <li><b>En autos pesa más que el seguidor participe que el lujo.</b> «Modificamos el auto de un seguidor en 14 días»: 16 M de vistas. Los G63 Mansory sin historia: 0,15 a 4,2 M.</li>
+    <li><b>En español ganan los retos con meta concreta y en grupo</b> (1 $ → PS5: 2,6 M; lapicera → auto: 4 M). Los «$1 a $1.000» en solitario se quedan entre 16 y 76 mil.</li>
+    <li><b>Mansory divide opiniones</b> («objeto de burlas por su estilo excesivo»), y ese debate trae comentarios.</li>
+    <li><b>En Bolivia, «$10» pesa</b>: el dólar oficial pasó de Bs 6,96 a Bs 11,92 (31-ago-2026). El 40 % de los trabajadores de LatAm teme perder el empleo por la IA.</li>
+  </ol>
+
+  <h3>Los videos con más vistas</h3>
+  <div class="tabla"><table>
+    <thead><tr><th>Video</th><th>Cuenta</th><th class="n">Vistas</th><th class="n">Me gusta</th><th>Fecha</th></tr></thead>
+    <tbody>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/OJ3h5ox9ZV4">Vendí mi casa por $1 dólar</a></td><td>MrBeast en Español</td><td class="n">78,5 M</td><td class="n">1,65 M</td><td>sep-2021</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/uImFHteQd_8">I Delivered a Penny to MrBeast! (final)</a></td><td>Ryan Trahan</td><td class="n">22,0 M</td><td class="n">1,02 M</td><td>jun-2022</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/uYPgFIqmyAY">Modificamos el auto de un seguidor en 14 días</a></td><td>Kenyi Nakamura</td><td class="n">16,0 M</td><td class="n">571 mil</td><td>sep-2025</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/Gxb3L8d0UtY">Trading $0.01 Into a House (fallido)</a></td><td>Ryan Trahan</td><td class="n">13,4 M</td><td class="n">285 mil</td><td>dic-2021</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/BVWjRCWVJ3E">Intercambié una lapicera hasta un auto en 7 días</a></td><td>Tacser</td><td class="n">4,0 M</td><td class="n">52 mil</td><td>jun-2024</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/nzfLaqqGoYU">Sobreviviendo con $1 hasta la final · Día 10</a></td><td>YOLO Aventuras</td><td class="n">3,6 M</td><td class="n">77 mil</td><td>jun-2026</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/udkglGKaLAM">Convertimos 1$ en una PlayStation 5 en 24 hrs</a></td><td>Pato</td><td class="n">2,6 M</td><td class="n">31 mil</td><td>may-2026</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/Or8neoE7Z4c">3 formas de ganar dinero con Claude</a></td><td>Adrián Sáenz</td><td class="n">826 mil</td><td class="n">38 mil</td><td>may-2026</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://youtu.be/M49W2dQib1Q">Turning $0.01 Into My First SUPERCAR</a></td><td>JD Montclair</td><td class="n">215 mil</td><td class="n">4,6 mil</td><td>oct-2026</td></tr>
+    </tbody>
+  </table></div>
+  <p class="sub">Cifras leídas en YouTube el 13-nov-2026.</p>
+
+  <h3>Lo que comenta la gente</h3>
+  <div class="grupo"><b>«¿Es real? Muéstrame la prueba»</b>
+    <p class="cita">«¿fuente?» · «¿pruebas?» · «¿cómo sabemos que es real?»</p>
+    <p class="sub">Respuestas típicas a quien publica cifras (Vouchshot, may-2026). En español la duda llega a los títulos: «Toda la verdad sobre Anas» (262 mil vistas).</p></div>
+  <div class="grupo"><b>«¿Y la siguiente parte?»</b>
+    <p class="sub">En los retos de intercambio, los comentarios piden la segunda parte (paráfrasis de la prensa). El final de Trahan junta 4 veces más comentarios que un episodio normal.</p></div>
+  <div class="grupo"><b>«A costa de otros, no»</b>
+    <p class="cita">«No sabías si el carro tenía valor sentimental»</p>
+    <p class="sub">Crítica más repetida al influencer que destrozó un auto para regalar otro (El Imparcial). El público castiga los atajos, no los fracasos honestos.</p></div>
+  <div class="grupo"><b>«La viralidad no es un modelo económico»</b>
+    <p class="sub">Columna de eju.tv (ago-2026). En títulos sobre ganar con IA aparece «o es puro humo»: desconfianza hacia quien vende cursos.</p></div>
+
+  <h3>5 ideas para los videos de Kev</h3>
+  <div class="lista-ideas">
+    <div class="idea"><i>1</i><div><b>Prueba verificable en cada video.</b><span class="sub">Saldo real con fecha 2 segundos en pantalla, contador «$X / $450.000» y el enlace al historial en el primer comentario.</span></div></div>
+    <div class="idea"><i>2</i><div><b>Cada video como episodio 1.</b><span class="sub">Abrir con 3 segundos de resumen («empecé con $10, voy en $X, la meta es un Mansory») y titular por resultado, sin «Día N».</span></div></div>
+    <div class="idea"><i>3</i><div><b>Que la audiencia toque el reto, sin rifa paga.</b><span class="sub">Votar la próxima jugada en comentarios, «firma el auto» gratis por comentar o compartir, mostrar al seguidor que firmó. Si «Firma el Mercedes» cobra, consultar la norma boliviana antes.</span></div></div>
+    <div class="idea"><i>4</i><div><b>Metas intermedias con nombre y el debate del Mansory.</b><span class="sub">«Primer cliente de $1.000», «primer auto», cifras en dólares y bolivianos, y de vez en cuando «¿el Mansory es lujo o mal gusto?».</span></div></div>
+    <div class="idea"><i>5</i><div><b>Ser quien explica la IA a la pyme boliviana.</b><span class="sub">Casos reales de Prime con la cifra en el título, respondiendo «¿me quita el trabajo?», mostrando también lo que sale mal.</span></div></div>
+  </div>
+</section>
+
+<hr>
+
+<section id="prime">
+  <p class="k">Prime</p>
+  <h2>Dueños de pymes, sus clientes y la competencia</h2>
+
+  <h3>Hallazgos</h3>
+  <ol>
+    <li><b>La rapidez gana.</b> En Uruguay la rapidez (61 %) ya pesa más que la amabilidad (56 %), y WhatsApp pasó del 4 % al 42 % como canal preferido en un año (encuesta encargada por una empresa de chatbots). <a target="_blank" rel="noopener" href="https://www.elobservador.com.uy/ciencia-y-tecnologia/whatsapp-desplazo-al-telefono-como-el-canal-que-prefieren-los-uruguayos-hablar-empresas-n6051805">El Observador</a></li>
+    <li><b>Poca paciencia con la IA.</b> El 28 % de los latinoamericanos no esperaría ni un segundo por un agente de IA; el 92 % sí esperaría por una persona; solo el 16 % tuvo un paso a humano sin repetir datos (Twilio, sin muestra publicada). En México, al 86 % le frustra repetir información (Sinch).</li>
+    <li><b>Las herramientas del rubro se odian por los cobros.</b> Trustpilot (13-nov-2026): ManyChat 2,0/5 (315 reseñas), Kommo 2,6/5 (67), Wati 2,9/5 (276). Cargos automáticos, cancelaciones imposibles, soporte que no responde.</li>
+    <li><b>Miedo a perder el número de WhatsApp.</b> Reseñas avisan que algunas herramientas pueden hacer que bloqueen el WhatsApp; la competencia empuja envíos masivos.</li>
+    <li><b>En YouTube ganan los tutoriales de «en X minutos, sin programar, gratis»</b>, todos de educadores que venden cursos. Nadie vende el resultado hecho.</li>
+    <li><b>La competencia en Meta cambia anuncios cada 5–7 días, pero repite ángulos:</b> pérdida («¿Cuánto perdiste por responder tarde?») y velocidad («El que contesta primero, vende»). Ya hay empleados IA con nombre por rubro («Habla con Ana», «Mia»).</li>
+    <li><b>Bolivia está casi vacía:</b> en la biblioteca de anuncios salen sobre todo cursos de IA. Prime tiene 2 anuncios en bolivianos desde el 13-nov-2026. El único lanzamiento local es Datec Lucy.</li>
+  </ol>
+
+  <h3>Contenido y anuncios que rinden</h3>
+  <div class="tabla"><table>
+    <thead><tr><th>Título</th><th>Canal</th><th class="n">Vistas</th><th>Gancho</th></tr></thead>
+    <tbody>
+      <tr><td><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=ZnlLfKR-vDQ">Crea tu primer AGENTE de IA en 15 minutos (sin programar)</a></td><td>Xavier Mitjana</td><td class="n">672 mil</td><td>tiempo corto + sin programar</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=7HlfFHLoYK8">Agentes IA en 18 minutos (lo que el 95% no entiende)</a></td><td>Benjamín Cordero</td><td class="n">591 mil</td><td>brecha de conocimiento</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=M5ZSjBnACtM">Tutorial N8N: ¡Construir Chatbot en WhatsApp!</a></td><td>Virola (21 mil subs)</td><td class="n">569 mil</td><td>método fácil</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=IjyXIYtxesA">Automatiza WhatsApp con IA y crea tu agente de ventas</a></td><td>Camilo Barbosa</td><td class="n">260 mil</td><td>dejar de responder tú</td></tr>
+      <tr><td><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=4qRCYFnH5W4">Cómo automatizar WhatsApp con IA ✨GRATIS!!!</a></td><td>Emmanuel</td><td class="n">125 mil</td><td>gratis</td></tr>
+    </tbody>
+  </table></div>
+  <p class="sub">YouTube, 13-nov-2026. TikTok e Instagram sin verificar: no se pueden leer sin iniciar sesión.</p>
+
+  <h3>Dolores y elogios</h3>
+  <div class="grupo"><b>Perder la venta por responder tarde</b>
+    <p class="cita">«El cliente que escribe a tres negocios se queda con el primero que responde»</p><p class="sub">Comentario en YouTube.</p></div>
+  <div class="grupo"><b>Cobros sorpresa y cancelaciones imposibles</b>
+    <p class="cita">«Impossible to cancel your plan» · «I was automatically charged $400 without requesting the renewal»</p><p class="sub">Trustpilot (ManyChat, Kommo), 2026.</p></div>
+  <div class="grupo"><b>Bot malo y no llegar a un humano</b>
+    <p class="cita">«The WATI AI support response is honestly pathetic»</p><p class="sub">Trustpilot, sep-2026.</p></div>
+  <div class="grupo"><b>Elogio: claro y sin humo</b>
+    <p class="cita">«0 humo, 0 publicidad de cursos mágicos, 0 enredos»</p><p class="sub">Comentario con 109 «me gusta» en el video de Benjamín Cordero.</p></div>
+  <div class="grupo"><b>Elogio: contesta y deja todo anotado</b>
+    <p class="cita">«El salto grande llega cuando la IA además agenda y deja anotado qué pidió cada cliente»</p><p class="sub">Comentario en YouTube.</p></div>
+
+  <h3>5 ideas para el contenido y la venta de Prime</h3>
+  <div class="lista-ideas">
+    <div class="idea"><i>1</i><div><b>«Sin contrato, se cancela con un mensaje.»</b><span class="sub">Lo que más odian de la competencia son los cobros y cancelaciones; ningún anuncio activo promete salida fácil.</span></div></div>
+    <div class="idea"><i>2</i><div><b>Paso a humano en segundos, sin repetir nada.</b><span class="sub">Un video: el cliente pide hablar con una persona y el dueño responde enseguida con todo el historial.</span></div></div>
+    <div class="idea"><i>3</i><div><b>«Le puse un empleado IA a [negocio de Santa Cruz] en 15 minutos, sin programar.»</b><span class="sub">El formato de los videos más vistos, pero con un negocio real y el chat en pantalla: Prime vende el resultado hecho, no un curso.</span></div></div>
+    <div class="idea"><i>4</i><div><b>Anuncios con ángulos de pérdida y velocidad, rotando cada semana.</b><span class="sub">«¿Cuánto perdiste anoche por no responder?», «Cien "¿precio?" respondidos solos». Quedarse con el que aguante dos tandas.</span></div></div>
+    <div class="idea"><i>5</i><div><b>«Tu número no se bloquea.»</b><span class="sub">Solo después de confirmar que Prime usa la API oficial de WhatsApp.</span></div></div>
+  </div>
+</section>
+
+<hr>
+
+<section id="tendencias">
+  <p class="k">Tendencias · noviembre 2026</p>
+  <h2>Qué está rindiendo en TikTok, Instagram y Shorts</h2>
+  <ol>
+    <li><b>Bolivia por red:</b> TikTok 9,43 M (+36,6 %), Facebook 7,55 M, YouTube 6,96 M, Instagram 2,55 M. Instagram y Facebook sirven más para llegar a dueños de pymes. <a target="_blank" rel="noopener" href="https://datareportal.com/reports/digital-2026-bolivia">DataReportal</a></li>
+    <li><b>YouTube Shorts recorta el alcance de lo resubido</b> desde el 1-oct-2026; lo propio tiene prioridad. Ventaja para Kev, que graba su material.</li>
+    <li><b>Instagram pesa tiempo de visualización y envíos por DM más que likes.</b> Cada reel necesita una razón para mandárselo a alguien.</li>
+    <li><b>Trial Reels:</b> probar 2 ganchos del mismo video con gente que no te sigue; Instagram dice que suben un 80 % el alcance con no seguidores.</li>
+    <li><b>2026 es el año de lo real</b> (TikTok Next Report LatAm): contenido crudo le gana al pulido, y 1 de cada 4 usuarios busca algo en los primeros 30 s. El texto en pantalla y la descripción importan como en un buscador.</li>
+    <li><b>Series y videos de más de 1 minuto:</b> TikTok empuja series; su programa de pagos solo paga videos de más de 60 s (no confirmado para Bolivia).</li>
+    <li><b>«Comenta PALABRA y te lo mando»</b> rinde más que «link en la bio» (cifras de blogs, no de estudios).</li>
+    <li><b>Sonidos en Bolivia esta semana</b> (biblioteca comercial de TikTok): dominan los de «noticia urgente / última hora», luego motivacionales y de negocios. Sirven de referencia de tono para «ÚLTIMA HORA: Día N».</li>
+  </ol>
+
+  <h3>Calendario para probar 4 semanas (hora de Bolivia)</h3>
+  <div class="tabla"><table>
+    <thead><tr><th>Día</th><th>TikTok</th><th>Instagram</th><th>Qué publicar</th></tr></thead>
+    <tbody>
+      <tr><td>Lunes</td><td>13:00</td><td>—</td><td>Capítulo del reto</td></tr>
+      <tr><td>Martes</td><td>18:00–20:00</td><td>18:00</td><td>Prime: caso o demo</td></tr>
+      <tr><td>Miércoles</td><td>21:00–22:00</td><td>12:00 o 18:00</td><td>Capítulo del reto</td></tr>
+      <tr><td>Jueves</td><td>13:00–17:00</td><td>9:00</td><td>Prime: «el empleado IA hace X»</td></tr>
+      <tr><td>Viernes</td><td>18:00</td><td>—</td><td>Storytime o error del reto</td></tr>
+      <tr><td>Sábado</td><td>15:00–17:00</td><td>—</td><td>Capítulo / balance de la semana</td></tr>
+      <tr><td>Domingo</td><td>9:00 o 13:00</td><td>—</td><td>Resumen semanal con contador</td></tr>
+    </tbody>
+  </table></div>
+  <p class="sub">Cruza Buffer (TikTok e Instagram, 2026) y Sprout Social (mar-2026), que no coinciden: hay que medirlo en TikTok Studio. Frecuencia más eficiente: 2–5 videos por semana; publicar más sube el techo, no el promedio (Buffer, 11,4 M de publicaciones).</p>
+</section>
+
+<hr>
+
+<section id="limites">
+  <p class="k">Límites</p>
+  <div class="aviso"><b>Qué no se pudo ver desde la nube.</b> Esta máquina no tiene tus sesiones de Instagram ni TikTok: no hay vistas de TikTok o IG salvo las publicadas por la prensa, ni hashtags propios de Bolivia (el Creative Center pide sesión). Reddit bloqueó el acceso y los comentarios de YouTube se leyeron solo en parte. Sin verificar: el 21,1 % de empresas bolivianas que usan IA (INE), los datos de HypeAuditor sobre Mansory y la norma boliviana de rifas. Con tu navegador en la Mac se puede completar la parte de TikTok e Instagram.</div>
+</section>
+</main>
+
+</body>
+</html>
