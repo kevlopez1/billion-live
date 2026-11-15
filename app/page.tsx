@@ -128,7 +128,7 @@ export default function Dashboard() {
   ]
 
   const renderHome = () => (
-    <div className="space-y-14 md:space-y-20">
+    <div className="space-y-20 md:space-y-32">
       {/* Hero + espectadores en vivo */}
       <div className="space-y-6 md:space-y-8">
         <Reveal>
