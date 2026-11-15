@@ -117,8 +117,6 @@ export default function Dashboard() {
     return () => cancelAnimationFrame(r)
   }, [activeView])
 
-  // "Ranking" vive en su propia página (/ranking).
-  const goToRanking = () => router.push("/ranking")
 
   const navItems = [
     { id: "dashboard" as const, label: t.nav.dashboard },
@@ -321,16 +319,6 @@ export default function Dashboard() {
                 </button>
               )
             })}
-            <button
-              onClick={() => {
-                goToRanking()
-                setMenuOpen(false)
-              }}
-              className="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-[15px] text-foreground hover:bg-foreground/[0.06]"
-            >
-              <Trophy className="w-[18px] h-[18px]" />
-              Ranking
-            </button>
             {/* La cuenta va al final y separada: las de arriba son secciones del
                 reto, esta es la sesión de quien mira. */}
             <div className="my-2 h-px bg-border" />
@@ -383,12 +371,6 @@ export default function Dashboard() {
                   {item.label}
                 </button>
               ))}
-              <button
-                onClick={goToRanking}
-                className="px-3.5 py-2 rounded-full text-sm transition-all press-effect text-muted-foreground hover:text-foreground"
-              >
-                Ranking
-              </button>
             </nav>
             {/* Va con PALABRA y no con un icono: el apretón de manos solo no
                 decía nada, y en el celular era lo único que se veía. */}
