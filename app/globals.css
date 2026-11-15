@@ -7,29 +7,31 @@
 /* Light mode (default) */
 :root {
   /* Tema CLARO "cielo" — luz radial arriba, celeste en los bordes, tinta NAVY. */
-  --background: oklch(0.99 0.004 240);
-  --foreground: oklch(0.27 0.05 252);
-  --card: oklch(1 0 0 / 0.72);
-  --card-foreground: oklch(0.27 0.05 252);
+  /* Estética Apple (nov 2026): blanco, tinta casi negra, grises neutros y un
+     solo azul de acción. */
+  --background: #fbfbfd;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
   --popover: oklch(0.995 0.003 240 / 0.98);
-  --popover-foreground: oklch(0.27 0.05 252);
-  --primary: oklch(0.27 0.05 252);
+  --popover-foreground: #1d1d1f;
+  --primary: #1d1d1f;
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.94 0.015 240);
-  --secondary-foreground: oklch(0.27 0.05 252);
-  --muted: oklch(0.92 0.018 240);
-  --muted-foreground: oklch(0.46 0.04 250);
-  --accent: oklch(0.27 0.05 252);
+  --secondary: #f5f5f7;
+  --secondary-foreground: #1d1d1f;
+  --muted: #f5f5f7;
+  --muted-foreground: #6e6e73;
+  --accent: #1d1d1f;
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.3 0.06 250 / 0.14);
-  --input: oklch(0.3 0.06 250 / 0.1);
-  --ring: oklch(0.5 0.1 245);
-  --radius: 1.75rem;
+  --border: rgb(0 0 0 / 0.08);
+  --input: rgb(0 0 0 / 0.1);
+  --ring: #0071e3;
+  --radius: 1.125rem;
 
   /* Acento firma: AZUL de la marca (el plan, la visión, PRIME) */
-  --gold: oklch(0.52 0.1 245);
+  --gold: #0071e3;
   /* Acento ROJO: dinero y urgencia (uso estratégico) */
   --rojo: oklch(0.55 0.19 28);
 
@@ -63,27 +65,27 @@
 .dark {
   /* Dark mode — OLED puro, sin tinte. */
   --background: oklch(0 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.135 0 0 / 0.55);
+  --foreground: #f5f5f7;
+  --card: #1c1c1e;
   --card-foreground: oklch(0.97 0 0);
   --popover: oklch(0.1 0 0 / 0.96);
   --popover-foreground: oklch(0.97 0 0);
   --primary: oklch(0.97 0 0);
   --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.18 0 0 / 0.6);
+  --secondary: #1c1c1e;
   --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.2 0 0);
-  --muted-foreground: oklch(0.62 0 0);
+  --muted: #2c2c2e;
+  --muted-foreground: #86868b;
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.12 0 0);
   --destructive: oklch(0.6 0.16 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0 0 / 0.08);
-  --input: oklch(1 0 0 / 0.1);
-  --ring: oklch(0.97 0 0);
+  --border: rgb(255 255 255 / 0.1);
+  --input: rgb(255 255 255 / 0.12);
+  --ring: #2997ff;
 
   /* Acento firma celeste (más claro en oscuro) */
-  --gold: oklch(0.78 0.09 230);
+  --gold: #2997ff;
   /* Rojo (más brillante en oscuro) */
   --rojo: oklch(0.66 0.19 28);
 
@@ -114,9 +116,9 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-manrope), system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), "Helvetica Neue", Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-inter), "Helvetica Neue", Arial, sans-serif;
+  --font-serif: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-grotesk), "SF Mono", "Roboto Mono", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -179,10 +181,11 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.011em;
     /* Kev: «las palabras de la web, más negritas». El cuerpo pasa de 400 a
        500, y lo que ya era más grueso sube un escalón abajo. */
     font-weight: 500;
+    -webkit-font-smoothing: antialiased;
   }
   h1,
   h2,
@@ -190,7 +193,7 @@
   h4,
   .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.025em;
+    letter-spacing: -0.03em;
   }
   /* Titulares editoriales: que el texto se equilibre solo en varias líneas. */
   h1,
@@ -814,7 +817,7 @@ body::after {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.04;
+  opacity: 0; /* Apple: sin grano */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
