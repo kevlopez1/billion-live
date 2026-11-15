@@ -19,6 +19,8 @@ export type Comprobante = {
 }
 
 export const COMPROBANTES: Comprobante[] = [
+  { src: "/images/comprobantes/ganadero-qr-2500.jpg", bs: 2500, bank: "Banco Ganadero · QR", date: "12 nov 2026" },
+  { src: "/images/comprobantes/ganadero-qr-3500.jpg", bs: 3500, bank: "Banco Ganadero · QR", date: "10 nov 2026" },
   // El extracto no dice desde qué banco llegó: se pone solo lo que sí dice.
   { src: "/images/comprobantes/interbanc-2000.jpg", bs: 2000, bank: "Transferencia interbancaria", date: "29 oct 2026" },
   { src: "/images/comprobantes/ganadero-interbanc-3265.jpg", bs: 3265, bank: "Banco Ganadero · interbancaria", date: "23 oct 2026" },
