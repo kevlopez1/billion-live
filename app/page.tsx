@@ -201,7 +201,7 @@ export default function Dashboard() {
               </span>
               <div>
                 <div className="font-display font-bold text-base md:text-lg tracking-tight">
-                  Unite a la comunidad
+                  Únete a la comunidad
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
                   Grupo de WhatsApp del reto · detrás de escena y avisos en vivo
@@ -376,7 +376,7 @@ export default function Dashboard() {
                 <button
                   key={item.id}
                   onClick={() => setActiveView(item.id)}
-                  className={`px-3.5 py-2 rounded-full text-sm transition-all press-effect ${
+                  className={`whitespace-nowrap px-3.5 py-2 rounded-full text-sm transition-all press-effect ${
                     activeView === item.id
                       ? "bg-foreground text-background font-semibold"
                       : "text-muted-foreground hover:text-foreground"

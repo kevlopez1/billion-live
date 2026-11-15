@@ -43,7 +43,7 @@ export function WhatsAppPopup() {
             <MessageCircle className="w-5 h-5" />
           </span>
           <div className="min-w-0">
-            <div className="font-display font-bold text-sm tracking-tight">Unite a la comunidad</div>
+            <div className="font-display font-bold text-sm tracking-tight">Únete a la comunidad</div>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
               Grupo de WhatsApp del reto — detrás de escena, avisos y la comunidad en vivo.
             </p>
