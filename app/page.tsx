@@ -24,7 +24,6 @@ import { MemoriaScroll } from "@/components/memoria-scroll"
 import { Eventos } from "@/components/eventos"
 import { MuroFirmas } from "@/components/muro-firmas"
 import { FirmaCta } from "@/components/firma-cta"
-import { AutoPixeles } from "@/components/auto-pixeles"
 import { useRouter } from "next/navigation"
 import { EV, track } from "@/lib/track"
 import { PrimeMark } from "@/components/prime-mark"
@@ -167,7 +166,6 @@ export default function Dashboard() {
             contador, abajo unos comprobantes sueltos. Es una sola historia —
             este es el auto, estas son las firmas que ya tiene. */}
         <Reveal delay={80}>
-          <AutoPixeles />
           <MuroFirmas />
         </Reveal>
       </section>
