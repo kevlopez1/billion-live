@@ -711,8 +711,9 @@
 /* ── Reveal al hacer scroll (movimiento sutil tipo sitio pro) ── */
 .reveal {
   opacity: 0;
-  transform: translateY(26px);
-  transition: opacity 0.8s cubic-bezier(0.2, 0.6, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.6, 0.2, 1);
+  transform: translateY(32px) scale(0.985);
+  /* La curva de apple.com: entra rápido y se asienta despacio. */
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 .reveal-in {

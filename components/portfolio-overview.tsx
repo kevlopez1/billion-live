@@ -11,6 +11,8 @@ import { EV, track } from "@/lib/track"
 import { supabase, subscribeToGlobalMetrics, type GlobalMetrics } from "@/lib/supabase"
 import { montoConfiable } from "@/lib/contador"
 import { PrimeMark } from "@/components/prime-mark"
+import { AutoScroll } from "@/components/auto-scroll"
+import { CintaEntidades } from "@/components/cinta-entidades"
 
 export function PortfolioOverview() {
   const { metrics } = useApp()
@@ -113,13 +115,14 @@ export function PortfolioOverview() {
     } catch {}
     const startValue = initial ? 0 : displayValue
     const endValue = supabaseMetrics.net_worth
-    const duration = initial ? 1600 : 800
+    const duration = initial ? 2200 : 800
     const startTime = performance.now()
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime
       const progress = Math.min(elapsed / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
+      // Curva "expo out": arranca rápido y frena suave, como los números de Apple.
+      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress)
       setDisplayValue(startValue + (endValue - startValue) * eased)
 
       if (progress < 1) {
@@ -173,12 +176,14 @@ export function PortfolioOverview() {
           className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[6%] w-[52%] h-8 md:h-10 rounded-full blur-2xl"
           style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(27,23,16,0.32), transparent 70%)" }}
         />
-        <img
-          src="/images/car/green-2-cut.png"
-          alt="Mercedes-AMG GT 63 4-door por Mansory"
-          className="relative mx-auto w-[78%] max-w-xl sm:w-[70%]"
-          loading="eager"
-        />
+        <AutoScroll>
+          <img
+            src="/images/car/green-2-cut.png"
+            alt="Mercedes-AMG GT 63 4-door por Mansory"
+            className="relative mx-auto w-[78%] max-w-xl sm:w-[70%]"
+            loading="eager"
+          />
+        </AutoScroll>
       </div>
 
       {/* Otros ángulos (fotos oficiales) */}
@@ -276,6 +281,7 @@ export function PortfolioOverview() {
           </span>
         </Link>
       </div>
+      <CintaEntidades />
     </section>
   )
 }
