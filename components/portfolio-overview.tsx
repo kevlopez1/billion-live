@@ -158,7 +158,7 @@ export function PortfolioOverview() {
         <span className="block font-serif-display italic text-muted-foreground text-3xl sm:text-5xl">
           De <span className="text-rojo">$10</span> a un
         </span>
-        <span className="block font-display font-extrabold uppercase tracking-tighter text-foreground text-7xl sm:text-8xl md:text-9xl -mt-1">
+        <span className="block font-display font-extrabold uppercase tracking-tighter text-foreground text-[16vw] sm:text-8xl md:text-9xl -mt-1">
           Mercedes
         </span>
         <span className="mt-3 flex items-center justify-center gap-2 text-muted-foreground">
@@ -183,7 +183,7 @@ export function PortfolioOverview() {
 
       {/* Otros ángulos (fotos oficiales) */}
       <div
-        className="mt-6 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
+        className="mt-6 flex gap-3 overflow-x-auto sm:justify-center snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: "none" }}
       >
         {["green-3", "green-4", "green-1"].map((n, i) => (
