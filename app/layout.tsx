@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter, Manrope, Bricolage_Grotesque, Instrument_Serif } from "next/font/google"
+import { Manrope, Bricolage_Grotesque, Instrument_Serif } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AppProvider } from "@/context/app-context"
 import { AuthProvider } from "@/context/auth-context"
@@ -10,13 +10,6 @@ import { SITE_URL } from "@/lib/site"
 
 // Mezcla de 3 tipografías (look único):
 // Manrope = cuerpo · Bricolage Grotesque = títulos display · Instrument Serif = acentos editoriales.
-// Inter: el respaldo de SF Pro fuera de Apple (Windows, Android).
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-})
-
 const manrope = Manrope({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -230,7 +223,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${inter.variable} ${manrope.variable} ${bricolage.variable} ${instrumentSerif.variable} font-sans antialiased`}>
+      <body className={`${manrope.variable} ${bricolage.variable} ${instrumentSerif.variable} font-sans antialiased`}>
         <AuthProvider>
           <AppProvider>
             {children}

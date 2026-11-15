@@ -116,9 +116,9 @@
 }
 
 @theme inline {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), "Helvetica Neue", Arial, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-inter), "Helvetica Neue", Arial, sans-serif;
-  --font-serif: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-manrope), system-ui, sans-serif;
   --font-mono: var(--font-grotesk), "SF Mono", "Roboto Mono", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -181,11 +181,10 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    letter-spacing: -0.011em;
+    letter-spacing: -0.01em;
     /* Kev: «las palabras de la web, más negritas». El cuerpo pasa de 400 a
        500, y lo que ya era más grueso sube un escalón abajo. */
     font-weight: 500;
-    -webkit-font-smoothing: antialiased;
   }
   h1,
   h2,
@@ -193,7 +192,7 @@
   h4,
   .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.03em;
+    letter-spacing: -0.025em;
   }
   /* Titulares editoriales: que el texto se equilibre solo en varias líneas. */
   h1,
