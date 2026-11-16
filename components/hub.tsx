@@ -8,8 +8,11 @@ import { MansoryMark } from "@/components/mansory-mark"
 
 // WhatsApp del empleado AI de PRIME (número real).
 const PRIME_WA = "59172258926"
+// ⚠️ Esta frase es la que le abre el menú del reto en el bot de PRIME: lo reconoce por
+// "de $10 a un Mercedes" (`vieneDelReto` en prime-agent-whatsapp, src/agent/retoMenu.ts).
+// El test de ese repo tiene esta misma frase: si se cambia aquí, se cambia allá también.
 const PRIME_MSG = encodeURIComponent(
-  "Hola, vengo del reto Kev Project GTA y quiero conocer a mi empleado AI de PRIME.",
+  "Hola, vengo del proyecto de $10 a un Mercedes Mansory",
 )
 const PRIME_WA_URL = `https://wa.me/${PRIME_WA}?text=${PRIME_MSG}`
 const PRIME_WEB = "https://primebusiness.live"
