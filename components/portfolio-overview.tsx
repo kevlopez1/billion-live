@@ -13,6 +13,7 @@ import { montoConfiable } from "@/lib/contador"
 import { PrimeMark } from "@/components/prime-mark"
 import { AutoScroll } from "@/components/auto-scroll"
 import { CintaEntidades } from "@/components/cinta-entidades"
+import { CancionInicio } from "@/components/cancion"
 
 export function PortfolioOverview() {
   const { metrics } = useApp()
@@ -147,6 +148,7 @@ export function PortfolioOverview() {
 
   return (
     <section className="relative text-center">
+      <CancionInicio />
       {/* Eyebrow (pill) — el punto rojo = EN VIVO */}
       <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3.5 py-1.5 text-[11px] uppercase tracking-[0.22em] text-muted-foreground mb-6">
         <span className="relative flex h-2 w-2">
