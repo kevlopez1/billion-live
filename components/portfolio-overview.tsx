@@ -180,7 +180,7 @@ export function PortfolioOverview() {
         />
         <AutoScroll>
           <img
-            src="/images/car/green-2-cut.png"
+            src="/images/car/celeste-2-cut.png"
             alt="Mercedes-AMG GT 63 4-door por Mansory"
             className="relative mx-auto w-[78%] max-w-xl sm:w-[70%]"
             loading="eager"
@@ -193,7 +193,7 @@ export function PortfolioOverview() {
         className="mt-6 flex gap-3 overflow-x-auto sm:justify-center snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: "none" }}
       >
-        {["green-3", "green-4", "green-1"].map((n, i) => (
+        {["celeste-3", "celeste-4", "celeste-1"].map((n, i) => (
           <div
             key={i}
             className="img-zoom snap-center shrink-0 w-[44%] sm:w-[29%] lg:w-[23%] rounded-2xl overflow-hidden border border-border bg-white shadow-[0_8px_30px_-16px_rgba(0,0,0,0.22)]"
